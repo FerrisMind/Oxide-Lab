@@ -6,6 +6,24 @@
 
 ![Oxide Lab](https://img.shields.io/badge/Status-Active-brightgreen) ![Platform](https://img.shields.io/badge/Platform-Windows-blue) ![License](https://img.shields.io/badge/License-MIT-yellow)
 
+<!-- Project Logo -->
+<p align="center">
+  <img src="static/logo.svg" alt="Oxide Lab Logo" width="140" />
+</p>
+
+---
+
+## 📚 Table of Contents
+- [What is this?](#-what-is-this)
+- [Who is this app for?](#-who-is-this-app-for)
+- [Key Features](#-key-features)
+- [How to Start Using](#-how-to-start-using)
+- [Interface Features](#-interface-features)
+- [Privacy and Security](#-privacy-and-security)
+- [Tips and Recommendations](#-tips-and-recommendations)
+- [System Requirements and Limitations](#-system-requirements-and-limitations)
+- [Support the Project](#-support-the-project)
+
 ---
 
 ## ✨ What is this?
