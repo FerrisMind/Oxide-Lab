@@ -1,4 +1,4 @@
-[Русский](README_RU.md)
+[Русский](README-RU.md)
 
 
 # 🤖 Oxide Lab - Local AI Assistant
