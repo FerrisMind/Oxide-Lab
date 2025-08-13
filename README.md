@@ -1,146 +1,147 @@
 [Русский](README-RU.md)
 
-
 # 🤖 Oxide Lab - Local AI Assistant
 
-> Private, powerful, and easy-to-use AI chat right on your computer
+> **Private, powerful and easy-to-use AI chat right on your computer**
 
-![Oxide Lab](https://img.shields.io/badge/Status-Active-brightgreen) ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue) ![License](https://img.shields.io/badge/License-MIT-yellow)
+![Oxide Lab](https://img.shields.io/badge/Status-Active-brightgreen) ![Platform](https://img.shields.io/badge/Platform-Windows-blue) ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
 
-## ✨ What is it?
+## ✨ What is this?
 
-**Oxide Lab** is a modern desktop app for chatting with AI models that runs entirely on your computer. No subscriptions. No cloud. Your data never leaves your device.
+**Oxide Lab** is a modern desktop application for communicating with AI models that runs completely locally on your computer. No subscriptions, no data sent to the internet — just you and your personal AI assistant.
 
-### 🎯 Who is it for?
+### 🎯 Who is this app for?
 
-- AI enthusiasts who want to experiment locally
-- Privacy-focused users who value full control
-- Researchers who need configurable generation
-- Creatives who want inspiration and brainstorming help
+- **AI enthusiasts** — want to experiment with models locally
+- **Privacy matters** — your data stays only with you
+- **Researchers** — need control over generation parameters
+- **Creative minds** — use AI for writing, brainstorming and inspiration
 
 ---
 
 ## 🚀 Key Features
 
-### 💬 Smart chat interface
-- Modern, intuitive design
+### 💬 **Smart Chat Interface**
+- Modern and intuitive design
 - Real-time streaming responses
-- Rich text and code formatting
-- Persistent conversation history
+- Support for text and code formatting
 
-### 🧠 "Thinking" mode
-- Enable the **Thinking** mode to watch the AI reason step-by-step
-- See the chain of thought before the final answer
-- Better results on complex tasks
+### 🧠 **Thinking Mode**
+- Enable the **"Thinking"** feature and watch AI think
+- See the analysis process before the final answer
+- Higher quality and thoughtful solutions to complex tasks
 
-### ⚙️ Flexible controls
-- Temperature — adjust creativity
-- Top-K, Top-P, Min-P — fine-tune response style
-- Repeat penalty — reduce repetition
-- Context length — from 64 up to 128,000 tokens
+### ⚙️ **Flexible Settings**
+- **Temperature** — control response creativity
+- **Top-K, Top-P, Min-P** — fine-tune generation style
+- **Repeat Penalty** — avoid repetitions
+- **Context Length** — depends on model and device resources
 
-### 🔧 Easy setup
-- Load any GGUF models
-- Automatic device selection (GPU/CPU)
-- Smart memory handling
-- Adjustable number of GPU layers
+### 🔧 **Easy Setup**
+- Support for local Qwen3 models in GGUF format (other models — in plans)
+- Intelligent memory management
 
 ---
 
-## 📖 Getting started
+## 📖 How to Start Using
 
-### 1️⃣ Get a model
-Download a `.gguf` model and a `tokenizer.json` file:
-- Recommended models: Qwen-2.5-7B, Qwen-2.5-14B, Qwen-2.5-32B
-- Where to get them: Hugging Face or official model repositories
+### 1️⃣ **Get the Model**
+Download a model in `.gguf` format and `tokenizer.json` file:
+- **Recommended models:** Qwen3 7B (and other Qwen3 variants in GGUF)
+- **Where to download:** Hugging Face, official model repositories
 
-### 2️⃣ Load into the app
+### 2️⃣ **Load into Application**
 1. Open Oxide Lab
-2. Click **"Pick model file"** and select your `.gguf`
-3. Click **"Pick tokenizer"** and select `tokenizer.json`
-4. Optionally set the number of GPU layers
+2. Click **"Select Model File"** and specify path to `.gguf` file
+3. Click **"Select Tokenizer"** and specify path to `tokenizer.json`
+4. Optionally configure inference parameters
 5. Click **"Load"**
 
-### 3️⃣ Start chatting
-- Type your question or prompt
-- Enable **Thinking** for deeper responses
-- Adjust generation parameters to your liking
-- Enjoy your private AI assistant!
+### 3️⃣ **Start Chatting**
+- Enter your question or request
+- Enable **"Thinking"** for deeper responses
+- Adjust generation parameters to your taste
+- Enjoy conversation with your personal AI!
 
 ---
 
-## 🎨 Interface highlights
+## 🎨 Interface Features
 
-### 🎯 Smart commands
-- Use `/think` at the beginning of a message to enable thinking mode
-- Use `/no_think` to disable it for a single request
-
-### 📊 Clear indicators
-- Detailed loading progress with stages
+### 📊 **Informative Indicators**
+- Model loading progress with detailed stages
 - Generation status indicators
-- Visualized chain-of-thought block
+- Visual display of AI thinking
 
-### ⚡ Quick actions
-- Cancel loading with one click
+### ⚡ **Quick Actions**
+- Cancel model loading with one click
 - Stop generation at any moment
-- Adjust parameters on the fly
+- Quick parameter changes without reloading
 
 ---
 
-## 🛡️ Privacy & Security
+## 🛡️ Privacy and Security
 
-### 🔒 100% local
-- All computation happens on your machine
-- No external requests or cloud processing
-- Full control over your data
+### 🔒 **100% Local**
+- All computations happen on your computer
+- No external requests or data sending
+- Full control over your information
 
-### 💾 Data handling
-- Conversations are stored only in the app session
+### 💾 **Data Management**
+- Conversations stored only in application session
 - Models remain on your disk
-- No hidden analytics or tracking
+- No hidden data collection
 
 ---
 
-## 💡 Tips
+## 💡 Tips and Recommendations
 
-### 🎯 For best results
-- Enable Thinking mode for complex tasks
-- Try temperature 0.7–1.0 for creativity, 0.1–0.3 for precision
-- Increase context length for long documents
-- Tune GPU layers based on your VRAM budget
+### 🎯 **For best results:**
+- Use thinking mode for complex tasks
+- The app already has the best settings built-in based on Qwen3 model manufacturer recommendations. Just enable and use!
+- The app also supports changing default settings. Experiment with temperature: 0.7-1.0 for creativity, 0.1-0.3 for accuracy
+- Increase context for working with long documents
 
-### ⚡ Performance
-- 8GB+ VRAM: you can offload most layers to GPU
-- 4–6GB VRAM: try 50–70% of layers on GPU
-- <4GB VRAM: prefer CPU for stability
+### ⚡ **Performance optimization:**
+- Currently works only on CPU+RAM. GPU support (CUDA) is planned for the future
 
-### 🎨 Creative usage
-- Use Thinking mode for analysis and planning
-- High temperature for creative writing
-- Long context for large documents
+### 🎨 **Creative usage:**
+- Enable thinking for text analysis and problem solving
+- Experiment with high temperature for creative writing
+- Use long context for working with large documents
 
 ---
 
-## 🆘 Need help?
+## 🖥️ System Requirements and Limitations
 
-### ❓ FAQ
-- App doesn’t start? Check system compatibility
-- Slow generation? Reduce GPU layers or model size
-- Loading errors? Ensure model and tokenizer are compatible
+### Supported Platforms
+- Windows 10/11 — full support
+- Linux and macOS — in planning stage (not yet supported)
+
+### Models
+- Supported: Qwen3 in GGUF format (mono-architecture)
+- Important: compatibility with other models is not yet guaranteed
+
+### Minimum Hardware Requirements
+The smallest Qwen3 models (0.6B and 1.7B) work with acceptable speed and quality even on devices with 2-core CPU and 4 GB RAM. The 4B model also works in this application with such devices, but the performance is many times lower and requires more memory, which is difficult to achieve, for example, with LM Studio without significant quality loss.
+
+### Context and Performance
+- Effective context length depends on: selected model, available RAM
+- Practically achievable context length may be lower than theoretically declared by the model
+- The larger the context, the higher the memory requirements and lower the generation speed
 
 ---
 
-## 🌟 Support the project
+## 🌟 Support the Project
 
-If Oxide Lab helps you:
-- ⭐ Star the repo
-- 🐛 Report issues
-- 💡 Suggest features
-- 🤝 Share with others
+If Oxide Lab has been useful to you:
+- ⭐ Star the project
+- 🐛 Report bugs
+- 💡 Suggest new features
+- 🤝 Share with friends
 
 ---
 
-> Built with ❤️ for the AI community  
-> Freedom, privacy, and control over your AI
+> **Made with ❤️ for the AI enthusiast community**  
+> *Freedom, privacy and control over artificial intelligence*
