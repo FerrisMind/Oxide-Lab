@@ -1,3 +1,6 @@
+[Русский](README_RU.md)
+
+
 # 🤖 Oxide Lab - Local AI Assistant
 
 > Private, powerful, and easy-to-use AI chat right on your computer
