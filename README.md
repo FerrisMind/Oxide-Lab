@@ -66,7 +66,7 @@
 ### 1️⃣ **Get the Model**
 Download a model in `.gguf` format and `tokenizer.json` file:
 - **Recommended models:** Qwen3 7B (and other Qwen3 variants in GGUF)
-- **Where to download:** Hugging Face, official model repositories
+- **Where to download:** [Hugging Face](https://huggingface.co/collections/Qwen/qwen3-67dd247413f0e2e4f653967f), official model repositories
 
 ### 2️⃣ **Load into Application**
 1. Open Oxide Lab
