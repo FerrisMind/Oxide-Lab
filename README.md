@@ -2,7 +2,7 @@
 
 <!-- Project Logo -->
 <p align="center">
-  <img src=".github/assets/logo.svg" alt="Oxide Lab Logo" />
+  <img src=".github/assets/logo.svg" alt="Oxide Lab Logo" width="512" />
 </p>
 
 > **Private, powerful and easy-to-use AI chat right on your computer**
