@@ -1,15 +1,13 @@
 [Русский](README-RU.md)
 
-# 🤖 Oxide Lab - Local AI Assistant
+<!-- Project Logo -->
+<p align="center">
+  <img src=".github/assets/logo.svg" alt="Oxide Lab Logo" />
+</p>
 
 > **Private, powerful and easy-to-use AI chat right on your computer**
 
 ![Oxide Lab](https://img.shields.io/badge/Status-Active-brightgreen) ![Platform](https://img.shields.io/badge/Platform-Windows-blue) ![License](https://img.shields.io/badge/License-MIT-yellow)
-
-<!-- Project Logo -->
-<p align="center">
-  <img src=".github/assets/logo.svg" alt="Oxide Lab Logo" width="140" />
-</p>
 
 ---
 
