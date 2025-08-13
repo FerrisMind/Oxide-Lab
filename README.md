@@ -8,7 +8,7 @@
 
 <!-- Project Logo -->
 <p align="center">
-  <img src="static/logo.svg" alt="Oxide Lab Logo" width="140" />
+  <img src=".github/assets/logo.svg" alt="Oxide Lab Logo" width="140" />
 </p>
 
 ---
@@ -91,6 +91,10 @@ Download a model in `.gguf` format and `tokenizer.json` file:
 - Model loading progress with detailed stages
 - Generation status indicators
 - Visual display of AI thinking
+
+<p align="center">
+  <img src=".github/assets/screenshots/chat-dark.png" alt="Oxide Lab Chat UI (Dark)" width="720" />
+</p>
 
 ### ⚡ **Quick Actions**
 - Cancel model loading with one click
