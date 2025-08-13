@@ -1,0 +1,23 @@
+[rust-analyzer]
+# Исключаем папку examples из анализа
+cargo.excludeDirs = ["examples"]
+
+# Отключаем линзы для улучшения производительности
+lens.enable = false
+
+# Включаем проверку при сохранении
+checkOnSave.enable = true
+
+# Настройки для улучшения производительности
+cargo.buildScripts.enable = false
+cargo.buildScripts.overrideCommand = null
+
+# Исключаем папку examples из индексации
+files.excludeDirs = ["examples", "target", ".cargo"]
+
+# Настройки для больших проектов
+assist.emitMustUse = false
+assist.emitStructLiteral = false
+
+
+

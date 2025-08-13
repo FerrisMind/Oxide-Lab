@@ -1,0 +1,56 @@
+[package]
+name = "oxide-lab"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "llm_chat_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Candle (ML) and related crates
+anyhow = "1"
+# Отключаем default-features, чтобы не притягивать CUDA/DLL по умолчанию
+candle = { package = "candle-core", git = "https://github.com/huggingface/candle.git", default-features = false, features = [] }
+candle-nn = { git = "https://github.com/huggingface/candle.git", default-features = false, features = [] }
+candle-transformers = { git = "https://github.com/huggingface/candle.git", default-features = false, features = [] }
+# Опционально: flash-attn (включается через нашу feature `flash-attn` ниже)
+candle-flash-attn = { path = "../examples/candle-flash-attn", optional = true }
+tokenizers = { version = "0.21", features = ["onig"] }
+rand = "0.9"
+
+
+[features]
+# По умолчанию — сборка без CUDA, чтобы бинарь запускался на системах без NVIDIA/CUDA DLL
+default = []
+
+# Включить поддержку CUDA (используется только при сборке с этой фичей)
+cuda = [
+    "candle/cuda",
+    "candle-nn/cuda",
+    "candle-transformers/cuda",
+]
+
+# Flash-Attention поверх CUDA
+flash-attn = [
+    "cuda",
+    "candle-flash-attn",
+]
+
+

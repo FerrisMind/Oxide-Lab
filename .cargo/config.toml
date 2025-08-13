@@ -1,0 +1,7 @@
+[rust-analyzer]
+# Дополнительные настройки для rust-analyzer
+cargo.excludeDirs = ["examples"]
+files.excludeDirs = ["examples", "target", ".cargo"]
+
+
+
