@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900" role="img" aria-label="Векторный макет интерфейса Oxide Lab">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f7f5f2"/>
+      <stop offset="50%" stop-color="#f1efec"/>
+      <stop offset="100%" stop-color="#f7f5f2"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e2c6ff"/>
+      <stop offset="100%" stop-color="#d4b8ff"/>
+    </linearGradient>
+    <linearGradient id="scrollGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(179,205,224,0.8)"/>
+      <stop offset="100%" stop-color="rgba(179,205,224,0.6)"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="rgba(0,0,0,0.08)"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.06)"/>
+    </filter>
+    <style><![CDATA[
+      .text { fill: #2b2a29; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+      .muted { fill: #6d6a6a; }
+      .brand { font-weight: 700; letter-spacing: .3px; }
+      .btn { fill: #f3f3f3; stroke: transparent; }
+      .btn.active { fill: #b3cde0; }
+      .primary { fill: url(#accentGrad); }
+      .card { fill: #ffffff; rx: 16; }
+      .bubble { rx: 12; }
+      .bubble.assistant { fill: #ffffff; stroke: #e8e6e3; }
+      .bubble.user { fill: #e2c6ff; }
+      .dash { stroke: #e8e6e3; stroke-dasharray: 6 6; fill: #faf9f7; }
+      .stroke-muted { stroke: #d9d6d2; }
+      .accent { fill: #b3cde0; }
+      .scrollbar { fill: rgba(179,205,224,0.7); }
+      .kbd { fill: #f3f3f3; stroke: #e0dfdc; }
+    ]]></style>
+  </defs>
+
+  <!-- Фон -->
+  <rect x="0" y="0" width="1440" height="900" fill="url(#bgGrad)"/>
+
+  <!-- Верхняя шапка приложения -->
+  <g transform="translate(48,32)">
+    <!-- Бренд -->
+    <g transform="translate(0,0)">
+      <!-- Иконка-эмблема -->
+      <g transform="translate(0,2)">
+        <rect x="0" y="0" width="24" height="24" rx="6" class="accent"/>
+        <path d="M6 7 L12 4 L18 7 L18 13 L12 16 L6 13 Z" fill="#ffffff" opacity="0.9"/>
+      </g>
+      <text x="36" y="20" class="text brand" font-size="18">Oxide Lab</text>
+    </g>
+
+    <!-- Оконные кнопки справа -->
+    <g transform="translate(1240,4)">
+      <circle cx="10" cy="10" r="10" fill="#f0f0f0"/>
+      <rect x="5" y="9" width="10" height="2" rx="1" class="text" opacity=".7"/>
+    </g>
+    <g transform="translate(1280,4)">
+      <circle cx="10" cy="10" r="10" fill="#f0f0f0"/>
+      <rect x="6" y="6" width="8" height="8" rx="1.5" class="text" opacity=".7"/>
+    </g>
+    <g transform="translate(1320,4)">
+      <circle cx="10" cy="10" r="10" fill="#f0f0f0"/>
+      <path d="M6 6 L14 14 M14 6 L6 14" stroke="#2b2a29" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+    </g>
+  </g>
+
+  <!-- Основная область -->
+  <g transform="translate(48,88)">
+    <!-- Карточка загрузчика модели -->
+    <g filter="url(#cardShadow)">
+      <rect x="0" y="0" width="1344" height="180" class="card"/>
+    </g>
+    <!-- Заголовок -->
+    <text x="24" y="36" class="text" font-size="20" font-weight="700">Загрузка модели</text>
+
+    <!-- Переключатель формата -->
+    <g transform="translate(24,56)">
+      <rect x="0" y="0" width="72" height="32" rx="10" class="btn active"/>
+      <text x="20" y="21" class="text" font-size="14">GGUF</text>
+    </g>
+
+    <!-- Поля выбора файлов -->
+    <g transform="translate(24,100)">
+      <rect x="0" y="0" width="520" height="36" rx="10" fill="#fcfbfa" stroke="#e8e6e3"/>
+      <text x="12" y="23" class="muted" font-size="13">Путь к модели (.gguf)</text>
+      <rect x="532" y="0" width="110" height="36" rx="10" class="btn"/>
+      <text x="568" y="23" class="text" font-size="13">Выбрать</text>
+
+      <g transform="translate(680,0)">
+        <rect x="0" y="0" width="520" height="36" rx="10" fill="#fcfbfa" stroke="#e8e6e3"/>
+        <text x="12" y="23" class="muted" font-size="13">Путь к токенизатору (.json)</text>
+        <rect x="532" y="0" width="110" height="36" rx="10" class="btn"/>
+        <text x="568" y="23" class="text" font-size="13">Выбрать</text>
+      </g>
+    </g>
+
+    <!-- Кнопка действия и прогресс -->
+    <g transform="translate(24,148)">
+      <rect x="0" y="0" width="140" height="36" rx="12" class="primary"/>
+      <text x="28" y="23" class="text" font-size="14" fill="#3a2f4f">Загрузить</text>
+
+      <!-- Прогресс-бар -->
+      <rect x="168" y="8" width="300" height="20" rx="10" fill="#f3f3f3"/>
+      <rect x="168" y="8" width="160" height="20" rx="10" fill="#b3cde0"/>
+      <text x="476" y="23" class="muted" font-size="12">Прогресс: 53%</text>
+    </g>
+  </g>
+
+  <!-- Чат -->
+  <g transform="translate(48,300)">
+    <g filter="url(#cardShadow)">
+      <rect x="0" y="0" width="1344" height="552" class="card"/>
+    </g>
+
+    <!-- Сообщения -->
+    <g transform="translate(24,24)">
+      <rect x="0" y="0" width="1296" height="420" rx="12" class="dash"/>
+      <!-- Скроллбар (декоративно) -->
+      <rect x="1296" y="8" width="8" height="404" rx="4" fill="transparent"/>
+      <rect x="1296" y="120" width="8" height="120" rx="4" class="scrollbar"/>
+
+      <!-- Пустое состояние (если нужно) -->
+      <!-- <text x="520" y="210" class="muted" font-size="14">Нет сообщений. Напишите что-нибудь…</text> -->
+
+      <!-- Баблы сообщений -->
+      <g transform="translate(16,16)">
+        <!-- Assistant -->
+        <rect x="0" y="0" width="520" height="64" class="bubble assistant"/>
+        <text x="16" y="26" class="text" font-size="14">Привет! Я готов помочь. Чем займёмся?</text>
+      </g>
+      <g transform="translate(760,96)">
+        <!-- User -->
+        <rect x="0" y="0" width="520" height="64" class="bubble user"/>
+        <text x="16" y="26" class="text" font-size="14">Загрузи модель и начнём тест диалога.</text>
+      </g>
+      <g transform="translate(16,176)">
+        <!-- Assistant (длиннее, многострочный) -->
+        <rect x="0" y="0" width="680" height="96" class="bubble assistant"/>
+        <text x="16" y="26" class="text" font-size="14">Отлично. Выберите файлы модели и токенизатора выше и нажмите «Загрузить». После загрузки я буду отвечать в этом окне.</text>
+      </g>
+    </g>
+
+    <!-- Композер -->
+    <g transform="translate(24,462)">
+      <rect x="0" y="0" width="1080" height="66" rx="12" fill="#fcfbfa" stroke="#e8e6e3"/>
+      <text x="16" y="40" class="muted" font-size="14">Напишите сообщение...</text>
+
+      <!-- Кнопки справа -->
+      <g transform="translate(1100,0)">
+        <rect x="0" y="0" width="64" height="66" rx="12" class="btn"/>
+        <g transform="translate(20,18)">
+          <rect x="0" y="8" width="24" height="2.5" rx="1.2" class="text" opacity=".7"/>
+          <rect x="0" y="16" width="24" height="2.5" rx="1.2" class="text" opacity=".7"/>
+          <rect x="0" y="0" width="24" height="2.5" rx="1.2" class="text" opacity=".7"/>
+        </g>
+      </g>
+      <g transform="translate(1172,0)">
+        <rect x="0" y="0" width="64" height="66" rx="12" class="btn"/>
+        <!-- Микрофон -->
+        <g transform="translate(22,18)">
+          <rect x="6" y="2" width="12" height="20" rx="6" class="text" opacity=".7"/>
+          <rect x="0" y="24" width="24" height="2.5" rx="1.2" class="text" opacity=".7"/>
+          <rect x="10.5" y="10" width="3" height="14" class="card"/>
+        </g>
+      </g>
+      <g transform="translate(1244,0)">
+        <rect x="0" y="0" width="96" height="66" rx="12" class="primary"/>
+        <!-- Самолётик (отправить) -->
+        <g transform="translate(32,21)">
+          <path d="M0 0 L36 12 L0 24 L6 14 L20 12 L6 10 Z" fill="#3a2f4f" opacity="0.9"/>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- Подсказки клавиш (декор) -->
+  <g transform="translate(48,872)">
+    <rect x="0" y="-28" width="72" height="24" rx="6" class="kbd"/>
+    <text x="16" y="-12" class="text" font-size="12">Shift+Enter</text>
+    <text x="92" y="-12" class="muted" font-size="12">— новая строка</text>
+  </g>
+</svg>
