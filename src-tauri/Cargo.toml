@@ -31,7 +31,7 @@ candle = { package = "candle-core", git = "https://github.com/huggingface/candle
 candle-nn = { git = "https://github.com/huggingface/candle.git", default-features = false, features = [] }
 candle-transformers = { git = "https://github.com/huggingface/candle.git", default-features = false, features = [] }
 # Опционально: flash-attn (включается через нашу feature `flash-attn` ниже)
-candle-flash-attn = { path = "../examples/candle-flash-attn", optional = true }
+candle-flash-attn = { git = "https://github.com/huggingface/candle.git", optional = true }
 tokenizers = { version = "0.21", features = ["onig"] }
 rand = "0.9"
 

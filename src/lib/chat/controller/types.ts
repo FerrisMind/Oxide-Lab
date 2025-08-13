@@ -2,7 +2,6 @@ import type { ChatMessage } from "$lib/chat/types";
 
 export type ChatControllerCtx = {
   get modelPath(): string; set modelPath(v: string);
-  get tokenizerPath(): string; set tokenizerPath(v: string);
   get prompt(): string; set prompt(v: string);
   get messages(): ChatMessage[]; set messages(v: ChatMessage[]);
   get messagesEl(): HTMLDivElement | null;

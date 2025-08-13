@@ -11,6 +11,7 @@ use candle::quantized::gguf_file;
 use serde::{Deserialize, Serialize};
 use state::{ModelState, SharedState};
 use tokenizers::Tokenizer;
+use std::collections::HashMap;
 use crate::model::qwen3_offload::ModelWeights as Qwen3Gguf;
 
 fn device_label(d: &Device) -> &'static str {
@@ -19,6 +20,59 @@ fn device_label(d: &Device) -> &'static str {
         Device::Cuda(_) => "CUDA",
         Device::Metal(_) => "Metal",
     }
+}
+
+fn find_tokenizer_json_in_metadata(md: &HashMap<String, gguf_file::Value>) -> Option<String> {
+    for key in [
+        "tokenizer.json",
+        "qwen3.tokenizer_json",
+        "general.tokenizer_json",
+        "tokenizer.ggml",
+        "tokenizer",
+    ] {
+        if let Some(v) = md.get(key) {
+            if let Ok(s) = v.to_string() { return Some(s.clone()); }
+        }
+    }
+    None
+}
+
+fn get_string_array(md: &HashMap<String, gguf_file::Value>, key: &str) -> Option<Vec<String>> {
+    match md.get(key) {
+        Some(gguf_file::Value::Array(vs)) => {
+            let mut out: Vec<String> = Vec::with_capacity(vs.len());
+            for v in vs {
+                if let Ok(s) = v.to_string() { out.push(s.clone()); }
+            }
+            Some(out)
+        }
+        _ => None,
+    }
+}
+
+fn try_reconstruct_tokenizer_from_bpe(md: &HashMap<String, gguf_file::Value>) -> Option<String> {
+    // Некоторые GGUF кладут BPE словарь и merges как строки/массивы; соберём простейший tokenizer.json
+    // Попробуем стандартные ключи GGUF: tokenizer.ggml.tokens / tokenizer.ggml.merges,
+    // а также резервные: tokenizer.vocab / tokenizer.merges / tokenizer.ggml.bpe_merges
+    let vocab_list = get_string_array(md, "tokenizer.ggml.tokens")
+        .or_else(|| get_string_array(md, "tokenizer.vocab"))?;
+    let merges_list = get_string_array(md, "tokenizer.ggml.merges")
+        .or_else(|| get_string_array(md, "tokenizer.ggml.bpe_merges"))
+        .or_else(|| get_string_array(md, "tokenizer.merges"))
+        .unwrap_or_else(|| Vec::new());
+    // Сформируем отображение токен->id по порядку
+    let mut vocab_obj: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    for (i, tok) in vocab_list.iter().enumerate() {
+        vocab_obj.insert(tok.clone(), serde_json::json!(i as u32));
+    }
+    // Простейший JSON для BPE, совместимый с tokenizers
+    let json = serde_json::json!({
+        "version": "1.0",
+        "pre_tokenizer": { "type": "ByteLevel", "add_prefix_space": false, "trim_offsets": true },
+        "decoder": { "type": "ByteLevel", "add_prefix_space": false, "trim_offsets": true },
+        "model": { "type": "BPE", "vocab": vocab_obj, "merges": merges_list },
+    });
+    Some(json.to_string())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,7 +87,7 @@ pub enum DevicePreference {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "format", rename_all = "lowercase")]
 pub enum LoadRequest {
-    // GGUF: путь к .gguf и tokenizer.json
+    // GGUF: путь к .gguf; tokenizer.json и config.json будут прочитаны из метаданных/встроенных секций если доступны
     Gguf {
         model_path: String,
         tokenizer_path: Option<String>,
@@ -79,6 +133,29 @@ fn load_model(state: tauri::State<SharedState>, req: LoadRequest) -> Result<(), 
             let mut file = File::open(&model_path).map_err(|e| e.to_string())?;
             let content = gguf_file::Content::read(&mut file)
                 .map_err(|e| format!("{}", e.with_path(PathBuf::from(model_path.clone()))))?;
+            // Попытка загрузить tokenizer из GGUF метаданных/встроенных blobs (до передачи content в модель)
+            let tokenizer = match tokenizer_path.as_ref() {
+                Some(p) => Tokenizer::from_file(p).map_err(|e| e.to_string())?,
+                None => {
+                    // 1) Поиск JSON в строковых метаданных
+                    let md = &content.metadata;
+                    if let Some(json) = find_tokenizer_json_in_metadata(md) {
+                        Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string())?
+                    } else if let Some(json) = try_reconstruct_tokenizer_from_bpe(md) {
+                        Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string())?
+                    } else {
+                        return Err("tokenizer_path is required for gguf (no embedded tokenizer found)".into());
+                    }
+                }
+            };
+            // Сохраним config.json если присутствует в метаданных
+            if let Some(gg) = content.metadata.get("config.json").and_then(|v| v.to_string().ok()).cloned()
+                .or_else(|| content.metadata.get("tokenizer.ggml.config").and_then(|v| v.to_string().ok()).cloned())
+                .or_else(|| content.metadata.get("general.config_json").and_then(|v| v.to_string().ok()).cloned())
+            {
+                guard.model_config_json = Some(gg);
+            }
+
             // Передаём gpu/cpu, чтобы при загрузке модель размесила веса на устройства с автоматическим fallback на CPU при OOM
             let model = Qwen3Gguf::from_gguf(
                 content,
@@ -90,19 +167,13 @@ fn load_model(state: tauri::State<SharedState>, req: LoadRequest) -> Result<(), 
             )
                 .map_err(|e| e.to_string())?;
 
-            let tp = tokenizer_path.clone();
-            let tokenizer = match tp.as_ref() {
-                Some(p) => Tokenizer::from_file(p).map_err(|e| e.to_string())?,
-                None => return Err("tokenizer_path is required for gguf".into()),
-            };
-
             guard.gguf_model = Some(model);
             guard.gguf_file = Some(file);
             guard.tokenizer = Some(tokenizer);
             let ctx = if context_length == 0 { 1 } else { context_length };
             guard.context_length = ctx;
             guard.model_path = Some(model_path);
-            guard.tokenizer_path = tp;
+            guard.tokenizer_path = tokenizer_path;
             println!("[load] gguf loaded, context_length={}", guard.context_length);
         }
     }

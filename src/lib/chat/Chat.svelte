@@ -51,7 +51,7 @@
 
   const controller = createChatController({
     get modelPath() { return modelPath; }, set modelPath(v) { modelPath = v; },
-    get tokenizerPath() { return tokenizerPath; }, set tokenizerPath(v) { tokenizerPath = v; },
+    
     get prompt() { return prompt; }, set prompt(v) { prompt = v; },
     get messages() { return messages; }, set messages(v) { messages = v; },
     get messagesEl() { return messagesEl; },
@@ -97,7 +97,7 @@
   onDestroy(() => controller.destroy());
 
   const pickModel = controller.pickModel;
-  const pickTokenizer = controller.pickTokenizer;
+  
 </script>
 
 <main class="wrap">
@@ -105,7 +105,6 @@
   <LoaderPanel
     bind:format
     bind:modelPath
-    bind:tokenizerPath
     bind:enable_thinking
     bind:n_gpu_layers
     bind:ctx_limit_value
@@ -119,7 +118,6 @@
     bind:busy
     bind:isLoaded
     onPickModel={pickModel}
-    onPickTokenizer={pickTokenizer}
     onMainAction={() => (isLoadingModel ? cancelLoading() : (isLoaded ? unloadGGUF() : loadGGUF()))}
   >
     <!-- Параметры инференса -->

@@ -40,16 +40,14 @@
   }
 
   async function loadGGUF() {
-    if (!modelPath || !tokenizerPath) {
-      await message("Укажите путь к .gguf и tokenizer.json", { title: "Загрузка модели", kind: "warning" });
+    if (!modelPath) {
+      await message("Укажите путь к .gguf", { title: "Загрузка модели", kind: "warning" });
       return;
     }
     busy = true; isLoaded = false; errorText = "";
     try {
       await ensureListener();
-      await invoke("load_model", {
-        req: { format: "gguf", model_path: modelPath, tokenizer_path: tokenizerPath }
-      });
+      await invoke("load_model", { req: { format: "gguf", model_path: modelPath, tokenizer_path: null } });
       isLoaded = true;
     } catch (e) {
       const err = String(e ?? "Unknown error");

@@ -13,6 +13,7 @@ pub(crate) struct ModelState {
     pub(crate) context_length: usize,
     pub(crate) model_path: Option<String>,
     pub(crate) tokenizer_path: Option<String>,
+    pub(crate) model_config_json: Option<String>,
     pub(crate) fallback_to_cpu_on_oom: bool,
     pub(crate) n_gpu_layers: usize,
 }
@@ -27,6 +28,7 @@ impl ModelState {
             context_length: 4096,
             model_path: None,
             tokenizer_path: None,
+            model_config_json: None,
             fallback_to_cpu_on_oom: true,
             n_gpu_layers: 0,
         }

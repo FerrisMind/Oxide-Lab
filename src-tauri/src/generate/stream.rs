@@ -37,20 +37,23 @@ fn generate_stream_impl(
     };
 
     let mut tos = TokenOutputStream::new(tokenizer);
-    // Базовые дефолты семплинга (не зависят от режима размышлений; управление теперь через теги /think и /no_think в промпте)
+    let is_no_think = req.prompt.contains("<think>") && req.prompt.contains("</think>");
+    // Дефолты семплинга не зависят от режима размышлений.
     let (def_temp, def_top_p, def_min_p, def_top_k) = (0.7_f64, Some(0.9_f64), Some(0.0_f64), Some(20_usize));
-    // Вычисляем эффективные значения
+    // Вычисляем эффективные значения. Если пользовательские параметры включены,
+    // не используем дефолты, а берём только переданные параметры; для температуры
+    // нейтральным значением считаем 1.0.
     let temperature: f64 = if req.use_custom_params {
-        req.temperature.unwrap_or(def_temp)
+        req.temperature.unwrap_or(1.0_f64)
     } else { def_temp };
-    let top_p: Option<f64> = if req.use_custom_params { req.top_p.or(def_top_p) } else { def_top_p };
-    let top_k: Option<usize> = if req.use_custom_params { req.top_k.or(def_top_k) } else { def_top_k };
-    let min_p: Option<f64> = if req.use_custom_params { req.min_p.or(def_min_p) } else { def_min_p };
-    // Включаем лёгкий repeat_penalty по умолчанию, чтобы уменьшить навязчивое повторение фраз
+    let top_p: Option<f64> = if req.use_custom_params { req.top_p } else { def_top_p };
+    let top_k: Option<usize> = if req.use_custom_params { req.top_k } else { def_top_k };
+    let min_p: Option<f64> = if req.use_custom_params { req.min_p } else { def_min_p };
+    // Включаем лёгкий repeat_penalty по умолчанию только когда пользовательские параметры выключены
     let repeat_penalty: Option<f32> = if req.use_custom_params { req.repeat_penalty } else { Some(1.1_f32) };
     println!(
-        "[infer] request: prompt_len={}, temperature={:.3}, top_k={:?}, top_p={:?}, min_p={:?}, repeat_penalty={:?}, repeat_last_n={}, use_custom_params={}",
-        req.prompt.len(), temperature, top_k, top_p, min_p, repeat_penalty, req.repeat_last_n, req.use_custom_params
+        "[infer] request: prompt_len={}, temperature={:.3}, top_k={:?}, top_p={:?}, min_p={:?}, repeat_penalty={:?}, repeat_last_n={}, use_custom_params={}, no_think_detected={}",
+        req.prompt.len(), temperature, top_k, top_p, min_p, repeat_penalty, req.repeat_last_n, req.use_custom_params, is_no_think
     );
     let _ = app.emit("token", String::new());
 
@@ -108,22 +111,35 @@ fn generate_stream_impl(
         LogitsProcessor::from_sampling(42, sampling)
     };
 
-    let mut log_min_p_once = true;
+    let mut log_min_p_prints = 0usize;
     let mut apply_min_p_mask = |logits: &Tensor| -> Result<Tensor, String> {
         let min_p = match min_p { Some(v) if v > 0.0 && v <= 1.0 => v as f32, _ => return Ok(logits.clone()) };
         if temperature <= 0.0 {
-            if log_min_p_once { println!("[infer] min_p ignored because temperature <= 0"); log_min_p_once = false; }
+            if log_min_p_prints < 5 { println!("[infer] min_p ignored because temperature <= 0"); log_min_p_prints += 1; }
             return Ok(logits.clone());
         }
         let t = temperature as f32;
         let vals: Vec<f32> = logits.to_vec1::<f32>().map_err(|e| e.to_string())?;
         if vals.is_empty() { return Ok(logits.clone()); }
         let mut max_val = f32::NEG_INFINITY;
-        for &v in &vals { if v > max_val { max_val = v; } }
+        let mut second_val = f32::NEG_INFINITY;
+        for &v in &vals {
+            if v > max_val {
+                second_val = max_val;
+                max_val = v;
+            } else if v > second_val {
+                second_val = v;
+            }
+        }
         let threshold = max_val + t * (min_p.ln());
         let mut kept = 0usize;
         let masked: Vec<f32> = vals.into_iter().map(|v| { if v >= threshold { kept += 1; v } else { f32::NEG_INFINITY } }).collect();
-        if log_min_p_once { println!("[infer] min_p applied: p={:.3}, temp={:.3}, threshold={:.4}, kept={} of {}", min_p, t, threshold, kept, masked.len()); log_min_p_once = false; }
+        if log_min_p_prints < 5 {
+            let delta = max_val - threshold;
+            let gap12 = max_val - second_val;
+            println!("[infer] min_p applied: p={:.3}, temp={:.3}, max={:.4}, threshold={:.4}, delta={:.4}, gap12={:.4}, kept={} of {}", min_p, t, max_val, threshold, delta, gap12, kept, masked.len());
+            log_min_p_prints += 1;
+        }
         Tensor::new(masked.as_slice(), logits.device()).map_err(|e| e.to_string())
     };
 

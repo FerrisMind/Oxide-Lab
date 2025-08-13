@@ -1,3 +1,7 @@
+[build]
+# Исключаем папку examples из сборки по умолчанию
+exclude = ["examples"]
+
 [rust-analyzer]
 # Дополнительные настройки для rust-analyzer
 cargo.excludeDirs = ["examples"]

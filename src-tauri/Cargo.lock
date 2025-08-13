@@ -488,34 +488,10 @@ dependencies = [
 [[package]]
 name = "candle-core"
 version = "0.9.1"
-dependencies = [
- "byteorder",
- "candle-kernels 0.9.1",
- "cudarc",
- "float8",
- "gemm 0.17.1",
- "half",
- "memmap2",
- "num-traits",
- "num_cpus",
- "rand 0.9.2",
- "rand_distr",
- "rayon",
- "safetensors",
- "thiserror 1.0.69",
- "ug",
- "ug-cuda",
- "yoke 0.7.5",
- "zip",
-]
-
-[[package]]
-name = "candle-core"
-version = "0.9.1"
 source = "git+https://github.com/huggingface/candle.git#be4f920f35b99af5919a86c0a2e08a78f3f63567"
 dependencies = [
  "byteorder",
- "candle-kernels 0.9.1 (git+https://github.com/huggingface/candle.git)",
+ "candle-kernels",
  "cudarc",
  "float8",
  "gemm 0.17.1",
@@ -537,18 +513,12 @@ dependencies = [
 [[package]]
 name = "candle-flash-attn"
 version = "0.9.1"
+source = "git+https://github.com/huggingface/candle.git#be4f920f35b99af5919a86c0a2e08a78f3f63567"
 dependencies = [
  "anyhow",
  "bindgen_cuda",
- "candle-core 0.9.1",
+ "candle-core",
  "half",
-]
-
-[[package]]
-name = "candle-kernels"
-version = "0.9.1"
-dependencies = [
- "bindgen_cuda",
 ]
 
 [[package]]
@@ -564,7 +534,7 @@ name = "candle-nn"
 version = "0.9.1"
 source = "git+https://github.com/huggingface/candle.git#be4f920f35b99af5919a86c0a2e08a78f3f63567"
 dependencies = [
- "candle-core 0.9.1 (git+https://github.com/huggingface/candle.git)",
+ "candle-core",
  "half",
  "num-traits",
  "rayon",
@@ -579,7 +549,7 @@ version = "0.9.1"
 source = "git+https://github.com/huggingface/candle.git#be4f920f35b99af5919a86c0a2e08a78f3f63567"
 dependencies = [
  "byteorder",
- "candle-core 0.9.1 (git+https://github.com/huggingface/candle.git)",
+ "candle-core",
  "candle-nn",
  "fancy-regex",
  "num-traits",
@@ -1087,7 +1057,7 @@ version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
- "libloading 0.8.8",
+ "libloading 0.7.4",
 ]
 
 [[package]]
@@ -2961,7 +2931,7 @@ version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77e878c846a8abae00dd069496dbe8751b16ac1c3d6bd2a7283a938e8228f90d"
 dependencies = [
- "proc-macro-crate 3.3.0",
+ "proc-macro-crate 1.3.1",
  "proc-macro2",
  "quote",
  "syn 2.0.104",
@@ -3257,7 +3227,7 @@ name = "oxide-lab"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "candle-core 0.9.1 (git+https://github.com/huggingface/candle.git)",
+ "candle-core",
  "candle-flash-attn",
  "candle-nn",
  "candle-transformers",

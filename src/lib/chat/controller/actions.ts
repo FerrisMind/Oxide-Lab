@@ -20,8 +20,8 @@ export function createActions(ctx: ChatControllerCtx) {
   }
 
   async function loadGGUF() {
-    if (!ctx.modelPath || !ctx.tokenizerPath) {
-      await message("Укажите путь к .gguf и tokenizer.json", { title: "Загрузка модели", kind: "warning" });
+    if (!ctx.modelPath) {
+      await message("Укажите путь к .gguf", { title: "Загрузка модели", kind: "warning" });
       return;
     }
     ctx.isLoadingModel = true;
@@ -43,7 +43,7 @@ export function createActions(ctx: ChatControllerCtx) {
       ctx.loadingStage = "model";
       ctx.loadingProgress = 30;
       // Выбираем устройство автоматически: если есть CUDA — будет использовано, иначе CPU
-      await invoke("load_model", { req: { format: "gguf", model_path: ctx.modelPath, tokenizer_path: ctx.tokenizerPath, context_length, n_gpu_layers, device: { kind: "auto" }, fallback_to_cpu_on_oom: true } });
+      await invoke("load_model", { req: { format: "gguf", model_path: ctx.modelPath, tokenizer_path: null, context_length, n_gpu_layers, device: { kind: "auto" }, fallback_to_cpu_on_oom: true } });
       if (ctx.isCancelling) return;
       ctx.loadingStage = "tokenizer";
       ctx.loadingProgress = 70;
@@ -190,16 +190,13 @@ export function createActions(ctx: ChatControllerCtx) {
     if (typeof selected === "string") ctx.modelPath = selected;
   }
 
-  async function pickTokenizer() {
-    const selected = await open({ multiple: false, filters: [{ name: "JSON", extensions: ["json"] }] });
-    if (typeof selected === "string") ctx.tokenizerPath = selected;
-  }
+  // Удалён выбор токенизатора: он загружается автоматически из GGUF
 
   function destroy() {
     stream.destroy();
   }
 
-  return { cancelLoading, loadGGUF, unloadGGUF, handleSend, generateFromHistory, stopGenerate, pickModel, pickTokenizer, destroy };
+  return { cancelLoading, loadGGUF, unloadGGUF, handleSend, generateFromHistory, stopGenerate, pickModel, destroy };
 }
 
 

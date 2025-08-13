@@ -11,7 +11,8 @@
 
   export let format: "gguf" = "gguf";
   export let modelPath = "";
-  export let tokenizerPath = "";
+  // deprecated: токенизатор берётся из GGUF
+  // export let tokenizerPath = "";
   export let enable_thinking = false;
   export let ctx_limit_value = 4096;
   export let n_gpu_layers = 0;
@@ -27,7 +28,6 @@
 
   // Коллбеки, реализуются родителем
   export let onPickModel: () => void;
-  export let onPickTokenizer: () => void;
   export let onMainAction: () => void;
 </script>
 
@@ -41,30 +41,13 @@
       <label for="gguf-model">GGUF файл</label>
       <div class="file-row">
         <div class="input-with-button">
-          <input id="gguf-model" placeholder="C:\models\qwen3.gguf" bind:value={modelPath} readonly />
+          <input id="gguf-model" placeholder="C:\\models\\qwen3.gguf" bind:value={modelPath} readonly />
           <button
             type="button"
             class="inside-btn"
             on:click={onPickModel}
             title="Выбрать файл модели"
             aria-label="Выбрать файл модели"
-          >
-            <Binoculars size={18} weight="bold" />
-          </button>
-        </div>
-      </div>
-    </div>
-    <div class="field">
-      <label for="gguf-tokenizer">tokenizer.json</label>
-      <div class="file-row">
-        <div class="input-with-button">
-          <input id="gguf-tokenizer" placeholder="C:\models\tokenizer.json" bind:value={tokenizerPath} readonly />
-          <button
-            type="button"
-            class="inside-btn"
-            on:click={onPickTokenizer}
-            title="Выбрать файл токенизатора"
-            aria-label="Выбрать файл токенизатора"
           >
             <Binoculars size={18} weight="bold" />
           </button>
@@ -94,7 +77,7 @@
     <button 
       class="primary"
       on:click={onMainAction}
-      disabled={busy || (!isLoaded && (!modelPath || !tokenizerPath))}
+      disabled={busy || (!isLoaded && (!modelPath))}
       style={(isLoadingModel || isUnloadingModel) ? `--progress-width: ${isLoadingModel ? loadingProgress : unloadingProgress}%` : ''}
       class:loading={isLoadingModel || isUnloadingModel}
       class:cancelling={isCancelling}
@@ -110,7 +93,7 @@
               {#if loadingStage === "model"}
                 Загрузка модели... {Math.round(loadingProgress)}%
               {:else if loadingStage === "tokenizer"}
-                Загрузка токенизатора... {Math.round(loadingProgress)}%
+                Инициализация токенизатора из GGUF... {Math.round(loadingProgress)}%
               {:else if loadingStage === "complete"}
                 Завершено! {Math.round(loadingProgress)}%
               {/if}
@@ -137,7 +120,7 @@
           {:else if loadingStage === "model"}
             <span class="stage-icon"><Package size={16} weight="bold" /></span> Загрузка модели GGUF в память...
           {:else if loadingStage === "tokenizer"}
-            <span class="stage-icon"><TextT size={16} weight="bold" /></span> Инициализация токенизатора...
+            <span class="stage-icon"><TextT size={16} weight="bold" /></span> Инициализация токенизатора из GGUF...
           {:else if loadingStage === "complete"}
             <span class="stage-icon"><CheckCircle size={16} weight="bold" /></span> Модель и токенизатор готовы к работе!
           {/if}
