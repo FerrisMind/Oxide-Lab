@@ -2,11 +2,10 @@ use std::fs::File;
 use std::sync::{Arc, Mutex};
 use candle::Device;
 use tokenizers::Tokenizer;
-use crate::models::qwen3::ModelWeights as Qwen3Gguf;
 
-/// Глобальное состояние модели и токенизатора
-pub(crate) struct ModelState {
-    pub(crate) gguf_model: Option<Qwen3Gguf>,
+/// Универсальное состояние для любой модели
+pub(crate) struct ModelState<M> {
+    pub(crate) gguf_model: Option<M>,
     pub(crate) gguf_file: Option<File>,
     pub(crate) tokenizer: Option<Tokenizer>,
     pub(crate) device: Device,
@@ -14,9 +13,10 @@ pub(crate) struct ModelState {
     pub(crate) model_path: Option<String>,
     pub(crate) tokenizer_path: Option<String>,
     pub(crate) model_config_json: Option<String>,
+    pub(crate) chat_template: Option<String>,
 }
 
-impl ModelState {
+impl<M> ModelState<M> {
     pub(crate) fn new(device: Device) -> Self {
         Self {
             gguf_model: None,
@@ -27,10 +27,11 @@ impl ModelState {
             model_path: None,
             tokenizer_path: None,
             model_config_json: None,
+            chat_template: None,
         }
     }
 }
 
-pub(crate) type SharedState = Arc<Mutex<ModelState>>;
+pub(crate) type SharedState<M> = Arc<Mutex<ModelState<M>>>;
 
 

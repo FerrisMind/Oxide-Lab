@@ -27,8 +27,12 @@ export type ChatControllerCtx = {
   get ctx_limit_value(): number; set ctx_limit_value(v: number);
   get enable_thinking(): boolean; set enable_thinking(v: boolean);
   get use_custom_params(): boolean; set use_custom_params(v: boolean);
-  // GPU offload UI
-  get n_gpu_layers(): number; set n_gpu_layers(v: number);
+  // Устройство инференса
+  get use_gpu(): boolean; set use_gpu(v: boolean);
+  get cuda_available(): boolean; set cuda_available(v: boolean);
+  get cuda_build(): boolean; set cuda_build(v: boolean);
+  get current_device(): string; set current_device(v: string);
+  // Offloading удалён
 };
 
 

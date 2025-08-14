@@ -124,7 +124,7 @@ Download a model in `.gguf` format and `tokenizer.json` file:
 - Increase context for working with long documents
 
 ### ⚡ **Performance optimization:**
-- Currently works only on CPU+RAM. GPU support (CUDA) is planned for the future
+- Supports CPU and CUDA (when available)
 
 ### 🎨 **Creative usage:**
 - Enable thinking for text analysis and problem solving

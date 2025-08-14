@@ -22,6 +22,11 @@
   let format: "gguf" = "gguf";
   let isLoaded = false;
   let errorText = "";
+  // Устройство
+  let use_gpu: boolean = false; // CPU по умолчанию
+  let cuda_available: boolean = false;
+  let cuda_build: boolean = false;
+  let current_device: string = "CPU";
   
   // Состояние загрузки модели
   let isLoadingModel = false;
@@ -46,8 +51,7 @@
   let enable_thinking: boolean = false;
   // Режим использования пользовательских параметров
   let use_custom_params: boolean = false;
-  // Кол-во слоёв на GPU (ползунок)
-  let n_gpu_layers: number = 0;
+  // Убран offloading: слои на GPU больше не настраиваются
 
   const controller = createChatController({
     get modelPath() { return modelPath; }, set modelPath(v) { modelPath = v; },
@@ -77,10 +81,15 @@
     get ctx_limit_value() { return ctx_limit_value; }, set ctx_limit_value(v) { ctx_limit_value = v; },
     get enable_thinking() { return enable_thinking; }, set enable_thinking(v) { enable_thinking = v; },
     get use_custom_params() { return use_custom_params; }, set use_custom_params(v) { use_custom_params = v; },
-    get n_gpu_layers() { return n_gpu_layers; }, set n_gpu_layers(v) { n_gpu_layers = v; },
+    get use_gpu() { return use_gpu; }, set use_gpu(v) { use_gpu = v; },
+    get cuda_available() { return cuda_available; }, set cuda_available(v) { cuda_available = v; },
+    get cuda_build() { return cuda_build; }, set cuda_build(v) { cuda_build = v; },
+    get current_device() { return current_device; }, set current_device(v) { current_device = v; },
   });
 
   const cancelLoading = controller.cancelLoading;
+  const refreshDeviceInfo = controller.refreshDeviceInfo;
+  const setDeviceByToggle = controller.setDeviceByToggle;
 
   const loadGGUF = controller.loadGGUF;
 
@@ -106,7 +115,6 @@
     bind:format
     bind:modelPath
     bind:enable_thinking
-    bind:n_gpu_layers
     bind:ctx_limit_value
     bind:isLoadingModel
     bind:isUnloadingModel
@@ -117,6 +125,11 @@
     bind:errorText
     bind:busy
     bind:isLoaded
+    bind:use_gpu
+    bind:cuda_available
+    bind:cuda_build
+    bind:current_device
+    on:device-toggle={(e) => setDeviceByToggle(!!e.detail?.checked)}
     onPickModel={pickModel}
     onMainAction={() => (isLoadingModel ? cancelLoading() : (isLoaded ? unloadGGUF() : loadGGUF()))}
   >

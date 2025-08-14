@@ -1,11 +1,50 @@
 import { invoke } from "@tauri-apps/api/core";
+// Экспортируем invoke/пробу CUDA в глобальную область для отладки из DevTools
+try {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).__invoke = invoke;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).__probeCuda = () => invoke("probe_cuda");
+} catch {}
 import { open, message } from "@tauri-apps/plugin-dialog";
 import type { ChatControllerCtx } from "./types";
 import { createStreamListener } from "./listener";
-import { buildQwenPromptForChat } from "$lib/chat/prompts";
+import { buildPromptWithChatTemplate } from "$lib/chat/prompts";
 
 export function createActions(ctx: ChatControllerCtx) {
   const stream = createStreamListener(ctx);
+
+  async function refreshDeviceInfo() {
+    try {
+      const info = await invoke<any>("get_device_info");
+      ctx.cuda_build = !!info?.cuda_build;
+      ctx.cuda_available = !!info?.cuda_available;
+      ctx.current_device = String(info?.current ?? "CPU");
+      // CPU по умолчанию; если включён тумблер и CUDA доступна — активируем GPU
+      ctx.use_gpu = ctx.cuda_available && ctx.current_device === "CUDA";
+    } catch {}
+  }
+
+  async function setDeviceByToggle(desired?: boolean) {
+    try {
+      if (typeof desired !== 'undefined') {
+        ctx.use_gpu = !!desired;
+      }
+      if (ctx.use_gpu) {
+        // Пытаемся переключиться на CUDA, даже если предварительная проверка says false,
+        // чтобы получить конкретную ошибку из backend (диагностика проблем PATH/DLL)
+        await invoke("set_device", { pref: { kind: "cuda", index: 0 } });
+      } else {
+        await invoke("set_device", { pref: { kind: "cpu" } });
+      }
+      await refreshDeviceInfo();
+    } catch (e) {
+      console.warn("[device] toggle switch failed", e);
+    }
+  }
+
+  // Инициализируем информацию об устройстве при старте
+  void refreshDeviceInfo();
 
   function cancelLoading() {
     ctx.isCancelling = true;
@@ -37,13 +76,20 @@ export function createActions(ctx: ChatControllerCtx) {
       }, 150);
       await stream.ensureListener();
       const context_length = Math.max(1, Math.floor(ctx.ctx_limit_value));
-      const n_gpu_layers = Math.max(0, Math.floor((ctx as any).n_gpu_layers ?? 0));
-      console.log("[load] frontend params", { context_length, n_gpu_layers });
+      console.log("[load] frontend params", { context_length });
       if (ctx.isCancelling) return;
       ctx.loadingStage = "model";
       ctx.loadingProgress = 30;
-      // Выбираем устройство автоматически: если есть CUDA — будет использовано, иначе CPU
-      await invoke("load_model", { req: { format: "gguf", model_path: ctx.modelPath, tokenizer_path: null, context_length, n_gpu_layers, device: { kind: "auto" }, fallback_to_cpu_on_oom: true } });
+      // CPU по умолчанию. Если пользователь явно включил GPU и он доступен — переключим на CUDA после загрузки.
+      await invoke("load_model", { req: { format: "gguf", model_path: ctx.modelPath, tokenizer_path: null, context_length, device: { kind: "cpu" } } });
+      await refreshDeviceInfo();
+      if (ctx.use_gpu && ctx.cuda_available) {
+        try {
+          await invoke("set_device", { pref: { kind: "cuda", index: 0 } });
+        } catch (e) {
+          console.warn("[device] switch to CUDA failed", e);
+        }
+      }
       if (ctx.isCancelling) return;
       ctx.loadingStage = "tokenizer";
       ctx.loadingProgress = 70;
@@ -144,7 +190,7 @@ export function createActions(ctx: ChatControllerCtx) {
           break;
         }
       }
-      const chatPrompt = buildQwenPromptForChat(hist as any);
+      const chatPrompt = await buildPromptWithChatTemplate(hist as any);
       console.log("[infer] frontend params", {
         use_custom_params: ctx.use_custom_params,
         temperature: ctx.use_custom_params && ctx.temperature_enabled ? ctx.temperature : null,
@@ -196,7 +242,7 @@ export function createActions(ctx: ChatControllerCtx) {
     stream.destroy();
   }
 
-  return { cancelLoading, loadGGUF, unloadGGUF, handleSend, generateFromHistory, stopGenerate, pickModel, destroy };
+  return { cancelLoading, loadGGUF, unloadGGUF, handleSend, generateFromHistory, stopGenerate, pickModel, destroy, refreshDeviceInfo, setDeviceByToggle };
 }
 
 

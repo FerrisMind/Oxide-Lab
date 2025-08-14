@@ -26,31 +26,33 @@ serde_json = "1"
 
 # Candle (ML) and related crates
 anyhow = "1"
-# Отключаем default-features, чтобы не притягивать CUDA/DLL по умолчанию
-candle = { package = "candle-core", git = "https://github.com/huggingface/candle.git", default-features = false, features = [] }
-candle-nn = { git = "https://github.com/huggingface/candle.git", default-features = false, features = [] }
-candle-transformers = { git = "https://github.com/huggingface/candle.git", default-features = false, features = [] }
+# Отключаем default-features; включение CUDA делаем через нашу feature `cuda` ниже
+candle = { package = "candle-core", git = "https://github.com/huggingface/candle.git", default-features = false }
+candle-nn = { git = "https://github.com/huggingface/candle.git", default-features = false }
+candle-transformers = { git = "https://github.com/huggingface/candle.git", default-features = false }
 # Опционально: flash-attn (включается через нашу feature `flash-attn` ниже)
 candle-flash-attn = { git = "https://github.com/huggingface/candle.git", optional = true }
 tokenizers = { version = "0.21", features = ["onig"] }
 rand = "0.9"
+minijinja = "2"
 
 
 [features]
-# По умолчанию — сборка без CUDA, чтобы бинарь запускался на системах без NVIDIA/CUDA DLL
-default = []
+# По умолчанию — включаем поддержку CUDA в сборке.
+# На системах без CUDA приложение продолжит работать, так как загрузка CUDA происходит динамически,
+# а наш код по умолчанию использует CPU и не обращается к CUDA без явного переключения.
+default = ["cuda"]
 
-# Включить поддержку CUDA (используется только при сборке с этой фичей)
+# Объявление фичи `cuda` (нужно, иначе Cargo ругается, что default ссылается на несуществующую фичу)
 cuda = [
+    # Прокидываем флаг в зависимости candle-*
     "candle/cuda",
     "candle-nn/cuda",
     "candle-transformers/cuda",
 ]
 
-# Flash-Attention поверх CUDA
-flash-attn = [
-    "cuda",
-    "candle-flash-attn",
-]
+# Удобный алиас для включения flash-attn через единую фичу нашего крейта
+flash-attn = ["candle-flash-attn"]
+
 
 

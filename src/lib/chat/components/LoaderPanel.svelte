@@ -9,13 +9,15 @@
   import Binoculars from "phosphor-svelte/lib/Binoculars";
   import CircleNotch from "phosphor-svelte/lib/CircleNotch";
 
+  import { createEventDispatcher } from "svelte";
+  const dispatch = createEventDispatcher();
   export let format: "gguf" = "gguf";
   export let modelPath = "";
   // deprecated: токенизатор берётся из GGUF
   // export let tokenizerPath = "";
   export let enable_thinking = false;
   export let ctx_limit_value = 4096;
-  export let n_gpu_layers = 0;
+  // Убран offloading: настройка слоёв на GPU удалена
   export let isLoadingModel = false;
   export let isUnloadingModel = false;
   export let isCancelling = false;
@@ -25,6 +27,11 @@
   export let errorText = "";
   export let busy = false;
   export let isLoaded = false;
+  // Устройство инференса
+  export let use_gpu = false; // CPU по умолчанию
+  export let cuda_available = false;
+  export let cuda_build = false;
+  export let current_device = "CPU";
 
   // Коллбеки, реализуются родителем
   export let onPickModel: () => void;
@@ -45,7 +52,7 @@
           <button
             type="button"
             class="inside-btn"
-            on:click={onPickModel}
+     on:click={onPickModel}
             title="Выбрать файл модели"
             aria-label="Выбрать файл модели"
           >
@@ -60,13 +67,21 @@
         <label for="p-thinking">Включить размышления</label>
       </div>
     </div>
+
     <div class="param">
-      <label for="p-gpu-layers">Слои на GPU</label>
-      <div class="row">
-        <input id="p-gpu-layers" type="range" min={0} max={128} step={1} bind:value={n_gpu_layers} />
-        <input type="number" min={0} max={128} step={1} bind:value={n_gpu_layers} />
+      <div class="row" style="align-items:center; gap: 12px;">
+        <label for="p-device">Устройство инференса</label>
+        <div class="toggle">
+          <input id="p-device" type="checkbox" bind:checked={use_gpu} disabled={!cuda_build}
+            title={!cuda_build ? 'Сборка без CUDA' : (!cuda_available ? 'Попытка переключить CUDA (может завершиться ошибкой)' : 'Переключение устройства при загрузке')}
+            on:change={(e) => dispatch('device-toggle', { checked: (e.currentTarget as HTMLInputElement).checked })}
+          />
+          <span>{use_gpu ? 'GPU (CUDA)' : 'CPU'}</span>
+        </div>
+        <span class="hint">Текущ.: {current_device}{!cuda_build ? ' / CUDA не в сборке' : (!cuda_available ? ' / CUDA не обнаружена' : '')}</span>
       </div>
     </div>
+    
     <div class="param">
       <label for="p-ctx">Длина контекста (токены)</label>
       <div class="row">
