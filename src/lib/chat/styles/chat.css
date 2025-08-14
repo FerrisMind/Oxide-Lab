@@ -155,20 +155,22 @@
   display: inline-flex;
   border: 1px solid var(--border-color, #e8e6e3);
   background: var(--card, #fcfbfa);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
+  padding: 2px;
+  gap: 2px;
 }
 .segmented-toggle .segment {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 4px 8px;
   border: none;
   background: transparent;
   color: var(--text);
   cursor: pointer;
+  border-radius: 8px;
 }
-.segmented-toggle .segment + .segment { border-left: 1px solid var(--border-color, #e8e6e3); }
 .segmented-toggle .segment.active {
   background: linear-gradient(135deg, var(--accent-2), #d4b8ff);
   color: #1c1c1c;
@@ -210,7 +212,6 @@
   .switch input:checked + .slider { background: linear-gradient(135deg, #695b99, #5a4b8a); }
   .segmented-toggle { background: #2d2d2d; border-color: #3a3a3a; }
   .segmented-toggle .segment { color: #eee; }
-  .segmented-toggle .segment + .segment { border-color: #3a3a3a; }
   .segmented-toggle .segment.active { background: linear-gradient(135deg, #695b99, #5a4b8a); color: #fff; }
 }
 

@@ -46,32 +46,8 @@
   </div>
 
   {#if format === 'gguf'}
-    <div class="field">
-      <label for="gguf-model">GGUF файл</label>
-      <div class="file-row">
-        <div class="input-with-button">
-          <input id="gguf-model" placeholder="C:\models\Qwen3.gguf" bind:value={modelPath} readonly />
-          <button
-            type="button"
-            class="inside-btn"
-     on:click={onPickModel}
-            title="Выбрать файл модели"
-            aria-label="Выбрать файл модели"
-          >
-            <Binoculars size={18} weight="bold" />
-          </button>
-        </div>
-      </div>
-    </div>
-    <div class="param thinking-spacer">
-      <div class="row">
-        <input id="p-thinking" type="checkbox" bind:checked={enable_thinking} />
-        <label for="p-thinking">Включить размышления</label>
-      </div>
-    </div>
-
     <div class="param">
-      <div class="row" style="align-items:center; gap: 12px;">
+      <div class="row" style="align-items:center; gap: 12px; margin-bottom: 6px;">
         <label for="device-toggle">Устройство инференса</label>
         <div class="segmented-toggle" title={!cuda_build ? 'Сборка без CUDA' : ''}>
           <button
@@ -96,6 +72,32 @@
         </div>
       </div>
     </div>
+
+    <div class="field">
+      <label for="gguf-model">GGUF файл</label>
+      <div class="file-row">
+        <div class="input-with-button">
+          <input id="gguf-model" placeholder="C:\models\Qwen3.gguf" bind:value={modelPath} readonly />
+          <button
+            type="button"
+            class="inside-btn"
+     on:click={onPickModel}
+            title="Выбрать файл модели"
+            aria-label="Выбрать файл модели"
+          >
+            <Binoculars size={18} weight="bold" />
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="param thinking-spacer">
+      <div class="row">
+        <input id="p-thinking" type="checkbox" bind:checked={enable_thinking} />
+        <label for="p-thinking">Включить размышления</label>
+      </div>
+    </div>
+
+    
     
     <div class="param">
       <label for="p-ctx">Длина контекста (токены)</label>
