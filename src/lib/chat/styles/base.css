@@ -223,7 +223,7 @@
   width: 100%;
   box-sizing: border-box;
 }
-.loader .inside-btn { cursor: pointer; right: 8px; }
+.loader .inside-btn { cursor: default; right: 8px; }
 
 /* Checkbox */
 .loader input[type="checkbox"] {
