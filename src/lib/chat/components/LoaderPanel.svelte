@@ -8,6 +8,8 @@
   import Lightbulb from "phosphor-svelte/lib/Lightbulb";
   import Binoculars from "phosphor-svelte/lib/Binoculars";
   import CircleNotch from "phosphor-svelte/lib/CircleNotch";
+  import Cpu from "phosphor-svelte/lib/Cpu";
+  import GraphicsCard from "phosphor-svelte/lib/GraphicsCard";
 
   import { createEventDispatcher } from "svelte";
   const dispatch = createEventDispatcher();
@@ -31,7 +33,7 @@
   export let use_gpu = false; // CPU по умолчанию
   export let cuda_available = false;
   export let cuda_build = false;
-  export let current_device = "CPU";
+  // current_device больше не используется (совпадает с выбранным сегментом)
 
   // Коллбеки, реализуются родителем
   export let onPickModel: () => void;
@@ -48,7 +50,7 @@
       <label for="gguf-model">GGUF файл</label>
       <div class="file-row">
         <div class="input-with-button">
-          <input id="gguf-model" placeholder="C:\\models\\qwen3.gguf" bind:value={modelPath} readonly />
+          <input id="gguf-model" placeholder="C:\models\Qwen3.gguf" bind:value={modelPath} readonly />
           <button
             type="button"
             class="inside-btn"
@@ -70,15 +72,28 @@
 
     <div class="param">
       <div class="row" style="align-items:center; gap: 12px;">
-        <label for="p-device">Устройство инференса</label>
-        <div class="toggle">
-          <input id="p-device" type="checkbox" bind:checked={use_gpu} disabled={!cuda_build}
-            title={!cuda_build ? 'Сборка без CUDA' : (!cuda_available ? 'Попытка переключить CUDA (может завершиться ошибкой)' : 'Переключение устройства при загрузке')}
-            on:change={(e) => dispatch('device-toggle', { checked: (e.currentTarget as HTMLInputElement).checked })}
-          />
-          <span>{use_gpu ? 'GPU (CUDA)' : 'CPU'}</span>
+        <label for="device-toggle">Устройство инференса</label>
+        <div class="segmented-toggle" title={!cuda_build ? 'Сборка без CUDA' : ''}>
+          <button
+            type="button"
+            class="segment" class:active={!use_gpu}
+            aria-label="Процессор"
+            on:click={() => dispatch('device-toggle', { checked: false })}
+          >
+            <Cpu size={18} />
+            <span>ЦП</span>
+          </button>
+          <button
+            type="button"
+            class="segment" class:active={use_gpu} disabled={!cuda_build}
+            aria-label="Графический процессор"
+            on:click={() => dispatch('device-toggle', { checked: true })}
+            title={!cuda_build ? 'Сборка без CUDA' : (!cuda_available ? 'Попытка переключить CUDA (может завершиться ошибкой)' : 'GPU (CUDA)')}
+          >
+            <GraphicsCard size={18} />
+            <span>ГП</span>
+          </button>
         </div>
-        <span class="hint">Текущ.: {current_device}{!cuda_build ? ' / CUDA не в сборке' : (!cuda_available ? ' / CUDA не обнаружена' : '')}</span>
       </div>
     </div>
     
