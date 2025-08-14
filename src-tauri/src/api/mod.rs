@@ -133,8 +133,28 @@ pub fn is_model_loaded(state: tauri::State<SharedState<Qwen3Gguf>>) -> Result<bo
 #[tauri::command]
 pub fn set_device(state: tauri::State<SharedState<Qwen3Gguf>>, pref: DevicePreference) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
-    let dev = crate::core::device::select_device(Some(pref));
-    guard.device = dev;
+    // Явно проверяем запрос CUDA и возвращаем ошибку, если инициализация не удалась
+    match pref {
+        DevicePreference::Cuda { index } => {
+            match candle::Device::cuda_if_available(index) {
+                Ok(dev) => {
+                    guard.device = dev;
+                }
+                Err(e) => {
+                    return Err(format!("CUDA init failed (index={}): {}", index, e));
+                }
+            }
+        }
+        DevicePreference::Cpu => {
+            guard.device = candle::Device::Cpu;
+        }
+        DevicePreference::Auto => {
+            guard.device = candle::Device::Cpu;
+        }
+        DevicePreference::Metal => {
+            guard.device = candle::Device::Cpu;
+        }
+    }
     let label = device_label(&guard.device);
     println!("[device] switched -> {}", label);
     // Если модель загружена — перезагрузим её под выбранное устройство
