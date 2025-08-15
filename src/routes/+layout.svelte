@@ -1,13 +1,17 @@
-<script>
+<script lang="ts">
   import "../app.css";
+  import "$lib/chat/Chat.css";
   // Тема для highlight.js (легкая)
   import 'highlight.js/styles/github.css';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import type { UnlistenFn } from '@tauri-apps/api/event';
   import Minus from "phosphor-svelte/lib/Minus";
   import ArrowsIn from "phosphor-svelte/lib/ArrowsIn";
   import ArrowsOut from "phosphor-svelte/lib/ArrowsOut";
   import X from "phosphor-svelte/lib/X";
+  import Sidebar from '$lib/components/Sidebar.svelte';
+  import GGUFUploadArea from '$lib/components/GGUFUploadArea.svelte';
   
   const appName = 'Oxide Lab';
   const appIcon = '/icon.svg';
@@ -27,29 +31,73 @@
   }
   
   onMount(() => {
-    // Проверяем начальное состояние окна
+    // Проверяем начальное состояние окна и слушаем resize через Tauri
+    const unlistenHolder: { fn: UnlistenFn | null } = { fn: null };
     (async () => {
       const w = (await import('@tauri-apps/api/window')).getCurrentWindow();
       isMaximized = await w.isMaximized();
-      
+
       // Слушаем изменения состояния окна
-      const unlisten = await w.onResized(() => {
+      unlistenHolder.fn = await w.onResized(() => {
         w.isMaximized().then(maximized => {
           isMaximized = maximized;
         });
       });
-      
-      return () => unlisten();
     })();
+
+    // Sync heights between chat and loader panels to avoid visual mismatch
+    const syncHeights = () => {
+      try {
+        const wrap = document.querySelector('main.wrap');
+        if (!wrap) return;
+        const chat = wrap.querySelector('.chat');
+        const loader = wrap.querySelector('.loader');
+        if (chat && loader) {
+          // reset loader explicit height first
+          if (loader instanceof HTMLElement) {
+            loader.style.height = '';
+            loader.style.minHeight = '';
+          }
+
+          // compute available height inside wrap
+          const wrapRect = wrap.getBoundingClientRect();
+          const header = document.querySelector('.app-header');
+          const headerH = header ? header.getBoundingClientRect().height : 0;
+          const targetH = wrapRect.height;
+
+          // don't force loader height here — let CSS/flex handle sizing and allow loader internal scroll
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    const debounced = () => { setTimeout(syncHeights, 50); };
+    window.addEventListener('resize', debounced);
+    const ro = new ResizeObserver(debounced);
+    const wrapEl = document.querySelector('main.wrap');
+    if (wrapEl) ro.observe(wrapEl);
+    // initial sync
+    setTimeout(syncHeights, 120);
+
+    return () => {
+      if (unlistenHolder.fn) unlistenHolder.fn();
+      window.removeEventListener('resize', debounced);
+      ro.disconnect();
+    };
   });
 </script>
 
 <div class="app-shell">
   <header class="app-header" data-tauri-drag-region>
-    <button type="button" class="brand" onclick={goHome} title={appName} aria-label={appName}>
+    <button class="brand" onclick={goHome} title="Домой" data-tauri-drag-region="false">
       <img src={appIcon} alt="App icon" class="brand-icon" />
       <span class="brand-title">{appName}</span>
     </button>
+    <div class="header-center" data-tauri-drag-region="false">
+      <!-- GGUF upload moved here -->
+      <GGUFUploadArea />
+    </div>
     <div class="window-controls" data-tauri-drag-region="false">
       <button type="button" class="win-btn" title="Свернуть" onclick={() => import('@tauri-apps/api/window').then(m => m.getCurrentWindow().minimize())}>
         <Minus size={16} weight="bold" />
@@ -67,9 +115,12 @@
     </div>
   </header>
 
-  <main class="app-main">
-    <slot />
-  </main>
+  <div class="app-body">
+    <Sidebar />
+    <main class="app-main">
+      <slot />
+    </main>
+  </div>
 </div>
 
 <style>
@@ -78,14 +129,22 @@
     background: var(--card); color: var(--text);
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 8px; border-bottom: 1px solid var(--border-color);
+    height: 56px; min-height: 56px; box-sizing: border-box; /* fixed header height */
     box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    height: 20px; /* Фиксированная высота для лучшего центрирования */
   }
   .brand { display: inline-flex; align-items: center; gap: 10px; cursor: default; background: transparent; border: none; padding: 4px 8px; border-radius: 8px; }
   .brand-icon { width: 20px; height: 20px; }
   .brand-title { font-weight: 700; letter-spacing: 0.3px; color: var(--text); opacity: 0.9; }
   .app-shell { height: 100dvh; min-height: 100dvh; display: flex; flex-direction: column; }
-  .app-main { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; }
+  .app-body { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; }
+  .app-main { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; padding: var(--content-gap); padding-top: var(--content-gap-top); }
+  /* shift chat content slightly left and give it full height under header */
+  /* ensure main wrap fits under header */
+  :global(main.wrap) { padding: var(--content-gap); height: 100%; min-height: 0; box-sizing: border-box; max-height: calc(100vh - 56px); overflow: auto; }
+  /* ensure chat area fills available vertical space */
+  :global(.chat) { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+  /* ensure sidebar keeps fixed width */
+  :global(.sidebar) { width: 60px; min-width: 60px; max-width: 60px; flex: 0 0 60px; }
   .window-controls { 
     display: inline-flex; 
     gap: 2px; 
@@ -108,7 +167,6 @@
   }
   .win-btn:hover { background: #f0f0f0; color: #212121; }
   .win-btn.close:hover { background: #e81123; color: #212121; }
-
 </style>
 
 

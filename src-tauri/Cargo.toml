@@ -23,9 +23,9 @@ tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+hf-hub = "0.4"
 
 # Candle (ML) and related crates
-anyhow = "1"
 # Отключаем default-features; включение CUDA делаем через нашу feature `cuda` ниже
 candle = { package = "candle-core", git = "https://github.com/huggingface/candle.git", default-features = false }
 candle-nn = { git = "https://github.com/huggingface/candle.git", default-features = false }
@@ -33,7 +33,6 @@ candle-transformers = { git = "https://github.com/huggingface/candle.git", defau
 # Опционально: flash-attn (включается через нашу feature `flash-attn` ниже)
 candle-flash-attn = { git = "https://github.com/huggingface/candle.git", optional = true }
 tokenizers = { version = "0.21", features = ["onig"] }
-rand = "0.9"
 minijinja = "2"
 
 

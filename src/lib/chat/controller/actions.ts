@@ -59,10 +59,6 @@ export function createActions(ctx: ChatControllerCtx) {
   }
 
   async function loadGGUF() {
-    if (!ctx.modelPath) {
-      await message("Укажите путь к .gguf", { title: "Загрузка модели", kind: "warning" });
-      return;
-    }
     ctx.isLoadingModel = true;
     ctx.loadingProgress = 0;
     ctx.loadingStage = "model";
@@ -76,12 +72,30 @@ export function createActions(ctx: ChatControllerCtx) {
       }, 150);
       await stream.ensureListener();
       const context_length = Math.max(1, Math.floor(ctx.ctx_limit_value));
-      console.log("[load] frontend params", { context_length });
+      console.log("[load] frontend params", { context_length, format: ctx.format });
       if (ctx.isCancelling) return;
       ctx.loadingStage = "model";
       ctx.loadingProgress = 30;
       // CPU по умолчанию. Если пользователь явно включил GPU и он доступен — переключим на CUDA после загрузки.
-      await invoke("load_model", { req: { format: "gguf", model_path: ctx.modelPath, tokenizer_path: null, context_length, device: { kind: "cpu" } } });
+      if (ctx.format === "gguf") {
+        if (!ctx.modelPath) {
+          await message("Укажите путь к .gguf", { title: "Загрузка модели", kind: "warning" });
+          return;
+        }
+        await invoke("load_model", { req: { format: "gguf", model_path: ctx.modelPath, tokenizer_path: null, context_length, device: { kind: "cpu" } } });
+      } else if (ctx.format === "hub_gguf") {
+        if (!ctx.repoId || !ctx.hubGgufFilename) {
+          await message("Укажите repoId и имя файла .gguf", { title: "Загрузка из HF Hub", kind: "warning" });
+          return;
+        }
+        await invoke("load_model", { req: { format: "hub_gguf", repo_id: ctx.repoId, revision: ctx.revision || null, filename: ctx.hubGgufFilename, context_length, device: { kind: "cpu" } } });
+      } else if (ctx.format === "hub_safetensors") {
+        if (!ctx.repoId) {
+          await message("Укажите repoId (owner/repo)", { title: "Загрузка из HF Hub", kind: "warning" });
+          return;
+        }
+        await invoke("load_model", { req: { format: "hub_safetensors", repo_id: ctx.repoId, revision: ctx.revision || null, context_length, device: { kind: "cpu" } } });
+      }
       await refreshDeviceInfo();
       if (ctx.use_gpu && ctx.cuda_available) {
         try {
@@ -232,8 +246,12 @@ export function createActions(ctx: ChatControllerCtx) {
   }
 
   async function pickModel() {
-    const selected = await open({ multiple: false, filters: [{ name: "GGUF", extensions: ["gguf"] }] });
-    if (typeof selected === "string") ctx.modelPath = selected;
+    if (ctx.format === "gguf") {
+      const selected = await open({ multiple: false, filters: [{ name: "GGUF", extensions: ["gguf"] }] });
+      if (typeof selected === "string") ctx.modelPath = selected;
+    } else {
+      await message("Для загрузки из HF Hub заполните repoId, revision (по желанию) и, для GGUF, имя файла.", { title: "HF Hub", kind: "info" });
+    }
   }
 
   // Удалён выбор токенизатора: он загружается автоматически из GGUF

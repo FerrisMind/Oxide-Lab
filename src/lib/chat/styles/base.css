@@ -1,57 +1,58 @@
-:root {
-  --bg: #f7f5f2;
-  --card: #ffffff;
-  --text: #2b2a29;
-  --muted: #6d6a6a;
-  --accent: #b3cde0;
-  --accent-2: #e2c6ff;
-  --radius: 12px;
-  --panel-bg: var(--card);
-  --panel-alt-bg: #f4fbff;
-  --panel-success-bg: #f8fff4;
-  --border-color: #e8e6e3;
-  --code-bg: #f5f5ff;
-  --code-fg: #222;
-  --code-keyword: #6f42c1;
-  --code-string: #22863a;
-  --code-title: #005cc5;
-  --code-number: #b08800;
-  --code-attr: #6f42c1;
-  --code-variable: #d73a49;
-  --code-comment: #6a737d;
-  --code-tag: #22863a;
-}
+/* Use global CSS variables from `src/app.css`. This file contains only chat-specific
+   styles and small dark-mode tweaks to avoid conflicting global :root redefinitions. */
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1f1f1f;
-    --card: #262626;
-    --text: #eee;
-    --muted: #aaa;
-    --accent: #5b7c99;
-    --accent-2: #695b99;
-    --panel-bg: #262b33;
-    --panel-alt-bg: #233240;
-    --panel-success-bg: #233a2b;
-    --border-color: #2f3a44;
-    --code-bg: #1c1e22;
-    --code-fg: #eee;
-    --code-keyword: #c678dd;
-    --code-string: #98c379;
-    --code-title: #61afef;
-    --code-number: #d19a66;
-    --code-attr: #e06c75;
-    --code-variable: #e06c75;
-    --code-comment: #7f848e;
-    --code-tag: #e06c75;
-  }
+  /* Chat-specific dark tweaks only */
   .field input { background: #2d2d2d; border-color: #3a3a3a; }
   .field input::placeholder { color: #bdbdbd; opacity: 1; }
 }
 
+/* Desktop layout: place chat and loader side-by-side with equal height */
+@media (min-width: 960px) {
+  /* Use flex layout to guarantee equal heights between chat and loader */
+  .wrap {
+    display: flex;
+    gap: var(--content-gap);
+    /* fill available height from parent (app-main) to avoid exceeding viewport */
+    height: 100%;
+    box-sizing: border-box;
+    align-items: stretch;
+  }
+
+  .chat {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .loader {
+    flex: 0 0 360px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  /* messages area should grow to fill available space */
+  .chat .messages { flex: 1 1 auto; min-height: 0; }
+}
+
+/* Ensure strict equality of chat and loader heights and prevent content from pushing height */
+@media (min-width: 960px) {
+  .chat, .loader {
+    box-sizing: border-box;
+    max-height: 100%;
+    overflow: auto !important;
+  }
+  /* prevent children margins from expanding container */
+  .chat * { margin-bottom: 0; }
+  .loader * { margin-bottom: 0; }
+}
+
 .wrap {
   min-height: 0;
-  background: linear-gradient(180deg, var(--bg), #f1efec 50%, var(--bg));
+  background: none; /* remove gradient background */
   color: var(--text);
   display: grid;
   grid-template-columns: 1fr;
@@ -65,7 +66,8 @@
 
 .loader, .chat {
   background: var(--card);
-  border-radius: var(--radius);
+  /* increased rounding for chat and loader */
+  border-radius: 14px;
   padding: 16px;
   box-shadow: 0 6px 30px rgba(0,0,0,0.05);
 }
@@ -230,10 +232,15 @@
   appearance: none;
   width: 16px; height: 16px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  /* make checkbox slightly more rounded to avoid sharp rectangle */
+  border-radius: 6px;
   background: var(--panel-bg);
   display: inline-block;
   position: relative;
+  padding: 0; /* prevent global input padding from stretching it */
+  box-sizing: content-box; /* ensure fixed width/height aren't affected by padding */
+  vertical-align: middle;
+  flex: 0 0 auto;
 }
 .loader input[type="checkbox"]:checked {
   background: var(--accent);
@@ -242,11 +249,14 @@
 .loader input[type="checkbox"]:checked::after {
   content: "";
   position: absolute;
-  left: 4px; top: 1px;
-  width: 4px; height: 8px;
+  /* center the checkmark inside the 16x16 box */
+  left: 50%;
+  top: 36%;
+  width: 6px;
+  height: 10px;
   border: solid #1b1b1b;
   border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 .loader .param .row { display: flex; gap: 8px; align-items: center; }
 .loader .param label { font-size: 12px; color: var(--muted); }

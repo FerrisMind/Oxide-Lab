@@ -8,7 +8,8 @@ use std::sync::{Arc, Mutex};
 use candle::Device;
 // use candle::quantized::gguf_file;
 use core::state::{ModelState, SharedState};
-use crate::models::qwen3::ModelWeights as Qwen3Gguf;
+use crate::models::common::model::ModelBackend;
+// use crate::models::qwen3::ModelWeights as Qwen3Gguf;
 // не импортируем типы напрямую здесь, чтобы избежать предупреждений об их неиспользовании
 
 // типы и утилиты перенесены в core/{types,device,tokenizer}.rs
@@ -17,7 +18,9 @@ use crate::models::qwen3::ModelWeights as Qwen3Gguf;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let shared: SharedState<Qwen3Gguf> = Arc::new(Mutex::new(ModelState::new(Device::Cpu)));
+    // Shared state хранит боксированную реализацию модели через trait-объект,
+    // что позволяет загружать разные архитектуры GGUF под единым интерфейсом.
+    let shared: SharedState<Box<dyn ModelBackend + Send>> = Arc::new(Mutex::new(ModelState::new(Device::Cpu)));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

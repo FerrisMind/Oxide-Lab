@@ -1,55 +1,37 @@
-/* Дополнительные стили для скроллбаров */
-/* Глобальные стили для layout, ранее в +layout.svelte */
+/* Глобальные CSS переменные */
 :root {
   --bg: #f7f5f2;
   --card: #ffffff;
+  --panel-bg: #f8f9fa;
   --text: #2b2a29;
   --muted: #6d6a6a;
+  --border-color: #e8e6e3;
+  --accent: #3b82f6;
+  --accent-2: #1d4ed8;
+  --panel-alt-bg: #f8f9fa;
+  --shadow: 0 4px 20px rgba(0,0,0,0.06);
+  --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+  --content-gap: 8px; /* default gap between left/right/bottom and content */
+  --content-gap-top: 8px; /* larger gap from header */
 }
 
-body { overflow-x: hidden; }
-
-/* Улучшенные стили для скроллбаров (глобально) */
-::-webkit-scrollbar { width: 12px; height: 12px; }
-::-webkit-scrollbar-track { background: transparent; border-radius: 6px; margin: 2px; }
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(179, 205, 224, 0.8), rgba(179, 205, 224, 0.6));
-  border-radius: 6px; border: 2px solid transparent; background-clip: content-box;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(179, 205, 224, 1), rgba(179, 205, 224, 0.8));
-  background-clip: content-box; transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(180deg, rgba(179, 205, 224, 1), rgba(179, 205, 224, 0.9));
-  background-clip: content-box; transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
-
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(91, 124, 153, 0.8), rgba(91, 124, 153, 0.6));
-    background-clip: content-box; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, rgba(91, 124, 153, 1), rgba(91, 124, 153, 0.8));
-    background-clip: content-box; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  }
-  ::-webkit-scrollbar-thumb:active {
-    background: linear-gradient(180deg, rgba(91, 124, 153, 1), rgba(91, 124, 153, 0.9));
-    background-clip: content-box; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
-  }
-}
-
-/* Плавные анимации для всех скроллбаров */
+/* Базовые стили */
 * {
-  scroll-behavior: smooth;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-/* Кастомные скроллбары для WebKit браузеров */
+html, body {
+  height: 100%;
+  min-height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* Улучшенные стили для скроллбаров */
 ::-webkit-scrollbar {
   width: 12px;
   height: 12px;
@@ -62,7 +44,7 @@ body { overflow-x: hidden; }
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(179, 205, 224, 0.8), rgba(179, 205, 224, 0.6));
+  background: rgba(179, 205, 224, 0.8);
   border-radius: 6px;
   border: 2px solid transparent;
   background-clip: content-box;
@@ -71,14 +53,14 @@ body { overflow-x: hidden; }
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(179, 205, 224, 1), rgba(179, 205, 224, 0.8));
+  background: rgba(179, 205, 224, 1);
   background-clip: content-box;
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(180deg, rgba(179, 205, 224, 1), rgba(179, 205, 224, 0.9));
+  background: rgba(179, 205, 224, 1);
   background-clip: content-box;
   transform: scale(1.1);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
@@ -92,51 +74,10 @@ body { overflow-x: hidden; }
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(179, 205, 224, 0.8) transparent;
+  scroll-behavior: smooth;
 }
 
-/* Темная тема */
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(91, 124, 153, 0.8), rgba(91, 124, 153, 0.6));
-    background-clip: content-box;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, rgba(91, 124, 153, 1), rgba(91, 124, 153, 0.8));
-    background-clip: content-box;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  }
-  
-  ::-webkit-scrollbar-thumb:active {
-    background: linear-gradient(180deg, rgba(91, 124, 153, 1), rgba(91, 124, 153, 0.9));
-    background-clip: content-box;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
-  }
-  
-  * {
-    scrollbar-color: rgba(91, 124, 153, 0.8) transparent;
-  }
-}
-
-/* Анимация появления скроллбара */
-@keyframes scrollbarFadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Применяем анимацию к скроллбарам */
-::-webkit-scrollbar-thumb {
-  animation: scrollbarFadeIn 0.3s ease-out;
-}
-
-/* Стили для горизонтальных скроллбаров */
+/* Горизонтальные скроллбары */
 ::-webkit-scrollbar:horizontal {
   height: 8px;
 }
@@ -153,8 +94,36 @@ body { overflow-x: hidden; }
   background-clip: content-box;
 }
 
-/* Темная тема для горизонтальных скроллбаров */
+/* Темная тема */
 @media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --card: #2d2d2d;
+    --panel-bg: #252525;
+    --text: #ffffff;
+    --muted: #a0a0a0;
+    --border-color: #404040;
+    --panel-alt-bg: #252525;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(91, 124, 153, 0.8);
+    background-clip: content-box;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(91, 124, 153, 1);
+    background-clip: content-box;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  
+  ::-webkit-scrollbar-thumb:active {
+    background: rgba(91, 124, 153, 1);
+    background-clip: content-box;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  }
+  
   ::-webkit-scrollbar-thumb:horizontal {
     background: linear-gradient(90deg, rgba(91, 124, 153, 0.8), rgba(91, 124, 153, 0.6));
     background-clip: content-box;
@@ -164,31 +133,13 @@ body { overflow-x: hidden; }
     background: linear-gradient(90deg, rgba(91, 124, 153, 1), rgba(91, 124, 153, 0.8));
     background-clip: content-box;
   }
+  
+  * {
+    scrollbar-color: rgba(91, 124, 153, 0.8) transparent;
+  }
 }
 
-/* Дополнительные эффекты для скроллбаров */
-::-webkit-scrollbar-thumb {
-  position: relative;
-}
-
-::-webkit-scrollbar-thumb::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
-  border-radius: inherit;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-::-webkit-scrollbar-thumb:hover::before {
-  opacity: 1;
-}
-
-/* Стили для скроллбаров в мобильных устройствах */
+/* Мобильные устройства */
 @media (max-width: 768px) {
   ::-webkit-scrollbar {
     width: 8px;
@@ -200,7 +151,7 @@ body { overflow-x: hidden; }
   }
 }
 
-/* Стили для скроллбаров в высоких DPI дисплеях */
+/* Высокие DPI дисплеи */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   ::-webkit-scrollbar {
     width: 14px;
@@ -212,35 +163,42 @@ body { overflow-x: hidden; }
   }
 }
 
-/* Анимация для скроллбаров при прокрутке */
-@keyframes scrollbarPulse {
-  0%, 100% {
-    opacity: 0.6;
+/* Анимации */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes scrollbarFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
   }
-  50% {
+  to {
     opacity: 1;
+    transform: translateX(0);
   }
+}
+
+@keyframes scrollbarPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Применяем анимации */
+::-webkit-scrollbar-thumb {
+  animation: scrollbarFadeIn 0.3s ease-out;
 }
 
 ::-webkit-scrollbar-thumb:active {
   animation: scrollbarPulse 1s ease-in-out infinite;
 }
 
-/* Стили для анимации загрузки в LoaderPanel */
+/* Утилитарные классы */
 .spinning {
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Стили для кнопки загрузки */
 .loading-button {
   display: flex;
   align-items: center;
@@ -249,4 +207,116 @@ body { overflow-x: hidden; }
 
 .loading-text {
   white-space: nowrap;
+}
+
+/* Базовые стили для компонентов */
+.wrap {
+  padding: 16px;
+  width: 100%;
+  /* fill parent's height rather than forcing min-height:100% which can exceed viewport */
+  height: 100%;
+  min-height: 0;
+}
+
+/* Стили для заголовков */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; }
+h5 { font-size: 1.125rem; }
+h6 { font-size: 1rem; }
+
+/* Стили для параграфов */
+p {
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+/* Стили для кнопок */
+button {
+   cursor: default;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  background: var(--accent);
+  color: white;
+}
+
+button:hover {
+  background: var(--accent-2);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Стили для ссылок */
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent-2);
+  text-decoration: underline;
+}
+
+/* Стили для форм */
+input, textarea, select {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  background: var(--card);
+  color: var(--text);
+  transition: border-color 0.2s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Стили для карточек */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .wrap {
+    padding: 12px;
+  }
+  
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  
+  .card {
+    padding: 16px;
+  }
 }

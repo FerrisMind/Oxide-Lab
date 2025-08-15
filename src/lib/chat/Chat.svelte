@@ -7,19 +7,21 @@
   import LoaderPanel from "$lib/chat/components/LoaderPanel.svelte";
   import MessageList from "$lib/chat/components/MessageList.svelte";
   import ChatPlaceholder from "$lib/chat/components/ChatPlaceholder.svelte";
-  import "./Chat.css";
+  // Chat styles are loaded globally from layout to avoid UI changes when navigating between pages
   // Убрали переключатель «сырого» Markdown
   import type { ChatMessage } from "$lib/chat/types";
   import { createChatController } from "$lib/chat/controller";
   import InferenceParams from "$lib/chat/components/InferenceParams.svelte";
 
   let modelPath = "";
-  let tokenizerPath = "";
+  let repoId: string = "";
+  let revision: string = "";
+  let hubGgufFilename: string = "";
   let prompt = "";
   let messages: ChatMessage[] = [];
   let messagesEl: HTMLDivElement | null = null;
   let busy = false;
-  let format: "gguf" = "gguf";
+  let format: "gguf" | "hub_gguf" | "hub_safetensors" = "gguf";
   let isLoaded = false;
   let errorText = "";
   // Устройство
@@ -55,6 +57,10 @@
 
   const controller = createChatController({
     get modelPath() { return modelPath; }, set modelPath(v) { modelPath = v; },
+    get format() { return format; }, set format(v) { format = v; },
+    get repoId() { return repoId; }, set repoId(v) { repoId = v; },
+    get revision() { return revision; }, set revision(v) { revision = v; },
+    get hubGgufFilename() { return hubGgufFilename; }, set hubGgufFilename(v) { hubGgufFilename = v; },
     
     get prompt() { return prompt; }, set prompt(v) { prompt = v; },
     get messages() { return messages; }, set messages(v) { messages = v; },
@@ -106,14 +112,49 @@
   onDestroy(() => controller.destroy());
 
   const pickModel = controller.pickModel;
-  
+  // expose minimal controller API to window for header GGUF control
+  if (typeof window !== 'undefined') {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    window.__oxide = {
+      pickModel: controller.pickModel,
+      loadGGUF: controller.loadGGUF,
+      unloadGGUF: controller.unloadGGUF,
+      cancelLoading: controller.cancelLoading,
+      getState: () => ({
+        modelPath, isLoaded, isLoadingModel, isUnloadingModel, isCancelling, loadingStage, loadingProgress, unloadingProgress, busy
+      })
+    };
+  }
 </script>
 
 <main class="wrap">
   <!-- удалено дублирование заголовка -->
+  {#if isLoaded}
+    <section class="chat">
+      <MessageList bind:messages bind:messagesEl />
+      <Composer 
+        bind:prompt 
+        {busy} 
+        {isLoaded} 
+        on:send={handleSend} 
+        on:stop={stopGenerate}
+        on:attach={() => console.log('Прикрепить файл')}
+        on:voice={() => console.log('Голосовое сообщение')}
+      />
+    </section>
+  {:else}
+    <section class="chat">
+      <ChatPlaceholder />
+    </section>
+  {/if}
+
   <LoaderPanel
     bind:format
     bind:modelPath
+    bind:repoId
+    bind:revision
+    bind:hubGgufFilename
     bind:enable_thinking
     bind:ctx_limit_value
     bind:isLoadingModel
@@ -128,9 +169,7 @@
     bind:use_gpu
     bind:cuda_available
     bind:cuda_build
-    bind:current_device
     on:device-toggle={(e) => setDeviceByToggle(!!e.detail?.checked)}
-    onPickModel={pickModel}
     onMainAction={() => (isLoadingModel ? cancelLoading() : (isLoaded ? unloadGGUF() : loadGGUF()))}
   >
     <!-- Параметры инференса -->
@@ -150,23 +189,6 @@
       />
     {/if}
   </LoaderPanel>
-
-  {#if isLoaded}
-    <section class="chat">
-      <MessageList bind:messages bind:messagesEl />
-      <Composer 
-        bind:prompt 
-        {busy} 
-        {isLoaded} 
-        on:send={handleSend} 
-        on:stop={stopGenerate}
-        on:attach={() => console.log('Прикрепить файл')}
-        on:voice={() => console.log('Голосовое сообщение')}
-      />
-    </section>
-  {:else}
-    <ChatPlaceholder />
-  {/if}
 </main>
 
 

@@ -29,7 +29,7 @@ impl TokenOutputStream {
         };
         self.tokens.push(token);
         let text = self.decode(&self.tokens[self.prev_index..])?;
-        if text.len() > 0 {
+        if !text.is_empty() {
             // Найти границу расхождения по символам (а не по байтам), чтобы избежать разреза внутри UTF-8
             let mut split_byte = 0usize;
             let mut prev_iter = prev_text.chars();

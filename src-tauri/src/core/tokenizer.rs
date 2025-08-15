@@ -32,7 +32,7 @@ pub fn try_reconstruct_tokenizer_from_bpe(md: &HashMap<String, gguf_file::Value>
     let merges_list = get_string_array(md, "tokenizer.ggml.merges")
         .or_else(|| get_string_array(md, "tokenizer.ggml.bpe_merges"))
         .or_else(|| get_string_array(md, "tokenizer.merges"))
-        .unwrap_or_else(|| Vec::new());
+        .unwrap_or_default();
     let mut vocab_obj: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
     for (i, tok) in vocab_list.iter().enumerate() { vocab_obj.insert(tok.clone(), serde_json::json!(i as u32)); }
     let json = serde_json::json!({
@@ -52,7 +52,7 @@ pub fn mark_special_chat_tokens(tokenizer: &mut Tokenizer) {
     ];
     let mut to_add: Vec<AddedToken> = Vec::new();
     for &tok in specials.iter() {
-        if vocab.get(tok).is_some() {
+        if vocab.contains_key(tok) {
             let mut at = AddedToken::from(tok.to_string(), true);
             at = at.single_word(false).lstrip(false).rstrip(false);
             to_add.push(at);

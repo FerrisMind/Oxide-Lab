@@ -2,7 +2,7 @@ use candle::Tensor;
 use tauri::Emitter;
 
 use crate::core::state::SharedState;
-use crate::models::qwen3::ModelWeights as Qwen3Gguf;
+use crate::models::common::model::ModelBackend;
 use crate::core::token_output_stream::TokenOutputStream;
 use crate::core::tokenizer::extract_eos_ids;
 use crate::core::types::GenerateRequest;
@@ -13,12 +13,12 @@ use std::sync::atomic::Ordering;
 
 pub async fn generate_stream_cmd(
     app: tauri::AppHandle,
-    state: tauri::State<'_, SharedState<Qwen3Gguf>>,
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
     req: GenerateRequest,
 ) -> Result<(), String> {
     CANCEL_GENERATION.store(false, Ordering::SeqCst);
     let app_clone = app.clone();
-    let state_arc: SharedState<Qwen3Gguf> = state.inner().clone();
+    let state_arc: SharedState<Box<dyn ModelBackend + Send>> = state.inner().clone();
     let res = tauri::async_runtime::spawn_blocking(move || {
         generate_stream_impl(app_clone, state_arc, req)
     })
@@ -29,7 +29,7 @@ pub async fn generate_stream_cmd(
 
 fn generate_stream_impl(
     app: tauri::AppHandle,
-    state: SharedState<Qwen3Gguf>,
+    state: SharedState<Box<dyn ModelBackend + Send>>,
     req: GenerateRequest,
 ) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
@@ -148,7 +148,7 @@ fn generate_stream_impl(
         next_token = logits_processor.sample(&logits).map_err(|e| e.to_string())?;
         all_tokens.push(next_token);
         if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? { emitter.push_maybe_emit(&t); }
-        if next_token == eos_token || stop_ids.iter().any(|&s| s == next_token) { break; }
+        if next_token == eos_token || stop_ids.contains(&next_token) { break; }
     }
 
     if let Some(rest) = tos.decode_rest().map_err(|e| e.to_string())? { emitter.push_maybe_emit(&rest); }

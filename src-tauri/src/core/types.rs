@@ -18,6 +18,28 @@ pub enum LoadRequest {
         context_length: usize,
         device: Option<DevicePreference>,
     },
+    #[serde(rename = "hub_gguf")]
+    HubGguf {
+        /// Репозиторий на HF Hub: например, "Qwen/Qwen2.5-3B-Instruct-GGUF"
+        repo_id: String,
+        /// Ревизия/ветка/коммит (опционально), по умолчанию — main
+        revision: Option<String>,
+        /// Имя файла .gguf в репозитории. Обязателен для однозначной загрузки.
+        filename: String,
+        context_length: usize,
+        device: Option<DevicePreference>,
+    },
+    #[serde(rename = "hub_safetensors")]
+    HubSafetensors {
+        /// Репозиторий на HF Hub: например, "meta-llama/Meta-Llama-3-8B-Instruct"
+        repo_id: String,
+        /// Ревизия/ветка/коммит (опционально), по умолчанию — main
+        revision: Option<String>,
+        /// Контекст (KV-cache length)
+        context_length: usize,
+        /// Предпочтительное устройство
+        device: Option<DevicePreference>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
