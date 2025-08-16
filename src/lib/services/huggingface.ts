@@ -196,16 +196,32 @@ export class HuggingFaceService {
     // Сортировка
     const sortBy = params.sort || 'downloads';
     const order = params.order || 'desc';
-    
+
     filteredModels.sort((a, b) => {
-      let aValue = a[sortBy];
-      let bValue = b[sortBy];
-      
+      let aValue: any;
+      let bValue: any;
+      switch (sortBy) {
+        case 'likes':
+          aValue = a.likes;
+          bValue = b.likes;
+          break;
+        case 'updated':
+          // map 'updated' to `lastModified`
+          aValue = a.lastModified;
+          bValue = b.lastModified;
+          break;
+        case 'downloads':
+        default:
+          aValue = a.downloads;
+          bValue = b.downloads;
+          break;
+      }
+
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
-      
+
       if (order === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {

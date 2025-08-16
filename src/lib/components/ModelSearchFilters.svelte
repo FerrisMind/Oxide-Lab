@@ -136,11 +136,13 @@
     position: relative;
   }
 
-  .search-icon {
+  /* keep icon visually present but avoid unused selector warning */
+  .search-input-wrapper :global(svg) {
     color: var(--muted);
     position: absolute;
     left: 16px;
     z-index: 1;
+    pointer-events: none;
   }
 
   .search-input {

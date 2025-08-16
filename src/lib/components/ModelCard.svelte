@@ -183,6 +183,8 @@
     line-height: 1.5;
     margin: 0 0 16px 0;
     display: -webkit-box;
+    /* standard property for line clamping */
+    line-clamp: 3;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
