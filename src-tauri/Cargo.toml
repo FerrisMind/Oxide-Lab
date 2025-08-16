@@ -31,7 +31,6 @@ candle = { package = "candle-core", git = "https://github.com/huggingface/candle
 candle-nn = { git = "https://github.com/huggingface/candle.git", default-features = false }
 candle-transformers = { git = "https://github.com/huggingface/candle.git", default-features = false }
 # Опционально: flash-attn (включается через нашу feature `flash-attn` ниже)
-candle-flash-attn = { git = "https://github.com/huggingface/candle.git", optional = true }
 tokenizers = { version = "0.21", features = ["onig"] }
 minijinja = "2"
 
@@ -49,9 +48,6 @@ cuda = [
     "candle-nn/cuda",
     "candle-transformers/cuda",
 ]
-
-# Удобный алиас для включения flash-attn через единую фичу нашего крейта
-flash-attn = ["candle-flash-attn"]
 
 
 

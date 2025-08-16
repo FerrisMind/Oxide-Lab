@@ -75,9 +75,6 @@ name = "anyhow"
 version = "1.0.99"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0674a1ddeecb70197781e945de4b3b8ffb61fa939a5597bcf48503737663100"
-dependencies = [
- "backtrace",
-]
 
 [[package]]
 name = "arbitrary"
@@ -508,17 +505,6 @@ dependencies = [
  "ug-cuda",
  "yoke 0.7.5",
  "zip",
-]
-
-[[package]]
-name = "candle-flash-attn"
-version = "0.9.1"
-source = "git+https://github.com/huggingface/candle.git#be4f920f35b99af5919a86c0a2e08a78f3f63567"
-dependencies = [
- "anyhow",
- "bindgen_cuda",
- "candle-core",
- "half",
 ]
 
 [[package]]
@@ -3426,7 +3412,6 @@ name = "oxide-lab"
 version = "0.1.0"
 dependencies = [
  "candle-core",
- "candle-flash-attn",
  "candle-nn",
  "candle-transformers",
  "hf-hub",

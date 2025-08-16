@@ -300,7 +300,7 @@ pub fn cancel_generation() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_chat_template(state: tauri::State<SharedState<Qwen3Gguf>>) -> Result<Option<String>, String> {
+pub fn get_chat_template(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<Option<String>, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     Ok(guard.chat_template.clone())
 }
@@ -309,7 +309,7 @@ pub fn get_chat_template(state: tauri::State<SharedState<Qwen3Gguf>>) -> Result<
 pub struct ChatMsgDto { pub role: String, pub content: String }
 
 #[tauri::command]
-pub fn render_prompt(state: tauri::State<SharedState<Qwen3Gguf>>, messages: Vec<ChatMsgDto>) -> Result<String, String> {
+pub fn render_prompt(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>, messages: Vec<ChatMsgDto>) -> Result<String, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     let tpl = match &guard.chat_template { Some(s) if !s.trim().is_empty() => s.clone(), _ => return Err("chat_template not available".into()) };
     // Лог на вход
@@ -328,13 +328,13 @@ pub fn render_prompt(state: tauri::State<SharedState<Qwen3Gguf>>, messages: Vec<
 }
 
 #[tauri::command]
-pub fn is_model_loaded(state: tauri::State<SharedState<Qwen3Gguf>>) -> Result<bool, String> {
+pub fn is_model_loaded(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<bool, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     Ok(guard.gguf_model.is_some() && guard.tokenizer.is_some())
 }
 
 #[tauri::command]
-pub fn set_device(state: tauri::State<SharedState<Qwen3Gguf>>, pref: DevicePreference) -> Result<(), String> {
+pub fn set_device(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>, pref: DevicePreference) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     // Явно проверяем запрос CUDA и возвращаем ошибку, если инициализация не удалась
     match pref {
@@ -386,7 +386,9 @@ pub fn set_device(state: tauri::State<SharedState<Qwen3Gguf>>, pref: DevicePrefe
                 .map_err(|e| e.to_string())?,
         };
 
-        guard.gguf_model = Some(model);
+        // Wrap concrete model into AnyModel and box as trait object
+        let any = AnyModel::from_qwen3(model);
+        guard.gguf_model = Some(Box::new(any));
         guard.gguf_file = Some(file);
         guard.tokenizer = Some(tokenizer);
         guard.chat_template = chat_tpl;
@@ -408,7 +410,7 @@ pub struct DeviceInfoDto {
 }
 
 #[tauri::command]
-pub fn get_device_info(state: tauri::State<SharedState<Qwen3Gguf>>) -> Result<DeviceInfoDto, String> {
+pub fn get_device_info(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<DeviceInfoDto, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     let current = device_label(&guard.device).to_string();
     let cuda_build = cfg!(feature = "cuda");
