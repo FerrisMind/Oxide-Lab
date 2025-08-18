@@ -529,7 +529,7 @@
   .description-content td {
     padding: 0.6em 1em;
     text-align: left;
-    border-bottom: 1px solid var(--border-color);
+    border: 1px solid var(--border-color);
   }
 
   .description-content th {

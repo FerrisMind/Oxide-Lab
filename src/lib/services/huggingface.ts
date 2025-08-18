@@ -543,7 +543,7 @@ export class HuggingFaceService {
       
       if (response.ok) {
         const readmeContent = await response.text();
-        return this.extractDescriptionFromReadme(readmeContent);
+        return this.stripFrontMatter(readmeContent);
       }
       
       // Если получили 401 или другую ошибку, пытаемся получить через API
@@ -597,6 +597,11 @@ export class HuggingFaceService {
     }
     
     return description || null;
+  }
+
+  // Удаляем YAML-фронт-маттер из начала README (строки между --- ... ---)
+  private stripFrontMatter(content: string): string {
+    return content.replace(/^---[\s\S]*?---\s*/m, "");
   }
 
   // Получение описания через API как fallback

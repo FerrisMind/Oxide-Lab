@@ -20,7 +20,7 @@ marked.use(markedHighlight({
   }
 }));
 
-marked.setOptions({ gfm: true, breaks: true });
+marked.setOptions({ gfm: true, breaks: false, tables: true });
 
 // Простая обёртка для безопасного преобразования Markdown → HTML
 export function renderMarkdownToSafeHtml(markdownText: string): string {
@@ -50,16 +50,21 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
       }
       input = out.join('\n');
     }
-    const dirty = marked.parse(input) as string;
+    const dirty = (typeof (marked as any).parse === 'function'
+      ? (marked as any).parse(input)
+      : (marked as any)(input)) as string;
     // Разрешаем типичные теги Markdown, остальное вычищаем
-    const clean = DOMPurify.sanitize(dirty, {
-      ALLOWED_TAGS: [
-        'h1','h2','h3','h4','h5','h6','p','br','hr','strong','em','b','i','u','s',
-        'ul','ol','li','blockquote','code','pre','a','table','thead','tbody','tr','th','td','span'
-      ],
-      ALLOWED_ATTR: ['href','title','target','rel','class']
-    });
-    return clean;
+    const sanitized = typeof window !== 'undefined'
+      ? DOMPurify.sanitize(dirty, {
+          ALLOWED_TAGS: [
+            'h1','h2','h3','h4','h5','h6','p','br','hr','strong','em','b','i','u','s',
+            'ul','ol','li','blockquote','code','pre','a','table','thead','tbody','tr','th','td','span',
+            'img'
+          ],
+          ALLOWED_ATTR: ['href','title','target','rel','class','src','alt','width','height']
+        })
+      : dirty;
+    return sanitized;
   } catch {
     return DOMPurify.sanitize(markdownText ?? '');
   }
