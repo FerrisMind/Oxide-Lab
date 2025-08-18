@@ -13,6 +13,16 @@
   --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
   --content-gap: 8px; /* default gap between left/right/bottom and content */
   --content-gap-top: 8px; /* larger gap from header */
+  /* ↓ Добавляем переменные цветовой схемы для кода/hljs, согласованные с UI */
+  --code-bg: var(--panel-bg);
+  --code-fg: var(--text);
+  --code-keyword: var(--accent-2);
+  --code-string: #0e814a; /* зелёный для строк */
+  --code-title: #995500; /* заголовки/имена */
+  --code-number: #b45309; /* числа/символы */
+  --code-variable: #6d28d9; /* переменные */
+  --code-tag: #2563eb; /* теги/мета */
+  --code-comment: var(--muted); /* комментарии */
 }
 
 /* Базовые стили */
@@ -104,6 +114,16 @@ html, body {
     --muted: #a0a0a0;
     --border-color: #404040;
     --panel-alt-bg: #252525;
+    /* ↓ Темные значения для подсветки синтаксиса */
+    --code-bg: var(--panel-bg);
+    --code-fg: var(--text);
+    --code-keyword: #93c5fd; /* светло-синий */
+    --code-string: #86efac; /* светло-зелёный */
+    --code-title: #fcd34d; /* жёлтый для заголовков/имён */
+    --code-number: #fdba74; /* персиковый для чисел */
+    --code-variable: #c4b5fd; /* сиреневый для переменных */
+    --code-tag: #93c5fd; /* голубой для тегов/мета */
+    --code-comment: #9ca3af; /* серый для комментариев */
   }
 
   ::-webkit-scrollbar-thumb {

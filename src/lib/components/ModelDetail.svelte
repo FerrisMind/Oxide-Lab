@@ -516,7 +516,8 @@
     border-bottom-color: var(--accent);
   }
 
-  .description-content table {
+  /* Таблицы внутри markdown-описания: снимаем скоупинг с внутренних тегов */
+  .description-content :global(table) {
     width: 100%;
     border-collapse: collapse;
     margin: 1em 0;
@@ -525,19 +526,19 @@
     overflow: hidden;
   }
 
-  .description-content th,
-  .description-content td {
+  .description-content :global(th),
+  .description-content :global(td) {
     padding: 0.6em 1em;
     text-align: left;
     border: 1px solid var(--border-color);
   }
 
-  .description-content th {
+  .description-content :global(th) {
     background: var(--panel-alt-bg);
     font-weight: 600;
   }
 
-  .description-content tr:last-child td {
+  .description-content :global(tr:last-child) :global(td) {
     border-bottom: none;
   }
 
