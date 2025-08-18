@@ -144,7 +144,7 @@
   /* ensure chat area fills available vertical space */
   :global(.chat) { height: 100%; min-height: 0; display: flex; flex-direction: column; }
   /* ensure sidebar keeps fixed width */
-  :global(.sidebar) { width: 60px; min-width: 60px; max-width: 60px; flex: 0 0 60px; }
+  :global(.sidebar) { width: 60px; min-width: 60px; max-width: 6000px; flex: 0 0 60px; }
   .window-controls { 
     display: inline-flex; 
     gap: 2px; 

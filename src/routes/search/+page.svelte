@@ -1,51 +1,115 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import ModelSearchFilters from '$lib/components/ModelSearchFilters.svelte';
-  import ModelCard from '$lib/components/ModelCard.svelte';
+  import SearchLayout from '$lib/components/SearchLayout.svelte';
+  import { huggingFaceService } from '$lib/services/huggingface';
+  import type { HFModel, SearchResult } from '$lib/services/huggingface';
   import { rightSidebarOpen } from '$lib/stores/sidebar';
-  import { huggingFaceService, type HFModel } from '$lib/services/huggingface';
 
-  // Состояние поиска
   let searchQuery = '';
   let selectedFormats: string[] = [];
+  let selectedPipelineTags: string[] = [];
+  let selectedLibraries: string[] = [];
+  let selectedLanguages: string[] = [];
+  let selectedLicenses: string[] = [];
+  let authorFilter = '';
   let isLoading = false;
+  let isLoadingMore = false;
   let models: HFModel[] = [];
   let error: string | null = null;
   let hasSearched = false;
+  let hasMore = false;
+  let nextOffset = 0;
+  let totalCount = 0;
+  
+  // Состояние выбранной модели
+  let selectedModel: HFModel | null = null;
+  let modelDetailLoading = false;
 
   // Убрали mock данные - теперь используем сервис
 
   // Функция поиска моделей
-  async function searchModels(query: string, formats: string[]) {
-    isLoading = true;
+  async function searchModels({
+    query = searchQuery,
+    formats = selectedFormats,
+    pipelineTags = selectedPipelineTags,
+    libraries = selectedLibraries,
+    languages = selectedLanguages,
+    licenses = selectedLicenses,
+    author = authorFilter,
+    loadMore = false
+  } = {}) {
+    if (loadMore) {
+      isLoadingMore = true;
+    } else {
+      isLoading = true;
+      models = [];
+      nextOffset = 0;
+    }
+    
     error = null;
-    hasSearched = true;
-
+    
     try {
-      // Используем сервис для поиска моделей
-      const searchParams = {
+      const result: SearchResult = await huggingFaceService.searchModels({
         query: query.trim(),
-        formats: formats,
-        limit: 50,
-        sort: 'downloads' as const,
-        order: 'desc' as const
-      };
-
-      models = await huggingFaceService.searchModels(searchParams);
+        formats,
+        pipeline_tag: pipelineTags[0], // API принимает только один тег
+        library: libraries,
+        language: languages,
+        license: licenses,
+        author: author?.trim(),
+        limit: 20,
+        offset: loadMore ? nextOffset : 0,
+        sort: 'downloads',
+        order: 'desc'
+      });
+      
+      if (loadMore) {
+        models = [...models, ...result.models];
+      } else {
+        models = result.models;
+      }
+      
+      hasMore = result.hasMore;
+      nextOffset = result.nextOffset || 0;
+      totalCount = result.totalCount;
+      hasSearched = true;
     } catch (err) {
-      error = 'Ошибка при поиске моделей. Попробуйте еще раз.';
-      console.error('Search error:', err);
+      error = err instanceof Error ? err.message : 'Произошла ошибка при поиске';
+      if (!loadMore) {
+        models = [];
+      }
     } finally {
       isLoading = false;
+      isLoadingMore = false;
     }
+  }
+
+  async function loadMoreModels() {
+    if (!hasMore || isLoadingMore) return;
+    await searchModels({ loadMore: true });
   }
 
   // Обработчик поиска
   function handleSearch(event: CustomEvent) {
-    const { query, formats } = event.detail;
+    const { query, formats, pipelineTags, libraries, languages, licenses, author } = event.detail;
     searchQuery = query;
     selectedFormats = formats;
-    searchModels(query, formats);
+    selectedPipelineTags = pipelineTags;
+    selectedLibraries = libraries;
+    selectedLanguages = languages;
+    selectedLicenses = licenses;
+    authorFilter = author;
+    
+    searchModels({
+      query,
+      formats,
+      pipelineTags,
+      libraries,
+      languages,
+      licenses,
+      author
+    });
   }
 
   // Добавление модели в менеджер
@@ -56,6 +120,17 @@
     rightSidebarOpen.set(true);
   }
 
+  // Обработка выбора модели
+  function handleModelSelect(event: CustomEvent<{ model: HFModel }>) {
+    selectedModel = event.detail.model;
+    modelDetailLoading = true;
+    
+    // Имитация загрузки деталей (в реальности детали загружаются в компоненте ModelDetail)
+    setTimeout(() => {
+      modelDetailLoading = false;
+    }, 100);
+  }
+
   // Загрузка популярных моделей при монтировании
   onMount(() => {
     // Можно загрузить популярные модели по умолчанию
@@ -64,91 +139,162 @@
 
 <main class="wrap" class:sidebar-open={$rightSidebarOpen}>
   <div class="search-page">
-    <div class="page-header">
-      <h1>Поиск моделей</h1>
-      <p>Найдите и добавьте модели из Hugging Face Hub в ваш менеджер моделей</p>
+    <!-- Фильтры поиска на всю ширину -->
+    <div class="filters-container">
+      <ModelSearchFilters
+        bind:searchQuery
+        bind:selectedFormats
+        bind:selectedPipelineTags
+        bind:selectedLibraries
+        bind:selectedLanguages
+        bind:selectedLicenses
+        bind:authorFilter
+        {isLoading}
+        clearSearch={() => {
+          searchQuery = '';
+          selectedFormats = [];
+          selectedPipelineTags = [];
+          selectedLibraries = [];
+          selectedLanguages = [];
+          selectedLicenses = [];
+          authorFilter = '';
+          models = [];
+          hasSearched = false;
+          hasMore = false;
+          nextOffset = 0;
+          totalCount = 0;
+          error = null;
+        }}
+        on:search={handleSearch}
+      />
     </div>
 
-    <ModelSearchFilters
-      bind:searchQuery
-      bind:selectedFormats
-      {isLoading}
-      on:search={handleSearch}
-    />
-
-    <!-- Результаты поиска -->
-    {#if hasSearched}
-      {#if isLoading}
-        <div class="loading-state">
-          <div class="loading-spinner"></div>
-          <p>Поиск моделей...</p>
-        </div>
-      {:else if error}
-        <div class="error-state">
-          <p class="error-message">{error}</p>
-          <button class="retry-btn" on:click={() => searchModels(searchQuery, selectedFormats)}>
-            Попробовать снова
-          </button>
-        </div>
-      {:else if models.length === 0}
-        <div class="no-results">
-          <p>По вашему запросу ничего не найдено.</p>
-          <p>Попробуйте изменить поисковый запрос или фильтры.</p>
-        </div>
+    <!-- Секция результатов -->
+    <div class="results-section">
+      {#if hasSearched}
+        {#if isLoading}
+          <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Поиск моделей...</p>
+          </div>
+        {:else if error}
+          <div class="error-state">
+            <p class="error-message">{error}</p>
+            <button class="retry-btn" on:click={() => searchModels()}>
+              Попробовать снова
+            </button>
+          </div>
+        {:else if models.length === 0}
+          <div class="no-results">
+            <p>По вашему запросу ничего не найдено.</p>
+            <p>Попробуйте изменить поисковый запрос или фильтры.</p>
+          </div>
+        {:else}
+          
+          <div class="results-layout">
+            <SearchLayout 
+              {models}
+              {selectedModel}
+              {isLoading}
+              {hasMore}
+              {error}
+              {totalCount}
+              on:selectModel={handleModelSelect}
+              on:loadMore={loadMoreModels}
+            />
+          </div>
+        {/if}
       {:else}
-        <div class="results-section">
-          <div class="results-header">
-            <h2>Найдено моделей: {models.length}</h2>
-            {#if searchQuery || selectedFormats.length > 0}
-              <button class="clear-search-btn" on:click={() => { searchQuery = ''; selectedFormats = []; searchModels('', []); }}>
-                Очистить поиск
-              </button>
-            {/if}
-          </div>
-          
-          <div class="models-grid">
-            {#each models as model (model.id)}
-              <ModelCard {model} on:click={() => addModelToManager(model.id)} />
-            {/each}
-          </div>
-        </div>
-      {/if}
-    {:else}
-      <!-- Начальное состояние -->
-      <div class="initial-state">
-        <div class="welcome-card">
-          <h3>Добро пожаловать в поиск моделей!</h3>
-          <p>Используйте поисковую строку выше, чтобы найти модели по названию, описанию или тегам.</p>
-          <p>Фильтры помогут вам найти модели в нужных форматах (GGUF или Safetensors).</p>
-          
-          <div class="popular-searches">
-            <h4>Популярные запросы:</h4>
-            <div class="search-suggestions">
-              <button class="suggestion-btn" on:click={() => { searchQuery = 'llama'; searchModels('llama', selectedFormats); }}>
-                llama
-              </button>
-              <button class="suggestion-btn" on:click={() => { searchQuery = 'mistral'; searchModels('mistral', selectedFormats); }}>
-                mistral
-              </button>
-              <button class="suggestion-btn" on:click={() => { searchQuery = 'gemma'; searchModels('gemma', selectedFormats); }}>
-                gemma
-              </button>
-              <button class="suggestion-btn" on:click={() => { searchQuery = 'qwen'; searchModels('qwen', selectedFormats); }}>
-                qwen
-              </button>
+        <!-- Начальное состояние -->
+        <div class="initial-state">
+          <div class="welcome-card">
+            <h3>Добро пожаловать в поиск моделей!</h3>
+            <p>Используйте поисковую строку выше, чтобы найти модели по названию, описанию или тегам.</p>
+            <p>Фильтры помогут вам найти модели в нужных форматах (GGUF или Safetensors).</p>
+            
+            <div class="popular-searches">
+              <h4>Популярные запросы:</h4>
+              <div class="search-suggestions">
+                <button class="suggestion-btn" on:click={() => { 
+                  searchQuery = 'llama'; 
+                  searchModels({ query: 'llama', formats: selectedFormats, pipelineTags: selectedPipelineTags, libraries: selectedLibraries, languages: selectedLanguages, licenses: selectedLicenses, author: authorFilter }); 
+                }}>
+                  llama
+                </button>
+                <button class="suggestion-btn" on:click={() => { 
+                  searchQuery = 'mistral'; 
+                  searchModels({ query: 'mistral', formats: selectedFormats, pipelineTags: selectedPipelineTags, libraries: selectedLibraries, languages: selectedLanguages, licenses: selectedLicenses, author: authorFilter }); 
+                }}>
+                  mistral
+                </button>
+                <button class="suggestion-btn" on:click={() => { 
+                  searchQuery = 'gemma'; 
+                  searchModels({ query: 'gemma', formats: selectedFormats, pipelineTags: selectedPipelineTags, libraries: selectedLibraries, languages: selectedLanguages, licenses: selectedLicenses, author: authorFilter }); 
+                }}>
+                  gemma
+                </button>
+                <button class="suggestion-btn" on:click={() => { 
+                  searchQuery = 'qwen'; 
+                  searchModels({ query: 'qwen', formats: selectedFormats, pipelineTags: selectedPipelineTags, libraries: selectedLibraries, languages: selectedLanguages, licenses: selectedLicenses, author: authorFilter }); 
+                }}>
+                  qwen
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    {/if}
+      {/if}
+    </div>
   </div>
 </main>
 
 <style>
   .search-page {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 56px - 32px);
+    max-height: calc(100vh - 56px - 32px);
+    background: var(--bg);
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .filters-container {
+    flex-shrink: 0;
+    width: 100%;
+    max-width: none;
+    background: var(--panel-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-radius: 12px 12px 12px 12px;
+  }
+
+  .results-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 20px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sidebar {
+    width: 500px;
+    min-width: 500px;
+    background: var(--card);
+    border-right: 1px solid var(--border-color);
+    overflow: hidden;
+  }
+
+  .main-content {
+    flex: 1;
+    background: var(--card);
+    overflow: hidden;
   }
 
   .page-header {
@@ -177,8 +323,15 @@
   }
 
   .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
     text-align: center;
-    padding: 60px 20px;
+    color: var(--muted);
+    padding: 40px 20px;
+    overflow: hidden;
   }
 
   .loading-spinner {
@@ -197,11 +350,18 @@
   }
 
   .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
     text-align: center;
+    color: var(--muted);
     padding: 40px 20px;
     background: var(--panel-alt-bg);
     border-radius: 12px;
     border: 1px solid var(--border-color);
+    overflow: hidden;
   }
 
   .error-message {
@@ -228,9 +388,15 @@
   }
 
   .no-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
     text-align: center;
-    padding: 60px 20px;
     color: var(--muted);
+    padding: 40px 20px;
+    overflow: hidden;
   }
 
   .no-results p {
@@ -238,59 +404,39 @@
     font-size: 1.1rem;
   }
 
-  .results-section {
-    margin-top: 32px;
-  }
-
-  .results-header {
+  .results-layout {
+    flex: 1;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 16px;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding: 20px 0;
   }
 
-  .results-header h2 {
-    margin: 0;
-    color: var(--text);
-    font-size: 1.5rem;
-  }
 
-  .clear-search-btn {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--muted);
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 14px;
-     cursor: default;
-    transition: all 0.2s ease;
-  }
-
-  .clear-search-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .models-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 24px;
-  }
 
   .initial-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    text-align: center;
     padding: 40px 20px;
+    overflow: hidden;
   }
 
   .welcome-card {
-    background: var(--card);
-    border: 1px solid var(--border-color);
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 40px;
-    text-align: center;
-    max-width: 800px;
-    margin: 0 auto;
+    padding: 48px 32px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
   }
 
   .welcome-card h3 {
@@ -343,9 +489,38 @@
   }
 
   /* Адаптивность */
+  @media (max-width: 1024px) {
+    .filters-container {
+      padding: 16px;
+    }
+
+    .results-section {
+      padding: 16px;
+    }
+
+    .welcome-card {
+      padding: 32px 24px;
+      max-width: 500px;
+    }
+
+    .suggestion-btn {
+      font-size: 14px;
+      padding: 8px 16px;
+    }
+  }
+
   @media (max-width: 768px) {
     .search-page {
-      padding: 0 12px;
+      height: auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    .filters-container {
+      padding: 12px;
+    }
+
+    .results-section {
+      padding: 12px;
     }
 
     .page-header h1 {
@@ -356,22 +531,67 @@
       font-size: 1rem;
     }
 
-    .models-grid {
-      grid-template-columns: 1fr;
-      gap: 16px;
+    .results-layout {
+      gap: 12px;
+    }
+
+    .sidebar {
+      min-height: 250px;
+    }
+
+    .main-content {
+      min-height: 350px;
     }
 
     .welcome-card {
-      padding: 24px;
+      padding: 24px 16px;
+      max-width: 400px;
+      margin: 0;
     }
 
     .search-suggestions {
       flex-direction: column;
       align-items: center;
+      gap: 8px;
     }
 
     .suggestion-btn {
-      width: 200px;
+      width: 100%;
+      max-width: 200px;
+      font-size: 13px;
+      padding: 6px 12px;
+    }
+
+    .results-header {
+      padding: 12px;
+    }
+
+    .search-results-info {
+      padding: 0 12px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .results-section {
+      padding: 8px;
+    }
+
+    .sidebar {
+      min-height: 200px;
+    }
+
+    .main-content {
+      min-height: 300px;
+    }
+
+    .welcome-card {
+      padding: 20px 12px;
+      max-width: 350px;
+    }
+
+    .suggestion-btn {
+      padding: 5px 10px;
+      font-size: 12px;
     }
   }
 

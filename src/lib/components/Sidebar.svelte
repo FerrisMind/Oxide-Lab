@@ -70,7 +70,7 @@
 <style>
   /* Sidebar core */
   .sidebar {
-    width: 60px; /* icon-only width */
+    width: 120px; /* expanded width */
     height: 100%;
     background: var(--card);
     border-right: 1px solid var(--border-color, #e8e6e3);
@@ -129,8 +129,7 @@
   
   .nav-icon { display: flex; align-items: center; justify-content: center; color: inherit; }
   
-  /* hide textual content blocks if accidentally left */
-  .nav-content, .nav-title, .nav-description { display: none; }
+
   
   .sidebar-footer {
     padding: 8px 6px;
