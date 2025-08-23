@@ -1,0 +1,5 @@
+@media (prefers-color-scheme: dark) {
+  /* Chat-specific dark tweaks only */
+  .field input { background: #2d2d2d; border-color: #3a3a3a; }
+  .field input::placeholder { color: #bdbdbd; opacity: 1; }
+}

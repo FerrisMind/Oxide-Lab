@@ -1,15 +1,21 @@
-import { mount, unmount, type ComponentConstructorOptions } from 'svelte';
-import CodeMirror from '$lib/components/CodeMirror.svelte';
-import Copy from 'phosphor-svelte/lib/Copy';
-import Check from 'phosphor-svelte/lib/Check';
+import { mount, unmount } from 'svelte';
+import { 
+  detectLanguageFromContent, 
+  extractLanguageFromClassNames 
+} from './utils/language-detector';
+import { 
+  createCodeMirrorToolbar, 
+  createCodeMirrorContainer, 
+  createEditorContainer 
+} from './utils/dom-utils';
+import { 
+  mountCodeMirrorComponent, 
+  cleanupCodeBlock, 
+  type CodeBlock 
+} from './utils/component-manager';
+import { getCodeMirrorRenderer, cleanupRenderer } from './utils/renderer-manager';
 
-interface CodeBlock {
-  element: HTMLElement;
-  code: string;
-  language: string;
-  component?: any;
-  iconComponent?: any;
-}
+export type { CodeBlock };
 
 export class CodeMirrorRenderer {
   private codeBlocks: Map<HTMLElement, CodeBlock> = new Map();
@@ -88,182 +94,24 @@ export class CodeMirrorRenderer {
   }
 
   private extractLanguage(codeElement: Element): string {
-    // Check for language class (hljs-*, language-*, etc.)
-    const classList = Array.from(codeElement.classList);
-    
-    for (const className of classList) {
-      if (className.startsWith('hljs-')) {
-        // Skip hljs utility classes
-        continue;
-      }
-      if (className.startsWith('language-')) {
-        return className.replace('language-', '');
-      }
-      if (className.startsWith('lang-')) {
-        return className.replace('lang-', '');
-      }
-    }
-
-    // Check parent pre element
-    if (codeElement.parentElement) {
-      const parentClassList = Array.from(codeElement.parentElement.classList);
-      for (const className of parentClassList) {
-        if (className.startsWith('language-')) {
-          return className.replace('language-', '');
-        }
-      }
+    // Try to extract language from class names first
+    const languageFromClass = extractLanguageFromClassNames(codeElement);
+    if (languageFromClass) {
+      return languageFromClass;
     }
 
     // Try to detect language from content
-    return this.detectLanguageFromContent(codeElement.textContent || '');
-  }
-
-  private detectLanguageFromContent(code: string): string {
-    const trimmed = code.trim();
-    
-    // JavaScript/TypeScript patterns
-    if (
-      /^(import|export|const|let|var|function|class|\w+\s*=>)/.test(trimmed) ||
-      /\.(js|ts|jsx|tsx)$/.test(trimmed) ||
-      /console\.log|document\.|window\./.test(trimmed)
-    ) {
-      return 'javascript';
-    }
-
-    // Python patterns
-    if (
-      /^(def|class|import|from|if __name__|print\()/.test(trimmed) ||
-      /\.py$/.test(trimmed) ||
-      /:\s*$/.test(trimmed.split('\n')[0])
-    ) {
-      return 'python';
-    }
-
-    // HTML patterns
-    if (
-      /^<!DOCTYPE|^<html|^<\w+[^>]*>/.test(trimmed) ||
-      /<\/\w+>/.test(trimmed)
-    ) {
-      return 'html';
-    }
-
-    // CSS patterns
-    if (
-      /^[.#]?\w+\s*\{/.test(trimmed) ||
-      /:\s*[^;]+;/.test(trimmed)
-    ) {
-      return 'css';
-    }
-
-    // JSON patterns
-    if (
-      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-      (trimmed.startsWith('[') && trimmed.endsWith(']'))
-    ) {
-      try {
-        JSON.parse(trimmed);
-        return 'json';
-      } catch {
-        // Not valid JSON
-      }
-    }
-
-    // SQL patterns
-    if (
-      /^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\s+/i.test(trimmed) ||
-      /\bFROM\s+\w+/i.test(trimmed)
-    ) {
-      return 'sql';
-    }
-
-    return '';
+    return detectLanguageFromContent(codeElement.textContent || '');
   }
 
   private replaceWithCodeMirror(preElement: HTMLPreElement, code: string, language: string) {
     // Create container for CodeMirror
-    const container = document.createElement('div');
-    container.className = 'codemirror-container';
+    const container = createCodeMirrorContainer();
     
-    // Create copy button
-    const toolbar = document.createElement('div');
-    toolbar.className = 'codemirror-toolbar';
+    // Create toolbar with language label and copy button
+    const { toolbar } = createCodeMirrorToolbar(language, code);
     
-    const languageLabel = document.createElement('span');
-    languageLabel.className = 'codemirror-language';
-    languageLabel.textContent = language || 'text';
-    
-    const copyButton = document.createElement('button');
-    copyButton.className = 'codemirror-copy-btn';
-    copyButton.title = 'Copy code';
-    
-    // Create icon container
-    const iconContainer = document.createElement('span');
-    iconContainer.className = 'codemirror-copy-icon';
-    copyButton.appendChild(iconContainer);
-    
-    // Mount the copy icon
-    let currentIcon = mount(Copy, {
-      target: iconContainer,
-      props: { size: 16, weight: 'regular' }
-    });
-    
-    copyButton.addEventListener('click', () => {
-      navigator.clipboard.writeText(code).then(() => {
-        // Replace with check icon
-        if (currentIcon) {
-          try { unmount(currentIcon); } catch {}
-        }
-        currentIcon = mount(Check, {
-          target: iconContainer,
-          props: { size: 16, weight: 'regular' }
-        });
-        
-        setTimeout(() => {
-          // Replace back with copy icon
-          if (currentIcon) {
-            try { unmount(currentIcon); } catch {}
-          }
-          currentIcon = mount(Copy, {
-            target: iconContainer,
-            props: { size: 16, weight: 'regular' }
-          });
-        }, 1000);
-      }).catch(() => {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = code;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        
-        // Replace with check icon
-        if (currentIcon) {
-          try { unmount(currentIcon); } catch {}
-        }
-        currentIcon = mount(Check, {
-          target: iconContainer,
-          props: { size: 16, weight: 'regular' }
-        });
-        
-        setTimeout(() => {
-          // Replace back with copy icon
-          if (currentIcon) {
-            try { unmount(currentIcon); } catch {}
-          }
-          currentIcon = mount(Copy, {
-            target: iconContainer,
-            props: { size: 16, weight: 'regular' }
-          });
-        }, 1000);
-      });
-    });
-
-    toolbar.appendChild(languageLabel);
-    toolbar.appendChild(copyButton);
-    
-    const editorContainer = document.createElement('div');
-    editorContainer.className = 'codemirror-editor';
+    const editorContainer = createEditorContainer();
     
     container.appendChild(toolbar);
     container.appendChild(editorContainer);
@@ -273,25 +121,14 @@ export class CodeMirrorRenderer {
 
     // Mount CodeMirror component
     try {
-      const component = mount(CodeMirror, {
-        target: editorContainer,
-        props: {
-          code: code,
-          language: language,
-          readonly: true,
-          theme: 'auto',
-          showLineNumbers: true,
-          wrap: true
-        }
-      });
+      const component = mountCodeMirrorComponent(editorContainer, code, language);
 
       // Store reference for cleanup
       this.codeBlocks.set(container, {
         element: container,
         code,
         language,
-        component,
-        iconComponent: currentIcon
+        component
       });
     } catch (error) {
       console.error('Failed to mount CodeMirror component:', error);
@@ -311,21 +148,10 @@ export class CodeMirrorRenderer {
 
   private cleanupCodeBlock(container: HTMLElement) {
     const block = this.codeBlocks.get(container);
-    if (block?.component) {
-      try {
-        unmount(block.component);
-      } catch (error) {
-        console.error('Failed to unmount CodeMirror component:', error);
-      }
+    if (block) {
+      cleanupCodeBlock(block);
+      this.codeBlocks.delete(container);
     }
-    if (block?.iconComponent) {
-      try {
-        unmount(block.iconComponent);
-      } catch (error) {
-        console.error('Failed to unmount icon component:', error);
-      }
-    }
-    this.codeBlocks.delete(container);
   }
 
   private cleanup() {
@@ -344,27 +170,5 @@ export class CodeMirrorRenderer {
   }
 }
 
-// Container-specific renderer management
-const containerRenderers = new Map<HTMLElement, CodeMirrorRenderer>();
-
-export function getCodeMirrorRenderer(container?: HTMLElement): CodeMirrorRenderer {
-  if (!container) {
-    // For backward compatibility, return a new renderer
-    return new CodeMirrorRenderer();
-  }
-  
-  let renderer = containerRenderers.get(container);
-  if (!renderer) {
-    renderer = new CodeMirrorRenderer();
-    containerRenderers.set(container, renderer);
-  }
-  return renderer;
-}
-
-export function cleanupRenderer(container: HTMLElement) {
-  const renderer = containerRenderers.get(container);
-  if (renderer) {
-    renderer.destroy();
-    containerRenderers.delete(container);
-  }
-}
+// Export the renderer manager functions
+export { getCodeMirrorRenderer, cleanupRenderer };

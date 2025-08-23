@@ -1,3 +1,9 @@
+@import './styles/variables.css';
+@import './styles/scrollbar.css';
+@import './styles/base.css';
+@import './styles/components.css';
+@import './styles/animations.css';
+
 /* Глобальные CSS переменные */
 :root {
   --bg: #f7f5f2;
@@ -23,85 +29,6 @@
   --code-variable: #6d28d9; /* переменные */
   --code-tag: #2563eb; /* теги/мета */
   --code-comment: var(--muted); /* комментарии */
-}
-
-/* Базовые стили */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html, body {
-  height: 100%;
-  min-height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  overflow-x: hidden;
-}
-
-/* Улучшенные стили для скроллбаров */
-::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 6px;
-  margin: 2px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(179, 205, 224, 0.8);
-  border-radius: 6px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(179, 205, 224, 1);
-  background-clip: content-box;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-::-webkit-scrollbar-thumb:active {
-  background: rgba(179, 205, 224, 1);
-  background-clip: content-box;
-  transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
-
-::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
-/* Стили для Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(179, 205, 224, 0.8) transparent;
-  scroll-behavior: smooth;
-}
-
-/* Горизонтальные скроллбары */
-::-webkit-scrollbar:horizontal {
-  height: 8px;
-}
-
-::-webkit-scrollbar-thumb:horizontal {
-  background: linear-gradient(90deg, rgba(179, 205, 224, 0.8), rgba(179, 205, 224, 0.6));
-  border-radius: 4px;
-  border: 1px solid transparent;
-  background-clip: content-box;
-}
-
-::-webkit-scrollbar-thumb:horizontal:hover {
-  background: linear-gradient(90deg, rgba(179, 205, 224, 1), rgba(179, 205, 224, 0.8));
-  background-clip: content-box;
 }
 
 /* Темная тема */
@@ -261,7 +188,7 @@ p {
 
 /* Стили для кнопок */
 button {
-   cursor: default;
+  cursor: default;
   border: none;
   border-radius: 8px;
   padding: 8px 16px;
@@ -272,71 +199,4 @@ button {
   color: white;
 }
 
-button:hover {
-  background: var(--accent-2);
-  transform: translateY(-1px);
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Стили для ссылок */
-a {
-  color: var(--accent);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-a:hover {
-  color: var(--accent-2);
-  text-decoration: underline;
-}
-
-/* Стили для форм */
-input, textarea, select {
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 14px;
-  background: var(--card);
-  color: var(--text);
-  transition: border-color 0.2s ease;
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* Стили для карточек */
-.card {
-  background: var(--card);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: var(--shadow);
-  transition: box-shadow 0.2s ease;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-hover);
-}
-
-/* Адаптивность */
-@media (max-width: 768px) {
-  .wrap {
-    padding: 12px;
-  }
-  
-  h1 { font-size: 1.75rem; }
-  h2 { font-size: 1.5rem; }
-  h3 { font-size: 1.25rem; }
-  
-  .card {
-    padding: 16px;
-  }
-}
+/* Добавляем недостающие закрывающие скобки */

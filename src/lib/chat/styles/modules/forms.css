@@ -1,0 +1,97 @@
+.switch { display: inline-flex; gap: 8px; margin-bottom: 12px; }
+.switch button {
+  padding: 8px 12px; border-radius: 10px; border: 1px solid transparent;
+  background: #f3f3f3; color: var(--text); cursor: default;
+}
+.switch button.active { background: var(--accent); }
+
+.field { display: grid; gap: 6px; margin: 10px 0; }
+.field label { font-size: 12px; color: var(--muted); }
+.field input {
+  border: 1px solid #e8e6e3; padding: 10px 12px; border-radius: 10px; outline: none;
+  background: #fcfbfa; color: var(--text);
+  width: 100%;
+}
+.field input::placeholder { color: #5a5a5a; opacity: 0.9; }
+
+/* Встроенная кнопка внутри инпута выбора файла */
+.input-with-button { 
+  position: relative; 
+  width: 100%; 
+  max-width: 100%;
+  overflow: hidden;
+}
+.input-with-button input { 
+  padding: var(--control-padding-y) var(--control-padding-x); 
+  padding-right: 40px; 
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.inside-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: var(--panel-bg);
+  color: var(--text);
+  border-radius: 8px;
+  cursor: default;
+}
+.inside-btn svg { width: 18px; height: 18px; }
+.inside-btn:hover { background: var(--accent); color: #1b1b1b; border-color: transparent; }
+
+.primary {
+  background: var(--accent-2); border: none; border-radius: 12px; padding: 10px 14px;
+  cursor: default; color: #3a2f4f; font-weight: 600; margin-top: 6px;
+}
+.primary.danger { background: #ffb3b3; color: #3a1f1f; }
+
+.file-row { 
+  display: flex; 
+  gap: 8px; 
+  align-items: center; 
+  width: 100%; 
+  max-width: 100%; 
+  overflow: hidden; 
+}
+.file-row input { 
+  flex: 1; 
+  min-width: 0; 
+  max-width: 100%;
+}
+
+.params { display: grid; gap: 10px; margin-top: 12px; }
+.param { display: grid; gap: 6px; }
+.param label { font-size: 12px; color: var(--muted); }
+.param .row { display: flex; gap: 8px; align-items: center; }
+.param input[type="range"] { flex: 1; }
+.thinking-spacer { margin-bottom: 12px; }
+
+/* Новая структура параметров: чекбокс слева, название, справа инпут; слайдер ниже */
+.param .head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.param .head label { font-size: 13px; color: var(--text); }
+.param .head .value-input {
+  width: 112px;
+}
+.param .slider-row {
+  display: grid;
+}
+.param .slider-row input[type="range"] {
+  width: 100%;
+}

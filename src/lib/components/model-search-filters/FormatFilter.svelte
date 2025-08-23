@@ -1,6 +1,5 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import type { FilterOption } from './filter-types';
   import { availableFormats } from './filter-types';
 
   export let selectedFormats: string[];
