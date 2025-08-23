@@ -1,5 +1,4 @@
 <script lang="ts">
-  import MagnifyingGlass from 'phosphor-svelte/lib/MagnifyingGlass';
   import Funnel from 'phosphor-svelte/lib/Funnel';
   import CaretDown from 'phosphor-svelte/lib/CaretDown';
   import CaretUp from 'phosphor-svelte/lib/CaretUp';
@@ -131,36 +130,9 @@
     }
     handleSearch();
   }
-
-  function handleKeyPress(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      handleSearch();
-    }
-  }
 </script>
 
 <div class="search-filters">
-  <div class="search-section">
-    <div class="search-input-wrapper">
-      <MagnifyingGlass size={20} class="search-icon" />
-      <input
-        type="text"
-        placeholder="Поиск моделей (например: llama, mistral, gemma)..."
-        bind:value={searchQuery}
-        on:keypress={handleKeyPress}
-        class="search-input"
-        disabled={isLoading}
-      />
-      <button 
-        class="search-btn" 
-        on:click={handleSearch}
-        disabled={isLoading}
-      >
-        {isLoading ? 'Поиск...' : 'Найти'}
-      </button>
-    </div>
-  </div>
-
   <div class="filters-section">
     <div class="filters-header">
       <div class="filters-title">
@@ -200,7 +172,7 @@
             type="text"
             placeholder="Например: microsoft, google, meta-llama..."
             bind:value={authorFilter}
-            on:keypress={handleKeyPress}
+            on:keypress={(e) => e.key === 'Enter' && handleSearch()}
             class="author-input"
             disabled={isLoading}
           />
@@ -362,75 +334,8 @@
     box-sizing: border-box;
   }
 
-  .search-section {
-    margin-bottom: 20px;
-    width: 100%;
-  }
-
-  .search-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: relative;
-  }
-
-  /* keep icon visually present but avoid unused selector warning */
-  .search-input-wrapper :global(svg) {
-    color: var(--muted);
-    position: absolute;
-    left: 16px;
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  .search-input {
-    flex: 1;
-    padding: 12px 16px 12px 48px;
-    border: 2px solid var(--border-color);
-    border-radius: 10px;
-    font-size: 16px;
-    background: var(--bg);
-    color: var(--text);
-    outline: none;
-    transition: all 0.2s ease;
-  }
-
-  .search-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(179, 205, 224, 0.1);
-  }
-
-  .search-input:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .search-btn {
-    background: var(--accent-2);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-size: 16px;
-    font-weight: 600;
-     cursor: default;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-  }
-
-  .search-btn:hover:not(:disabled) {
-    background: var(--accent);
-    transform: translateY(-1px);
-  }
-
-  .search-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
   .filters-section {
-    border-top: 1px solid var(--border);
-    padding-top: 20px;
+    padding-top: 0;
     width: 100%;
   }
 
@@ -717,16 +622,6 @@
       padding: 12px;
     }
 
-    .search-input-wrapper {
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .search-input {
-      width: 100%;
-      font-size: 16px; /* Предотвращает зум на iOS */
-    }
-
     .format-filters,
     .pipeline-filters,
     .library-filters,
@@ -763,21 +658,11 @@
       font-size: 13px;
       padding: 6px 12px;
     }
-
-    .search-btn {
-      width: 100%;
-      font-size: 15px;
-      padding: 12px 20px;
-    }
   }
 
   @media (max-width: 480px) {
     .search-filters {
       padding: 8px;
-    }
-
-    .search-input {
-      padding: 10px 12px;
     }
 
     .format-filters,
@@ -804,20 +689,10 @@
     .author-input {
       padding: 8px 10px;
     }
-
-    .search-btn {
-      padding: 10px 16px;
-      font-size: 14px;
-    }
   }
 
   /* Темная тема */
   @media (prefers-color-scheme: dark) {
-    .search-input {
-      background: var(--card);
-      border-color: var(--border-color);
-    }
-
     .format-btn {
       border-color: var(--border-color);
     }

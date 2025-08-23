@@ -1,4 +1,6 @@
 <script lang="ts">
+  import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
+  import Heart from 'phosphor-svelte/lib/Heart';
   import type { HFModel } from '$lib/services/huggingface';
   import { createEventDispatcher } from 'svelte';
 
@@ -87,10 +89,10 @@
               </div>
               <div class="title-stats">
                 <span class="stat likes" title="Лайки">
-                  ❤️ {formatDownloads(model.likes)}
+                  <Heart size={12} /> {formatDownloads(model.likes)}
                 </span>
                 <span class="stat downloads" title="Загрузки">
-                  ⬇️ {formatDownloads(model.downloads)}
+                  <DownloadSimple size={12} /> {formatDownloads(model.downloads)}
                 </span>
               </div>
             </div>
@@ -238,6 +240,9 @@
     font-size: 0.75rem;
     color: var(--muted);
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
   .formats {

@@ -4,6 +4,7 @@
   // Тема для highlight.js (легкая)
   import 'highlight.js/styles/github.css';
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import type { UnlistenFn } from '@tauri-apps/api/event';
   import Minus from "phosphor-svelte/lib/Minus";
@@ -12,6 +13,19 @@
   import X from "phosphor-svelte/lib/X";
   import Sidebar from '$lib/components/Sidebar.svelte';
   import GGUFUploadArea from '$lib/components/GGUFUploadArea.svelte';
+  import HeaderSearch from '$lib/components/HeaderSearch.svelte';
+  import { triggerHeaderSearch } from '$lib/stores/search';
+  
+  // Определяем, должен ли отображаться GGUFUploadArea
+  $: shouldShowGGUFUploadArea = $page.url.pathname === '/' || $page.url.pathname === '/api';
+  
+  // Определяем, должен ли отображаться HeaderSearch
+  $: shouldShowHeaderSearch = $page.url.pathname === '/search';
+  
+  // Обработчик поиска из хедера
+  function handleHeaderSearch(event: CustomEvent<{ query: string }>) {
+    triggerHeaderSearch(event.detail.query);
+  }
   
   const appName = 'Oxide Lab';
   const appIcon = '/icon.svg';
@@ -95,8 +109,15 @@
       <span class="brand-title">{appName}</span>
     </button>
     <div class="header-center" data-tauri-drag-region="false">
-      <!-- GGUF upload moved here -->
-      <GGUFUploadArea />
+      <!-- GGUF upload показывается только на вкладках чата и API работы -->
+      {#if shouldShowGGUFUploadArea}
+        <GGUFUploadArea />
+      {/if}
+      
+      <!-- Поиск показывается только на вкладке поиска -->
+      {#if shouldShowHeaderSearch}
+        <HeaderSearch on:search={handleHeaderSearch} />
+      {/if}
     </div>
     <div class="window-controls" data-tauri-drag-region="false">
       <button type="button" class="win-btn" title="Свернуть" onclick={() => import('@tauri-apps/api/window').then(m => m.getCurrentWindow().minimize())}>
@@ -135,6 +156,14 @@
   .brand { display: inline-flex; align-items: center; gap: 10px; cursor: default; background: transparent; border: none; padding: 4px 8px; border-radius: 8px; }
   .brand-icon { width: 20px; height: 20px; }
   .brand-title { font-weight: 700; letter-spacing: 0.3px; color: var(--text); opacity: 0.9; }
+  .header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-width: 600px;
+    margin: 0 auto;
+  }
   .app-shell { height: 100dvh; min-height: 100dvh; display: flex; flex-direction: column; }
   .app-body { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; }
   .app-main { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; padding: var(--content-gap); padding-top: var(--content-gap-top); }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { headerSearchQuery, searchTrigger } from '$lib/stores/search';
   import ModelSearchFilters from '$lib/components/ModelSearchFilters.svelte';
   import SearchLayout from '$lib/components/SearchLayout.svelte';
   import { huggingFaceService } from '$lib/services/huggingface';
@@ -135,6 +136,15 @@
   onMount(() => {
     // Можно загрузить популярные модели по умолчанию
   });
+
+  // Слушаем поиск из хедера
+  $: if ($searchTrigger) {
+    searchQuery = $headerSearchQuery;
+    searchModels({ query: searchQuery });
+  }
+  
+  // Синхронизируем с хедером при изменении запроса на странице
+  $: headerSearchQuery.set(searchQuery);
 </script>
 
 <main class="wrap" class:sidebar-open={$rightSidebarOpen}>

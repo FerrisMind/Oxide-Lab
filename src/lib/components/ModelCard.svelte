@@ -1,4 +1,6 @@
 <script lang="ts">
+  import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
+  import Heart from 'phosphor-svelte/lib/Heart';
   export let model: {
     id: string;
     name: string;
@@ -60,11 +62,11 @@
     </div>
     <div class="model-stats">
       <div class="stat">
-        <span class="stat-icon">⬇️</span>
+        <DownloadSimple size={14} class="stat-icon" />
         <span class="stat-value">{formatDownloads(model.downloads)}</span>
       </div>
       <div class="stat">
-        <span class="stat-icon">❤️</span>
+        <Heart size={14} class="stat-icon" />
         <span class="stat-value">{formatDownloads(model.likes)}</span>
       </div>
     </div>
@@ -170,7 +172,8 @@
   }
 
   .stat-icon {
-    font-size: 12px;
+    color: var(--muted);
+    flex-shrink: 0;
   }
 
   .stat-value {

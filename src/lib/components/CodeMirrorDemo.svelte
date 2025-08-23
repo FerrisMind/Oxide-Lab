@@ -1,7 +1,7 @@
 <script lang="ts">
   import CodeMirror from './CodeMirror.svelte';
   import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
-  import { getCodeMirrorRenderer } from '$lib/chat/codemirror-renderer';
+  import { getCodeMirrorRenderer, cleanupRenderer } from '$lib/chat/codemirror-renderer';
   import { onMount, onDestroy } from 'svelte';
 
   let contentEl: HTMLDivElement;
@@ -86,14 +86,14 @@ Regular text continues to render normally with **bold** and *italic* formatting.
       contentEl.innerHTML = renderMarkdownToSafeHtml(sampleMarkdown);
       
       // Apply CodeMirror rendering
-      renderer = getCodeMirrorRenderer();
+      renderer = getCodeMirrorRenderer(contentEl);
       renderer.startWatching(contentEl);
     }
   });
 
   onDestroy(() => {
     if (renderer && contentEl) {
-      renderer.stopWatching();
+      cleanupRenderer(contentEl);
     }
   });
 </script>

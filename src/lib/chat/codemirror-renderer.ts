@@ -1,19 +1,24 @@
 import { mount, unmount, type ComponentConstructorOptions } from 'svelte';
 import CodeMirror from '$lib/components/CodeMirror.svelte';
+import Copy from 'phosphor-svelte/lib/Copy';
+import Check from 'phosphor-svelte/lib/Check';
 
 interface CodeBlock {
   element: HTMLElement;
   code: string;
   language: string;
   component?: any;
+  iconComponent?: any;
 }
 
 export class CodeMirrorRenderer {
   private codeBlocks: Map<HTMLElement, CodeBlock> = new Map();
-  private observer: MutationObserver;
+  private observer: MutationObserver | null = null;
+  private isWatching: boolean = false;
+  private container: HTMLElement | null = null;
 
   constructor() {
-    // Watch for DOM changes to catch new code blocks
+    // Initialize observer but don't start watching yet
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
@@ -31,16 +36,36 @@ export class CodeMirrorRenderer {
   }
 
   public startWatching(container: HTMLElement) {
-    this.observer.observe(container, {
-      childList: true,
-      subtree: true,
-    });
+    // If already watching the same container, don't restart
+    if (this.isWatching && this.container === container) {
+      return;
+    }
+    
+    // Stop watching previous container if any
+    if (this.isWatching) {
+      this.stopWatching();
+    }
+    
+    this.container = container;
+    this.isWatching = true;
+    
+    if (this.observer) {
+      this.observer.observe(container, {
+        childList: true,
+        subtree: true,
+      });
+    }
+    
     // Process existing elements
     this.processElement(container);
   }
 
   public stopWatching() {
-    this.observer.disconnect();
+    if (this.observer) {
+      this.observer.disconnect();
+    }
+    this.isWatching = false;
+    this.container = null;
     this.cleanup();
   }
 
@@ -169,13 +194,39 @@ export class CodeMirrorRenderer {
     
     const copyButton = document.createElement('button');
     copyButton.className = 'codemirror-copy-btn';
-    copyButton.textContent = '📋';
     copyButton.title = 'Copy code';
+    
+    // Create icon container
+    const iconContainer = document.createElement('span');
+    iconContainer.className = 'codemirror-copy-icon';
+    copyButton.appendChild(iconContainer);
+    
+    // Mount the copy icon
+    let currentIcon = mount(Copy, {
+      target: iconContainer,
+      props: { size: 16, weight: 'regular' }
+    });
+    
     copyButton.addEventListener('click', () => {
       navigator.clipboard.writeText(code).then(() => {
-        copyButton.textContent = '✅';
+        // Replace with check icon
+        if (currentIcon) {
+          try { unmount(currentIcon); } catch {}
+        }
+        currentIcon = mount(Check, {
+          target: iconContainer,
+          props: { size: 16, weight: 'regular' }
+        });
+        
         setTimeout(() => {
-          copyButton.textContent = '📋';
+          // Replace back with copy icon
+          if (currentIcon) {
+            try { unmount(currentIcon); } catch {}
+          }
+          currentIcon = mount(Copy, {
+            target: iconContainer,
+            props: { size: 16, weight: 'regular' }
+          });
         }, 1000);
       }).catch(() => {
         // Fallback for older browsers
@@ -186,9 +237,24 @@ export class CodeMirrorRenderer {
         document.execCommand('copy');
         document.body.removeChild(textArea);
         
-        copyButton.textContent = '✅';
+        // Replace with check icon
+        if (currentIcon) {
+          try { unmount(currentIcon); } catch {}
+        }
+        currentIcon = mount(Check, {
+          target: iconContainer,
+          props: { size: 16, weight: 'regular' }
+        });
+        
         setTimeout(() => {
-          copyButton.textContent = '📋';
+          // Replace back with copy icon
+          if (currentIcon) {
+            try { unmount(currentIcon); } catch {}
+          }
+          currentIcon = mount(Copy, {
+            target: iconContainer,
+            props: { size: 16, weight: 'regular' }
+          });
         }, 1000);
       });
     });
@@ -224,7 +290,8 @@ export class CodeMirrorRenderer {
         element: container,
         code,
         language,
-        component
+        component,
+        iconComponent: currentIcon
       });
     } catch (error) {
       console.error('Failed to mount CodeMirror component:', error);
@@ -251,6 +318,13 @@ export class CodeMirrorRenderer {
         console.error('Failed to unmount CodeMirror component:', error);
       }
     }
+    if (block?.iconComponent) {
+      try {
+        unmount(block.iconComponent);
+      } catch (error) {
+        console.error('Failed to unmount icon component:', error);
+      }
+    }
     this.codeBlocks.delete(container);
   }
 
@@ -263,15 +337,34 @@ export class CodeMirrorRenderer {
 
   public destroy() {
     this.stopWatching();
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
   }
 }
 
-// Global instance for easy access
-let globalRenderer: CodeMirrorRenderer | null = null;
+// Container-specific renderer management
+const containerRenderers = new Map<HTMLElement, CodeMirrorRenderer>();
 
-export function getCodeMirrorRenderer(): CodeMirrorRenderer {
-  if (!globalRenderer) {
-    globalRenderer = new CodeMirrorRenderer();
+export function getCodeMirrorRenderer(container?: HTMLElement): CodeMirrorRenderer {
+  if (!container) {
+    // For backward compatibility, return a new renderer
+    return new CodeMirrorRenderer();
   }
-  return globalRenderer;
+  
+  let renderer = containerRenderers.get(container);
+  if (!renderer) {
+    renderer = new CodeMirrorRenderer();
+    containerRenderers.set(container, renderer);
+  }
+  return renderer;
+}
+
+export function cleanupRenderer(container: HTMLElement) {
+  const renderer = containerRenderers.get(container);
+  if (renderer) {
+    renderer.destroy();
+    containerRenderers.delete(container);
+  }
 }

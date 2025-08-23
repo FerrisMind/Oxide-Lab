@@ -1,8 +1,13 @@
 <script lang="ts">
+  // Fixed: Model descriptions now load properly on every model selection
   import type { HFModel } from '$lib/services/huggingface';
   import { huggingFaceService } from '$lib/services/huggingface';
   import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
-  import { onMount } from 'svelte';
+  import { getCodeMirrorRenderer } from '$lib/chat/codemirror-renderer';
+  import { onMount, mount, unmount, onDestroy } from 'svelte';
+  import Robot from 'phosphor-svelte/lib/Robot';
+  import Download from 'phosphor-svelte/lib/Download';
+  import Heart from 'phosphor-svelte/lib/Heart';
 
   export let model: HFModel | null = null;
   export let loading = false;
@@ -11,24 +16,144 @@
   let detailedModel: HFModel | null = null;
   let detailsLoading = false;
   let tagsCollapsed = false;
+  let emptyIconEl: HTMLElement;
+  let robotIcon: any;
+  let downloadIconEl: HTMLElement;
+  let heartIconEl: HTMLElement;
+  let downloadIcon: any;
+  let heartIcon: any;
+  let descriptionEl: HTMLElement;
+  let codeMirrorRenderer: any;
+  let isDescriptionWatched = false;
 
-  $: if (model) {
-    loadModelDetails();
+  let currentModelId: string | null = null;
+
+  $: handleModelChange(model);
+  
+  function handleModelChange(newModel: HFModel | null) {
+    const newModelId = newModel?.id || null;
+    
+    if (newModelId !== currentModelId) {
+      // Model has changed, cleanup previous state
+      if (currentModelId !== null) {
+        cleanupCodeMirror();
+        detailedModel = null;
+      }
+      
+      currentModelId = newModelId;
+      
+      if (newModel) {
+        loadModelDetails();
+      }
+    }
+  }
+  
+  function cleanupCodeMirror() {
+    if (codeMirrorRenderer && isDescriptionWatched) {
+      try {
+        codeMirrorRenderer.stopWatching();
+      } catch {}
+    }
+    isDescriptionWatched = false;
+  }
+
+  // Mount robot icon when component is ready
+  $: if (emptyIconEl && !model) {
+    if (robotIcon) {
+      try { unmount(robotIcon); } catch {}
+    }
+    robotIcon = mount(Robot, {
+      target: emptyIconEl,
+      props: { size: 64, weight: 'regular' }
+    });
+  }
+
+  // Mount action button icons when model is loaded
+  $: if (downloadIconEl && model) {
+    if (downloadIcon) {
+      try { unmount(downloadIcon); } catch {}
+    }
+    downloadIcon = mount(Download, {
+      target: downloadIconEl,
+      props: { size: 16, weight: 'regular' }
+    });
+  }
+
+  $: if (heartIconEl && model) {
+    if (heartIcon) {
+      try { unmount(heartIcon); } catch {}
+    }
+    heartIcon = mount(Heart, {
+      target: heartIconEl,
+      props: { size: 16, weight: 'regular' }
+    });
+  }
+
+  // Apply CodeMirror to description content when it's rendered
+  $: setupCodeMirror(descriptionEl, detailedModel?.description || model?.description);
+  
+  function setupCodeMirror(element: HTMLElement, description: string | undefined) {
+    if (element && description) {
+      // Clean up previous CodeMirror setup
+      cleanupCodeMirror();
+      
+      try {
+        if (!codeMirrorRenderer) {
+          codeMirrorRenderer = getCodeMirrorRenderer();
+        }
+        codeMirrorRenderer.startWatching(element);
+        isDescriptionWatched = true;
+      } catch (error) {
+        console.error('Failed to apply CodeMirror to model description:', error);
+      }
+    }
+  }
+
+  // Cleanup CodeMirror and icons when component is destroyed or model changes
+  onDestroy(() => {
+    cleanup();
+  });
+  
+  function cleanup() {
+    if (robotIcon) {
+      try { unmount(robotIcon); } catch {}
+      robotIcon = null;
+    }
+    if (downloadIcon) {
+      try { unmount(downloadIcon); } catch {}
+      downloadIcon = null;
+    }
+    if (heartIcon) {
+      try { unmount(heartIcon); } catch {}
+      heartIcon = null;
+    }
+    cleanupCodeMirror();
   }
 
   async function loadModelDetails() {
     if (!model) return;
     
+    const currentModelId = model.id;
     detailsLoading = true;
+    
     try {
-      const details = await huggingFaceService.getModelDetails(model.id);
-      if (details) {
+      const details = await huggingFaceService.getModelDetails(currentModelId);
+      
+      // Check if the model hasn't changed while we were loading
+      if (model?.id === currentModelId && details) {
         detailedModel = details;
       }
     } catch (error) {
       console.error('Ошибка загрузки деталей модели:', error);
+      // Only set detailedModel to null if we're still on the same model
+      if (model?.id === currentModelId) {
+        detailedModel = null;
+      }
     } finally {
-      detailsLoading = false;
+      // Only update loading state if we're still on the same model
+      if (model?.id === currentModelId) {
+        detailsLoading = false;
+      }
     }
   }
 
@@ -86,7 +211,7 @@
     </div>
   {:else if !model}
     <div class="empty-state">
-      <div class="empty-icon">🤖</div>
+      <div class="empty-icon" bind:this={emptyIconEl}></div>
       <h3>Выберите модель</h3>
       <p>Выберите модель из списка слева, чтобы увидеть подробную информацию</p>
     </div>
@@ -101,11 +226,11 @@
         
         <div class="model-actions">
           <button class="btn btn-primary">
-            <span class="btn-icon">⬇️</span>
+            <span class="btn-icon" bind:this={downloadIconEl}></span>
             Скачать
           </button>
           <button class="btn btn-secondary">
-            <span class="btn-icon">❤️</span>
+            <span class="btn-icon" bind:this={heartIconEl}></span>
             {formatNumber(model.likes)}
           </button>
         </div>
@@ -210,7 +335,7 @@
       {#if detailedModel?.description || model.description}
         <div class="model-description">
           <h3>Описание</h3>
-          <div class="description-content">
+          <div class="description-content" bind:this={descriptionEl}>
             {@html renderMarkdownToSafeHtml(detailedModel?.description || model.description || '')}
           </div>
         </div>
@@ -244,8 +369,16 @@
   }
 
   .empty-icon {
-    font-size: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 1rem;
+    color: var(--muted);
+  }
+  
+  .empty-icon :global(svg) {
+    color: inherit;
+    fill: currentColor;
   }
 
   .empty-state h3 {
@@ -313,6 +446,17 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+  }
+
+  .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-icon :global(svg) {
+    color: inherit;
+    fill: currentColor;
   }
 
   .btn-primary {
@@ -432,32 +576,397 @@
     opacity: 0.9;
   }
 
+  /* Responsive images in markdown content */
+  .description-content :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin: 1em 0;
+    display: block;
+    transition: all 0.2s ease;
+  }
+
+  .description-content :global(img:hover) {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+
+  /* Handle images inside paragraphs or other containers */
+  .description-content :global(p) :global(img) {
+    margin: 0.5em 0;
+  }
+
+  /* Responsive image containers */
+  .description-content :global(figure) {
+    margin: 1em 0;
+    text-align: center;
+  }
+
+  .description-content :global(figure) :global(img) {
+    margin: 0 auto 0.5em;
+  }
+
+  .description-content :global(figcaption) {
+    font-size: 0.875rem;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 0.5em;
+  }
+
+  /* Responsive lists in markdown content */
+  .description-content :global(ul),
+  .description-content :global(ol) {
+    margin: 1em 0;
+    padding-left: 2em;
+    line-height: 1.6;
+  }
+
+  .description-content :global(li) {
+    margin: 0.5em 0;
+    padding-left: 0.25em;
+  }
+
+  .description-content :global(ul) :global(li) {
+    list-style-type: disc;
+  }
+
+  .description-content :global(ol) :global(li) {
+    list-style-type: decimal;
+  }
+
+  /* Nested lists */
+  .description-content :global(ul) :global(ul),
+  .description-content :global(ol) :global(ol),
+  .description-content :global(ul) :global(ol),
+  .description-content :global(ol) :global(ul) {
+    margin: 0.25em 0;
+    padding-left: 1.5em;
+  }
+
+  .description-content :global(ul) :global(ul) :global(li) {
+    list-style-type: circle;
+  }
+
+  .description-content :global(ul) :global(ul) :global(ul) :global(li) {
+    list-style-type: square;
+  }
+
+  /* Additional markdown elements */
+  .description-content :global(h1),
+  .description-content :global(h2),
+  .description-content :global(h3),
+  .description-content :global(h4),
+  .description-content :global(h5),
+  .description-content :global(h6) {
+    margin: 1.5em 0 0.75em 0;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+  }
+
+  .description-content :global(h1) { font-size: 1.8rem; }
+  .description-content :global(h2) { font-size: 1.5rem; }
+  .description-content :global(h3) { font-size: 1.3rem; }
+  .description-content :global(h4) { font-size: 1.1rem; }
+  .description-content :global(h5) { font-size: 1rem; }
+  .description-content :global(h6) { font-size: 0.9rem; }
+
+  /* Paragraphs */
+  .description-content :global(p) {
+    margin: 0.75em 0;
+    line-height: 1.6;
+  }
+
+  /* Code elements */
+  .description-content :global(code) {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-size: 0.875em;
+  }
+
+  .description-content :global(pre) {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 1em;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1em 0;
+    font-family: ui-monospace, SFMono-Regular, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-size: 0.875em;
+    line-height: 1.4;
+  }
+
+  .description-content :global(pre) :global(code) {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  /* Blockquotes */
+  .description-content :global(blockquote) {
+    margin: 1em 0;
+    padding: 0.75em 1em;
+    border-left: 4px solid var(--accent);
+    background: var(--panel-alt-bg);
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    color: var(--text);
+  }
+
+  .description-content :global(blockquote) :global(p) {
+    margin: 0;
+  }
+
+  /* Links */
+  .description-content :global(a) {
+    color: var(--accent);
+    text-decoration: underline;
+    transition: color 0.2s ease;
+  }
+
+  .description-content :global(a:hover) {
+    color: var(--accent-hover);
+  }
+
+  /* Emphasis and strong */
+  .description-content :global(em) {
+    font-style: italic;
+  }
+
+  .description-content :global(strong) {
+    font-weight: 600;
+  }
+
+  /* Strikethrough */
+  .description-content :global(del),
+  .description-content :global(s) {
+    text-decoration: line-through;
+    opacity: 0.7;
+  }
+
+  /* Horizontal rules */
+  .description-content :global(hr) {
+    border: none;
+    height: 1px;
+    background: var(--border-color);
+    margin: 2em 0;
+  }
+
+  /* Details and summary */
+  .description-content :global(details) {
+    margin: 1em 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5em 1em;
+    background: var(--card);
+  }
+
+  .description-content :global(summary) {
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.5em 0;
+    color: var(--accent);
+    user-select: none;
+  }
+
+  .description-content :global(summary:hover) {
+    color: var(--accent-hover);
+  }
+
+  /* Keyboard, sample, and variable elements */
+  .description-content :global(kbd) {
+    background: var(--panel-alt-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.2em 0.4em;
+    font-family: ui-monospace, SFMono-Regular, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-size: 0.875em;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .description-content :global(samp),
+  .description-content :global(var) {
+    font-family: ui-monospace, SFMono-Regular, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-style: italic;
+  }
+
+  /* Abbreviations and definitions */
+  .description-content :global(abbr),
+  .description-content :global(dfn) {
+    border-bottom: 1px dotted var(--muted);
+    cursor: help;
+  }
+
+  /* Quotes */
+  .description-content :global(q) {
+    font-style: italic;
+  }
+
+  .description-content :global(q):before {
+    content: '"';
+  }
+
+  .description-content :global(q):after {
+    content: '"';
+  }
+
+  /* Citations */
+  .description-content :global(cite) {
+    font-style: italic;
+    opacity: 0.8;
+  }
+
+  /* Subscript and superscript */
+  .description-content :global(sub),
+  .description-content :global(sup) {
+    font-size: 0.75em;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+  }
+
+  .description-content :global(sub) {
+    bottom: -0.25em;
+  }
+
+  .description-content :global(sup) {
+    top: -0.5em;
+  }
+
+  /* Mark (highlight) */
+  .description-content :global(mark) {
+    background: #ffeb3b;
+    color: #000;
+    padding: 0.1em 0.2em;
+    border-radius: 2px;
+  }
+
+  /* Small text */
+  .description-content :global(small) {
+    font-size: 0.875em;
+    opacity: 0.8;
+  }
 
 
-  /* Таблицы внутри markdown-описания: снимаем скоупинг с внутренних тегов */
+
+  /* Responsive tables in markdown content */
   .description-content :global(table) {
     width: 100%;
+    max-width: 100%;
     border-collapse: collapse;
     margin: 1em 0;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+  }
+
+  .description-content :global(table:hover) {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   }
 
   .description-content :global(th),
   .description-content :global(td) {
-    padding: 0.6em 1em;
+    padding: 0.75em 1em;
     text-align: left;
     border: 1px solid var(--border-color);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
   }
 
   .description-content :global(th) {
     background: var(--panel-alt-bg);
     font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text);
+  }
+
+  .description-content :global(td) {
+    background: var(--card);
+  }
+
+  .description-content :global(tr:nth-child(even)) :global(td) {
+    background: var(--panel-alt-bg);
   }
 
   .description-content :global(tr:last-child) :global(td) {
     border-bottom: none;
+  }
+
+  /* Responsive table container for horizontal scrolling on small screens */
+  .description-content :global(.table-responsive) {
+    overflow-x: auto;
+    margin: 1em 0;
+  }
+
+  /* Mobile-friendly table adjustments */
+  @media (max-width: 768px) {
+    .description-content :global(table) {
+      font-size: 0.8rem;
+    }
+
+    .description-content :global(th),
+    .description-content :global(td) {
+      padding: 0.5em 0.75em;
+    }
+
+    .description-content :global(th) {
+      font-size: 0.75rem;
+    }
+  }
+
+  /* Very small screens - stack table cells vertically */
+  @media (max-width: 480px) {
+    .description-content :global(table),
+    .description-content :global(thead),
+    .description-content :global(tbody),
+    .description-content :global(th),
+    .description-content :global(td),
+    .description-content :global(tr) {
+      display: block;
+    }
+
+    .description-content :global(thead) :global(tr) {
+      position: absolute;
+      top: -9999px;
+      left: -9999px;
+    }
+
+    .description-content :global(tr) {
+      border: 1px solid var(--border-color);
+      margin-bottom: 0.5em;
+      border-radius: 8px;
+      padding: 0.5em;
+      background: var(--card);
+    }
+
+    .description-content :global(td) {
+      border: none !important;
+      position: relative;
+      padding-left: 50% !important;
+      padding-top: 0.5em;
+      padding-bottom: 0.5em;
+    }
+
+    .description-content :global(td):before {
+      content: attr(data-label) ': ';
+      position: absolute;
+      left: 6px;
+      width: 45%;
+      padding-right: 10px;
+      white-space: nowrap;
+      font-weight: 600;
+      color: var(--muted);
+    }
   }
 
 

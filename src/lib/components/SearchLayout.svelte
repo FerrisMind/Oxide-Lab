@@ -8,11 +8,14 @@
   export const error: string | null = null;
   export let totalCount: number = 0;
   
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, mount, unmount, onMount } from 'svelte';
   import ModelList from './ModelList.svelte';
   import ModelDetail from './ModelDetail.svelte';
+  import Robot from 'phosphor-svelte/lib/Robot';
   
   const dispatch = createEventDispatcher();
+  let noSelectionIconEl: HTMLElement;
+  let robotIcon: any;
   
   function handleModelSelect(event: CustomEvent) {
     dispatch('selectModel', event.detail);
@@ -20,6 +23,17 @@
   
   function handleLoadMore() {
     dispatch('loadMore');
+  }
+  
+  // Mount robot icon when no model is selected
+  $: if (noSelectionIconEl && !selectedModel) {
+    if (robotIcon) {
+      try { unmount(robotIcon); } catch {}
+    }
+    robotIcon = mount(Robot, {
+      target: noSelectionIconEl,
+      props: { size: 64, weight: 'regular' }
+    });
   }
 </script>
 
@@ -62,7 +76,7 @@
       {:else}
         <div class="no-selection">
           <div class="no-selection-content">
-            <div class="no-selection-icon">🤖</div>
+            <div class="no-selection-icon" bind:this={noSelectionIconEl}></div>
             <h4>Выберите модель</h4>
             <p>Выберите модель из списка слева, чтобы увидеть подробную информацию</p>
           </div>
@@ -161,9 +175,17 @@
   }
   
   .no-selection-icon {
-    font-size: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 16px;
     opacity: 0.5;
+    color: var(--muted);
+  }
+  
+  .no-selection-icon :global(svg) {
+    color: inherit;
+    fill: currentColor;
   }
   
   .no-selection h4 {
@@ -214,10 +236,6 @@
     
     .no-selection {
       padding: 20px;
-    }
-    
-    .no-selection-icon {
-      font-size: 3rem;
     }
   }
 </style>

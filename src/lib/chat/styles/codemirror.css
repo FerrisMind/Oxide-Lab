@@ -31,9 +31,11 @@
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 14px;
   transition: background-color 0.2s ease;
   color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .codemirror-copy-btn:hover {
@@ -43,6 +45,18 @@
 
 .codemirror-copy-btn:active {
   transform: scale(0.95);
+}
+
+.codemirror-copy-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.codemirror-copy-icon :global(svg) {
+  color: inherit;
+  fill: currentColor;
 }
 
 .codemirror-editor {
@@ -146,8 +160,12 @@
   }
 
   .codemirror-copy-btn {
-    font-size: 13px;
     padding: 3px 6px;
+  }
+  
+  .codemirror-copy-icon :global(svg) {
+    width: 14px;
+    height: 14px;
   }
 }
 

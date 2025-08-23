@@ -1,5 +1,21 @@
 <script lang="ts">
   import CodeMirrorDemo from '$lib/components/CodeMirrorDemo.svelte';
+  import { mount, unmount } from 'svelte';
+  import TestTube from 'phosphor-svelte/lib/TestTube';
+  import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
+  
+  let testIconEl: HTMLElement;
+  let testIcon: any;
+  
+  $: if (testIconEl) {
+    if (testIcon) {
+      try { unmount(testIcon); } catch {}
+    }
+    testIcon = mount(TestTube, {
+      target: testIconEl,
+      props: { size: 32, weight: 'regular' }
+    });
+  }
 </script>
 
 <svelte:head>
@@ -9,7 +25,7 @@
 <main class="test-page">
   <div class="container">
     <div class="header">
-      <h1>🧪 CodeMirror Integration Test</h1>
+      <h1><span class="test-icon" bind:this={testIconEl}></span> CodeMirror Integration Test</h1>
       <p>This page demonstrates the CodeMirror integration for enhanced code display in chat messages.</p>
     </div>
     
@@ -18,14 +34,14 @@
     <div class="features">
       <h3>Features Implemented:</h3>
       <ul>
-        <li>✅ Automatic language detection for code blocks</li>
-        <li>✅ Syntax highlighting with theme support</li>
-        <li>✅ Copy button for each code block</li>
-        <li>✅ Line numbers and code folding</li>
-        <li>✅ Responsive design for mobile devices</li>
-        <li>✅ Integration with existing markdown renderer</li>
-        <li>✅ Support for JavaScript, Python, CSS, JSON, HTML, SQL, and more</li>
-        <li>✅ Automatic theme switching (light/dark)</li>
+        <li class="feature-item"><CheckCircle size={16} weight="fill" class="check-icon" /> Automatic language detection for code blocks</li>
+        <li class="feature-item"><CheckCircle size={16} weight="fill" class="check-icon" /> Syntax highlighting with theme support</li>
+        <li class="feature-item"><CheckCircle size={16} weight="fill" class="check-icon" /> Copy button with Phosphor icons for each code block</li>
+        <li class="feature-item"><CheckCircle size={16} weight="fill" class="check-icon" /> Line numbers and code folding</li>
+        <li class="feature-item"><CheckCircle size={16} weight="fill" class="check-icon" /> Responsive design for mobile devices</li>
+        <li class="feature-item"><CheckCircle size={16} weight="fill" class="check-icon" /> Integration with existing markdown renderer</li>
+        <li class="feature-item"><CheckCircle size={16} weight="fill" class="check-icon" /> Support for JavaScript, Python, CSS, JSON, HTML, SQL, and more</li>
+        <li class="feature-item"><CheckCircle size={16} weight="fill" class="check-icon" /> Automatic theme switching (light/dark)</li>
       </ul>
     </div>
 
@@ -35,7 +51,7 @@
         <li>When the AI generates a response with code blocks, they are first processed by the markdown renderer</li>
         <li>The CodeMirror renderer then identifies code blocks and replaces them with interactive CodeMirror editors</li>
         <li>Language is automatically detected or specified via markdown code fence syntax</li>
-        <li>Each code block gets a toolbar with language indicator and copy button</li>
+        <li>Each code block gets a toolbar with language indicator and copy button (using Phosphor icons)</li>
         <li>The editor is read-only but fully interactive for scrolling and selection</li>
       </ol>
     </div>
@@ -69,6 +85,22 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  
+  .test-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+  }
+  
+  .test-icon :global(svg) {
+    color: inherit;
+    fill: currentColor;
   }
 
   .header p {
@@ -104,6 +136,18 @@
     color: var(--text);
     padding: 8px 0;
     font-size: 1.1rem;
+  }
+  
+  .feature-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  :global(.check-icon) {
+    color: #10b981 !important;
+    fill: currentColor !important;
+    flex-shrink: 0;
   }
 
   .usage ol {

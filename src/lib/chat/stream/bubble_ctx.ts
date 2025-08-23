@@ -1,5 +1,5 @@
 import { unmount } from "svelte";
-import { getCodeMirrorRenderer } from "$lib/chat/codemirror-renderer";
+import { getCodeMirrorRenderer, cleanupRenderer } from "$lib/chat/codemirror-renderer";
 
 export type StreamSegment = { kind: "html" | "text"; data: string };
 
@@ -100,8 +100,7 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
       // Cleanup CodeMirror if it was watching this bubble
       if (ctx?.codeMirrorWatching && ctx?.mdContentEl) {
         try {
-          const renderer = getCodeMirrorRenderer();
-          renderer.stopWatching();
+          cleanupRenderer(ctx.mdContentEl);
         } catch {}
       }
       node.removeEventListener("scroll", onScroll as any);
