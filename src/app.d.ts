@@ -35,6 +35,7 @@ declare module 'phosphor-svelte' {
   export class UploadSimple extends SvelteComponentTyped<{ size?: number | string; weight?: string; style?: string }>{}
   export class PaperPlaneRight extends SvelteComponentTyped<{ size?: number | string; weight?: string; style?: string }>{}
   export class ChatsCircle extends SvelteComponentTyped<{ size?: number | string; weight?: string; style?: string }>{}
+  export class ArrowSquareOut extends SvelteComponentTyped<{ size?: number | string; weight?: string; style?: string }>{}
 }
 
 

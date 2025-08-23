@@ -226,8 +226,8 @@
     if (!model) return;
     
     try {
-      const { open } = await import('@tauri-apps/plugin-opener');
-      await open(`https://huggingface.co/${model.id}`);
+      const { openUrl } = await import('@tauri-apps/plugin-opener');
+      await openUrl(`https://huggingface.co/${model.id}`);
     } catch (error) {
       console.error('Ошибка при открытии карточки модели на Hugging Face:', error);
     }
@@ -258,15 +258,17 @@
         </div>
         
         <div class="model-actions">
-          <button class="btn btn-primary">
-            <span class="btn-icon" bind:this={downloadIconEl}></span>
-            Скачать
-          </button>
-          <button class="btn btn-secondary">
-            <span class="btn-icon" bind:this={heartIconEl}></span>
-            {formatNumber(model.likes)}
-          </button>
-          <button class="btn btn-secondary" on:click={openHuggingFaceCard} title="Открыть на Hugging Face">
+          <div class="action-row">
+            <button class="btn btn-primary">
+              <span class="btn-icon" bind:this={downloadIconEl}></span>
+              Скачать
+            </button>
+            <button class="btn btn-secondary">
+              <span class="btn-icon" bind:this={heartIconEl}></span>
+              {formatNumber(model.likes)}
+            </button>
+          </div>
+          <button class="btn btn-secondary btn-hf" on:click={openHuggingFaceCard} title="Открыть на Hugging Face">
             <span class="btn-icon" bind:this={huggingFaceIconEl}></span>
             Hugging Face
           </button>
@@ -372,7 +374,7 @@
       {#if detailedModel?.description || model.description}
         <div class="model-description">
           <h3>Описание</h3>
-          <div class="description-content" bind:this={descriptionEl}>
+          <div class="description-content md-stream" bind:this={descriptionEl}>
             {@html renderMarkdownToSafeHtml(detailedModel?.description || model.description || '')}
           </div>
         </div>
@@ -469,7 +471,40 @@
 
   .model-actions {
     display: flex;
+    flex-direction: column;
     gap: 8px;
+    min-width: 200px;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-hf {
+    width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    .model-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+    }
+    
+    .model-title {
+      text-align: center;
+    }
+    
+    .model-actions {
+      min-width: auto;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .action-row {
+      flex-direction: column;
+    }
   }
 
   .btn {

@@ -34,6 +34,9 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
     let input = markdownText ?? '';
     // Нормализуем переводы строк
     input = input.replace(/\r\n?/g, '\n');
+    
+    // Обрабатываем GitHub-style callouts перед основным парсингом
+    input = processCallouts(input);
 
     // Быстрый путь: разворачиваем полноценные блоки ```md|markdown|gfm ...```
     let enhanced = input.replace(/```(?:markdown|md|gfm)\s*\n([\s\S]*?)```/gi, (_m, inner) => inner);
@@ -85,6 +88,8 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
             'math','mi','mo','mn','ms','mtext','mrow','msup','msub','mfrac','msqrt','mroot',
             // Ruby аннотации (для восточных языков)
             'ruby','rt','rp',
+            // SVG для иконок callout
+            'svg','path',
             // Дополнительные элементы
             'wbr','bdi','bdo'
           ],
@@ -110,6 +115,8 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
             'controls','autoplay','muted','loop','preload','poster',
             // Математика
             'mathvariant','mathsize','mathcolor','mathbackground',
+            // SVG атрибуты для иконок
+            'viewBox','fill','d','width','height',
             // Дополнительные
             'hidden','contenteditable','spellcheck','draggable'
           ]
@@ -119,6 +126,116 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
   } catch {
     return DOMPurify.sanitize(markdownText ?? '');
   }
+}
+
+// Функция для обработки GitHub-style callouts
+function processCallouts(text: string): string {
+  const lines = text.split('\n');
+  const result: string[] = [];
+  let i = 0;
+  
+  while (i < lines.length) {
+    const line = lines[i];
+    const calloutMatch = line.match(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](.*)$/);
+    
+    if (calloutMatch) {
+      const [, type, title] = calloutMatch;
+      const calloutType = type.toLowerCase();
+      const customTitle = title.trim();
+      
+      // Начинаем обработку callout
+      const calloutLines = [`<div class="callout callout-${calloutType}">`];
+      calloutLines.push(`<div class="callout-body">`); 
+      calloutLines.push(`<div class="callout-icon">${getCalloutIcon(type)}</div>`);
+      calloutLines.push(`<div class="callout-content">`);
+      
+      // Если есть кастомный заголовок, добавляем его как первый элемент контента
+      if (customTitle) {
+        calloutLines.push(`<div class="callout-custom-title">${customTitle}</div>`);
+      }
+      
+      i++; // переходим к следующей строке
+      
+      // Собираем содержимое callout
+      const contentLines: string[] = [];
+      while (i < lines.length) {
+        const contentLine = lines[i];
+        
+        // Если строка не начинается с '>', то callout закончился
+        if (!contentLine.startsWith('>')) {
+          break;
+        }
+        
+        // Удаляем '> ' или '>' в начале строки
+        const cleanLine = contentLine.replace(/^>\s?/, '');
+        contentLines.push(cleanLine);
+        i++;
+      }
+      
+      // Обрабатываем содержимое как markdown
+      if (contentLines.length > 0) {
+        const contentMarkdown = contentLines.join('\n');
+        // Рекурсивно обрабатываем содержимое (без callouts, чтобы избежать бесконечной рекурсии)
+        const contentHtml = renderMarkdownContent(contentMarkdown);
+        calloutLines.push(contentHtml);
+      }
+      
+      calloutLines.push(`</div>`);
+      calloutLines.push(`</div>`);
+      calloutLines.push(`</div>`);
+      
+      result.push(...calloutLines);
+      
+      // i уже указывает на следующую строку после callout
+      continue;
+    }
+    
+    result.push(line);
+    i++;
+  }
+  
+  return result.join('\n');
+}
+
+// Вспомогательная функция для рендеринга markdown без callout обработки
+function renderMarkdownContent(markdownText: string): string {
+  try {
+    const dirty = (typeof (marked as any).parse === 'function'
+      ? (marked as any).parse(markdownText)
+      : (marked as any)(markdownText)) as string;
+    return dirty;
+  } catch {
+    return markdownText;
+  }
+}
+
+// Получение заголовка по умолчанию для типа callout
+function getDefaultCalloutTitle(type: string): string {
+  const titles: Record<string, string> = {
+    'NOTE': 'Note',
+    'TIP': 'Tip', 
+    'IMPORTANT': 'Important',
+    'WARNING': 'Warning',
+    'CAUTION': 'Caution'
+  };
+  return titles[type] || type;
+}
+
+// Получение SVG иконки для типа callout (Phosphor Icons)
+function getCalloutIcon(type: string): string {
+  const icons: Record<string, string> = {
+    // Phosphor Info icon for NOTE
+    'NOTE': '<svg width="16" height="16" viewBox="0 0 256 256"><path fill="currentColor" d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24m0 192a88 88 0 1 1 88-88a88.1 88.1 0 0 1-88 88m16-40a8 8 0 0 1-8 8h-24a8 8 0 0 1 0-16h8v-40h-8a8 8 0 0 1 0-16h16a8 8 0 0 1 8 8v48h8a8 8 0 0 1 8 8M124 96a12 12 0 1 1 12-12a12 12 0 0 1-12 12"/></svg>',
+    // Phosphor Lightbulb icon for TIP  
+    'TIP': '<svg width="16" height="16" viewBox="0 0 256 256"><path fill="currentColor" d="M176 232a8 8 0 0 1-8 8H88a8 8 0 0 1 0-16h80a8 8 0 0 1 8 8m40-128a87.55 87.55 0 0 1-33.64 69.21A16.24 16.24 0 0 0 176 186v6a16 16 0 0 1-16 16H96a16 16 0 0 1-16-16v-6a16 16 0 0 0-6.23-12.66A87.59 87.59 0 0 1 40 104.49C39.74 56.83 78.26 17.14 125.88 16A88 88 0 0 1 216 104m-16 0a72 72 0 0 0-73.74-72c-36 .92-66.13 30.77-67.26 66.75A71.64 71.64 0 0 0 83.18 151a32.17 32.17 0 0 1 12.82 25.82V192h64v-15.18A32.17 32.17 0 0 1 172.82 151A71.65 71.65 0 0 0 200 104m-72 56.61V136a8 8 0 0 0-16 0v24.61a16 16 0 1 0 16 0"/></svg>',
+    // Phosphor SealWarning icon for IMPORTANT
+    'IMPORTANT': '<svg width="16" height="16" viewBox="0 0 256 256"><path fill="currentColor" d="M225.86 102.82c-3.77-3.94-7.67-8-9.14-11.57c-1.36-3.27-1.44-8.69-1.52-13.94c-.15-9.76-.31-20.82-8-28.51s-18.75-7.85-28.51-8c-5.25-.08-10.67-.16-13.94-1.52c-3.56-1.47-7.63-5.37-11.57-9.14C146.28 23.51 138.44 16 128 16s-18.27 7.51-25.18 14.14c-3.94 3.77-8 7.67-11.57 9.14C88 40.64 82.58 40.72 77.33 40.8c-9.76.15-20.82.31-28.51 8s-7.85 18.75-8 28.51c-.08 5.25-.16 10.67-1.52 13.94c-1.47 3.56-5.37 7.63-9.14 11.57C23.51 109.72 16 117.56 16 128s7.51 18.27 14.14 25.18c3.77 3.94 7.67 8 9.14 11.57c1.36 3.27 1.44 8.69 1.52 13.94c.15 9.76.31 20.82 8 28.51s18.75 7.85 28.51 8c5.25.08 10.67.16 13.94 1.52c3.56 1.47 7.63 5.37 11.57 9.14c6.9 6.63 14.74 14.14 25.18 14.14s18.27-7.51 25.18-14.14c3.94-3.77 8-7.67 11.57-9.14c3.27-1.36 8.69-1.44 13.94-1.52c9.76-.15 20.82-.31 28.51-8s7.85-18.75 8-28.51c.08-5.25.16-10.67 1.52-13.94c1.47-3.56 5.37-7.63 9.14-11.57c6.63-6.9 14.14-14.74 14.14-25.18s-7.51-18.27-14.14-25.18M120 80a8 8 0 0 1 16 0v56a8 8 0 0 1-16 0Zm8 104a12 12 0 1 1 12-12a12 12 0 0 1-12 12"/></svg>',
+    // Phosphor Warning icon for WARNING
+    'WARNING': '<svg width="16" height="16" viewBox="0 0 256 256"><path fill="currentColor" d="m236.8 188.09l-99.21-169.86a16 16 0 0 0-27.18 0L11.2 188.09a16 16 0 0 0 13.59 24.17h198.42a16 16 0 0 0 13.59-24.17M120 104a8 8 0 0 1 16 0v40a8 8 0 0 1-16 0Zm8 88a12 12 0 1 1 12-12a12 12 0 0 1-12 12"/></svg>',
+    // Phosphor ShieldWarning icon for CAUTION 
+    'CAUTION': '<svg width="16" height="16" viewBox="0 0 256 256"><path fill="currentColor" d="M208 40H48a16 16 0 0 0-16 16v58.78c0 89.61 75.82 119.34 91 124.39a15.53 15.53 0 0 0 10 0c15.2-5.05 91-34.78 91-124.39V56a16 16 0 0 0-16-16M120 80a8 8 0 0 1 16 0v56a8 8 0 0 1-16 0Zm8 104a12 12 0 1 1 12-12a12 12 0 0 1-12 12"/></svg>'
+  };
+  return icons[type] || icons['NOTE'];
 }
 
 
