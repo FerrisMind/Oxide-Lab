@@ -16,7 +16,8 @@ export function appendSegments(index: number, bubble: HTMLDivElement, segments: 
       thinkBrainHost: null,
       mdEl: null,
       mdText: "",
-      lastKind: null
+      lastKind: null,
+      codeMirrorWatching: false
     }) as any;
 
   for (const seg of segments) {

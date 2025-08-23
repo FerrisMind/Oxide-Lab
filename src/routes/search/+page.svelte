@@ -194,11 +194,10 @@
           <div class="results-layout">
             <SearchLayout 
               {models}
-              {selectedModel}
-              {isLoading}
-              {hasMore}
-              {error}
-              {totalCount}
+              selectedModel={selectedModel}
+              isLoading={isLoading}
+              hasMore={hasMore}
+              totalCount={totalCount}
               on:selectModel={handleModelSelect}
               on:loadMore={loadMoreModels}
             />
@@ -283,44 +282,7 @@
     min-width: 0;
   }
 
-  .sidebar {
-    width: 500px;
-    min-width: 500px;
-    background: var(--card);
-    border-right: 1px solid var(--border-color);
-    overflow: hidden;
-  }
 
-  .main-content {
-    flex: 1;
-    background: var(--card);
-    overflow: hidden;
-  }
-
-  .page-header {
-    text-align: center;
-    margin-bottom: 32px;
-    padding: 32px 0;
-  }
-
-  .page-header h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--text);
-    margin: 0 0 16px 0;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .page-header p {
-    font-size: 1.1rem;
-    color: var(--muted);
-    margin: 0;
-    max-width: 600px;
-    margin: 0 auto;
-  }
 
   .loading-state {
     display: flex;
@@ -523,24 +485,8 @@
       padding: 12px;
     }
 
-    .page-header h1 {
-      font-size: 2rem;
-    }
-
-    .page-header p {
-      font-size: 1rem;
-    }
-
     .results-layout {
       gap: 12px;
-    }
-
-    .sidebar {
-      min-height: 250px;
-    }
-
-    .main-content {
-      min-height: 350px;
     }
 
     .welcome-card {
@@ -562,13 +508,7 @@
       padding: 6px 12px;
     }
 
-    .results-header {
-      padding: 12px;
-    }
 
-    .search-results-info {
-      padding: 0 12px;
-    }
   }
 
   @media (max-width: 480px) {
@@ -576,13 +516,7 @@
       padding: 8px;
     }
 
-    .sidebar {
-      min-height: 200px;
-    }
 
-    .main-content {
-      min-height: 300px;
-    }
 
     .welcome-card {
       padding: 20px 12px;

@@ -1,0 +1,178 @@
+/* CodeMirror integration styles */
+.codemirror-container {
+  margin: 12px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--code-bg);
+  border: 1px solid var(--border-color);
+}
+
+.codemirror-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--panel-alt-bg);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+}
+
+.codemirror-language {
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.codemirror-copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+  color: var(--muted);
+}
+
+.codemirror-copy-btn:hover {
+  background: var(--panel-bg);
+  color: var(--text);
+}
+
+.codemirror-copy-btn:active {
+  transform: scale(0.95);
+}
+
+.codemirror-editor {
+  background: var(--code-bg);
+}
+
+/* Override CodeMirror default styles to match app theme */
+.codemirror-container :global(.cm-editor) {
+  background: var(--code-bg) !important;
+  color: var(--code-fg) !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.codemirror-container :global(.cm-content) {
+  padding: 16px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.codemirror-container :global(.cm-focused) {
+  outline: none !important;
+}
+
+.codemirror-container :global(.cm-gutters) {
+  background: var(--panel-alt-bg) !important;
+  border-right: 1px solid var(--border-color) !important;
+  color: var(--muted) !important;
+}
+
+.codemirror-container :global(.cm-lineNumbers) {
+  color: var(--muted) !important;
+  font-size: 12px !important;
+}
+
+.codemirror-container :global(.cm-activeLine) {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+.codemirror-container :global(.cm-selectionBackground) {
+  background: var(--accent) !important;
+  opacity: 0.2 !important;
+}
+
+/* Syntax highlighting adjustments to match app theme */
+.codemirror-container :global(.cm-editor) {
+  --cm-keyword-color: var(--code-keyword);
+  --cm-string-color: var(--code-string);
+  --cm-comment-color: var(--code-comment);
+  --cm-number-color: var(--code-number);
+  --cm-variable-color: var(--code-variable);
+  --cm-tag-color: var(--code-tag);
+  --cm-title-color: var(--code-title);
+}
+
+/* Light theme specific overrides */
+@media (prefers-color-scheme: light) {
+  .codemirror-container :global(.cm-editor:not(.cm-dark)) {
+    background: var(--code-bg) !important;
+  }
+
+  .codemirror-container :global(.cm-activeLine) {
+    background: rgba(0, 0, 0, 0.03) !important;
+  }
+}
+
+/* Dark theme specific overrides */
+@media (prefers-color-scheme: dark) {
+  .codemirror-container :global(.cm-editor) {
+    background: var(--code-bg) !important;
+  }
+
+  .codemirror-container :global(.cm-activeLine) {
+    background: rgba(255, 255, 255, 0.05) !important;
+  }
+
+  .codemirror-toolbar {
+    background: var(--panel-bg);
+    border-bottom-color: var(--border-color);
+  }
+
+  .codemirror-copy-btn:hover {
+    background: var(--panel-alt-bg);
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .codemirror-container :global(.cm-content) {
+    padding: 12px !important;
+    font-size: 13px !important;
+  }
+
+  .codemirror-toolbar {
+    padding: 6px 10px;
+  }
+
+  .codemirror-language {
+    font-size: 10px;
+  }
+
+  .codemirror-copy-btn {
+    font-size: 13px;
+    padding: 3px 6px;
+  }
+}
+
+/* Ensure proper integration with markdown content */
+.md-stream .codemirror-container {
+  margin: 12px 0;
+}
+
+.md-content .codemirror-container {
+  margin: 12px 0;
+}
+
+/* Animation for copy button feedback */
+@keyframes copySuccess {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.codemirror-copy-btn.success {
+  animation: copySuccess 0.3s ease;
+}

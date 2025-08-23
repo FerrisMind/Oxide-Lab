@@ -1,5 +1,6 @@
 @import "./styles/base.css";
 @import "./styles/chat.css";
 @import "./styles/markdown.css";
+@import "./styles/codemirror.css";
 @import "./styles/progress.css";
 

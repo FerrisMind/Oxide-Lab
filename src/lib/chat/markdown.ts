@@ -20,7 +20,7 @@ marked.use(markedHighlight({
   }
 }));
 
-marked.setOptions({ gfm: true, breaks: false, tables: true });
+marked.setOptions({ gfm: true, breaks: false });
 
 // Простая обёртка для безопасного преобразования Markdown → HTML
 export function renderMarkdownToSafeHtml(markdownText: string): string {

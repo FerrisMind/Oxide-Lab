@@ -1,4 +1,5 @@
 import { unmount } from "svelte";
+import { getCodeMirrorRenderer } from "$lib/chat/codemirror-renderer";
 
 export type StreamSegment = { kind: "html" | "text"; data: string };
 
@@ -19,6 +20,7 @@ export type BubbleCtx = {
   mdEyeIcon: any | null;
   mdText: string;
   lastKind: "html" | "text" | null;
+  codeMirrorWatching: boolean;
 };
 
 export const assistantBubbleEls = new Map<number, HTMLDivElement>();
@@ -46,7 +48,8 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
     mdEyeHost: null,
     mdEyeIcon: null,
     mdText: "",
-    lastKind: null
+    lastKind: null,
+    codeMirrorWatching: false
   });
 
   const onScroll = () => {
@@ -77,7 +80,8 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
           mdEyeHost: null,
           mdEyeIcon: null,
           mdText: "",
-          lastKind: null
+          lastKind: null,
+          codeMirrorWatching: false
         }
       );
       bubbleCtxs.delete(params.index);
@@ -92,6 +96,13 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
       }
       if (ctx?.mdEyeIcon) {
         try { unmount(ctx.mdEyeIcon); } catch {}
+      }
+      // Cleanup CodeMirror if it was watching this bubble
+      if (ctx?.codeMirrorWatching && ctx?.mdContentEl) {
+        try {
+          const renderer = getCodeMirrorRenderer();
+          renderer.stopWatching();
+        } catch {}
       }
       node.removeEventListener("scroll", onScroll as any);
       assistantBubbleEls.delete(params.index);

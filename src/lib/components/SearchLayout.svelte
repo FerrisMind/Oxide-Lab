@@ -1,10 +1,12 @@
-<script>
-  export let models = [];
-  export let selectedModel = null;
-  export let isLoading = false;
-  export let hasMore = false;
-  export let error = null;
-  export let totalCount = 0;
+<script lang="ts">
+  import type { HFModel } from '$lib/services/huggingface';
+  
+  export let models: HFModel[] = [];
+  export let selectedModel: HFModel | null = null;
+  export let isLoading: boolean = false;
+  export let hasMore: boolean = false;
+  export const error: string | null = null;
+  export let totalCount: number = 0;
   
   import { createEventDispatcher } from 'svelte';
   import ModelList from './ModelList.svelte';
@@ -12,7 +14,7 @@
   
   const dispatch = createEventDispatcher();
   
-  function handleModelSelect(event) {
+  function handleModelSelect(event: CustomEvent) {
     dispatch('selectModel', event.detail);
   }
   

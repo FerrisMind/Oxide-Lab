@@ -263,13 +263,7 @@
     margin-bottom: 12px;
   }
 
-  .loading-spinner.small {
-    width: 20px;
-    height: 20px;
-    border-width: 2px;
-    margin-bottom: 0;
-    margin-right: 8px;
-  }
+
 
   @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -438,83 +432,7 @@
     opacity: 0.9;
   }
 
-  .description-content h1,
-  .description-content h2,
-  .description-content h3,
-  .description-content h4,
-  .description-content h5,
-  .description-content h6 {
-    color: var(--text);
-    margin: 1.5em 0 0.5em 0;
-    font-weight: 600;
-  }
 
-  .description-content h1 { font-size: 1.5em; }
-  .description-content h2 { font-size: 1.3em; }
-  .description-content h3 { font-size: 1.2em; }
-  .description-content h4 { font-size: 1.1em; }
-  .description-content h5 { font-size: 1em; }
-  .description-content h6 { font-size: 0.9em; }
-
-  .description-content p {
-    margin: 0.8em 0;
-    line-height: 1.6;
-  }
-
-  .description-content ul,
-  .description-content ol {
-    margin: 0.8em 0;
-    padding-left: 1.5em;
-  }
-
-  .description-content li {
-    margin: 0.3em 0;
-    line-height: 1.5;
-  }
-
-  .description-content blockquote {
-    margin: 1em 0;
-    padding: 0.8em 1em;
-    border-left: 4px solid var(--accent);
-    background: var(--panel-alt-bg);
-    border-radius: 0 8px 8px 0;
-    font-style: italic;
-  }
-
-  .description-content code {
-    background: var(--panel-alt-bg);
-    padding: 0.2em 0.4em;
-    border-radius: 4px;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 0.9em;
-    color: var(--accent);
-  }
-
-  .description-content pre {
-    background: var(--panel-alt-bg);
-    padding: 1em;
-    border-radius: 8px;
-    overflow-x: auto;
-    margin: 1em 0;
-    border: 1px solid var(--border-color);
-  }
-
-  .description-content pre code {
-    background: none;
-    padding: 0;
-    color: var(--text);
-  }
-
-  .description-content a {
-    color: var(--accent);
-    text-decoration: none;
-    border-bottom: 1px solid transparent;
-    transition: border-color 0.2s ease;
-  }
-
-  .description-content a:hover {
-    border-bottom-color: var(--accent);
-  }
 
   /* Таблицы внутри markdown-описания: снимаем скоупинг с внутренних тегов */
   .description-content :global(table) {
@@ -542,23 +460,7 @@
     border-bottom: none;
   }
 
-  .description-content strong,
-  .description-content b {
-    font-weight: 600;
-    color: var(--text);
-  }
 
-  .description-content em,
-  .description-content i {
-    font-style: italic;
-  }
-
-  .description-content hr {
-    border: none;
-    height: 1px;
-    background: var(--border-color);
-    margin: 2em 0;
-  }
 
   .no-description {
     font-style: italic;
