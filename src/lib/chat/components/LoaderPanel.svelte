@@ -4,7 +4,6 @@
   import ContextLengthSelector from "./loader/ContextLengthSelector.svelte";
   import ThinkingModeToggle from "./loader/ThinkingModeToggle.svelte";
   import HubModelForm from "./loader/HubModelForm.svelte";
-  import LoadButton from "./loader/LoadButton.svelte";
   import LoadingStatus from "./loader/LoadingStatus.svelte";
   
   const dispatch = createEventDispatcher();
@@ -32,10 +31,9 @@
   export let use_gpu = false; // CPU по умолчанию
   export let cuda_available = false;
   export let cuda_build = false;
-  // current_device больше не используется (совпадает с выбранным сегментом)
 
   // Коллбеки, реализуются родителем
-  export let onMainAction: () => void;
+  export let onMainAction: (() => void) | undefined = undefined;
 
   // reference-only export (used by parent) — prevent Svelte warning by using const alias
   const _modelPath_ref = modelPath;
@@ -55,21 +53,6 @@
     <ThinkingModeToggle bind:enable_thinking />
     
     <ContextLengthSelector bind:ctx_limit_value />
-    
-    <LoadButton 
-      bind:isLoadingModel
-      bind:isUnloadingModel
-      bind:isCancelling
-      bind:isLoaded
-      bind:busy
-      bind:loadingStage
-      bind:loadingProgress
-      bind:unloadingProgress
-      bind:repoId
-      bind:hubGgufFilename
-      {format}
-      {onMainAction}
-    />
     
     <LoadingStatus 
       bind:isLoadingModel
@@ -95,21 +78,6 @@
     
     <ContextLengthSelector bind:ctx_limit_value />
     
-    <LoadButton 
-      bind:isLoadingModel
-      bind:isUnloadingModel
-      bind:isCancelling
-      bind:isLoaded
-      bind:busy
-      bind:loadingStage
-      bind:loadingProgress
-      bind:unloadingProgress
-      bind:repoId
-      bind:hubGgufFilename
-      {format}
-      {onMainAction}
-    />
-    
     <LoadingStatus 
       bind:isLoadingModel
       bind:isCancelling
@@ -133,21 +101,6 @@
     />
     
     <ContextLengthSelector bind:ctx_limit_value />
-    
-    <LoadButton 
-      bind:isLoadingModel
-      bind:isUnloadingModel
-      bind:isCancelling
-      bind:isLoaded
-      bind:busy
-      bind:loadingStage
-      bind:loadingProgress
-      bind:unloadingProgress
-      bind:repoId
-      bind:hubGgufFilename
-      {format}
-      {onMainAction}
-    />
     
     <LoadingStatus 
       bind:isLoadingModel

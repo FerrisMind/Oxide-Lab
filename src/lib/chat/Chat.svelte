@@ -170,7 +170,6 @@
     bind:cuda_available
     bind:cuda_build
     on:device-toggle={(e) => setDeviceByToggle(!!e.detail?.checked)}
-    onMainAction={() => (isLoadingModel ? cancelLoading() : (isLoaded ? unloadGGUF() : loadGGUF()))}
   >
     <!-- Параметры инференса -->
     {#if isLoaded}
