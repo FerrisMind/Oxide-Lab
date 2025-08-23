@@ -3,6 +3,7 @@ import Eye from "phosphor-svelte/lib/Eye";
 import EyeSlash from "phosphor-svelte/lib/EyeSlash";
 import { renderMarkdownToSafeHtml } from "$lib/chat/markdown";
 import { getCodeMirrorRenderer, cleanupRenderer } from "$lib/chat/codemirror-renderer";
+import { enableExternalLinks } from "$lib/chat/external-links";
 import type { BubbleCtx } from "./bubble_ctx";
 
 function hasMarkdownFeatures(text: string): boolean {
@@ -78,6 +79,9 @@ export function appendMarkdownText(ctx: BubbleCtx, text: string): BubbleCtx {
   ctx.mdText += normalized;
   if (ctx.mdContentEl) {
     ctx.mdContentEl.innerHTML = renderMarkdownToSafeHtml(ctx.mdText);
+    
+    // Enable external link handling
+    enableExternalLinks(ctx.mdContentEl);
     
     // Apply CodeMirror rendering to code blocks
     try {

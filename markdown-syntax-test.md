@@ -313,11 +313,37 @@ According to <cite>the specification</cite>, this should work.
 
 <div dir="ltr">This is left-to-right text</div>
 
-### Testing Technical Terms Auto-Enhancement
+### Testing Inline Code (According to Markdown Specification)
 
-The following technical terms should be automatically wrapped in code tags:
+The following should be highlighted as code ONLY when explicitly marked with backticks:
 
-transformers pytorch tensorflow onnx safetensors gguf ggml llama mistral qwen bert gpt tokenizer embedding attention inference quantization fine-tuning lora model dataset python javascript typescript rust cuda json yaml docker kubernetes git github api rest graphql
+- `transformers` - explicitly marked as code, should be highlighted
+- pytorch - normal text, should NOT be highlighted
+- `tensorflow` - explicitly marked as code, should be highlighted  
+- onnx - normal text, should NOT be highlighted
+- `safetensors` - explicitly marked as code, should be highlighted
+- python - normal text, should NOT be highlighted
+- `javascript` - explicitly marked as code, should be highlighted
+- docker - normal text, should NOT be highlighted
+
+### Testing Normal Text (Should NOT be Auto-Enhanced)
+
+The following common words should remain as regular text:
+
+The model architecture is great. We need a better API for our application. This attention mechanism works well. We can infer from the data that the gradient is steep. The adapter was broken. Our dataset is too small. The optimizer needs tuning. The scheduler is running. We can rest now. I need to activate this feature. Let me git this problem sorted.
+
+### Mixed Content Test
+
+In this sentence, only `pytorch` (with backticks) should be highlighted as code, while words like model, api, and data should remain as normal text.
+
+Code blocks should work normally:
+
+```python
+# This should be syntax highlighted as Python
+import pytorch
+model = "some model"
+api = "some api"
+```
 
 ---
 

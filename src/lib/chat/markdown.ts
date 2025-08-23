@@ -28,120 +28,15 @@ marked.setOptions({
   pedantic: false // Более либеральный парсинг
 });
 
-// Функция для автоматического обрамления технических терминов
-function enhanceTechnicalTerms(text: string): string {
-  // Список технических терминов для автоматического обрамления
-  const technicalTerms = [
-    // Машинное обучение и AI
-    'transformers', 'pytorch', 'tensorflow', 'onnx', 'safetensors', 'gguf', 'ggml',
-    'llama', 'mistral', 'gemma', 'qwen', 'bert', 'gpt', 'claude', 'tokenizer',
-    'embedding', 'attention', 'inference', 'quantization', 'fine-tuning', 'lora',
-    'adapter', 'checkpoint', 'model', 'dataset', 'optimizer', 'scheduler',
-    
-    // Фреймворки и библиотеки
-    'huggingface', 'numpy', 'pandas', 'scikit-learn', 'matplotlib', 'seaborn',
-    'jupyter', 'colab', 'gradio', 'streamlit', 'fastapi', 'flask', 'django',
-    
-    // Языки программирования
-    'python', 'javascript', 'typescript', 'rust', 'cpp', 'java', 'cuda', 'sql',
-    
-    // Технологии и форматы
-    'json', 'yaml', 'xml', 'csv', 'parquet', 'hdf5', 'pickle', 'docker',
-    'kubernetes', 'git', 'github', 'gitlab', 'api', 'rest', 'graphql',
-    
-    // Методы и алгоритмы
-    'gradient', 'backpropagation', 'sgd', 'adam', 'rmsprop', 'dropout',
-    'batch-norm', 'layer-norm', 'activation', 'relu', 'gelu', 'sigmoid', 'tanh',
-    
-    // Архитектуры
-    'cnn', 'rnn', 'lstm', 'gru', 'gan', 'vae', 'autoencoder', 'resnet', 'vit',
-    'clip', 'diffusion', 'stable-diffusion', 'controlnet'
-  ];
-  
-  // Новый подход: обрабатываем текст по строкам, избегая placeholders
-  const lines = text.split('\n');
-  let inCodeBlock = false;
-  let codeBlockDelimiter = '';
-  
-  const processedLines = lines.map(line => {
-    const trimmedLine = line.trim();
-    
-    // Обнаружение начала/конца кодовых блоков
-    if (!inCodeBlock) {
-      if (trimmedLine.startsWith('```')) {
-        inCodeBlock = true;
-        codeBlockDelimiter = '```';
-        return line;
-      } else if (trimmedLine.startsWith('~~~')) {
-        inCodeBlock = true;
-        codeBlockDelimiter = '~~~';
-        return line;
-      }
-    } else {
-      if (trimmedLine.startsWith(codeBlockDelimiter)) {
-        inCodeBlock = false;
-        codeBlockDelimiter = '';
-        return line;
-      }
-    }
-    
-    // Пропускаем обработку строк внутри кодовых блоков
-    if (inCodeBlock) {
-      return line;
-    }
-    
-    // Пропускаем обработку строк с HTML тегами
-    if (line.includes('<') && line.includes('>')) {
-      return line;
-    }
-    
-    // Обрабатываем строку, сохраняя существующие inline кодовые блоки
-    let processedLine = line;
-    
-    // Разделяем строку на части: обычный текст и inline код
-    const parts = processedLine.split(/(`[^`]*`)/g);
-    
-    const processedParts = parts.map((part, index) => {
-      // Нечетные индексы - это inline код, не обрабатываем
-      if (index % 2 === 1) {
-        return part;
-      }
-      
-      // Обрабатываем технические термины в обычном тексте
-      let processedPart = part;
-      technicalTerms.forEach(term => {
-        const regex = new RegExp(`\\b${term}\\b`, 'gi');
-        processedPart = processedPart.replace(regex, (match) => {
-          return `\`${match}\``;
-        });
-      });
-      
-      return processedPart;
-    });
-    
-    return processedParts.join('');
-  });
-  
-  return processedLines.join('\n');
-}
-
 // Простая обёртка для безопасного преобразования Markdown → HTML
 export function renderMarkdownToSafeHtml(markdownText: string): string {
   try {
     let input = markdownText ?? '';
     // Нормализуем переводы строк
     input = input.replace(/\r\n?/g, '\n');
-    
-    // Автоматически обрамляем технические термины в код-теги
-    let enhanced = enhanceTechnicalTerms(input);
-    
-    // Проверка на оставшиеся placeholders после обработки
-    if (enhanced.includes('TECHTERM_PRESERVE_') || enhanced.includes('__PRESERVE_')) {
-      console.warn('Placeholders detected after enhancement:', enhanced.match(/(TECHTERM_PRESERVE_\d+_PLACEHOLDER|__PRESERVE_\d+__)/g));
-    }
-    
+
     // Быстрый путь: разворачиваем полноценные блоки ```md|markdown|gfm ...```
-    enhanced = enhanced.replace(/```(?:markdown|md|gfm)\s*\n([\s\S]*?)```/gi, (_m, inner) => inner);
+    let enhanced = input.replace(/```(?:markdown|md|gfm)\s*\n([\s\S]*?)```/gi, (_m, inner) => inner);
     enhanced = enhanced.replace(/~~~(?:markdown|md|gfm)\s*\n([\s\S]*?)~~~/gi, (_m, inner) => inner);
     // Робастный путь: если встречаются незакрытые/странно размеченные блоки с тегом markdown —
     // снимем ограждения построчно, чтобы контент парсился как обычный Markdown

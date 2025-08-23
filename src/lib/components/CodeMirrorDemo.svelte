@@ -2,6 +2,7 @@
   import CodeMirror from './CodeMirror.svelte';
   import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
   import { getCodeMirrorRenderer, cleanupRenderer } from '$lib/chat/codemirror-renderer';
+  import { enableExternalLinks } from '$lib/chat/external-links';
   import { onMount, onDestroy } from 'svelte';
 
   let contentEl: HTMLDivElement;
@@ -84,6 +85,9 @@ Regular text continues to render normally with **bold** and *italic* formatting.
   onMount(() => {
     if (contentEl) {
       contentEl.innerHTML = renderMarkdownToSafeHtml(sampleMarkdown);
+      
+      // Enable external links
+      enableExternalLinks(contentEl);
       
       // Apply CodeMirror rendering
       renderer = getCodeMirrorRenderer(contentEl);

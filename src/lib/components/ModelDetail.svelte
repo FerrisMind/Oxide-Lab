@@ -4,10 +4,12 @@
   import { huggingFaceService } from '$lib/services/huggingface';
   import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
   import { getCodeMirrorRenderer } from '$lib/chat/codemirror-renderer';
+  import { enableExternalLinks } from '$lib/chat/external-links';
   import { onMount, mount, unmount, onDestroy } from 'svelte';
   import Robot from 'phosphor-svelte/lib/Robot';
   import Download from 'phosphor-svelte/lib/Download';
   import Heart from 'phosphor-svelte/lib/Heart';
+  import ArrowSquareOut from 'phosphor-svelte/lib/ArrowSquareOut';
 
   export let model: HFModel | null = null;
   export let loading = false;
@@ -20,8 +22,10 @@
   let robotIcon: any;
   let downloadIconEl: HTMLElement;
   let heartIconEl: HTMLElement;
+  let huggingFaceIconEl: HTMLElement;
   let downloadIcon: any;
   let heartIcon: any;
+  let huggingFaceIcon: any;
   let descriptionEl: HTMLElement;
   let codeMirrorRenderer: any;
   let isDescriptionWatched = false;
@@ -89,6 +93,16 @@
     });
   }
 
+  $: if (huggingFaceIconEl && model) {
+    if (huggingFaceIcon) {
+      try { unmount(huggingFaceIcon); } catch {}
+    }
+    huggingFaceIcon = mount(ArrowSquareOut, {
+      target: huggingFaceIconEl,
+      props: { size: 16, weight: 'regular' }
+    });
+  }
+
   // Apply CodeMirror to description content when it's rendered
   $: setupCodeMirror(descriptionEl, detailedModel?.description || model?.description);
   
@@ -96,6 +110,9 @@
     if (element && description) {
       // Clean up previous CodeMirror setup
       cleanupCodeMirror();
+      
+      // Enable external links for the description content
+      enableExternalLinks(element);
       
       try {
         if (!codeMirrorRenderer) {
@@ -126,6 +143,10 @@
     if (heartIcon) {
       try { unmount(heartIcon); } catch {}
       heartIcon = null;
+    }
+    if (huggingFaceIcon) {
+      try { unmount(huggingFaceIcon); } catch {}
+      huggingFaceIcon = null;
     }
     cleanupCodeMirror();
   }
@@ -200,6 +221,18 @@
     return tagColors[tag.toLowerCase()] || '#6b7280';
   }
 
+  // Открытие карточки модели на Hugging Face в браузере
+  async function openHuggingFaceCard() {
+    if (!model) return;
+    
+    try {
+      const { open } = await import('@tauri-apps/plugin-opener');
+      await open(`https://huggingface.co/${model.id}`);
+    } catch (error) {
+      console.error('Ошибка при открытии карточки модели на Hugging Face:', error);
+    }
+  }
+
 
 </script>
 
@@ -232,6 +265,10 @@
           <button class="btn btn-secondary">
             <span class="btn-icon" bind:this={heartIconEl}></span>
             {formatNumber(model.likes)}
+          </button>
+          <button class="btn btn-secondary" on:click={openHuggingFaceCard} title="Открыть на Hugging Face">
+            <span class="btn-icon" bind:this={huggingFaceIconEl}></span>
+            Hugging Face
           </button>
         </div>
       </div>
