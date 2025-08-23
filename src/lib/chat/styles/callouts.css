@@ -1,0 +1,177 @@
+/* Callouts and Blockquotes */
+
+/* Horizontal lines */
+.md-stream hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 2em 0;
+  height: 0;
+}
+
+/* GitHub-style Callouts */
+.md-stream .callout {
+  margin: 1em 0;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  background-color: var(--panel-alt-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.md-stream .callout:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.md-stream .callout-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.md-stream .callout-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.md-stream .callout-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.md-stream .callout-content {
+  flex: 1;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.md-stream .callout-content > :first-child {
+  margin-top: 0;
+}
+
+.md-stream .callout-content > :last-child {
+  margin-bottom: 0;
+}
+
+.md-stream .callout-custom-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+/* Callout type-specific styling */
+.md-stream .callout-note {
+  border-left-color: #0969da;
+  background-color: rgba(9, 105, 218, 0.05);
+}
+
+.md-stream .callout-note .callout-icon {
+  color: #0969da;
+}
+
+.md-stream .callout-tip {
+  border-left-color: #1f883d;
+  background-color: rgba(31, 136, 61, 0.05);
+}
+
+.md-stream .callout-tip .callout-icon {
+  color: #1f883d;
+}
+
+.md-stream .callout-important {
+  border-left-color: #8250df;
+  background-color: rgba(130, 80, 223, 0.05);
+}
+
+.md-stream .callout-important .callout-icon {
+  color: #8250df;
+}
+
+.md-stream .callout-warning {
+  border-left-color: #d1242f;
+  background-color: rgba(209, 36, 47, 0.05);
+}
+
+.md-stream .callout-warning .callout-icon {
+  color: #d1242f;
+}
+
+.md-stream .callout-caution {
+  border-left-color: #d97706;
+  background-color: rgba(217, 119, 6, 0.05);
+}
+
+.md-stream .callout-caution .callout-icon {
+  color: #d97706;
+}
+
+/* Blockquotes */
+.md-stream blockquote {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border-left: 4px solid var(--accent);
+  background: var(--panel-alt-bg);
+  color: var(--text);
+  font-style: italic;
+}
+
+.md-stream blockquote > :first-child {
+  margin-top: 0;
+}
+
+.md-stream blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* Dark mode adjustments for callouts */
+@media (prefers-color-scheme: dark) {
+  .md-stream .callout-note {
+    border-left-color: #58a6ff;
+    background-color: rgba(88, 166, 255, 0.1);
+  }
+  
+  .md-stream .callout-note .callout-icon {
+    color: #58a6ff;
+  }
+  
+  .md-stream .callout-tip {
+    border-left-color: #56d364;
+    background-color: rgba(86, 211, 100, 0.1);
+  }
+  
+  .md-stream .callout-tip .callout-icon {
+    color: #56d364;
+  }
+  
+  .md-stream .callout-important {
+    border-left-color: #a5a3ff;
+    background-color: rgba(165, 163, 255, 0.1);
+  }
+  
+  .md-stream .callout-important .callout-icon {
+    color: #a5a3ff;
+  }
+  
+  .md-stream .callout-warning {
+    border-left-color: #f85149;
+    background-color: rgba(248, 81, 73, 0.1);
+  }
+  
+  .md-stream .callout-warning .callout-icon {
+    color: #f85149;
+  }
+  
+  .md-stream .callout-caution {
+    border-left-color: #ff8c00;
+    background-color: rgba(255, 140, 0, 0.1);
+  }
+  
+  .md-stream .callout-caution .callout-icon {
+    color: #ff8c00;
+  }
+}

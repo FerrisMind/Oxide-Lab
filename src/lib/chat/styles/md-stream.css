@@ -1,0 +1,75 @@
+/* Markdown stream container and controls */
+.md-stream {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  position: static;
+}
+
+.md-stream .md-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 2px 0 0;
+}
+
+.md-stream .md-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  background: var(--panel-bg);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 6px;
+  cursor: default;
+}
+
+.md-stream .md-eye-host {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  color: var(--text);
+  fill: currentColor;
+}
+
+.md-stream .md-toggle-text {
+  display: none;
+}
+
+.md-stream .md-content {
+  margin: 4px 4px 0 4px;
+}
+
+.md-stream .md-raw {
+  display: none;
+  margin: 8px 0;
+  padding: 10px;
+  background: var(--panel-bg);
+  color: var(--text);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.md-stream.show-raw .md-content {
+  display: none;
+}
+
+.md-stream.show-raw .md-raw {
+  display: block;
+}
+
+/* General paragraph styling */
+.md-stream p {
+  margin: 0.5em 0;
+  line-height: 1.6;
+}
