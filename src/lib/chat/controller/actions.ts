@@ -82,19 +82,19 @@ export function createActions(ctx: ChatControllerCtx) {
           await message("Укажите путь к .gguf", { title: "Загрузка модели", kind: "warning" });
           return;
         }
-        await invoke("load_model", { req: { format: "gguf", model_path: ctx.modelPath, tokenizer_path: null, context_length, device: { kind: "cpu" } } });
+        await invoke("load_model", { req: { format: "gguf", model_path: ctx.modelPath, tokenizer_path: null, context_length, device: (ctx.use_gpu ? { kind: "cuda", index: 0 } : { kind: "cpu" }) } });
       } else if (ctx.format === "hub_gguf") {
         if (!ctx.repoId || !ctx.hubGgufFilename) {
           await message("Укажите repoId и имя файла .gguf", { title: "Загрузка из HF Hub", kind: "warning" });
           return;
         }
-        await invoke("load_model", { req: { format: "hub_gguf", repo_id: ctx.repoId, revision: ctx.revision || null, filename: ctx.hubGgufFilename, context_length, device: { kind: "cpu" } } });
+        await invoke("load_model", { req: { format: "hub_gguf", repo_id: ctx.repoId, revision: ctx.revision || null, filename: ctx.hubGgufFilename, context_length, device: (ctx.use_gpu ? { kind: "cuda", index: 0 } : { kind: "cpu" }) } });
       } else if (ctx.format === "hub_safetensors") {
         if (!ctx.repoId) {
           await message("Укажите repoId (owner/repo)", { title: "Загрузка из HF Hub", kind: "warning" });
           return;
         }
-        await invoke("load_model", { req: { format: "hub_safetensors", repo_id: ctx.repoId, revision: ctx.revision || null, context_length, device: { kind: "cpu" } } });
+        await invoke("load_model", { req: { format: "hub_safetensors", repo_id: ctx.repoId, revision: ctx.revision || null, context_length, device: (ctx.use_gpu ? { kind: "cuda", index: 0 } : { kind: "cpu" }) } });
       }
       await refreshDeviceInfo();
       if (ctx.use_gpu && ctx.cuda_available) {

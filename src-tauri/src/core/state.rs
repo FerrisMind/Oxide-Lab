@@ -4,7 +4,7 @@ use candle::Device;
 use tokenizers::Tokenizer;
 
 /// Универсальное состояние для любой модели
-pub(crate) struct ModelState<M> {
+pub struct ModelState<M> {
     pub(crate) gguf_model: Option<M>,
     pub(crate) gguf_file: Option<File>,
     pub(crate) tokenizer: Option<Tokenizer>,
@@ -21,7 +21,7 @@ pub(crate) struct ModelState<M> {
 }
 
 impl<M> ModelState<M> {
-    pub(crate) fn new(device: Device) -> Self {
+    pub fn new(device: Device) -> Self {
         Self {
             gguf_model: None,
             gguf_file: None,
@@ -39,6 +39,6 @@ impl<M> ModelState<M> {
     }
 }
 
-pub(crate) type SharedState<M> = Arc<Mutex<ModelState<M>>>;
+pub type SharedState<M> = Arc<Mutex<ModelState<M>>>;
 
 

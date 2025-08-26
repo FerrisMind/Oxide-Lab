@@ -37,6 +37,11 @@
 
   // reference-only export (used by parent) — prevent Svelte warning by using const alias
   const _modelPath_ref = modelPath;
+  const _isUnloadingModel_ref = isUnloadingModel;
+  const _unloadingProgress_ref = unloadingProgress;
+  const _busy_ref = busy;
+  const _isLoaded_ref = isLoaded;
+  const _onMainAction_ref = onMainAction;
 </script>
 
 <section class="loader">

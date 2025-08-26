@@ -1,7 +1,7 @@
-mod core;
-mod generate;
-mod models;
-mod api;
+pub mod core;
+pub mod generate;
+pub mod models;
+pub mod api;
 // модуль `model` удалён, всё перенесено в `models/`
 // moved heavy operations to api/
 use std::sync::{Arc, Mutex};
