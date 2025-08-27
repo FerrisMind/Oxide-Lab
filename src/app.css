@@ -1,13 +1,18 @@
-@import './styles/variables.css';
-@import './styles/scrollbar.css';
-@import './styles/base.css';
-@import './styles/components.css';
-@import './styles/animations.css';
+@import url('./styles/variables.css');
+
+@import url('./styles/scrollbar.css');
+
+@import url('./styles/base.css');
+
+@import url('./styles/components.css');
+
+@import url('./styles/animations.css');
 
 /* Глобальные CSS переменные */
+
 :root {
   --bg: #f7f5f2;
-  --card: #ffffff;
+  --card: #fff;
   --panel-bg: #f8f9fa;
   --text: #2b2a29;
   --muted: #6d6a6a;
@@ -15,16 +20,17 @@
   --accent: #3b82f6;
   --accent-2: #1d4ed8;
   --panel-alt-bg: #f8f9fa;
-  --shadow: 0 4px 20px rgba(0,0,0,0.06);
-  --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+  --shadow: 0 4px 20px rgb(0 0 0 / 0.06);
+  --shadow-hover: 0 8px 30px rgb(0 0 0 / 0.12);
   --content-gap: 8px; /* default gap between left/right/bottom and content */
   --content-gap-top: 8px; /* larger gap from header */
+
   /* ↓ Добавляем переменные цветовой схемы для кода/hljs, согласованные с UI */
   --code-bg: var(--panel-bg);
   --code-fg: var(--text);
   --code-keyword: var(--accent-2);
   --code-string: #0e814a; /* зелёный для строк */
-  --code-title: #995500; /* заголовки/имена */
+  --code-title: #950; /* заголовки/имена */
   --code-number: #b45309; /* числа/символы */
   --code-variable: #6d28d9; /* переменные */
   --code-tag: #2563eb; /* теги/мета */
@@ -37,10 +43,11 @@
     --bg: #1a1a1a;
     --card: #2d2d2d;
     --panel-bg: #252525;
-    --text: #ffffff;
+    --text: #fff;
     --muted: #a0a0a0;
     --border-color: #404040;
     --panel-alt-bg: #252525;
+
     /* ↓ Темные значения для подсветки синтаксиса */
     --code-bg: var(--panel-bg);
     --code-fg: var(--text);
@@ -54,57 +61,57 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(91, 124, 153, 0.8);
+    background: rgb(91 124 153 / 0.8);
     background-clip: content-box;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(91, 124, 153, 1);
+    background: rgb(91 124 153 / 1);
     background-clip: content-box;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
   }
-  
+
   ::-webkit-scrollbar-thumb:active {
-    background: rgba(91, 124, 153, 1);
+    background: rgb(91 124 153 / 1);
     background-clip: content-box;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 6px 16px rgb(0 0 0 / 0.5);
   }
-  
+
   ::-webkit-scrollbar-thumb:horizontal {
-    background: linear-gradient(90deg, rgba(91, 124, 153, 0.8), rgba(91, 124, 153, 0.6));
+    background: linear-gradient(90deg, rgb(91 124 153 / 0.8), rgb(91 124 153 / 0.6));
     background-clip: content-box;
   }
-  
+
   ::-webkit-scrollbar-thumb:horizontal:hover {
-    background: linear-gradient(90deg, rgba(91, 124, 153, 1), rgba(91, 124, 153, 0.8));
+    background: linear-gradient(90deg, rgb(91 124 153 / 1), rgb(91 124 153 / 0.8));
     background-clip: content-box;
   }
-  
+
   * {
-    scrollbar-color: rgba(91, 124, 153, 0.8) transparent;
+    scrollbar-color: rgb(91 124 153 / 0.8) transparent;
   }
 }
 
 /* Мобильные устройства */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     border: 1px solid transparent;
   }
 }
 
 /* Высокие DPI дисплеи */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+@media (min-device-pixel-ratio: 2), (resolution >= 192dpi) {
   ::-webkit-scrollbar {
     width: 14px;
     height: 14px;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     border: 3px solid transparent;
   }
@@ -112,8 +119,12 @@
 
 /* Анимации */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes scrollbarFadeIn {
@@ -121,6 +132,7 @@
     opacity: 0;
     transform: translateX(10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -128,11 +140,17 @@
 }
 
 @keyframes scrollbarPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Применяем анимации */
+
 ::-webkit-scrollbar-thumb {
   animation: scrollbarFadeIn 0.3s ease-out;
 }
@@ -142,6 +160,7 @@
 }
 
 /* Утилитарные классы */
+
 .spinning {
   animation: spin 1s linear infinite;
 }
@@ -157,29 +176,50 @@
 }
 
 /* Базовые стили для компонентов */
+
 .wrap {
   padding: 16px;
   width: 100%;
+
   /* fill parent's height rather than forcing min-height:100% which can exceed viewport */
   height: 100%;
   min-height: 0;
 }
 
 /* Стили для заголовков */
-h1, h2, h3, h4, h5, h6 {
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--text);
   font-weight: 600;
   line-height: 1.2;
 }
 
-h1 { font-size: 2rem; }
-h2 { font-size: 1.75rem; }
-h3 { font-size: 1.5rem; }
-h4 { font-size: 1.25rem; }
-h5 { font-size: 1.125rem; }
-h6 { font-size: 1rem; }
+h1 {
+  font-size: 2rem;
+}
+h2 {
+  font-size: 1.75rem;
+}
+h3 {
+  font-size: 1.5rem;
+}
+h4 {
+  font-size: 1.25rem;
+}
+h5 {
+  font-size: 1.125rem;
+}
+h6 {
+  font-size: 1rem;
+}
 
 /* Стили для параграфов */
+
 p {
   color: var(--text);
   line-height: 1.6;
@@ -187,6 +227,7 @@ p {
 }
 
 /* Стили для кнопок */
+
 button {
   cursor: default;
   border: none;

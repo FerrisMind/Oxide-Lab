@@ -44,7 +44,7 @@
     background: none;
     border: none;
     color: var(--muted);
-    cursor: pointer;
+     cursor: default;
     padding: 4px;
     border-radius: 4px;
     transition: all 0.2s ease;

@@ -1,17 +1,18 @@
-import { mount, unmount } from 'svelte';
-import { 
-  detectLanguageFromContent, 
-  extractLanguageFromClassNames 
+// mount/unmount are not used directly here
+// import { mount, unmount } from 'svelte';
+import {
+  detectLanguageFromContent,
+  extractLanguageFromClassNames,
 } from './utils/language-detector';
-import { 
-  createCodeMirrorToolbar, 
-  createCodeMirrorContainer, 
-  createEditorContainer 
+import {
+  createCodeMirrorToolbar,
+  createCodeMirrorContainer,
+  createEditorContainer,
 } from './utils/dom-utils';
-import { 
-  mountCodeMirrorComponent, 
-  cleanupCodeBlock, 
-  type CodeBlock 
+import {
+  mountCodeMirrorComponent,
+  cleanupCodeBlock,
+  type CodeBlock,
 } from './utils/component-manager';
 import { getCodeMirrorRenderer, cleanupRenderer } from './utils/renderer-manager';
 
@@ -46,22 +47,22 @@ export class CodeMirrorRenderer {
     if (this.isWatching && this.container === container) {
       return;
     }
-    
+
     // Stop watching previous container if any
     if (this.isWatching) {
       this.stopWatching();
     }
-    
+
     this.container = container;
     this.isWatching = true;
-    
+
     if (this.observer) {
       this.observer.observe(container, {
         childList: true,
         subtree: true,
       });
     }
-    
+
     // Process existing elements
     this.processElement(container);
   }
@@ -78,14 +79,14 @@ export class CodeMirrorRenderer {
   private processElement(element: HTMLElement) {
     // Find all pre > code elements (markdown code blocks)
     const codeElements = element.querySelectorAll('pre > code');
-    
+
     codeElements.forEach((codeEl) => {
       const preEl = codeEl.parentElement as HTMLPreElement;
       if (!preEl || this.codeBlocks.has(preEl)) return;
 
       const code = codeEl.textContent || '';
       const language = this.extractLanguage(codeEl);
-      
+
       // Only replace if it's a substantial code block (more than just inline code)
       if (code.trim().length > 10 || code.includes('\n')) {
         this.replaceWithCodeMirror(preEl, code, language);
@@ -107,15 +108,15 @@ export class CodeMirrorRenderer {
   private replaceWithCodeMirror(preElement: HTMLPreElement, code: string, language: string) {
     // Create container for CodeMirror
     const container = createCodeMirrorContainer();
-    
+
     // Create toolbar with language label and copy button
     const { toolbar } = createCodeMirrorToolbar(language, code);
-    
+
     const editorContainer = createEditorContainer();
-    
+
     container.appendChild(toolbar);
     container.appendChild(editorContainer);
-    
+
     // Replace the pre element
     preElement.parentNode?.replaceChild(container, preElement);
 
@@ -128,7 +129,7 @@ export class CodeMirrorRenderer {
         element: container,
         code,
         language,
-        component
+        component,
       });
     } catch (error) {
       console.error('Failed to mount CodeMirror component:', error);

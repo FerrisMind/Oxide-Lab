@@ -5,7 +5,7 @@
  */
 export function detectLanguageFromContent(code: string): string {
   const trimmed = code.trim();
-  
+
   // JavaScript/TypeScript patterns
   if (
     /^(import|export|const|let|var|function|class|\w+\s*=>)/.test(trimmed) ||
@@ -25,18 +25,12 @@ export function detectLanguageFromContent(code: string): string {
   }
 
   // HTML patterns
-  if (
-    /^<!DOCTYPE|^<html|^<\w+[^>]*>/.test(trimmed) ||
-    /<\/\w+>/.test(trimmed)
-  ) {
+  if (/^<!DOCTYPE|^<html|^<\w+[^>]*>/.test(trimmed) || /<\/\w+>/.test(trimmed)) {
     return 'html';
   }
 
   // CSS patterns
-  if (
-    /^[.#]?\w+\s*\{/.test(trimmed) ||
-    /:\s*[^;]+;/.test(trimmed)
-  ) {
+  if (/^[.#]?\w+\s*\{/.test(trimmed) || /:\s*[^;]+;/.test(trimmed)) {
     return 'css';
   }
 
@@ -72,7 +66,7 @@ export function detectLanguageFromContent(code: string): string {
 export function extractLanguageFromClassNames(codeElement: Element): string {
   // Check for language class (hljs-*, language-*, etc.)
   const classList = Array.from(codeElement.classList);
-  
+
   for (const className of classList) {
     if (className.startsWith('hljs-')) {
       // Skip hljs utility classes

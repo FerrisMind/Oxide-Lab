@@ -31,7 +31,7 @@ export interface SearchEvent {
 // Available filter options
 export const availableFormats: FilterOption[] = [
   { id: 'gguf', label: 'GGUF', color: '#10b981' },
-  { id: 'safetensors', label: 'Safetensors', color: '#3b82f6' }
+  { id: 'safetensors', label: 'Safetensors', color: '#3b82f6' },
 ];
 
 export const availablePipelineTags: FilterOption[] = [
@@ -42,7 +42,7 @@ export const availablePipelineTags: FilterOption[] = [
   { id: 'summarization', label: 'Summarization' },
   { id: 'translation', label: 'Translation' },
   { id: 'text-classification', label: 'Classification' },
-  { id: 'feature-extraction', label: 'Embeddings' }
+  { id: 'feature-extraction', label: 'Embeddings' },
 ];
 
 export const availableLibraries: FilterOption[] = [
@@ -51,7 +51,7 @@ export const availableLibraries: FilterOption[] = [
   { id: 'tensorflow', label: 'TensorFlow' },
   { id: 'jax', label: 'JAX' },
   { id: 'onnx', label: 'ONNX' },
-  { id: 'safetensors', label: 'SafeTensors' }
+  { id: 'safetensors', label: 'SafeTensors' },
 ];
 
 export const availableLanguages: FilterOption[] = [
@@ -62,7 +62,7 @@ export const availableLanguages: FilterOption[] = [
   { id: 'fr', label: 'French' },
   { id: 'de', label: 'German' },
   { id: 'ja', label: 'Japanese' },
-  { id: 'ko', label: 'Korean' }
+  { id: 'ko', label: 'Korean' },
 ];
 
 export const availableLicenses: FilterOption[] = [
@@ -71,7 +71,7 @@ export const availableLicenses: FilterOption[] = [
   { id: 'cc-by-4.0', label: 'CC BY 4.0' },
   { id: 'cc-by-sa-4.0', label: 'CC BY-SA 4.0' },
   { id: 'gpl-3.0', label: 'GPL 3.0' },
-  { id: 'other', label: 'Other' }
+  { id: 'other', label: 'Other' },
 ];
 
 /**
@@ -79,7 +79,7 @@ export const availableLicenses: FilterOption[] = [
  */
 export function toggleInArray<T>(array: T[], value: T): T[] {
   if (array.includes(value)) {
-    return array.filter(item => item !== value);
+    return array.filter((item) => item !== value);
   } else {
     return [...array, value];
   }
@@ -89,11 +89,13 @@ export function toggleInArray<T>(array: T[], value: T): T[] {
  * Check if any filters are active
  */
 export function hasActiveFilters(state: FilterState): boolean {
-  return state.selectedFormats.length > 0 ||
-         state.selectedPipelineTags.length > 0 ||
-         state.selectedLibraries.length > 0 ||
-         state.selectedLanguages.length > 0 ||
-         state.selectedLicenses.length > 0 ||
-         !!state.searchQuery ||
-         !!state.authorFilter;
+  return (
+    state.selectedFormats.length > 0 ||
+    state.selectedPipelineTags.length > 0 ||
+    state.selectedLibraries.length > 0 ||
+    state.selectedLanguages.length > 0 ||
+    state.selectedLicenses.length > 0 ||
+    !!state.searchQuery ||
+    !!state.authorFilter
+  );
 }

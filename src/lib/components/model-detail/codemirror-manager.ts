@@ -27,10 +27,10 @@ export function createCodeMirrorManager(): CodeMirrorManager {
       if (element && description) {
         // Clean up previous CodeMirror setup
         cleanupCodeMirror();
-        
+
         // Enable external links for the description content
         enableExternalLinks(element);
-        
+
         try {
           if (!codeMirrorRenderer) {
             codeMirrorRenderer = getCodeMirrorRenderer();
@@ -45,6 +45,6 @@ export function createCodeMirrorManager(): CodeMirrorManager {
 
     cleanup() {
       cleanupCodeMirror();
-    }
+    },
   };
 }

@@ -1,7 +1,11 @@
 /* Анимации */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes scrollbarFadeIn {
@@ -9,6 +13,7 @@
     opacity: 0;
     transform: translateX(10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -16,11 +21,17 @@
 }
 
 @keyframes scrollbarPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Применяем анимации */
+
 ::-webkit-scrollbar-thumb {
   animation: scrollbarFadeIn 0.3s ease-out;
 }
@@ -30,6 +41,7 @@
 }
 
 /* Утилитарные классы */
+
 .spinning {
   animation: spin 1s linear infinite;
 }

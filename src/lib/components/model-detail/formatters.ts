@@ -24,7 +24,7 @@ export function formatDate(dateString: string): string {
     month: 'long',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 }
 
@@ -33,16 +33,16 @@ export function formatDate(dateString: string): string {
  */
 export function getTagColor(tag: string): string {
   const tagColors: Record<string, string> = {
-    'gguf': '#10b981',
-    'safetensors': '#3b82f6',
-    'llama': '#8b5cf6',
-    'mistral': '#f59e0b',
-    'gemma': '#ef4444',
-    'qwen': '#06b6d4',
-    'pytorch': '#ee4b2b',
-    'transformers': '#ff6b6b',
+    gguf: '#10b981',
+    safetensors: '#3b82f6',
+    llama: '#8b5cf6',
+    mistral: '#f59e0b',
+    gemma: '#ef4444',
+    qwen: '#06b6d4',
+    pytorch: '#ee4b2b',
+    transformers: '#ff6b6b',
     'text-generation': '#4ecdc4',
-    'conversational': '#45b7d1'
+    conversational: '#45b7d1',
   };
   return tagColors[tag.toLowerCase()] || '#6b7280';
 }

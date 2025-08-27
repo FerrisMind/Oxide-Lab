@@ -11,7 +11,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid transparent;
-  border-top: 2px solid currentColor;
+  border-top: 2px solid currentcolor;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   transition: all 0.3s ease;
@@ -74,7 +74,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid transparent;
-  border-top: 2px solid currentColor;
+  border-top: 2px solid currentcolor;
   border-radius: 50%;
   animation: spin 0.5s linear infinite;
 }
@@ -83,7 +83,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid transparent;
-  border-bottom: 2px solid currentColor;
+  border-bottom: 2px solid currentcolor;
   border-radius: 50%;
   animation: spin 1.2s linear infinite;
   transition: all 0.3s ease;
@@ -169,48 +169,81 @@
 .progress-fill::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.15);
+  inset: 0;
+  background: rgb(255 255 255 / 0.15);
   animation: shimmer 2s infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-2px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes progressPulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes iconBounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
 }
 
 @keyframes successPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -218,75 +251,75 @@
     background: #3a1f1f;
     border-color: #ff6b6b;
   }
-  
+
   .loading-status.success {
     background: #1f3a1f;
     border-color: #4caf50;
   }
-  
+
   .loading-progress-bar {
     background: var(--panel-bg);
   }
-  
+
   .progress-fill {
     background: linear-gradient(90deg, var(--accent), var(--accent-2));
   }
-  
+
   .progress-fill::after {
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.1), transparent);
   }
-  
+
   .loading-status:hover {
     box-shadow: var(--shadow-hover);
   }
-  
+
   .loading-progress-bar:hover {
     background: var(--card);
   }
-  
+
   .primary.loading:hover {
     box-shadow: var(--shadow-hover);
   }
-  
+
   .primary.cancelling:hover {
     box-shadow: var(--shadow-hover);
   }
-  
+
   .primary.cancelling {
     background: #8b3a3a;
   }
-  
+
   .primary.cancelling:hover {
     background: #7a2f2f;
   }
-  
+
   .primary.loading {
     background: var(--accent);
   }
-  
+
   .primary.loading:hover {
     background: var(--accent-2);
   }
-  
+
   .loading-hint {
     color: var(--muted);
   }
-  
+
   .stage-icon {
     filter: brightness(1.2);
   }
-  
-  .loading-spinner, .cancelling-spinner, .unloading-spinner {
-    border-color: rgba(255, 255, 255, 0.3);
+
+  .loading-spinner,
+  .cancelling-spinner,
+  .unloading-spinner {
+    border-color: rgb(255 255 255 / 0.3);
   }
-  
+
   .primary.loading::after {
     background: linear-gradient(90deg, var(--accent), var(--accent-2));
   }
-  
+
   .primary.cancelling::after {
     background: linear-gradient(90deg, #8b3a3a, #7a2f2f);
   }
 }
-
-

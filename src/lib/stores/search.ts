@@ -6,5 +6,5 @@ export const searchTrigger = writable(0);
 // Function to trigger search from header
 export function triggerHeaderSearch(query: string) {
   headerSearchQuery.set(query);
-  searchTrigger.update(n => n + 1);
+  searchTrigger.update((n) => n + 1);
 }

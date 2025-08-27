@@ -17,31 +17,31 @@ export class HuggingFaceAPI {
   // Fetch с retry логикой
   async fetchWithRetry(url: string, options?: RequestInit): Promise<Response> {
     let lastError: Error;
-    
+
     for (let attempt = 0; attempt < this.retryAttempts; attempt++) {
       try {
         const response = await fetch(url, {
           ...options,
           headers: {
             ...this.getHeaders(),
-            ...options?.headers
-          }
+            ...options?.headers,
+          },
         });
-        
+
         if (response.ok || response.status === 404) {
           return response;
         }
-        
+
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       } catch (error) {
         lastError = error as Error;
-        
+
         if (attempt < this.retryAttempts - 1) {
           await this.delay(this.retryDelay * Math.pow(2, attempt));
         }
       }
     }
-    
+
     throw lastError!;
   }
 
@@ -49,11 +49,11 @@ export class HuggingFaceAPI {
   async getModelFiles(modelId: string): Promise<HFModelFile[]> {
     try {
       const response = await this.fetchWithRetry(`${this.baseUrl}/models/${modelId}/tree/main`);
-      
+
       if (!response.ok) {
         return [];
       }
-      
+
       return await response.json();
     } catch (error) {
       console.error('Error getting model files:', error);
@@ -66,25 +66,27 @@ export class HuggingFaceAPI {
     try {
       // Сначала пытаемся получить README без авторизации
       const url = `https://huggingface.co/${modelId}/resolve/main/README.md`;
-      
+
       // Делаем запрос без использования fetchWithRetry для лучшего контроля ошибок
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; HuggingFace-Client)'
-        }
+          'User-Agent': 'Mozilla/5.0 (compatible; HuggingFace-Client)',
+        },
       });
-      
+
       if (response.ok) {
         const readmeContent = await response.text();
         return stripFrontMatter(readmeContent);
       }
-      
+
       // Если получили 401 или другую ошибку, пытаемся получить через API
       if (response.status === 401 || response.status === 403) {
-        console.warn(`README недоступен для модели ${modelId} (${response.status}), используем API`);
+        console.warn(
+          `README недоступен для модели ${modelId} (${response.status}), используем API`,
+        );
         return await this.getDescriptionFromApi(modelId);
       }
-      
+
       return null;
     } catch (error) {
       console.warn('Ошибка при получении README модели, пытаемся через API:', error);
@@ -97,12 +99,12 @@ export class HuggingFaceAPI {
     try {
       const url = `${this.baseUrl}/models/${modelId}`;
       const response = await this.fetchWithRetry(url);
-      
+
       if (response.ok) {
         const modelData = await response.json();
         return modelData.description || null;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Ошибка при получении описания через API:', error);
@@ -112,7 +114,7 @@ export class HuggingFaceAPI {
 
   // Задержка для retry
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // Получение заголовков для API запросов

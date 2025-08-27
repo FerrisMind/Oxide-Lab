@@ -85,7 +85,7 @@
   
   .search-input:disabled {
     opacity: 0.6;
-    cursor: not-allowed;
+      cursor: default;
   }
   
   .inside-btn {
@@ -130,6 +130,6 @@
   
   .inside-btn:disabled {
     opacity: 0.6;
-    cursor: not-allowed;
+     cursor: default;
   }
 </style>

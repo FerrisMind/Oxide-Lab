@@ -1,4 +1,5 @@
 /* CoT (Chain of Thought) / инструменты / markdown */
+
 .cot {
   margin: 2px 0;
 }
@@ -34,7 +35,7 @@
 .cot .caret-host svg {
   transition: transform 150ms ease;
   color: var(--accent);
-  fill: currentColor;
+  fill: currentcolor;
 }
 
 .cot[open] .caret-host svg {
@@ -47,7 +48,7 @@
   width: 16px;
   height: 16px;
   color: var(--accent);
-  fill: currentColor;
+  fill: currentcolor;
   transform: translateY(-1px);
 }
 
@@ -57,7 +58,7 @@
 }
 
 .cot-pre {
-  margin: 2px 0 12px 0;
+  margin: 2px 0 12px;
   padding: 6px;
   background: var(--panel-bg);
   border-radius: 8px;
@@ -68,7 +69,8 @@
   max-width: 100%;
 }
 
-.tool-card, .tool-response {
+.tool-card,
+.tool-response {
   margin: 8px 0;
   padding: 10px;
   border-radius: 10px;

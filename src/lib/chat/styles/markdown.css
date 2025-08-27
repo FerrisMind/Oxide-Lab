@@ -1,13 +1,19 @@
 /* Modular Markdown Styles - Main Import File */
 
 /* Import modular CSS files for better organization and maintainability */
-@import './cot-tools.css';
-@import './code-syntax.css';
-@import './md-stream.css';
-@import './typography.css';
-@import './callouts.css';
-@import './tables-responsive.css';
-@import './details-utils.css';
+@import url('./cot-tools.css');
+
+@import url('./code-syntax.css');
+
+@import url('./md-stream.css');
+
+@import url('./typography.css');
+
+@import url('./callouts.css');
+
+@import url('./tables-responsive.css');
+
+@import url('./details-utils.css');
 
 /* 
  * This file now serves as the main entry point for all markdown-related styles.

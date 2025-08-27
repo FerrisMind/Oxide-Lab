@@ -1,9 +1,11 @@
 /* ===== Loader panel form controls (right panel) ===== */
+
 .loader {
   --control-radius: 10px;
   --control-padding-y: 8px; /* 4px grid */
   --control-padding-x: 12px; /* 4px grid */
-  --focus-ring: 0 0 0 3px rgba(179, 205, 224, 0.15);
+  --focus-ring: 0 0 0 3px rgb(179 205 224 / 0.15);
+
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
@@ -11,9 +13,17 @@
 }
 
 /* Text / path inputs */
-.loader .field { display: grid; gap: 6px; margin: 8px 0; }
-.loader .field label { font-size: 12px; color: var(--muted); }
-.loader .field input[type="text"],
+.loader .field {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+}
+.loader .field label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.loader .field input[type='text'],
 .loader .field input:not([type]) {
   border: 1px solid var(--border-color);
   background: #fcfbfa;
@@ -26,6 +36,7 @@
 }
 
 /* Улучшенные стили для полей с кнопками в правой панели */
+
 .loader .field .input-with-button {
   width: 100%;
   max-width: 100%;
@@ -40,25 +51,35 @@
   min-width: 0;
   flex: 1;
 }
-.loader .field input::placeholder { color: #5a5a5a; opacity: 0.9; }
+.loader .field input::placeholder {
+  color: #5a5a5a;
+  opacity: 0.9;
+}
 
 /* Ensure space for inside button */
-.loader .input-with-button input { 
-  padding: var(--control-padding-y) var(--control-padding-x); 
-  padding-right: 40px; 
+
+.loader .input-with-button input {
+  padding: var(--control-padding-y) var(--control-padding-x);
+  padding-right: 40px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
   box-sizing: border-box;
 }
-.loader .inside-btn { cursor: default; right: 8px; }
+.loader .inside-btn {
+  cursor: default;
+  right: 8px;
+}
 
 /* Checkbox */
-.loader input[type="checkbox"] {
+
+.loader input[type='checkbox'] {
   appearance: none;
-  width: 16px; height: 16px;
+  width: 16px;
+  height: 16px;
   border: 1px solid var(--border-color);
+
   /* make checkbox slightly more rounded to avoid sharp rectangle */
   border-radius: 6px;
   background: var(--panel-bg);
@@ -69,13 +90,16 @@
   vertical-align: middle;
   flex: 0 0 auto;
 }
-.loader input[type="checkbox"]:checked {
+
+.loader input[type='checkbox']:checked {
   background: var(--accent);
   border-color: transparent;
 }
-.loader input[type="checkbox"]:checked::after {
-  content: "";
+
+.loader input[type='checkbox']:checked::after {
+  content: '';
   position: absolute;
+
   /* center the checkmark inside the 16x16 box */
   left: 50%;
   top: 36%;
@@ -85,12 +109,19 @@
   border-width: 0 2px 2px 0;
   transform: translate(-50%, -50%) rotate(45deg);
 }
-.loader .param .row { display: flex; gap: 8px; align-items: center; }
-.loader .param label { font-size: 12px; color: var(--muted); }
+.loader .param .row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.loader .param label {
+  font-size: 12px;
+  color: var(--muted);
+}
 
 /* Range and number inputs */
-.loader input[type="range"] {
-  -webkit-appearance: none;
+
+.loader input[type='range'] {
   appearance: none;
   height: 8px;
   background: linear-gradient(0deg, var(--panel-bg), var(--panel-bg));
@@ -98,21 +129,27 @@
   border-radius: 999px;
   outline: none;
 }
-.loader input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
+
+.loader input[type='range']::-webkit-slider-thumb {
   appearance: none;
-  width: 16px; height: 16px;
+  width: 16px;
+  height: 16px;
   background: var(--accent);
-  border: none; border-radius: 50%;
+  border: none;
+  border-radius: 50%;
   cursor: default;
 }
-.loader input[type="range"]::-moz-range-thumb {
-  width: 16px; height: 16px;
+
+.loader input[type='range']::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
   background: var(--accent);
-  border: none; border-radius: 50%;
+  border: none;
+  border-radius: 50%;
   cursor: default;
 }
-.loader input[type="number"] {
+
+.loader input[type='number'] {
   border: 1px solid var(--border-color);
   background: #fcfbfa;
   color: var(--text);
@@ -123,9 +160,9 @@
 }
 
 /* Стилизация стрелок в числовых полях */
-.loader input[type="number"]::-webkit-outer-spin-button,
-.loader input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
+
+.loader input[type='number']::-webkit-outer-spin-button,
+.loader input[type='number']::-webkit-inner-spin-button {
   appearance: none;
   margin: 0;
   background: var(--panel-bg);
@@ -137,14 +174,15 @@
   cursor: default;
 }
 
-.loader input[type="number"]::-webkit-outer-spin-button:hover,
-.loader input[type="number"]::-webkit-inner-spin-button:hover {
+.loader input[type='number']::-webkit-outer-spin-button:hover,
+.loader input[type='number']::-webkit-inner-spin-button:hover {
   background: var(--accent);
 }
 
 /* Кастомные стрелки */
-.loader input[type="number"]::-webkit-outer-spin-button::before,
-.loader input[type="number"]::-webkit-inner-spin-button::before {
+
+.loader input[type='number']::-webkit-outer-spin-button::before,
+.loader input[type='number']::-webkit-inner-spin-button::before {
   content: '';
   position: absolute;
   left: 50%;
@@ -156,25 +194,26 @@
   border-right: 4px solid transparent;
 }
 
-.loader input[type="number"]::-webkit-outer-spin-button::before {
+.loader input[type='number']::-webkit-outer-spin-button::before {
   border-bottom: 6px solid var(--text);
   top: 40%;
 }
 
-.loader input[type="number"]::-webkit-inner-spin-button::before {
+.loader input[type='number']::-webkit-inner-spin-button::before {
   border-top: 6px solid var(--text);
   top: 60%;
 }
 
 /* Firefox */
-.loader input[type="number"]::-moz-number-spin-box {
+
+.loader input[type='number']::-moz-number-spin-box {
   background: var(--panel-bg);
   border-left: 1px solid var(--border-color);
   border-radius: 0 var(--control-radius) var(--control-radius) 0;
 }
 
-.loader input[type="number"]::-moz-number-spin-up,
-.loader input[type="number"]::-moz-number-spin-down {
+.loader input[type='number']::-moz-number-spin-up,
+.loader input[type='number']::-moz-number-spin-down {
   background: var(--panel-bg);
   border: none;
   border-radius: 0;
@@ -183,63 +222,71 @@
   cursor: default;
 }
 
-.loader input[type="number"]::-moz-number-spin-up:hover,
-.loader input[type="number"]::-moz-number-spin-down:hover {
+.loader input[type='number']::-moz-number-spin-up:hover,
+.loader input[type='number']::-moz-number-spin-down:hover {
   background: var(--accent);
 }
 
 /* Focus states */
+
 .loader .field input:focus,
-.loader input[type="number"]:focus {
+.loader input[type='number']:focus {
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
 }
 
 @media (prefers-color-scheme: dark) {
-  .loader .field input[type="text"],
+  .loader .field input[type='text'],
   .loader .field input:not([type]),
-  .loader input[type="number"] {
+  .loader input[type='number'] {
     background: #2d2d2d;
     border-color: #3a3a3a;
     color: #eee;
   }
-  .loader input[type="checkbox"] { background: #2d2d2d; border-color: #3a3a3a; }
-  .loader input[type="checkbox"]:checked::after { border-color: #fff; }
-  
+  .loader input[type='checkbox'] {
+    background: #2d2d2d;
+    border-color: #3a3a3a;
+  }
+  .loader input[type='checkbox']:checked::after {
+    border-color: #fff;
+  }
+
   /* Улучшенный клиппинг для темной темы */
+
   .loader .field .input-with-button input {
     background: #2d2d2d;
     border-color: #3a3a3a;
     color: #eee;
   }
-  
+
   /* Стили для стрелок в темной теме */
-  .loader input[type="number"]::-webkit-outer-spin-button,
-  .loader input[type="number"]::-webkit-inner-spin-button {
+
+  .loader input[type='number']::-webkit-outer-spin-button,
+  .loader input[type='number']::-webkit-inner-spin-button {
     background: #2d2d2d;
     border-left-color: #3a3a3a;
   }
-  
-  .loader input[type="number"]::-webkit-outer-spin-button:hover,
-  .loader input[type="number"]::-webkit-inner-spin-button:hover {
+
+  .loader input[type='number']::-webkit-outer-spin-button:hover,
+  .loader input[type='number']::-webkit-inner-spin-button:hover {
     background: var(--accent);
   }
-  
-  .loader input[type="number"]::-webkit-outer-spin-button::before {
+
+  .loader input[type='number']::-webkit-outer-spin-button::before {
     border-bottom-color: #eee;
   }
-  
-  .loader input[type="number"]::-webkit-inner-spin-button::before {
+
+  .loader input[type='number']::-webkit-inner-spin-button::before {
     border-top-color: #eee;
   }
-  
-  .loader input[type="number"]::-moz-number-spin-box {
+
+  .loader input[type='number']::-moz-number-spin-box {
     background: #2d2d2d;
     border-left-color: #3a3a3a;
   }
-  
-  .loader input[type="number"]::-moz-number-spin-up,
-  .loader input[type="number"]::-moz-number-spin-down {
+
+  .loader input[type='number']::-moz-number-spin-up,
+  .loader input[type='number']::-moz-number-spin-down {
     background: #2d2d2d;
   }
 }

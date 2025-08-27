@@ -129,7 +129,7 @@
     border-radius: 10px;
     font-size: 0.875rem;
     font-weight: 500;
-    cursor: pointer;
+     cursor: default;
     transition: all 0.2s ease;
   }
 

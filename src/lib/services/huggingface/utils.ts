@@ -23,48 +23,48 @@ export function buildSearchUrl(params: SearchParams): string {
   // Handle formats using filter parameter (correct API approach)
   if (params.formats?.length) {
     console.log('Formats received:', params.formats);
-    params.formats.forEach(format => {
+    params.formats.forEach((format) => {
       const formatMap: { [key: string]: string } = {
-        'gguf': 'gguf',
-        'safetensors': 'safetensors',
-        'pytorch': 'pytorch',
-        'tensorflow': 'tensorflow',
-        'onnx': 'onnx'
+        gguf: 'gguf',
+        safetensors: 'safetensors',
+        pytorch: 'pytorch',
+        tensorflow: 'tensorflow',
+        onnx: 'onnx',
       };
-      
+
       const filterValue = formatMap[format.toLowerCase()] || format.toLowerCase();
       searchParams.append('filter', filterValue);
       console.log(`Format ${format} added as filter: ${filterValue}`);
     });
   }
-  
+
   // Handle libraries using library parameter
   if (params.library?.length) {
     console.log('Libraries received:', params.library);
-    params.library.forEach(lib => {
+    params.library.forEach((lib) => {
       searchParams.append('library', lib);
       console.log(`Library added: ${lib}`);
     });
   }
 
   if (params.language?.length) {
-    params.language.forEach(lang => {
+    params.language.forEach((lang) => {
       searchParams.append('language', lang);
     });
   }
 
   if (params.license?.length) {
-    params.license.forEach(lic => {
+    params.license.forEach((lic) => {
       searchParams.append('license', lic);
     });
   }
 
   if (params.sort) {
     const sortMap = {
-      'lastModified': 'lastModified',
-      'createdAt': 'createdAt',
-      'downloads': 'downloads',
-      'likes': 'likes'
+      lastModified: 'lastModified',
+      createdAt: 'createdAt',
+      downloads: 'downloads',
+      likes: 'likes',
     };
     searchParams.append('sort', sortMap[params.sort]);
   }
@@ -89,10 +89,10 @@ export function buildSearchUrl(params: SearchParams): string {
 // Извлечение форматов из файлов модели
 export function extractFormats(files: HFModelFile[]): string[] {
   const formats = new Set<string>();
-  
-  files.forEach(file => {
+
+  files.forEach((file) => {
     const extension = file.path.split('.').pop()?.toLowerCase();
-    
+
     if (extension === 'gguf') {
       formats.add('gguf');
     } else if (extension === 'safetensors') {
@@ -105,7 +105,7 @@ export function extractFormats(files: HFModelFile[]): string[] {
       formats.add('tensorflow');
     }
   });
-  
+
   return Array.from(formats);
 }
 

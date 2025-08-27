@@ -19,11 +19,7 @@ export interface CodeBlock {
  * @param language Programming language
  * @returns Mounted component instance
  */
-export function mountCodeMirrorComponent(
-  target: HTMLElement, 
-  code: string, 
-  language: string
-): any {
+export function mountCodeMirrorComponent(target: HTMLElement, code: string, language: string): any {
   return mount(CodeMirror, {
     target,
     props: {
@@ -32,8 +28,8 @@ export function mountCodeMirrorComponent(
       readonly: true,
       theme: 'auto',
       showLineNumbers: true,
-      wrap: true
-    }
+      wrap: true,
+    },
   });
 }
 

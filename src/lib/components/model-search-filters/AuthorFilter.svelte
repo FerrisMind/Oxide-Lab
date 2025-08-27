@@ -67,7 +67,7 @@
 
   .author-input:disabled {
     opacity: 0.6;
-    cursor: not-allowed;
+      cursor: default;
   }
 
   /* Responsive */

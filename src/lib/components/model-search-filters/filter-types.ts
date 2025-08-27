@@ -39,7 +39,7 @@ export const availableLicenses = filterConfig.licenses;
 // Utility functions
 export function toggleArrayItem<T>(array: T[], item: T): T[] {
   if (array.includes(item)) {
-    return array.filter(i => i !== item);
+    return array.filter((i) => i !== item);
   } else {
     return [...array, item];
   }
@@ -65,6 +65,6 @@ export function clearAllFilters(): FilterState {
     selectedLanguages: [],
     selectedLicenses: [],
     authorFilter: '',
-    searchQuery: ''
+    searchQuery: '',
   };
 }

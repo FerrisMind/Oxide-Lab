@@ -1,9 +1,11 @@
 /* Desktop layout: place chat and loader side-by-side with equal height */
-@media (min-width: 960px) {
+@media (width >= 960px) {
   /* Use flex layout to guarantee equal heights between chat and loader */
+
   .wrap {
     display: flex;
     gap: var(--content-gap);
+
     /* fill available height from parent (app-main) to avoid exceeding viewport */
     height: 100%;
     box-sizing: border-box;
@@ -26,19 +28,28 @@
   }
 
   /* messages area should grow to fill available space */
-  .chat .messages { flex: 1 1 auto; min-height: 0; }
+  .chat .messages {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 }
 
 /* Ensure strict equality of chat and loader heights and prevent content from pushing height */
-@media (min-width: 960px) {
-  .chat, .loader {
+@media (width >= 960px) {
+  .chat,
+  .loader {
     box-sizing: border-box;
     max-height: 100%;
     overflow: auto !important;
   }
+
   /* prevent children margins from expanding container */
-  .chat * { margin-bottom: 0; }
-  .loader * { margin-bottom: 0; }
+  .chat * {
+    margin-bottom: 0;
+  }
+  .loader * {
+    margin-bottom: 0;
+  }
 }
 
 .wrap {
@@ -55,10 +66,12 @@
   box-sizing: border-box;
 }
 
-.loader, .chat {
+.loader,
+.chat {
   background: var(--card);
+
   /* increased rounding for chat and loader */
   border-radius: 14px;
   padding: 16px;
-  box-shadow: 0 6px 30px rgba(0,0,0,0.05);
+  box-shadow: 0 6px 30px rgb(0 0 0 / 0.05);
 }

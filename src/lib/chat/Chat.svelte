@@ -114,7 +114,7 @@
   const pickModel = controller.pickModel;
   // expose minimal controller API to window for header GGUF control
   if (typeof window !== 'undefined') {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // eslint-disable-next-line
     // @ts-ignore
     window.__oxide = {
       pickModel: controller.pickModel,
@@ -139,7 +139,18 @@
         {isLoaded} 
         on:send={handleSend} 
         on:stop={stopGenerate}
-        on:attach={() => console.log('Прикрепить файл')}
+        on:attach={(e) => {
+          // e.detail: { filename, content }
+          // Forward to controller's attach handler
+          // @ts-ignore
+          const actions: any = controller;
+          if (actions && typeof actions.handleAttachFile === 'function') {
+            // @ts-ignore
+            actions.handleAttachFile(e.detail);
+          } else {
+            console.log('Прикреплён файл', e.detail?.filename);
+          }
+        }}
         on:voice={() => console.log('Голосовое сообщение')}
       />
     </section>

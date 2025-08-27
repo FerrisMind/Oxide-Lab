@@ -1,4 +1,5 @@
 /* Улучшенные стили для скроллбаров */
+
 ::-webkit-scrollbar {
   width: 12px;
   height: 12px;
@@ -11,27 +12,27 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(179, 205, 224, 0.8);
+  background: rgb(179 205 224 / 0.8);
   border-radius: 6px;
   border: 2px solid transparent;
   background-clip: content-box;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
   animation: scrollbarFadeIn 0.3s ease-out;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(179, 205, 224, 1);
+  background: rgb(179 205 224 / 1);
   background-clip: content-box;
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: rgba(179, 205, 224, 1);
+  background: rgb(179 205 224 / 1);
   background-clip: content-box;
   transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.2);
   animation: scrollbarPulse 1s ease-in-out infinite;
 }
 
@@ -40,83 +41,85 @@
 }
 
 /* Стили для Firefox */
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(179, 205, 224, 0.8) transparent;
+  scrollbar-color: rgb(179 205 224 / 0.8) transparent;
   scroll-behavior: smooth;
 }
 
 /* Горизонтальные скроллбары */
+
 ::-webkit-scrollbar:horizontal {
   height: 8px;
 }
 
 ::-webkit-scrollbar-thumb:horizontal {
-  background: linear-gradient(90deg, rgba(179, 205, 224, 0.8), rgba(179, 205, 224, 0.6));
+  background: linear-gradient(90deg, rgb(179 205 224 / 0.8), rgb(179 205 224 / 0.6));
   border-radius: 4px;
   border: 1px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:horizontal:hover {
-  background: linear-gradient(90deg, rgba(179, 205, 224, 1), rgba(179, 205, 224, 0.8));
+  background: linear-gradient(90deg, rgb(179 205 224 / 1), rgb(179 205 224 / 0.8));
   background-clip: content-box;
 }
 
 /* Темная тема */
 @media (prefers-color-scheme: dark) {
   ::-webkit-scrollbar-thumb {
-    background: rgba(91, 124, 153, 0.8);
+    background: rgb(91 124 153 / 0.8);
     background-clip: content-box;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(91, 124, 153, 1);
+    background: rgb(91 124 153 / 1);
     background-clip: content-box;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
   }
-  
+
   ::-webkit-scrollbar-thumb:active {
-    background: rgba(91, 124, 153, 1);
+    background: rgb(91 124 153 / 1);
     background-clip: content-box;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 6px 16px rgb(0 0 0 / 0.5);
   }
-  
+
   ::-webkit-scrollbar-thumb:horizontal {
-    background: linear-gradient(90deg, rgba(91, 124, 153, 0.8), rgba(91, 124, 153, 0.6));
+    background: linear-gradient(90deg, rgb(91 124 153 / 0.8), rgb(91 124 153 / 0.6));
     background-clip: content-box;
   }
-  
+
   ::-webkit-scrollbar-thumb:horizontal:hover {
-    background: linear-gradient(90deg, rgba(91, 124, 153, 1), rgba(91, 124, 153, 0.8));
+    background: linear-gradient(90deg, rgb(91 124 153 / 1), rgb(91 124 153 / 0.8));
     background-clip: content-box;
   }
-  
+
   * {
-    scrollbar-color: rgba(91, 124, 153, 0.8) transparent;
+    scrollbar-color: rgb(91 124 153 / 0.8) transparent;
   }
 }
 
 /* Мобильные устройства */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     border: 1px solid transparent;
   }
 }
 
 /* Высокие DPI дисплеи */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+@media (min-device-pixel-ratio: 2), (resolution >= 192dpi) {
   ::-webkit-scrollbar {
     width: 14px;
     height: 14px;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     border: 3px solid transparent;
   }
@@ -128,6 +131,7 @@
     opacity: 0;
     transform: translateX(10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -135,6 +139,11 @@
 }
 
 @keyframes scrollbarPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }

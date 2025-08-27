@@ -6,20 +6,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Oxide Lab</title>
     <style>
-      html, body { height: 100%; }
-      body { min-height: 100dvh; margin: 0; }
-      
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        min-height: 100dvh;
+        margin: 0;
+      }
+
       /* Глобальные стили для скроллбаров */
       ::-webkit-scrollbar {
         width: 12px;
         height: 12px;
       }
-      
+
       ::-webkit-scrollbar-track {
         background: transparent;
         border-radius: 6px;
       }
-      
+
       ::-webkit-scrollbar-thumb {
         background: rgba(179, 205, 224, 0.6);
         border-radius: 6px;
@@ -27,44 +33,44 @@
         background-clip: content-box;
         transition: background-color 0.2s ease;
       }
-      
+
       ::-webkit-scrollbar-thumb:hover {
         background: rgba(179, 205, 224, 0.8);
         background-clip: content-box;
       }
-      
+
       ::-webkit-scrollbar-thumb:active {
         background: rgba(179, 205, 224, 1);
         background-clip: content-box;
       }
-      
+
       ::-webkit-scrollbar-corner {
         background: transparent;
       }
-      
+
       /* Стили для Firefox */
       * {
         scrollbar-width: thin;
         scrollbar-color: rgba(179, 205, 224, 0.6) transparent;
       }
-      
+
       /* Темная тема */
       @media (prefers-color-scheme: dark) {
         ::-webkit-scrollbar-thumb {
           background: rgba(91, 124, 153, 0.6);
           background-clip: content-box;
         }
-        
+
         ::-webkit-scrollbar-thumb:hover {
           background: rgba(91, 124, 153, 0.8);
           background-clip: content-box;
         }
-        
+
         ::-webkit-scrollbar-thumb:active {
           background: rgba(91, 124, 153, 1);
           background-clip: content-box;
         }
-        
+
         * {
           scrollbar-color: rgba(91, 124, 153, 0.6) transparent;
         }

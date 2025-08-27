@@ -1,6 +1,6 @@
 import { createEventDispatcher } from 'svelte';
 import type { SearchEvent } from './filter-types';
-import { 
+import {
   createSearchEvent,
   toggleFormat,
   togglePipelineTag,
@@ -12,7 +12,7 @@ import {
   removePipelineTag,
   removeLibrary,
   removeLanguage,
-  removeLicense
+  removeLicense,
 } from './filter-utils';
 
 // This function creates event handlers for the ModelSearchFilters component
@@ -35,18 +35,21 @@ export function createEventHandlers(
     setSelectedLanguages: (value: string[]) => void;
     setSelectedLicenses: (value: string[]) => void;
     setAuthorFilter: (value: string) => void;
-  }
+  },
 ) {
   function handleSearch() {
-    dispatch('search', createSearchEvent({
-      searchQuery: state.searchQuery,
-      selectedFormats: state.selectedFormats,
-      selectedPipelineTags: state.selectedPipelineTags,
-      selectedLibraries: state.selectedLibraries,
-      selectedLanguages: state.selectedLanguages,
-      selectedLicenses: state.selectedLicenses,
-      authorFilter: state.authorFilter
-    }));
+    dispatch(
+      'search',
+      createSearchEvent({
+        searchQuery: state.searchQuery,
+        selectedFormats: state.selectedFormats,
+        selectedPipelineTags: state.selectedPipelineTags,
+        selectedLibraries: state.selectedLibraries,
+        selectedLanguages: state.selectedLanguages,
+        selectedLicenses: state.selectedLicenses,
+        authorFilter: state.authorFilter,
+      }),
+    );
   }
 
   function handleToggleFormat(event: CustomEvent<string>) {
@@ -155,6 +158,6 @@ export function createEventHandlers(
     handleRemovePipelineTag,
     handleRemoveLibrary,
     handleRemoveLanguage,
-    handleRemoveLicense
+    handleRemoveLicense,
   };
 }

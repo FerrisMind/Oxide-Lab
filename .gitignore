@@ -63,3 +63,5 @@ desktop.ini
 # Tauri
 src-tauri/target/
 src-tauri/gen/
+# Ignore example folder (examples from upstream, not checked by linters)
+example/

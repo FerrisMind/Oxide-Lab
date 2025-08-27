@@ -3,9 +3,9 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 /**
  * Utility function to make all links in a container open in the system's default browser
  * instead of within the application.
- * 
+ *
  * This function should be called after markdown content is rendered and inserted into the DOM.
- * 
+ *
  * @param container - The HTML element containing the rendered markdown content
  */
 export function enableExternalLinks(container: HTMLElement): void {
@@ -13,8 +13,8 @@ export function enableExternalLinks(container: HTMLElement): void {
 
   // Find all anchor tags with href attributes
   const links = container.querySelectorAll('a[href]') as NodeListOf<HTMLAnchorElement>;
-  
-  links.forEach(link => {
+
+  links.forEach((link) => {
     const href = link.getAttribute('href');
     if (!href) return;
 
@@ -68,7 +68,7 @@ export function enableExternalLinks(container: HTMLElement): void {
 /**
  * Enhanced version that also handles dynamically added content.
  * Uses MutationObserver to watch for new links being added to the container.
- * 
+ *
  * @param container - The HTML element to watch for new markdown content
  * @returns A cleanup function to stop watching
  */
@@ -82,12 +82,12 @@ export function enableExternalLinksWithWatcher(container: HTMLElement): () => vo
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as HTMLElement;
-          
+
           // If the added node is a link itself
           if (element.tagName === 'A' && element.hasAttribute('href')) {
             enableExternalLinks(element.parentElement || container);
           }
-          
+
           // If the added node contains links
           const links = element.querySelectorAll?.('a[href]');
           if (links && links.length > 0) {
@@ -100,7 +100,7 @@ export function enableExternalLinksWithWatcher(container: HTMLElement): () => vo
 
   observer.observe(container, {
     childList: true,
-    subtree: true
+    subtree: true,
   });
 
   // Return cleanup function

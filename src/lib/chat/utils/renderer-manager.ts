@@ -13,7 +13,7 @@ export function getCodeMirrorRenderer(container?: HTMLElement): CodeMirrorRender
     // For backward compatibility, return a new renderer
     return new CodeMirrorRenderer();
   }
-  
+
   let renderer = containerRenderers.get(container);
   if (!renderer) {
     renderer = new CodeMirrorRenderer();

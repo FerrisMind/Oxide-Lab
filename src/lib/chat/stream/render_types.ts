@@ -1,3 +1,1 @@
-export type StreamSegment = { kind: "html" | "text"; data: string };
-
-
+export type StreamSegment = { kind: 'html' | 'text'; data: string };

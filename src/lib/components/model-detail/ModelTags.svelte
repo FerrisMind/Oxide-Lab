@@ -53,7 +53,7 @@
   .collapse-btn {
     background: none;
     border: none;
-    cursor: pointer;
+     cursor: default;
     padding: 4px;
     border-radius: 4px;
     transition: all 0.2s ease;

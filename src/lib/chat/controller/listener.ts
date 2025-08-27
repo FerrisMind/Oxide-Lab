@@ -1,11 +1,11 @@
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { createStreamParser } from "$lib/chat/parser";
-import { appendSegments, getAssistantBubbleEl } from "$lib/chat/stream_render";
-import type { ChatControllerCtx } from "./types";
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { createStreamParser } from '$lib/chat/parser';
+import { appendSegments, getAssistantBubbleEl } from '$lib/chat/stream_render';
+import type { ChatControllerCtx } from './types';
 
 export function createStreamListener(ctx: ChatControllerCtx) {
   let unlisten: UnlistenFn | null = null;
-  let streamBuf = "";
+  let streamBuf = '';
   let rafId: number | null = null;
   const streamParser = createStreamParser();
 
@@ -16,17 +16,24 @@ export function createStreamListener(ctx: ChatControllerCtx) {
       const { segments, remainder } = streamParser.parse(streamBuf);
       const msgs = ctx.messages;
       const last = msgs[msgs.length - 1];
-      if (last && last.role === "assistant") {
+      if (last && last.role === 'assistant') {
         const idx = msgs.length - 1;
         const el = getAssistantBubbleEl(idx);
         if (el) appendSegments(idx, el, segments);
-        const onlyText = segments.filter((s) => s.kind === "text").map((s) => s.data).join("");
-        if (onlyText) { last.content += onlyText; ctx.messages = msgs; }
+        const onlyText = segments
+          .filter((s) => s.kind === 'text')
+          .map((s) => s.data)
+          .join('');
+        if (onlyText) {
+          last.content += onlyText;
+          ctx.messages = msgs;
+        }
         queueMicrotask(() => {
           const container = ctx.messagesEl;
           if (!container) return;
           const threshold = 32;
-          const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - threshold;
+          const atBottom =
+            container.scrollTop + container.clientHeight >= container.scrollHeight - threshold;
           if (atBottom) container.scrollTop = container.scrollHeight;
         });
       }
@@ -36,16 +43,16 @@ export function createStreamListener(ctx: ChatControllerCtx) {
 
   async function ensureListener() {
     if (!unlisten) {
-      unlisten = await listen<string>("token", (event) => {
-        const token = event.payload ?? "";
-        if (token === "") {
+      unlisten = await listen<string>('token', (event) => {
+        const token = event.payload ?? '';
+        if (token === '') {
           const msgs = ctx.messages;
           const last = msgs[msgs.length - 1];
-          if (!last || last.role !== "assistant" || last.content !== "") {
-            msgs.push({ role: "assistant", content: "", html: "" } as any);
+          if (!last || last.role !== 'assistant' || last.content !== '') {
+            msgs.push({ role: 'assistant', content: '', html: '' } as any);
             ctx.messages = msgs;
           }
-          streamBuf = "";
+          streamBuf = '';
           streamParser.reset();
           return;
         }
@@ -57,7 +64,9 @@ export function createStreamListener(ctx: ChatControllerCtx) {
 
   function destroy() {
     if (unlisten) {
-      try { unlisten(); } catch {}
+      try {
+        unlisten();
+      } catch {}
       unlisten = null;
     }
     if (rafId !== null) {
@@ -68,5 +77,3 @@ export function createStreamListener(ctx: ChatControllerCtx) {
 
   return { ensureListener, destroy };
 }
-
-

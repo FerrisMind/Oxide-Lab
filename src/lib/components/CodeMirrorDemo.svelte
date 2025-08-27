@@ -52,7 +52,7 @@ print(quick_sort(numbers))
   border-radius: 8px;
   color: white;
   font-weight: 600;
-  cursor: pointer;
+   cursor: default;
   transition: transform 0.2s ease;
 }
 

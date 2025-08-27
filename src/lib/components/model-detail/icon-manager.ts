@@ -21,14 +21,18 @@ export function createIconManager(): IconManager {
 
   function safeMountIcon(Component: any, target: HTMLElement, props: any, currentIcon?: any) {
     if (currentIcon) {
-      try { unmount(currentIcon); } catch {}
+      try {
+        unmount(currentIcon);
+      } catch {}
     }
     return mount(Component, { target, props });
   }
 
   function safeUnmountIcon(icon: any) {
     if (icon) {
-      try { unmount(icon); } catch {}
+      try {
+        unmount(icon);
+      } catch {}
       return null;
     }
     return null;
@@ -41,13 +45,23 @@ export function createIconManager(): IconManager {
 
     mountActionIcons(downloadEl: HTMLElement, heartEl: HTMLElement, hfEl: HTMLElement) {
       if (downloadEl) {
-        downloadIcon = safeMountIcon(Download, downloadEl, { size: 16, weight: 'regular' }, downloadIcon);
+        downloadIcon = safeMountIcon(
+          Download,
+          downloadEl,
+          { size: 16, weight: 'regular' },
+          downloadIcon,
+        );
       }
       if (heartEl) {
         heartIcon = safeMountIcon(Heart, heartEl, { size: 16, weight: 'regular' }, heartIcon);
       }
       if (hfEl) {
-        huggingFaceIcon = safeMountIcon(ArrowSquareOut, hfEl, { size: 16, weight: 'regular' }, huggingFaceIcon);
+        huggingFaceIcon = safeMountIcon(
+          ArrowSquareOut,
+          hfEl,
+          { size: 16, weight: 'regular' },
+          huggingFaceIcon,
+        );
       }
     },
 
@@ -56,6 +70,6 @@ export function createIconManager(): IconManager {
       downloadIcon = safeUnmountIcon(downloadIcon);
       heartIcon = safeUnmountIcon(heartIcon);
       huggingFaceIcon = safeUnmountIcon(huggingFaceIcon);
-    }
+    },
   };
 }

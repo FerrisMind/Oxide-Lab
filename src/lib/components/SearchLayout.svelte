@@ -147,7 +147,7 @@
     border-radius: 8px;
     font-size: 14px;
     font-weight: 600;
-    cursor: pointer;
+     cursor: default;
     transition: all 0.2s ease;
   }
   
@@ -158,7 +158,7 @@
   
   .load-more-btn:disabled {
     opacity: 0.6;
-    cursor: not-allowed;
+     cursor: default;
   }
   
   .no-selection {

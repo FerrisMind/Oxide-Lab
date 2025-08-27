@@ -72,6 +72,6 @@
   .clear-filters-btn:disabled,
   .clear-search-btn:disabled {
     opacity: 0.4;
-    cursor: not-allowed;
+      cursor: default;
   }
 </style>

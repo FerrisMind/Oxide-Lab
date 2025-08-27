@@ -8,91 +8,105 @@ import Check from 'phosphor-svelte/lib/Check';
  * @param code The code content
  * @returns Toolbar element and copy button
  */
-export function createCodeMirrorToolbar(language: string, code: string): { 
-  toolbar: HTMLDivElement, 
-  copyButton: HTMLButtonElement,
-  languageLabel: HTMLSpanElement 
+export function createCodeMirrorToolbar(
+  language: string,
+  code: string,
+): {
+  toolbar: HTMLDivElement;
+  copyButton: HTMLButtonElement;
+  languageLabel: HTMLSpanElement;
 } {
   // Create toolbar container
   const toolbar = document.createElement('div');
   toolbar.className = 'codemirror-toolbar';
-  
+
   // Create language label
   const languageLabel = document.createElement('span');
   languageLabel.className = 'codemirror-language';
   languageLabel.textContent = language || 'text';
-  
+
   // Create copy button
   const copyButton = document.createElement('button');
   copyButton.className = 'codemirror-copy-btn';
   copyButton.title = 'Copy code';
-  
+
   // Create icon container
   const iconContainer = document.createElement('span');
   iconContainer.className = 'codemirror-copy-icon';
   copyButton.appendChild(iconContainer);
-  
+
   // Mount the copy icon
   let currentIcon = mount(Copy, {
     target: iconContainer,
-    props: { size: 16, weight: 'regular' }
+    props: { size: 16, weight: 'regular' },
   });
-  
+
   copyButton.addEventListener('click', () => {
-    navigator.clipboard.writeText(code).then(() => {
-      // Replace with check icon
-      if (currentIcon) {
-        try { unmount(currentIcon); } catch {}
-      }
-      currentIcon = mount(Check, {
-        target: iconContainer,
-        props: { size: 16, weight: 'regular' }
-      });
-      
-      setTimeout(() => {
-        // Replace back with copy icon
+    navigator.clipboard
+      .writeText(code)
+      .then(() => {
+        // Replace with check icon
         if (currentIcon) {
-          try { unmount(currentIcon); } catch {}
+          try {
+            unmount(currentIcon);
+          } catch {}
         }
-        currentIcon = mount(Copy, {
+        currentIcon = mount(Check, {
           target: iconContainer,
-          props: { size: 16, weight: 'regular' }
+          props: { size: 16, weight: 'regular' },
         });
-      }, 1000);
-    }).catch(() => {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = code;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      
-      // Replace with check icon
-      if (currentIcon) {
-        try { unmount(currentIcon); } catch {}
-      }
-      currentIcon = mount(Check, {
-        target: iconContainer,
-        props: { size: 16, weight: 'regular' }
-      });
-      
-      setTimeout(() => {
-        // Replace back with copy icon
+
+        setTimeout(() => {
+          // Replace back with copy icon
+          if (currentIcon) {
+            try {
+              unmount(currentIcon);
+            } catch {}
+          }
+          currentIcon = mount(Copy, {
+            target: iconContainer,
+            props: { size: 16, weight: 'regular' },
+          });
+        }, 1000);
+      })
+      .catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = code;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+
+        // Replace with check icon
         if (currentIcon) {
-          try { unmount(currentIcon); } catch {}
+          try {
+            unmount(currentIcon);
+          } catch {}
         }
-        currentIcon = mount(Copy, {
+        currentIcon = mount(Check, {
           target: iconContainer,
-          props: { size: 16, weight: 'regular' }
+          props: { size: 16, weight: 'regular' },
         });
-      }, 1000);
-    });
+
+        setTimeout(() => {
+          // Replace back with copy icon
+          if (currentIcon) {
+            try {
+              unmount(currentIcon);
+            } catch {}
+          }
+          currentIcon = mount(Copy, {
+            target: iconContainer,
+            props: { size: 16, weight: 'regular' },
+          });
+        }, 1000);
+      });
   });
 
   toolbar.appendChild(languageLabel);
   toolbar.appendChild(copyButton);
-  
+
   return { toolbar, copyButton, languageLabel };
 }
 

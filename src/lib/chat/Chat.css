@@ -1,6 +1,9 @@
-@import "./styles/base.css";
-@import "./styles/chat.css";
-@import "./styles/markdown.css";
-@import "./styles/codemirror.css";
-@import "./styles/progress.css";
+@import url('./styles/base.css');
 
+@import url('./styles/chat.css');
+
+@import url('./styles/markdown.css');
+
+@import url('./styles/codemirror.css');
+
+@import url('./styles/progress.css');

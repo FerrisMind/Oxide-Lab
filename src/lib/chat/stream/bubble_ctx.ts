@@ -1,7 +1,7 @@
-import { unmount } from "svelte";
-import { getCodeMirrorRenderer, cleanupRenderer } from "$lib/chat/codemirror-renderer";
+import { unmount } from 'svelte';
+import { getCodeMirrorRenderer, cleanupRenderer } from '$lib/chat/codemirror-renderer';
 
-export type StreamSegment = { kind: "html" | "text"; data: string };
+export type StreamSegment = { kind: 'html' | 'text'; data: string };
 
 export type BubbleCtx = {
   inThink: boolean;
@@ -19,7 +19,7 @@ export type BubbleCtx = {
   mdEyeHost: HTMLElement | null;
   mdEyeIcon: any | null;
   mdText: string;
-  lastKind: "html" | "text" | null;
+  lastKind: 'html' | 'text' | null;
   codeMirrorWatching: boolean;
 };
 
@@ -47,15 +47,15 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
     mdToggleBtn: null,
     mdEyeHost: null,
     mdEyeIcon: null,
-    mdText: "",
+    mdText: '',
     lastKind: null,
-    codeMirrorWatching: false
+    codeMirrorWatching: false,
   });
 
   const onScroll = () => {
     // хук под автоскролл (оставлен пустым)
   };
-  node.addEventListener("scroll", onScroll, { passive: true });
+  node.addEventListener('scroll', onScroll, { passive: true });
 
   return {
     update(newParams: { index: number }) {
@@ -79,23 +79,29 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
           mdToggleBtn: null,
           mdEyeHost: null,
           mdEyeIcon: null,
-          mdText: "",
+          mdText: '',
           lastKind: null,
-          codeMirrorWatching: false
-        }
+          codeMirrorWatching: false,
+        },
       );
       bubbleCtxs.delete(params.index);
     },
     destroy() {
       const ctx = bubbleCtxs.get(params.index);
       if (ctx?.thinkCaretIcon) {
-        try { unmount(ctx.thinkCaretIcon); } catch {}
+        try {
+          unmount(ctx.thinkCaretIcon);
+        } catch {}
       }
       if (ctx?.thinkBrainIcon) {
-        try { unmount(ctx.thinkBrainIcon); } catch {}
+        try {
+          unmount(ctx.thinkBrainIcon);
+        } catch {}
       }
       if (ctx?.mdEyeIcon) {
-        try { unmount(ctx.mdEyeIcon); } catch {}
+        try {
+          unmount(ctx.mdEyeIcon);
+        } catch {}
       }
       // Cleanup CodeMirror if it was watching this bubble
       if (ctx?.codeMirrorWatching && ctx?.mdContentEl) {
@@ -103,11 +109,9 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
           cleanupRenderer(ctx.mdContentEl);
         } catch {}
       }
-      node.removeEventListener("scroll", onScroll as any);
+      node.removeEventListener('scroll', onScroll as any);
       assistantBubbleEls.delete(params.index);
       bubbleCtxs.delete(params.index);
-    }
+    },
   };
 }
-
-

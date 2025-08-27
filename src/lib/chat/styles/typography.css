@@ -1,8 +1,13 @@
 /* Typography: Headings, Lists, Text Formatting */
 
 /* Headings with proper hierarchy */
-.md-stream h1, .md-stream h2, .md-stream h3, 
-.md-stream h4, .md-stream h5, .md-stream h6 {
+
+.md-stream h1,
+.md-stream h2,
+.md-stream h3,
+.md-stream h4,
+.md-stream h5,
+.md-stream h6 {
   margin: 1.2em 0 0.6em;
   font-weight: 600;
   line-height: 1.25;
@@ -39,14 +44,18 @@
 }
 
 /* Lists with proper indentation and styling */
-.md-stream ul, .md-stream ol {
+
+.md-stream ul,
+.md-stream ol {
   margin: 1em 0;
   padding-left: 2em;
   line-height: 1.6;
 }
 
-.md-stream ul ul, .md-stream ol ol, 
-.md-stream ul ol, .md-stream ol ul {
+.md-stream ul ul,
+.md-stream ol ol,
+.md-stream ul ol,
+.md-stream ol ul {
   margin: 0.25em 0;
   padding-left: 1.5em;
 }
@@ -68,7 +77,8 @@
 }
 
 /* Task Lists (checkboxes) */
-.md-stream input[type="checkbox"] {
+
+.md-stream input[type='checkbox'] {
   margin-right: 0.5em;
   accent-color: var(--accent);
 }
@@ -79,6 +89,7 @@
 }
 
 /* Definition lists */
+
 .md-stream dl {
   margin: 1em 0;
 }
@@ -98,20 +109,25 @@
 }
 
 /* Text formatting elements */
-.md-stream strong, .md-stream b {
+
+.md-stream strong,
+.md-stream b {
   font-weight: 600;
 }
 
-.md-stream em, .md-stream i {
+.md-stream em,
+.md-stream i {
   font-style: italic;
 }
 
-.md-stream s, .md-stream del {
+.md-stream s,
+.md-stream del {
   text-decoration: line-through;
   color: var(--muted);
 }
 
-.md-stream u, .md-stream ins {
+.md-stream u,
+.md-stream ins {
   text-decoration: underline;
   text-decoration-color: var(--accent);
 }
@@ -128,7 +144,8 @@
   color: var(--muted);
 }
 
-.md-stream sub, .md-stream sup {
+.md-stream sub,
+.md-stream sup {
   font-size: 0.75em;
   line-height: 0;
   position: relative;
@@ -144,6 +161,7 @@
 }
 
 /* Abbreviations and definitions */
+
 .md-stream abbr {
   text-decoration: underline dotted;
   cursor: help;
@@ -155,13 +173,14 @@
 }
 
 /* Citations and quotes */
+
 .md-stream cite {
   font-style: italic;
   color: var(--muted);
 }
 
 .md-stream q {
-  quotes: '"' '"' ''' ''';
+  quotes: '"' '"' '' ' ' '';
 }
 
 .md-stream q::before {
@@ -173,12 +192,14 @@
 }
 
 /* Time and data elements */
+
 .md-stream time {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
 /* Links */
+
 .md-stream a {
   color: var(--accent);
   text-decoration: underline;

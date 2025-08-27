@@ -1,4 +1,5 @@
 /* Code blocks and syntax highlighting */
+
 pre.code {
   margin: 8px 0;
   padding: 10px;
@@ -13,47 +14,66 @@ pre.code {
 }
 
 pre.code code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
   white-space: inherit;
   overflow-wrap: inherit;
   word-break: inherit;
 }
 
 /* Highlight.js syntax highlighting */
-.hljs, .hljs-subst {
+
+.hljs,
+.hljs-subst {
   color: var(--code-fg);
 }
 
-.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-built_in {
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-built_in {
   color: var(--code-keyword);
 }
 
-.hljs-string, .hljs-attr, .hljs-attribute, .hljs-template-variable {
+.hljs-string,
+.hljs-attr,
+.hljs-attribute,
+.hljs-template-variable {
   color: var(--code-string);
 }
 
-.hljs-title, .hljs-section, .hljs-selector-id, .hljs-name {
+.hljs-title,
+.hljs-section,
+.hljs-selector-id,
+.hljs-name {
   color: var(--code-title);
 }
 
-.hljs-number, .hljs-symbol, .hljs-bullet {
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
   color: var(--code-number);
 }
 
-.hljs-variable, .hljs-template-tag {
+.hljs-variable,
+.hljs-template-tag {
   color: var(--code-variable);
 }
 
-.hljs-meta, .hljs-tag {
+.hljs-meta,
+.hljs-tag {
   color: var(--code-tag);
 }
 
-.hljs-comment, .hljs-quote {
+.hljs-comment,
+.hljs-quote {
   color: var(--code-comment);
   font-style: italic;
 }
 
 /* Inline code elements */
+
 .md-stream :not(pre) > code {
   background: var(--code-bg);
   color: var(--code-fg);
@@ -75,19 +95,23 @@ pre.code code {
 }
 
 .md-stream pre code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
   white-space: inherit;
   overflow-wrap: inherit;
   word-break: inherit;
 }
 
-.md-stream pre code.hljs, pre.code code.hljs {
+.md-stream pre code.hljs,
+pre.code code.hljs {
   background: transparent !important;
   color: inherit;
   padding: 0 !important;
 }
 
 /* Keyboard, sample, and variable elements */
+
 .md-stream kbd {
   display: inline-block;
   padding: 0.1em 0.4em;
@@ -115,6 +139,7 @@ pre.code code {
 }
 
 /* Data elements */
+
 .md-stream data {
   color: var(--accent);
   font-family: ui-monospace, SFMono-Regular, monospace;

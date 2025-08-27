@@ -1,6 +1,7 @@
 /* Стили для кнопок */
+
 button {
-   cursor: default;
+  cursor: default;
   border: none;
   border-radius: 8px;
   padding: 8px 16px;
@@ -18,11 +19,12 @@ button:hover {
 
 button:disabled {
   opacity: 0.6;
-  cursor: not-allowed;
+  cursor: default;
   transform: none;
 }
 
 /* Стили для ссылок */
+
 a {
   color: var(--accent);
   text-decoration: none;
@@ -35,7 +37,10 @@ a:hover {
 }
 
 /* Стили для форм */
-input, textarea, select {
+
+input,
+textarea,
+select {
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 8px 12px;
@@ -45,13 +50,16 @@ input, textarea, select {
   transition: border-color 0.2s ease;
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
 }
 
 /* Стили для карточек */
+
 .card {
   background: var(--card);
   border: 1px solid var(--border-color);
@@ -66,7 +74,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* Адаптивность */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .card {
     padding: 16px;
   }

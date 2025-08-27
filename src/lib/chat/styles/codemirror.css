@@ -1,4 +1,5 @@
 /* CodeMirror integration styles */
+
 .codemirror-container {
   margin: 12px 0;
   border-radius: 8px;
@@ -28,7 +29,7 @@
 .codemirror-copy-btn {
   background: none;
   border: none;
-  cursor: pointer;
+  cursor: default;
   padding: 4px 8px;
   border-radius: 4px;
   transition: background-color 0.2s ease;
@@ -56,7 +57,7 @@
 
 .codemirror-copy-icon :global(svg) {
   color: inherit;
-  fill: currentColor;
+  fill: currentcolor;
 }
 
 .codemirror-editor {
@@ -64,6 +65,7 @@
 }
 
 /* Override CodeMirror default styles to match app theme */
+
 .codemirror-container :global(.cm-editor) {
   background: var(--code-bg) !important;
   color: var(--code-fg) !important;
@@ -73,7 +75,9 @@
 
 .codemirror-container :global(.cm-content) {
   padding: 16px !important;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace !important;
   font-size: 14px !important;
   line-height: 1.5 !important;
 }
@@ -94,7 +98,7 @@
 }
 
 .codemirror-container :global(.cm-activeLine) {
-  background: rgba(0, 0, 0, 0.02) !important;
+  background: rgb(0 0 0 / 0.02) !important;
 }
 
 .codemirror-container :global(.cm-selectionBackground) {
@@ -103,6 +107,7 @@
 }
 
 /* Syntax highlighting adjustments to match app theme */
+
 .codemirror-container :global(.cm-editor) {
   --cm-keyword-color: var(--code-keyword);
   --cm-string-color: var(--code-string);
@@ -120,7 +125,7 @@
   }
 
   .codemirror-container :global(.cm-activeLine) {
-    background: rgba(0, 0, 0, 0.03) !important;
+    background: rgb(0 0 0 / 0.03) !important;
   }
 }
 
@@ -131,7 +136,7 @@
   }
 
   .codemirror-container :global(.cm-activeLine) {
-    background: rgba(255, 255, 255, 0.05) !important;
+    background: rgb(255 255 255 / 0.05) !important;
   }
 
   .codemirror-toolbar {
@@ -145,7 +150,7 @@
 }
 
 /* Mobile responsive adjustments */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .codemirror-container :global(.cm-content) {
     padding: 12px !important;
     font-size: 13px !important;
@@ -162,7 +167,7 @@
   .codemirror-copy-btn {
     padding: 3px 6px;
   }
-  
+
   .codemirror-copy-icon :global(svg) {
     width: 14px;
     height: 14px;
@@ -170,6 +175,7 @@
 }
 
 /* Ensure proper integration with markdown content */
+
 .md-stream .codemirror-container {
   margin: 12px 0;
 }
@@ -183,9 +189,11 @@
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.1);
   }
+
   100% {
     transform: scale(1);
   }
