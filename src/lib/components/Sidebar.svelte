@@ -1,6 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { getVersion } from '@tauri-apps/api/app';
+  import { onMount } from 'svelte';
   import ChatCircle from 'phosphor-svelte/lib/ChatCircle';
   import Code from 'phosphor-svelte/lib/Code';
   import Database from 'phosphor-svelte/lib/Database';
@@ -37,6 +39,17 @@
     }
   ];
 
+  let appVersion = ''; // Will be loaded from Tauri config
+
+  onMount(async () => {
+    try {
+      appVersion = await getVersion();
+    } catch (error) {
+      console.error('Failed to get app version:', error);
+      appVersion = 'Unknown'; // Fallback if version can't be fetched
+    }
+  });
+
   function navigateTo(path: string) {
     goto(path);
   }
@@ -62,7 +75,7 @@
 
   <div class="sidebar-footer">
     <div class="footer-info">
-      <small>v0.1.0</small>
+      <small>v{appVersion}</small>
     </div>
   </div>
 </aside>
