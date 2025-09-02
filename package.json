@@ -9,7 +9,11 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:dev:cpu": "tauri dev -- --no-default-features",
+    "tauri:dev:cuda": "tauri dev -f cuda",
+    "tauri:build:cpu": "tauri build -- --no-default-features",
+    "tauri:build:cuda": "tauri build -f cuda"
   },
   "license": "MIT",
   "dependencies": {
