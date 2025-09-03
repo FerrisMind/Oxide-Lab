@@ -1,0 +1,19 @@
+name: Простой пример использования GitVerse CI/CD
+on:
+ push:
+jobs:
+  build-test:
+    name: Test context
+    # для примера мы используем запуск на облачном раннере https://gitverse.ru/docs/knowledge-base/actions/cloud-runners/
+    runs-on: 'ubuntu-cloud-runner'
+    steps:
+      - name: Display event name
+        run: echo ${{ gitverse.event_name }}
+      - name: Display Workflow
+        run: echo ${{ gitverse.workflow }}
+      - name: Display repository name
+        run: echo ${{ gitverse.Repository }}
+      - name: Display repository owner
+        run: echo ${{ gitverse.repository_owner }}
+      - name: Display actor
+        run: echo ${{ gitverse.actor }}
