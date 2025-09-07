@@ -1,5 +1,6 @@
 export {
   appendSegments,
+  finalizeStreaming,
   getAssistantBubbleEl,
   registerAssistantBubble,
 } from './stream/render_impl';

@@ -15,6 +15,8 @@
   import GGUFUploadArea from '$lib/components/GGUFUploadArea.svelte';
   import HeaderSearch from '$lib/components/HeaderSearch.svelte';
   import { triggerHeaderSearch } from '$lib/stores/search';
+  import { ensureGlobalChatStream } from '$lib/chat/global-stream';
+  import Chat from '$lib/chat/Chat.svelte';
   
   // Определяем, должен ли отображаться GGUFUploadArea
   $: shouldShowGGUFUploadArea = $page.url.pathname === '/' || $page.url.pathname === '/api';
@@ -45,6 +47,8 @@
   }
   
   onMount(() => {
+    // Ensure background chat stream listener is active across pages
+    void ensureGlobalChatStream();
     // Проверяем начальное состояние окна и слушаем resize через Tauri
     const unlistenHolder: { fn: UnlistenFn | null } = { fn: null };
     (async () => {
@@ -109,11 +113,11 @@
       <span class="brand-title">{appName}</span>
     </button>
     <div class="header-center" data-tauri-drag-region="false">
-      <!-- GGUF upload показывается только на вкладках чата и API работы -->
-      {#if shouldShowGGUFUploadArea}
+      <!-- GGUF upload: всегда смонтирован, скрывается классом -->
+      <div class="gguf-host" class:hidden={!shouldShowGGUFUploadArea}>
         <GGUFUploadArea />
-      {/if}
-      
+      </div>
+
       <!-- Поиск показывается только на вкладке поиска -->
       {#if shouldShowHeaderSearch}
         <HeaderSearch on:search={handleHeaderSearch} />
@@ -139,7 +143,14 @@
   <div class="app-body">
     <Sidebar />
     <main class="app-main">
-      <slot />
+      <div class="view-switch">
+        <div class="chat-host" class:hidden={$page.url.pathname !== '/'} aria-hidden={$page.url.pathname !== '/'}>
+          <Chat />
+        </div>
+        <div class="route-host" class:hidden={$page.url.pathname === '/'} aria-hidden={$page.url.pathname === '/'}>
+          <slot />
+        </div>
+      </div>
     </main>
   </div>
 </div>
@@ -164,9 +175,13 @@
     max-width: 600px;
     margin: 0 auto;
   }
+  .gguf-host.hidden { display: none; }
   .app-shell { height: 100dvh; min-height: 100dvh; display: flex; flex-direction: column; }
   .app-body { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; }
   .app-main { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; padding: var(--content-gap); padding-top: var(--content-gap-top); }
+  .view-switch { position: relative; display: flex; flex: 1 1 auto; min-height: 0; }
+  .chat-host, .route-host { flex: 1 1 auto; min-height: 0; display: none; }
+  .chat-host:not(.hidden), .route-host:not(.hidden) { display: flex; }
   /* shift chat content slightly left and give it full height under header */
   /* ensure main wrap fits under header */
   :global(main.wrap) { padding: var(--content-gap); height: 100%; min-height: 0; box-sizing: border-box; max-height: calc(100vh - 56px); overflow: auto; }

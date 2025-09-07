@@ -1,23 +1,11 @@
 <script lang="ts">
-  import Chat from "../lib/chat/Chat.svelte";
+  // Chat монтируется постоянно в layout. Этот маршрут не рендерит контент.
 </script>
 
-<div class="page-shell">
-  <Chat />
-  
-</div>
+<div class="page-shell"></div>
 
 <style>
-  .page-shell {
-    min-height: 0;
-    flex: 1 1 auto;
-    display: flex;
-    min-width: 0;
-  }
-  .page-shell :global(main.wrap) {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
+  .page-shell { display: contents; }
 </style>
 
 

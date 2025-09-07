@@ -24,6 +24,7 @@ module.exports = {
     'declaration-block-no-redundant-longhand-properties': true,
     // Allow some legacy checks to be ignored to avoid breaking third-party CSS
     'media-feature-name-no-unknown': null,
+    'media-feature-name-value-no-unknown': null,
     'no-duplicate-selectors': null,
     'declaration-property-value-keyword-no-deprecated': null,
     'declaration-property-value-no-unknown': null,

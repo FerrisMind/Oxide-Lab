@@ -63,7 +63,7 @@
     "husky": "^8.0.0"
   },
   "lint-staged": {
-    "*.{ts,js,svelte}": "eslint --cache --fix",
-    "*.css": "stylelint --fix"
+    "*.{ts,js,svelte}": "npx eslint --cache --fix",
+    "*.css": "npx stylelint --fix"
   }
 }

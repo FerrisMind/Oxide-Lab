@@ -1,19 +1,10 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  
   import Binoculars from 'phosphor-svelte/lib/Binoculars';
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
   import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
   import CircleNotch from 'phosphor-svelte/lib/CircleNotch';
-
-  let modelPath: string = '';
-  let isLoaded: boolean = false;
-  let isLoadingModel: boolean = false;
-  let isUnloadingModel: boolean = false;
-  let isCancelling: boolean = false;
-  let loadingStage: string = '';
-  let loadingProgress: number = 0;
-  let unloadingProgress: number = 0;
-  let busy: boolean = false;
+  import { chatState } from '$lib/stores/chat';
 
   function pickModel() {
     if ((window as any).__oxide?.pickModel) (window as any).__oxide.pickModel();
@@ -22,43 +13,24 @@
   function mainAction() {
     const ox = (window as any).__oxide;
     if (!ox) return;
-    if (isLoadingModel && ox.cancelLoading) return ox.cancelLoading();
-    if (isLoaded && ox.unloadGGUF) return ox.unloadGGUF();
+    if ($chatState.isLoadingModel && ox.cancelLoading) return ox.cancelLoading();
+    if ($chatState.isLoaded && ox.unloadGGUF) return ox.unloadGGUF();
     if (ox.loadGGUF) return ox.loadGGUF();
   }
-
-  let intervalId: number;
-  onMount(() => {
-    intervalId = window.setInterval(() => {
-      const s = (window as any).__oxide?.getState?.();
-      if (s) {
-        modelPath = s.modelPath || '';
-        isLoaded = !!s.isLoaded;
-        isLoadingModel = !!s.isLoadingModel;
-        isUnloadingModel = !!s.isUnloadingModel;
-        isCancelling = !!s.isCancelling;
-        loadingStage = s.loadingStage || '';
-        loadingProgress = s.loadingProgress || 0;
-        unloadingProgress = s.unloadingProgress || 0;
-        busy = !!s.busy;
-      }
-    }, 250);
-  });
-  onDestroy(() => { clearInterval(intervalId); });
 </script>
 
 <div class="gguf-upload-area">
   <div class="file-row">
     <div class="input-with-button">
-      <input class="gguf-input" placeholder="Выбрать GGUF файл" bind:value={modelPath} readonly />
+      <input class="gguf-input" placeholder="Выбрать GGUF файл" value={$chatState.modelPath} readonly />
       <button class="inside-btn" type="button" on:click={pickModel} aria-label="Выбрать файл модели"><Binoculars size={16} weight="bold" /></button>
     </div>
-    <button class="primary" on:click={mainAction} disabled={busy} title="Загрузить/Выгрузить">
-      {#if isLoadingModel}
-        <CircleNotch size={16} class="spinning" /> <span>Загрузка... {Math.round(loadingProgress)}%</span>
-      {:else if isUnloadingModel}
-        <CircleNotch size={16} class="spinning" /> <span>Выгрузка... {Math.round(unloadingProgress)}%</span>
-      {:else if isLoaded}
+    <button class="primary" on:click={mainAction} disabled={$chatState.busy} title="Загрузить/Выгрузить">
+      {#if $chatState.isLoadingModel}
+        <CircleNotch size={16} class="spinning" /> <span>Загрузка... {Math.round($chatState.loadingProgress)}%</span>
+      {:else if $chatState.isUnloadingModel}
+        <CircleNotch size={16} class="spinning" /> <span>Выгрузка... {Math.round($chatState.unloadingProgress)}%</span>
+      {:else if $chatState.isLoaded}
         <UploadSimple size={16} /> <span>Выгрузить</span>
       {:else}
         <DownloadSimple size={16} /> <span>Загрузить</span>

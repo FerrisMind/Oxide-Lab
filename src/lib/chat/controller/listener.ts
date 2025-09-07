@@ -1,12 +1,13 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { createStreamParser } from '$lib/chat/parser';
-import { appendSegments, getAssistantBubbleEl } from '$lib/chat/stream_render';
+import { appendSegments, finalizeStreaming, getAssistantBubbleEl } from '$lib/chat/stream_render';
 import type { ChatControllerCtx } from './types';
 
 export function createStreamListener(ctx: ChatControllerCtx) {
   let unlisten: UnlistenFn | null = null;
   let streamBuf = '';
   let rafId: number | null = null;
+  let isStreaming = false;
   const streamParser = createStreamParser();
 
   function scheduleFlush() {
@@ -19,7 +20,7 @@ export function createStreamListener(ctx: ChatControllerCtx) {
       if (last && last.role === 'assistant') {
         const idx = msgs.length - 1;
         const el = getAssistantBubbleEl(idx);
-        if (el) appendSegments(idx, el, segments);
+        if (el) appendSegments(idx, el, segments, isStreaming);
         const onlyText = segments
           .filter((s) => s.kind === 'text')
           .map((s) => s.data)
@@ -46,6 +47,7 @@ export function createStreamListener(ctx: ChatControllerCtx) {
       unlisten = await listen<string>('token', (event) => {
         const token = event.payload ?? '';
         if (token === '') {
+          // Start of new stream
           const msgs = ctx.messages;
           const last = msgs[msgs.length - 1];
           if (!last || last.role !== 'assistant' || last.content !== '') {
@@ -54,8 +56,21 @@ export function createStreamListener(ctx: ChatControllerCtx) {
           }
           streamBuf = '';
           streamParser.reset();
+          isStreaming = true;
           return;
         }
+        
+        if (token === '[DONE]') {
+          // End of stream
+          isStreaming = false;
+          const msgs = ctx.messages;
+          if (msgs.length > 0) {
+            const idx = msgs.length - 1;
+            finalizeStreaming(idx);
+          }
+          return;
+        }
+        
         streamBuf += token;
         scheduleFlush();
       });

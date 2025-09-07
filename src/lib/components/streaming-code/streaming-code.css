@@ -1,0 +1,119 @@
+/* Streaming Code Block Styles */
+
+.streaming-code-placeholder {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+}
+
+/* Progress bar animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes progress-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* CSS Variables for theming */
+
+:root {
+  --streaming-accent-color: #007acc;
+  --streaming-accent-color-alpha: rgb(0, 122, 204, 0.1);
+  --streaming-border-color: #e1e5e9;
+  --streaming-panel-bg: #fff;
+  --streaming-panel-alt-bg: #f8f9fa;
+  --streaming-text-primary: #24292f;
+  --streaming-text-secondary: #656d76;
+  --streaming-code-bg: #f6f8fa;
+  --streaming-code-fg: #24292f;
+}
+
+/* Dark theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --streaming-accent-color: #58a6ff;
+    --streaming-accent-color-alpha: rgb(88, 166, 255, 0.1);
+    --streaming-border-color: #30363d;
+    --streaming-panel-bg: #0d1117;
+    --streaming-panel-alt-bg: #161b22;
+    --streaming-text-primary: #f0f6fc;
+    --streaming-text-secondary: #8b949e;
+    --streaming-code-bg: #161b22;
+    --streaming-code-fg: #f0f6fc;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  :root {
+    --streaming-border-color: #000;
+    --streaming-text-primary: #000;
+    --streaming-text-secondary: #333;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --streaming-border-color: #fff;
+      --streaming-text-primary: #fff;
+      --streaming-text-secondary: #ccc;
+    }
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .streaming-code-block,
+  .codemirror-wrapper,
+  .progress-bar,
+  .status,
+  .expand-icon {
+    transition: none !important;
+  }
+  
+  .progress-icon svg {
+    animation: none !important;
+  }
+  
+  .progress-line {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* Focus styles for accessibility */
+
+.progress-bar:focus-visible {
+  outline: 2px solid var(--streaming-accent-color);
+  outline-offset: 2px;
+}
+
+/* Screen reader only content */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,8 +1,6 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
-  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-  import { onDestroy } from "svelte";
-  import { open, message } from "@tauri-apps/plugin-dialog";
+  // no direct event subscriptions in Chat; streaming handled via controller
+  import { onDestroy, onMount } from "svelte";
   import Composer from "$lib/chat/components/Composer.svelte";
   import LoaderPanel from "$lib/chat/components/LoaderPanel.svelte";
   import MessageList from "$lib/chat/components/MessageList.svelte";
@@ -12,6 +10,8 @@
   import type { ChatMessage } from "$lib/chat/types";
   import { createChatController } from "$lib/chat/controller";
   import InferenceParams from "$lib/chat/components/InferenceParams.svelte";
+  import { chatState, chatUiMounted, getDefaultChatState } from "$lib/stores/chat";
+  import { get as getStore } from "svelte/store";
 
   let modelPath = "";
   let repoId: string = "";
@@ -109,12 +109,55 @@
 
   const stopGenerate = controller.stopGenerate;
 
-  onDestroy(() => controller.destroy());
+  onDestroy(() => {
+    chatUiMounted.set(false);
+    // Persist chat/model state across navigation
+    chatState.set({
+      modelPath,
+      repoId,
+      revision,
+      hubGgufFilename,
+      format,
+
+      prompt,
+      messages,
+      busy,
+      isLoaded,
+      errorText,
+
+      isLoadingModel,
+      loadingProgress,
+      loadingStage,
+      isCancelling,
+      isUnloadingModel,
+      unloadingProgress,
+
+      temperature,
+      temperature_enabled,
+      top_k_enabled,
+      top_k_value,
+      top_p_enabled,
+      top_p_value,
+      min_p_enabled,
+      min_p_value,
+      repeat_penalty_enabled,
+      repeat_penalty_value,
+      ctx_limit_value,
+      enable_thinking,
+      use_custom_params,
+
+      use_gpu,
+      cuda_available,
+      cuda_build,
+      current_device,
+    });
+    controller.destroy();
+  });
 
   const pickModel = controller.pickModel;
   // expose minimal controller API to window for header GGUF control
   if (typeof window !== 'undefined') {
-    // eslint-disable-next-line
+     
     // @ts-ignore
     window.__oxide = {
       pickModel: controller.pickModel,
@@ -126,6 +169,68 @@
       })
     };
   }
+
+  // Load persisted chat/model state when component mounts
+  onMount(() => {
+    chatUiMounted.set(true);
+    try {
+      const s = getStore(chatState) ?? getDefaultChatState();
+      modelPath = s.modelPath;
+      repoId = s.repoId;
+      revision = s.revision;
+      hubGgufFilename = s.hubGgufFilename;
+      format = s.format;
+
+      prompt = s.prompt;
+      messages = Array.isArray(s.messages) ? s.messages : [];
+      busy = s.busy;
+      isLoaded = s.isLoaded;
+      errorText = s.errorText;
+
+      isLoadingModel = s.isLoadingModel;
+      loadingProgress = s.loadingProgress;
+      loadingStage = s.loadingStage;
+      isCancelling = s.isCancelling;
+      isUnloadingModel = s.isUnloadingModel;
+      unloadingProgress = s.unloadingProgress;
+
+      temperature = s.temperature;
+      temperature_enabled = s.temperature_enabled;
+      top_k_enabled = s.top_k_enabled; top_k_value = s.top_k_value;
+      top_p_enabled = s.top_p_enabled; top_p_value = s.top_p_value;
+      min_p_enabled = s.min_p_enabled; min_p_value = s.min_p_value;
+      repeat_penalty_enabled = s.repeat_penalty_enabled; repeat_penalty_value = s.repeat_penalty_value;
+      ctx_limit_value = s.ctx_limit_value;
+      enable_thinking = s.enable_thinking;
+      use_custom_params = s.use_custom_params;
+
+      use_gpu = s.use_gpu;
+      cuda_available = s.cuda_available;
+      cuda_build = s.cuda_build;
+      current_device = s.current_device;
+    } catch (e) {
+      // ignore, fall back to defaults
+    }
+    // UI остаётся смонтирован, восстановления и доп. переподключений не требуется
+  });
+
+  // Keep shared chatState in sync so header and other views get instant truth (no polling flicker)
+  $: chatState.update((s) => ({
+    ...s,
+    modelPath,
+    repoId,
+    revision,
+    hubGgufFilename,
+    format,
+    busy,
+    isLoaded,
+    isLoadingModel,
+    isUnloadingModel,
+    isCancelling,
+    loadingStage,
+    loadingProgress,
+    unloadingProgress,
+  }));
 </script>
 
 <main class="wrap">
