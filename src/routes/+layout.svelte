@@ -7,6 +7,7 @@
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import type { UnlistenFn } from '@tauri-apps/api/event';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
   import Minus from "phosphor-svelte/lib/Minus";
   import ArrowsIn from "phosphor-svelte/lib/ArrowsIn";
   import ArrowsOut from "phosphor-svelte/lib/ArrowsOut";
@@ -32,17 +33,26 @@
   const appName = 'Oxide Lab';
   const appIcon = '/icon.svg';
   let isMaximized = false;
+  const appWindow = getCurrentWindow();
   
   function goHome() { goto('/'); }
   
   async function toggleMaximize() {
-    const w = (await import('@tauri-apps/api/window')).getCurrentWindow();
-    if (await w.isMaximized()) { 
-      await w.unmaximize(); 
+    if (await appWindow.isMaximized()) { 
+      await appWindow.unmaximize(); 
       isMaximized = false;
     } else { 
-      await w.maximize(); 
+      await appWindow.maximize(); 
       isMaximized = true;
+    }
+  }
+  
+  // Make the entire header draggable
+  async function startDragging(event: MouseEvent) {
+    // Only start dragging if we're not clicking on an interactive element
+    const target = event.target as HTMLElement;
+    if (!target.closest('button, input, [data-tauri-drag-region="false"]')) {
+      await appWindow.startDragging();
     }
   }
   
@@ -52,12 +62,11 @@
     // Проверяем начальное состояние окна и слушаем resize через Tauri
     const unlistenHolder: { fn: UnlistenFn | null } = { fn: null };
     (async () => {
-      const w = (await import('@tauri-apps/api/window')).getCurrentWindow();
-      isMaximized = await w.isMaximized();
+      isMaximized = await appWindow.isMaximized();
 
       // Слушаем изменения состояния окна
-      unlistenHolder.fn = await w.onResized(() => {
-        w.isMaximized().then(maximized => {
+      unlistenHolder.fn = await appWindow.onResized(() => {
+        appWindow.isMaximized().then((maximized: boolean) => {
           isMaximized = maximized;
         });
       });
@@ -107,12 +116,12 @@
 </script>
 
 <div class="app-shell">
-  <header class="app-header" data-tauri-drag-region>
-    <button class="brand" onclick={goHome} title="Домой" data-tauri-drag-region="false">
+  <header class="app-header" onmousedown={startDragging}>
+    <button class="brand" onclick={goHome} title="Домой">
       <img src={appIcon} alt="App icon" class="brand-icon" />
       <span class="brand-title">{appName}</span>
     </button>
-    <div class="header-center" data-tauri-drag-region="false">
+    <div class="header-center">
       <!-- GGUF upload: всегда смонтирован, скрывается классом -->
       <div class="gguf-host" class:hidden={!shouldShowGGUFUploadArea}>
         <GGUFUploadArea />
@@ -123,8 +132,8 @@
         <HeaderSearch on:search={handleHeaderSearch} />
       {/if}
     </div>
-    <div class="window-controls" data-tauri-drag-region="false">
-      <button type="button" class="win-btn" title="Свернуть" onclick={() => import('@tauri-apps/api/window').then(m => m.getCurrentWindow().minimize())}>
+    <div class="window-controls">
+      <button type="button" class="win-btn" title="Свернуть" onclick={() => appWindow.minimize()}>
         <Minus size={16} weight="bold" />
       </button>
       <button type="button" class="win-btn" title={isMaximized ? "Восстановить" : "Развернуть"} onclick={toggleMaximize}>
@@ -134,7 +143,7 @@
           <ArrowsOut size={16} weight="bold" />
         {/if}
       </button>
-      <button type="button" class="win-btn close" title="Закрыть" onclick={() => import('@tauri-apps/api/window').then(m => m.getCurrentWindow().close())}>
+      <button type="button" class="win-btn close" title="Закрыть" onclick={() => appWindow.close()}>
         <X size={16} weight="bold" />
       </button>
     </div>
@@ -163,10 +172,42 @@
     padding: 10px 8px; border-bottom: 1px solid var(--border-color);
     height: 56px; min-height: 56px; box-sizing: border-box; /* fixed header height */
     box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    user-select: none; /* disable text selection */
+    -webkit-user-select: none; /* safari support */
+    cursor: default;
   }
-  .brand { display: inline-flex; align-items: center; gap: 10px; cursor: default; background: transparent; border: none; padding: 4px 8px; border-radius: 8px; }
-  .brand-icon { width: 20px; height: 20px; }
-  .brand-title { font-weight: 700; letter-spacing: 0.3px; color: var(--text); opacity: 0.9; }
+  .brand { 
+    display: inline-flex; align-items: center; gap: 10px; 
+    cursor: pointer; 
+    background: transparent !important; 
+    border: none !important; 
+    padding: 4px 8px; 
+    border-radius: 8px;
+    transition: none !important;
+    color: var(--text) !important;
+    outline: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  .brand:hover, .brand:active, .brand:focus {
+    background: transparent !important; 
+    color: var(--text) !important;
+    transform: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+  .brand-icon { 
+    width: 20px; 
+    height: 20px; 
+    pointer-events: none;
+  }
+  .brand-title { 
+    font-weight: 700; 
+    letter-spacing: 0.3px; 
+    color: var(--text) !important; 
+    opacity: 0.9; 
+    pointer-events: none;
+  }
   .header-center {
     flex: 1;
     display: flex;
@@ -192,7 +233,7 @@
   .window-controls { 
     display: inline-flex; 
     gap: 2px; 
-    align-items: center; 
+    align-items: center;
   }
   .win-btn { 
     width: 36px; 

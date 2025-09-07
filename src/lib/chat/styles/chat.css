@@ -3,15 +3,17 @@
   flex-direction: column;
   min-height: 0;
 }
+
 .chat {
   grid-row: 1;
 }
+
 .loader {
   grid-row: 2;
 }
 
 .messages {
-  margin-top: 6px;
+  margin-top: 0;
   background: #faf9f7;
   border: 1px dashed #e8e6e3;
   border-radius: 10px;
@@ -27,17 +29,21 @@
 .message {
   display: flex;
 }
+
 .message.user {
   justify-content: flex-end;
 }
+
 .message.assistant {
   justify-content: flex-start;
 }
+
 .messages,
 .message,
 .bubble {
   min-width: 0;
 }
+
 .message {
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -62,9 +68,11 @@
   max-width: 100%;
   min-width: 0;
 }
+
 .message.user .bubble {
   background: var(--accent-2);
 }
+
 .message.assistant .bubble {
   background: #e8f0f8;
 }
@@ -125,13 +133,16 @@
   overflow: hidden;
   background: transparent;
 }
+
 .composer .composer-buttons .composer-btn:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgb(0 0 0 / 0.08);
 }
+
 .composer .composer-buttons .composer-btn:active {
   transform: translateY(0);
 }
+
 .composer .composer-buttons .composer-btn:disabled {
   opacity: 0.6;
   cursor: default;
@@ -173,13 +184,16 @@
   color: var(--text);
   border: none;
 }
+
 .send-btn:hover:not(:disabled) {
   filter: brightness(0.95);
 }
+
 .stop-btn {
   background: var(--stop-bg, #ff6b6b);
   color: #fff;
 }
+
 .stop-btn:hover {
   filter: brightness(0.95);
 }
@@ -202,6 +216,7 @@
   background: rgb(255 255 255 / 0.2);
   transition: left 0.5s ease;
 }
+
 .send-btn:not(:disabled):hover::before {
   left: 100%;
 }
@@ -218,18 +233,21 @@
   transform: translate(-50%, -50%);
   transition: all 0.3s ease;
 }
+
 .stop-btn:hover::after {
   width: 100%;
   height: 100%;
 }
 
 /* Modern toggle switch */
+
 .switch {
   position: relative;
   display: inline-block;
   width: 48px;
   height: 26px;
 }
+
 .switch input {
   opacity: 0;
   width: 0;
@@ -258,12 +276,15 @@
   border-radius: 50%;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
 }
+
 .switch input:checked + .slider {
   background: linear-gradient(135deg, var(--accent-2), #d4b8ff);
 }
+
 .switch input:checked + .slider::before {
   transform: translateX(22px);
 }
+
 .switch.disabled {
   opacity: 0.6;
   cursor: default;
@@ -295,6 +316,7 @@
   background: linear-gradient(135deg, var(--accent-2), #d4b8ff);
   color: #1c1c1c;
 }
+
 .segmented-toggle .segment:disabled {
   opacity: 0.6;
   cursor: default;
@@ -310,7 +332,6 @@
   padding: 16px;
   box-sizing: border-box;
   background: transparent;
-  border: 2px dashed var(--border-color);
   border-radius: 14px;
   margin: 0;
 }
@@ -321,11 +342,13 @@
   background: transparent;
   border-radius: 10px;
 }
+
 .placeholder-content h3 {
   margin: 0 0 8px;
   font-size: 18px;
   font-weight: 600;
 }
+
 .placeholder-content p {
   margin: 0;
   font-size: 14px;
@@ -337,14 +360,17 @@
     background: #222;
     border-color: #333;
   }
+
   .message.user .bubble {
     background: #4a3f66;
     color: #eee;
   }
+
   .message.assistant .bubble {
     background: #2f3640;
     color: #eee;
   }
+
   .composer textarea {
     background: #2d2d2d;
     border-color: #3a3a3a;
@@ -372,32 +398,41 @@
   .send-btn {
     background: linear-gradient(135deg, #695b99, #5a4b8a);
   }
+
   .send-btn:hover:not(:disabled) {
     background: linear-gradient(135deg, #5a4b8a, #695b99);
   }
+
   .stop-btn {
     background: linear-gradient(135deg, #d32f2f, #b71c1c);
   }
+
   .stop-btn:hover {
     background: linear-gradient(135deg, #b71c1c, #d32f2f);
   }
+
   .composer textarea:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgb(91 124 153 / 0.2);
   }
+
   .slider {
     background: #555;
   }
+
   .switch input:checked + .slider {
     background: linear-gradient(135deg, #695b99, #5a4b8a);
   }
+
   .segmented-toggle {
     background: #2d2d2d;
     border-color: #3a3a3a;
   }
+
   .segmented-toggle .segment {
     color: #eee;
   }
+
   .segmented-toggle .segment.active {
     background: linear-gradient(135deg, #695b99, #5a4b8a);
     color: #fff;
@@ -406,6 +441,7 @@
 
 @media (width >= 960px) {
   /* Use flex layout for desktop to keep consistent heights (defined in base.css) */
+
   .wrap {
     display: flex;
     gap: 20px;
@@ -413,12 +449,14 @@
     height: 100%;
     box-sizing: border-box;
   }
+
   .chat {
     flex: 1 1 auto;
     grid-column: unset;
     grid-row: unset;
     min-height: 0;
   }
+
   .loader {
     flex: 0 0 360px;
     grid-column: unset;
