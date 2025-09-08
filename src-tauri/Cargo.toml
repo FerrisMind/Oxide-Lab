@@ -49,5 +49,10 @@ cuda = [
     "candle-transformers/cuda",
 ]
 
-
-
+# Объявление фичи `metal` для поддержки Metal на macOS
+metal = [
+    # Прокидываем флаг в зависимости candle-*
+    "candle/metal",
+    "candle-nn/metal",
+    "candle-transformers/metal",
+]

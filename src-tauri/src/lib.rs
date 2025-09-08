@@ -1,3 +1,10 @@
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+// Use auto-selection for initial device instead of hardcoding CPU
+use crate::core::device::select_device;
+use crate::core::types::DevicePreference;
+
 pub mod core;
 pub mod generate;
 pub mod models;
@@ -5,7 +12,6 @@ pub mod api;
 // модуль `model` удалён, всё перенесено в `models/`
 // moved heavy operations to api/
 use std::sync::{Arc, Mutex};
-use candle::Device;
 // use candle::quantized::gguf_file;
 use core::state::{ModelState, SharedState};
 use crate::models::common::model::ModelBackend;
@@ -20,7 +26,9 @@ use crate::models::common::model::ModelBackend;
 pub fn run() {
     // Shared state хранит боксированную реализацию модели через trait-объект,
     // что позволяет загружать разные архитектуры GGUF под единым интерфейсом.
-    let shared: SharedState<Box<dyn ModelBackend + Send>> = Arc::new(Mutex::new(ModelState::new(Device::Cpu)));
+    // Use auto-selection for initial device instead of hardcoding CPU
+    let initial_device = select_device(Some(DevicePreference::Auto));
+    let shared: SharedState<Box<dyn ModelBackend + Send>> = Arc::new(Mutex::new(ModelState::new(initial_device)));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

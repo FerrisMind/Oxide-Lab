@@ -36,7 +36,7 @@
   - candle-examples: `src/lib.rs::device`, выбор dtype в `examples/*/main.rs` (GPU → BF16/F16, CPU → F32).
   - в проекте: `src-tauri/src/core/device.rs` (по умолчанию CPU, без авто BF16/F16 логики).
 - Для GGUF: тот же авто-выбор устройства; учитывать ограничения конкретных квантованных весов (если ядро недоступно — падать на CPU).
-- Статус: не реализовано (авто GPU/dtype).
+- Статус: РЕАЛИЗОВАНО ✓ (улучшенная версия с корректной runtime-детекцией CUDA/Metal)
 
 4. Тогглы производительности
 
@@ -57,51 +57,4 @@
 
 - Зачем: корректное форматирование ролей/токенов диалога для chat-моделей без ручной разметки.
 - Где посмотреть:
-  - candle-examples: `examples/gemma/main.rs` (спец-токены `<start_of_turn>`, `<end_of_turn>`), `examples/quantized-qwen3/main.rs` (шаблон с `<|im_start|>`/`<|im_end|>`).
-  - в проекте: `src-tauri/src/core/tokenizer.rs::{extract_chat_template,find_chat_template_in_metadata}` (есть утилиты, но не интегрированы в пайплайн генерации).
-- Для GGUF: искать `chat_template` в GGUF-метаданных (`tokenizer.chat_template` и др.).
-- Статус: частично (утилиты есть, применение — нет).
-
-6. Трассировка и метрики
-
-- Включаемая `tracing_chrome`-трассировка из UI для профилирования.
-- Вывод tokens/s и ключевых CPU/SIMD/GPU-фич.
-
-- Зачем: профилирование узких мест и контроль производительности.
-- Где посмотреть:
-  - candle-examples: `examples/*/main.rs` (`--tracing`, вывод tokens/s, печать SIMD/фич).
-  - в проекте: базовые логи есть (`[infer]`), tokens/s и tracing отсутствуют.
-- Для GGUF: применимо так же.
-- Статус: не реализовано.
-
-7. Контекст из метаданных модели
-
-- Устанавливать `context_length` из `config.json` (safetensors) или GGUF-метаданных вместо фиксированного значения.
-
-- Зачем: избегать лишней усечки контекста и ошибок при превышении лимита.
-- Где посмотреть:
-  - candle-examples: чтение `config.json` в `examples/*/main.rs` (лимиты контекста в конфиге моделей).
-  - в проекте: `src-tauri/src/state.rs` (`context_length: 4096`), `src-tauri/src/generate/ctx.rs` (использование лимита).
-- Для GGUF: извлекать `qwen3.context_length` (и аналоги по архитектурам) из метаданных GGUF.
-- Статус: не реализовано (жёсткая константа).
-
-8. Улучшение EOS/STOP-правил
-
-- Расширенные наборы стоп-токенов по моделям (e.g., `</s>`, `<|endoftext|>`, `<eos>`, `<|im_end|>`), настройка в реестре.
-
-- Зачем: корректная остановка генерации для разных семейств моделей.
-- Где посмотреть:
-  - candle-examples: `examples/gemma/main.rs` (`<eos>/<end_of_turn>`), `examples/qwen/main.rs` (`<|endoftext|>`, `<|im_end|>`), `examples/starcoder2/main.rs` (`<|endoftext|>`), `examples/llama/main.rs` (EOS из конфига/токенизатора).
-  - в проекте: `src-tauri/src/core/tokenizer.rs::extract_eos_ids` (универсальная эвристика).
-- Для GGUF: учитывать спец-токены из GGUF-метаданных и/или реконструированного токенизатора.
-- Статус: реализовано.
-
-9. Обобщение GGUF-загрузчика
-
-- Расширить за пределы Qwen3 при наличии поддержки в метаданных/спеке; единый путь инференса с safetensors.
-
-- Зачем: единая архитектура загрузки для quantized-семейств, уменьшение дублирования.
-- Где посмотреть:
-  - candle-examples: `examples/quantized-qwen3/main.rs` (чтение GGUF, инференс), паттерны построения моделей.
-  - в проекте: `src-tauri/src/models/qwen3/*` (есть только Qwen3), `src-tauri/src/models/common/*` (спеки/вспомогательные).
-- Статус: частично (только Qwen3).
+  - candle-examples: `examples/gemma/main.rs` (спец-токены `<start_of_turn>`, `<end_of_turn>`), `examples/quantized-qwen3/main.rs` (шаблон с `

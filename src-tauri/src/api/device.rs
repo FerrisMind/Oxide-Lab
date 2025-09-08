@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::path::PathBuf;
 use candle::quantized::gguf_file;
+use candle::utils::{cuda_is_available, metal_is_available};
 use crate::core::device::device_label;
 use crate::core::state::ModelState;
 use crate::core::tokenizer::{mark_special_chat_tokens, tokenizer_from_gguf_metadata, extract_chat_template, find_chat_template_in_metadata};
@@ -15,7 +16,7 @@ pub fn set_device(
     // Явно проверяем запрос CUDA и возвращаем ошибку, если инициализация не удалась
     match pref {
         crate::core::types::DevicePreference::Cuda { index } => {
-            match candle::Device::cuda_if_available(index) {
+            match candle::Device::new_cuda(index) {
                 Ok(dev) => {
                     guard.device = dev;
                 }
@@ -28,10 +29,61 @@ pub fn set_device(
             guard.device = candle::Device::Cpu;
         }
         crate::core::types::DevicePreference::Auto => {
-            guard.device = candle::Device::Cpu;
+            // Авто-выбор устройства CUDA → Metal → CPU, как в примерах Candle
+            guard.device = {
+                // Проверяем CUDA только если фича включена при компиляции
+                if cuda_is_available() {
+                    match candle::Device::new_cuda(0) {
+                        Ok(device) => {
+                            println!("[device] auto-selected CUDA");
+                            device
+                        }
+                        Err(e) => {
+                            eprintln!("[device] CUDA init failed: {}, falling back to next option", e);
+                            
+                            // Проверяем Metal только если фича включена при компиляции
+                            if metal_is_available() {
+                                match candle::Device::new_metal(0) {
+                                    Ok(device) => {
+                                        println!("[device] auto-selected Metal");
+                                        device
+                                    }
+                                    Err(e) => {
+                                        eprintln!("[device] Metal init failed: {}, falling back to CPU", e);
+                                        candle::Device::Cpu
+                                    }
+                                }
+                            } else {
+                                candle::Device::Cpu
+                            }
+                        }
+                    }
+                } else if metal_is_available() {
+                    match candle::Device::new_metal(0) {
+                        Ok(device) => {
+                            println!("[device] auto-selected Metal");
+                            device
+                        }
+                        Err(e) => {
+                            eprintln!("[device] Metal init failed: {}, falling back to CPU", e);
+                            candle::Device::Cpu
+                        }
+                    }
+                } else {
+                    println!("[device] auto-selected CPU");
+                    candle::Device::Cpu
+                }
+            };
         }
         crate::core::types::DevicePreference::Metal => {
-            guard.device = candle::Device::Cpu;
+            match candle::Device::new_metal(0) {
+                Ok(device) => {
+                    guard.device = device;
+                }
+                Err(e) => {
+                    return Err(format!("Metal init failed: {}", e));
+                }
+            }
         }
     }
     let label = device_label(&guard.device);

@@ -67,18 +67,16 @@ impl ChunkEmitter {
                     // Закрывающий тег не найден — отбрасываем весь фрагмент
                     return out;
                 }
+            } else if let Some(pos) = find_case_insensitive(s, "<think>") {
+                // Добавляем всё до открывающего тега и начинаем пропуск
+                out.push_str(&s[..pos]);
+                s = &s[pos + "<think>".len()..];
+                self.in_think_block = true;
+                continue;
             } else {
-                if let Some(pos) = find_case_insensitive(s, "<think>") {
-                    // Добавляем всё до открывающего тега и начинаем пропуск
-                    out.push_str(&s[..pos]);
-                    s = &s[pos + "<think>".len()..];
-                    self.in_think_block = true;
-                    continue;
-                } else {
-                    // Открывающий тег не найден — добавляем остаток и выходим
-                    out.push_str(s);
-                    break;
-                }
+                // Открывающий тег не найден — добавляем остаток и выходим
+                out.push_str(s);
+                break;
             }
         }
         out
