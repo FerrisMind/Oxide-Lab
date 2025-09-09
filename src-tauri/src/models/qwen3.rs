@@ -23,5 +23,3 @@ impl crate::models::common::model::ModelBackend for ModelWeights {
         self.inner.forward(input, position).map_err(|e| e.to_string())
     }
 }
-
-

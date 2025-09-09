@@ -9,60 +9,15 @@ fn test_architecture_detection() {
     metadata.insert("general.architecture".to_string(), Value::String("qwen3".to_string()));
     assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3));
     
-    // Test Llama detection
-    let mut metadata = HashMap::new();
-    metadata.insert("general.architecture".to_string(), Value::String("llama".to_string()));
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Llama));
-    
-    // Test Mistral detection
-    let mut metadata = HashMap::new();
-    metadata.insert("general.architecture".to_string(), Value::String("mistral".to_string()));
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Mistral));
-    
-    // Test Mixtral detection
-    let mut metadata = HashMap::new();
-    metadata.insert("general.architecture".to_string(), Value::String("mixtral".to_string()));
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Mixtral));
-    
-    // Test Gemma detection
-    let mut metadata = HashMap::new();
-    metadata.insert("general.architecture".to_string(), Value::String("gemma".to_string()));
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Gemma));
-    
-    // Test Phi3 detection
-    let mut metadata = HashMap::new();
-    metadata.insert("general.architecture".to_string(), Value::String("phi3".to_string()));
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Phi3));
-    
-    // Test Yi detection
-    let mut metadata = HashMap::new();
-    metadata.insert("general.architecture".to_string(), Value::String("yi".to_string()));
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Yi));
-    
-    // Test DeepSeek detection
-    let mut metadata = HashMap::new();
-    metadata.insert("general.architecture".to_string(), Value::String("deepseek".to_string()));
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::DeepSeek));
-    
-    // Test Pixtral detection
-    let mut metadata = HashMap::new();
-    metadata.insert("general.architecture".to_string(), Value::String("pixtral".to_string()));
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Pixtral));
-    
-    // Test SmolLM2 detection
-    let mut metadata = HashMap::new();
-    metadata.insert("general.architecture".to_string(), Value::String("smollm2".to_string()));
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::SmolLM2));
-    
     // Test fallback detection for Qwen
     let mut metadata = HashMap::new();
     metadata.insert("some.key".to_string(), Value::String("qwen3-model-v1".to_string()));
     assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3));
     
-    // Test fallback detection for Llama
+    // Test unknown architecture (Llama is not implemented yet)
     let mut metadata = HashMap::new();
-    metadata.insert("some.key".to_string(), Value::String("llama-3-8b".to_string()));
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Llama));
+    metadata.insert("general.architecture".to_string(), Value::String("llama".to_string()));
+    assert_eq!(detect_arch(&metadata), None); // Llama is not registered yet
     
     // Test unknown architecture
     let mut metadata = HashMap::new();

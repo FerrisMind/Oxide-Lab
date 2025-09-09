@@ -4,9 +4,8 @@ use candle::quantized::gguf_file;
 use crate::core::device::{device_label, select_device};
 use crate::core::state::ModelState;
 use crate::core::tokenizer::{mark_special_chat_tokens, tokenizer_from_gguf_metadata, extract_chat_template, find_chat_template_in_metadata};
-use crate::models::qwen3::ModelWeights as Qwen3Gguf;
-use crate::models::registry::{detect_arch, ArchKind};
-use crate::models::common::model::{AnyModel, ModelBackend};
+use crate::models::registry::{detect_arch, get_model_factory};
+use crate::models::common::model::ModelBackend;
 
 pub fn load_gguf_model(
     guard: &mut ModelState<Box<dyn ModelBackend + Send>>,
@@ -32,6 +31,7 @@ pub fn load_gguf_model(
         }
         None => println!("[template] not found in tokenizer.json"),
     }
+    
     let arch = detect_arch(&content.metadata).ok_or_else(|| "Unsupported GGUF architecture".to_string())?;
 
     if let Some(gg) = content.metadata.get("config.json").and_then(|v| v.to_string().ok()).cloned()
@@ -41,19 +41,12 @@ pub fn load_gguf_model(
         guard.model_config_json = Some(gg);
     }
 
-    let model_any = match arch {
-        ArchKind::Qwen3 => {
-            let m = Qwen3Gguf::from_gguf(content, &mut file, &guard.device, context_length, false)
-                .map_err(|e| e.to_string())?;
-            AnyModel::from_qwen3(m)
-        }
-        // For all other architectures, return an error indicating they're not yet supported
-        _ => {
-            return Err(format!("Architecture {:?} detected but not yet supported. Only Qwen3 is currently supported.", arch));
-        }
-    };
+    // Use the model factory to build the model
+    let model_backend = get_model_factory()
+        .build_from_gguf(arch, content, &mut file, &guard.device, context_length, false)
+        .map_err(|e| format!("Failed to build model: {}", e))?;
 
-    guard.gguf_model = Some(Box::new(model_any));
+    guard.gguf_model = Some(model_backend);
     guard.gguf_file = Some(file);
     guard.tokenizer = Some(tokenizer);
     guard.chat_template = chat_tpl;

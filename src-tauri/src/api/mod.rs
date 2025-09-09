@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 // Import our new modules
 mod model_loading;
-use model_loading::{gguf, hub_gguf, hub_safetensors, local_safetensors};
+use model_loading::{gguf, hub_gguf, safetensors};
 mod device;
 mod template;
 
@@ -22,10 +22,10 @@ pub fn load_model(state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>
             hub_gguf::load_hub_gguf_model(&mut guard, repo_id, revision, filename, context_length, device)
         }
         LoadRequest::HubSafetensors { repo_id, revision, context_length, device } => {
-            hub_safetensors::load_hub_safetensors_model(&mut guard, repo_id, revision, context_length, device)
+            safetensors::load_hub_safetensors_model(&mut guard, repo_id, revision, context_length, device)
         }
         LoadRequest::LocalSafetensors { model_path, context_length, device } => {
-            local_safetensors::load_local_safetensors_model(&mut guard, model_path, context_length, device)
+            safetensors::load_local_safetensors_model(&mut guard, model_path, context_length, device)
         }
     }
 }

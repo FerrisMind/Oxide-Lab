@@ -1,6 +1,9 @@
 use std::collections::HashMap;
+use std::sync::OnceLock;
+use crate::models::common::builder::ModelFactory;
+use crate::models::qwen3_builder::Qwen3ModelBuilder;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ArchKind {
     // Models from the user's list that are supported by Candle
     Llama,      // Covers Llama 2, 3, 3.1, 3.2, 3.3, 4 and CodeLlama
@@ -18,62 +21,33 @@ pub enum ArchKind {
     // Granite, GraniteMoE, InternLM2, Jais, JinaBert, JinaReranker, JinaEmbeddings, Minicpm, Mpt
 }
 
+/// Global model factory instance
+static MODEL_FACTORY: OnceLock<ModelFactory> = OnceLock::new();
+
+/// Get the global model factory instance
+pub fn get_model_factory() -> &'static ModelFactory {
+    MODEL_FACTORY.get_or_init(|| {
+        let mut factory = ModelFactory::new();
+        
+        // Register Qwen3 builder
+        factory.register_builder(crate::models::common::builder::ModelBuilder::Qwen3(Qwen3ModelBuilder::new()));
+        
+        // TODO: Register other builders as they are implemented
+        // factory.register_builder(crate::models::common::builder::ModelBuilder::Llama(LlamaModelBuilder::new()));
+        // factory.register_builder(crate::models::common::builder::ModelBuilder::Mistral(MistralModelBuilder::new()));
+        // etc.
+        
+        factory
+    })
+}
+
 pub fn detect_arch(metadata: &HashMap<String, candle::quantized::gguf_file::Value>) -> Option<ArchKind> {
-    // First, try to detect from the general.architecture field (standard GGUF approach)
-    if let Some(arch_value) = metadata.get("general.architecture") {
-        if let Ok(arch_str) = arch_value.to_string() {
-            return match arch_str.to_lowercase().as_str() {
-                "llama" | "llama2" | "llama3" => Some(ArchKind::Llama),
-                "mistral" | "mistralai" => Some(ArchKind::Mistral),
-                "mixtral" => Some(ArchKind::Mixtral),
-                "gemma" => Some(ArchKind::Gemma),
-                "qwen2" | "qwen3" => Some(ArchKind::Qwen3),
-                "yi" => Some(ArchKind::Yi),
-                "phi3" => Some(ArchKind::Phi3),
-                "deepseek" => Some(ArchKind::DeepSeek),
-                "pixtral" => Some(ArchKind::Pixtral),
-                "smollm2" => Some(ArchKind::SmolLM2),
-                _ => None,
-            };
-        }
-    }
-    
-    // Fallback: try to detect from model-specific fields or heuristics
-    for (_k, v) in metadata.iter() {
-        if let Ok(s) = v.to_string() {
-            let s_lower = s.to_lowercase();
-            if s_lower.contains("llama") {
-                return Some(ArchKind::Llama);
-            }
-            if s_lower.contains("mistral") {
-                return Some(ArchKind::Mistral);
-            }
-            if s_lower.contains("mixtral") {
-                return Some(ArchKind::Mixtral);
-            }
-            if s_lower.contains("gemma") {
-                return Some(ArchKind::Gemma);
-            }
-            if s_lower.contains("qwen") {
-                return Some(ArchKind::Qwen3);
-            }
-            if s_lower.contains("yi") {
-                return Some(ArchKind::Yi);
-            }
-            if s_lower.contains("phi3") {
-                return Some(ArchKind::Phi3);
-            }
-            if s_lower.contains("deepseek") {
-                return Some(ArchKind::DeepSeek);
-            }
-            if s_lower.contains("pixtral") {
-                return Some(ArchKind::Pixtral);
-            }
-            if s_lower.contains("smollm2") {
-                return Some(ArchKind::SmolLM2);
-            }
-        }
-    }
-    
-    None
+    // Use the model factory to detect the architecture
+    get_model_factory().detect_gguf_arch(metadata)
+}
+
+/// Detect architecture from config JSON
+pub fn detect_arch_from_config(config: &serde_json::Value) -> Option<ArchKind> {
+    // Use the model factory to detect the architecture
+    get_model_factory().detect_config_arch(config)
 }
