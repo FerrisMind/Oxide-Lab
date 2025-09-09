@@ -4,3 +4,6 @@ pub mod types;
 pub mod device;
 pub mod tokenizer;
 pub mod weights;
+pub mod prompt;
+pub mod config;
+pub mod precision;

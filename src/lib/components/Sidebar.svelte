@@ -7,6 +7,7 @@
   import Code from 'phosphor-svelte/lib/Code';
   import Database from 'phosphor-svelte/lib/Database';
   import MagnifyingGlass from 'phosphor-svelte/lib/MagnifyingGlass';
+  import Gear from 'phosphor-svelte/lib/Gear';
 
   const navigationItems = [
     {
@@ -36,6 +37,13 @@
       icon: MagnifyingGlass,
       path: '/search',
       description: 'Поиск в Hugging Face Hub'
+    },
+    {
+      id: 'settings',
+      title: 'Настройки',
+      icon: Gear,
+      path: '/settings',
+      description: 'Настройки приложения'
     }
   ];
 

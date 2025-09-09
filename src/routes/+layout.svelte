@@ -116,39 +116,40 @@
 </script>
 
 <div class="app-shell">
-  <header class="app-header" onmousedown={startDragging}>
-    <button class="brand" onclick={goHome} title="Домой">
-      <img src={appIcon} alt="App icon" class="brand-icon" />
-      <span class="brand-title">{appName}</span>
-    </button>
-    <div class="header-center">
-      <!-- GGUF upload: всегда смонтирован, скрывается классом -->
-      <div class="gguf-host" class:hidden={!shouldShowGGUFUploadArea}>
-        <GGUFUploadArea />
-      </div>
-
-      <!-- Поиск показывается только на вкладке поиска -->
-      {#if shouldShowHeaderSearch}
-        <HeaderSearch on:search={handleHeaderSearch} />
-      {/if}
-    </div>
-    <div class="window-controls">
-      <button type="button" class="win-btn" title="Свернуть" onclick={() => appWindow.minimize()}>
-        <Minus size={16} weight="bold" />
+  <div class="app-header-wrapper" onmousedown={startDragging} role="toolbar" tabindex="0">
+    <header class="app-header">
+      <button class="brand" onclick={goHome} title="Домой">
+        <img src={appIcon} alt="App icon" class="brand-icon" />
+        <span class="brand-title">{appName}</span>
       </button>
-      <button type="button" class="win-btn" title={isMaximized ? "Восстановить" : "Развернуть"} onclick={toggleMaximize}>
-        {#if isMaximized}
-          <ArrowsIn size={16} weight="bold" />
-        {:else}
-          <ArrowsOut size={16} weight="bold" />
+      <div class="header-center">
+        <!-- GGUF upload: всегда смонтирован, скрывается классом -->
+        <div class="gguf-host" class:hidden={!shouldShowGGUFUploadArea}>
+          <GGUFUploadArea />
+        </div>
+
+        <!-- Поиск показывается только на вкладке поиска -->
+        {#if shouldShowHeaderSearch}
+          <HeaderSearch on:search={handleHeaderSearch} />
         {/if}
-      </button>
-      <button type="button" class="win-btn close" title="Закрыть" onclick={() => appWindow.close()}>
-        <X size={16} weight="bold" />
-      </button>
-    </div>
-  </header>
-
+      </div>
+      <div class="window-controls">
+        <button type="button" class="win-btn" title="Свернуть" onclick={() => appWindow.minimize()}>
+          <Minus size={16} weight="bold" />
+        </button>
+        <button type="button" class="win-btn" title={isMaximized ? "Восстановить" : "Развернуть"} onclick={toggleMaximize}>
+          {#if isMaximized}
+            <ArrowsIn size={16} weight="bold" />
+          {:else}
+            <ArrowsOut size={16} weight="bold" />
+          {/if}
+        </button>
+        <button type="button" class="win-btn close" title="Закрыть" onclick={() => appWindow.close()}>
+          <X size={16} weight="bold" />
+        </button>
+      </div>
+    </header>
+  </div>
   <div class="app-body">
     <Sidebar />
     <main class="app-main">
@@ -165,16 +166,29 @@
 </div>
 
 <style>
+  /* App shell & header */
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  .app-header-wrapper {
+    position: relative;
+    -webkit-app-region: drag; /* Enable window dragging */
+  }
+  
   .app-header {
-    position: sticky; top: 0; z-index: 100;
-    background: var(--card); color: var(--text);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 8px; border-bottom: 1px solid var(--border-color);
-    height: 56px; min-height: 56px; box-sizing: border-box; /* fixed header height */
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    user-select: none; /* disable text selection */
-    -webkit-user-select: none; /* safari support */
-    cursor: default;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    height: 48px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    z-index: 100;
   }
   .brand { 
     display: inline-flex; align-items: center; gap: 10px; 
@@ -217,7 +231,6 @@
     margin: 0 auto;
   }
   .gguf-host.hidden { display: none; }
-  .app-shell { height: 100dvh; min-height: 100dvh; display: flex; flex-direction: column; }
   .app-body { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; }
   .app-main { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; padding: var(--content-gap); padding-top: var(--content-gap-top); }
   .view-switch { position: relative; display: flex; flex: 1 1 auto; min-height: 0; }

@@ -46,6 +46,8 @@ pub fn run() {
             api::render_prompt,
             api::get_device_info,
             api::probe_cuda,
+            api::get_precision_policy,
+            api::set_precision_policy,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

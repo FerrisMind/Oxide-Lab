@@ -1,5 +1,6 @@
 use crate::core::state::{ModelState, SharedState};
 use crate::core::types::{DevicePreference, GenerateRequest, LoadRequest};
+use crate::core::precision::PrecisionPolicy;
 use crate::generate;
 use crate::models::common::model::ModelBackend;
 use serde::{Deserialize, Serialize};
@@ -128,4 +129,17 @@ pub fn probe_cuda() -> Result<ProbeCudaDto, String> {
     {
         Ok(ProbeCudaDto { cuda_build, ok: false, error: Some("built without cuda feature".to_string()) })
     }
+}
+
+#[tauri::command]
+pub fn get_precision_policy(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<PrecisionPolicy, String> {
+    let guard = state.lock().map_err(|e| e.to_string())?;
+    Ok(guard.precision_policy.clone())
+}
+
+#[tauri::command]
+pub fn set_precision_policy(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>, policy: PrecisionPolicy) -> Result<(), String> {
+    let mut guard = state.lock().map_err(|e| e.to_string())?;
+    guard.precision_policy = policy;
+    Ok(())
 }

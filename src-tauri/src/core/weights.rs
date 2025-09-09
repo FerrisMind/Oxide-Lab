@@ -4,13 +4,14 @@
 //! - Loading safetensors files from Hugging Face Hub or local paths
 //! - Building VarBuilder instances from safetensors files
 //! - Handling both sharded and single-file model weights
-//! - Unified dtype policy for model loading
+//! - Unified dtype policy for model loading (delegated to core::precision)
 //! - Error handling and validation utilities
 
-use candle::{DType, Device};
+use candle::Device;
 use candle_nn::VarBuilder;
 use std::collections::HashSet;
 use std::path::Path;
+use crate::core::precision::{self, PrecisionPolicy};
 
 /// Lists safetensors files from a Hugging Face Hub repository.
 /// 
@@ -155,9 +156,21 @@ pub fn local_list_safetensors<P: AsRef<Path>>(path: P) -> Result<Vec<String>, St
 
 /// Builds a VarBuilder from safetensors files with unified dtype policy.
 /// 
-/// This function applies a unified dtype policy based on the device:
-/// - CUDA/Metal: BF16 for better performance
-/// - CPU: F32 for compatibility
+/// This function applies a unified dtype policy based on the device by delegating
+/// to the centralized precision policy in `core::precision`.
+/// 
+/// # Arguments
+/// * `safetensors_paths` - List of paths to safetensors files
+/// * `device` - Target device for the model
+/// 
+/// # Returns
+/// * `Ok(VarBuilder<'static>)` - Configured VarBuilder instance
+/// * `Err(String)` - Error message if VarBuilder creation fails
+
+/// Builds a VarBuilder from safetensors files with unified dtype policy.
+/// 
+/// This function applies a unified dtype policy based on the device by delegating
+/// to the centralized precision policy in `core::precision`.
 /// 
 /// # Arguments
 /// * `safetensors_paths` - List of paths to safetensors files
@@ -169,6 +182,24 @@ pub fn local_list_safetensors<P: AsRef<Path>>(path: P) -> Result<Vec<String>, St
 pub fn build_varbuilder(
     safetensors_paths: &[String], 
     device: &Device
+) -> Result<VarBuilder<'static>, String> {
+    build_varbuilder_with_precision(safetensors_paths, device, None)
+}
+/// 
+/// This function applies a unified dtype policy based on the device and precision policy.
+/// 
+/// # Arguments
+/// * `safetensors_paths` - List of paths to safetensors files
+/// * `device` - Target device for the model
+/// * `precision_policy` - Precision policy to use (default if None)
+/// 
+/// # Returns
+/// * `Ok(VarBuilder<'static>)` - Configured VarBuilder instance
+/// * `Err(String)` - Error message if VarBuilder creation fails
+pub fn build_varbuilder_with_precision(
+    safetensors_paths: &[String], 
+    device: &Device,
+    precision_policy: Option<&PrecisionPolicy>
 ) -> Result<VarBuilder<'static>, String> {
     // Validate that paths are provided
     if safetensors_paths.is_empty() {
@@ -182,16 +213,16 @@ pub fn build_varbuilder(
         }
     }
     
-    // Unified dtype policy
-    let dtype = match device {
-        Device::Cpu => DType::F32,
-        Device::Cuda(_) | Device::Metal(_) => DType::BF16,
+    // Unified dtype policy (delegated to precision module)
+    let dtype = match precision_policy {
+        Some(policy) => precision::select_dtype_by_policy(device, policy),
+        None => precision::select_dtype_default(device),
     };
     
     // Convert to PathBuf
     let paths: Vec<std::path::PathBuf> = safetensors_paths
         .iter()
-        .map(|p| std::path::PathBuf::from(p))
+        .map(std::path::PathBuf::from)
         .collect();
     
     // Create VarBuilder from safetensors files

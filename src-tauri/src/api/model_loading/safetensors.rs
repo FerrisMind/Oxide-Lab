@@ -3,7 +3,6 @@
 //! This module provides functions to load models from safetensors files
 //! using the unified ModelBuilder interface.
 
-use candle::DType;
 use hf_hub::{api::sync::Api, Repo, RepoType};
 use std::path::Path;
 
@@ -12,7 +11,7 @@ use crate::core::state::ModelState;
 use crate::core::tokenizer::{extract_chat_template, mark_special_chat_tokens};
 use crate::models::registry::{get_model_factory, detect_arch_from_config};
 use crate::models::common::model::ModelBackend;
-use crate::core::weights::{hub_list_safetensors, local_list_safetensors, hub_cache_safetensors, validate_safetensors_files};
+use crate::core::weights::{hub_list_safetensors, local_list_safetensors, hub_cache_safetensors, validate_safetensors_files, build_varbuilder_with_precision};
 
 /// Load a model from local safetensors files using the ModelBuilder pattern
 pub fn load_local_safetensors_model(
@@ -100,12 +99,10 @@ pub fn load_local_safetensors_model(
 
         // Detect the architecture
         if let Some(arch) = detect_arch_from_config(&config) {
-            // Determine the dtype based on device
-            let dtype = if dev.is_cuda() || dev.is_metal() {
-                DType::BF16 // Use BF16 for GPU devices
-            } else {
-                DType::F32 // Use F32 for CPU devices
-            };
+            // Determine the dtype based on device and precision policy
+            let dtype = build_varbuilder_with_precision(&filenames, &dev, Some(&guard.precision_policy))
+                .map_err(|e| format!("Failed to determine dtype: {}", e))?
+                .dtype();
 
             // Use the model factory to build the model
             match get_model_factory().build_from_safetensors(arch, &filenames, &config, &dev, dtype) {
@@ -216,12 +213,10 @@ pub fn load_hub_safetensors_model(
 
         // Detect the architecture
         if let Some(arch) = detect_arch_from_config(&config) {
-            // Determine the dtype based on device
-            let dtype = if dev.is_cuda() || dev.is_metal() {
-                DType::BF16 // Use BF16 for GPU devices
-            } else {
-                DType::F32 // Use F32 for CPU devices
-            };
+            // Determine the dtype based on device and precision policy
+            let dtype = build_varbuilder_with_precision(&cached_filenames, &dev, Some(&guard.precision_policy))
+                .map_err(|e| format!("Failed to determine dtype: {}", e))?
+                .dtype();
 
             // Use the model factory to build the model
             match get_model_factory().build_from_safetensors(arch, &cached_filenames, &config, &dev, dtype) {

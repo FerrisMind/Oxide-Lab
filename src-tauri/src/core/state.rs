@@ -2,6 +2,7 @@ use std::fs::File;
 use std::sync::{Arc, Mutex};
 use candle::Device;
 use tokenizers::Tokenizer;
+use crate::core::precision::PrecisionPolicy;
 
 /// Универсальное состояние для любой модели
 pub struct ModelState<M> {
@@ -18,6 +19,8 @@ pub struct ModelState<M> {
     pub(crate) hub_repo_id: Option<String>,
     pub(crate) hub_revision: Option<String>,
     pub(crate) safetensors_files: Option<Vec<String>>,
+    /// Precision policy for model loading
+    pub(crate) precision_policy: PrecisionPolicy,
 }
 
 impl<M> ModelState<M> {
@@ -35,6 +38,7 @@ impl<M> ModelState<M> {
             hub_repo_id: None,
             hub_revision: None,
             safetensors_files: None,
+            precision_policy: PrecisionPolicy::Default,
         }
     }
 }

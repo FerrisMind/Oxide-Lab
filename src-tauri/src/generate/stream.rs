@@ -5,9 +5,10 @@ use crate::core::state::SharedState;
 use crate::models::common::model::ModelBackend;
 use crate::core::token_output_stream::TokenOutputStream;
 use crate::core::tokenizer::extract_eos_ids;
+use crate::core::prompt::PromptBuilder;
+use crate::core::config::SamplingOptions;
 use crate::core::types::GenerateRequest;
-use super::{sampling::build_logits_processor, minp::MinPFilter, emit::ChunkEmitter, ctx::ContextSlice};
-// offloading удалён
+use super::{sampling::build_logits_processor_from_options, minp::MinPFilter, emit::ChunkEmitter, ctx::ContextSlice};
 use super::cancel::CANCEL_GENERATION;
 use std::sync::atomic::Ordering;
 
@@ -70,7 +71,13 @@ fn generate_stream_impl(
     );
     let _ = app.emit("token", String::new());
 
-    let prompt = req.prompt;
+    // Use chat messages if provided, otherwise use the prompt directly
+    let prompt = if let Some(messages) = req.messages {
+        // Build prompt using chat template
+        build_prompt_with_template(&guard.chat_template, messages)?
+    } else {
+        req.prompt
+    };
     let tokens = tos
         .tokenizer()
         .encode(prompt, true)
@@ -89,7 +96,16 @@ fn generate_stream_impl(
 
     let to_sample_soft_cap = guard.context_length.saturating_sub(ctx_slice.base_context_len).saturating_sub(1);
     let seed: u64 = req.seed.unwrap_or(42);
-    let (mut logits_processor, sampling_desc) = build_logits_processor(temperature, top_k, top_p, seed);
+    let sampling_options = SamplingOptions {
+        temperature,
+        top_k,
+        top_p,
+        min_p,
+        seed: Some(seed),
+        repeat_penalty,
+        repeat_last_n: req.repeat_last_n,
+    };
+    let (mut logits_processor, sampling_desc) = build_logits_processor_from_options(&sampling_options);
     println!("[infer] sampling strategy: {}", sampling_desc);
     let mut minp = MinPFilter::new(min_p, temperature);
 
@@ -165,6 +181,35 @@ fn generate_stream_impl(
     if let Some(rest) = tos.decode_rest().map_err(|e| e.to_string())? { emitter.push_maybe_emit(&rest); }
     emitter.flush();
     Ok(())
+}
+
+/// Build a prompt using the prompt builder with chat template support
+pub fn build_prompt_with_template(
+    chat_template: &Option<String>,
+    messages: Vec<crate::core::types::ChatMessage>,
+) -> Result<String, String> {
+    let builder = PromptBuilder::new(chat_template.clone());
+    
+    // Convert core::types::ChatMessage to core::prompt::ChatMessage
+    let prompt_messages: Vec<crate::core::prompt::ChatMessage> = messages.into_iter().map(|msg| {
+        crate::core::prompt::ChatMessage {
+            role: msg.role,
+            content: msg.content,
+        }
+    }).collect();
+    
+    // Try to render with template first, fallback to custom formatting
+    if builder.has_template() {
+        match builder.render_prompt(prompt_messages.clone()) {
+            Ok(rendered) => Ok(rendered),
+            Err(e) => {
+                println!("[template] render failed: {}, falling back to custom formatting", e);
+                Ok(builder.build_fallback_prompt(prompt_messages))
+            }
+        }
+    } else {
+        Ok(builder.build_fallback_prompt(prompt_messages))
+    }
 }
 
 
