@@ -34,6 +34,20 @@ candle-transformers = { git = "https://github.com/huggingface/candle.git", defau
 tokenizers = { version = "0.21", features = ["onig"] }
 minijinja = "2"
 
+# Image processing
+image = "0.25"
+
+# Audio processing
+# rodio = { version = "0.21", optional = true }
+# rubato = { version = "0.16", optional = true }
+
+# Random number generation
+rand = "0.8"
+
+# Логирование
+log = "0.4"
+env_logger = "0.11"
+
 
 [features]
 # По умолчанию — включаем поддержку CUDA в сборке.
@@ -56,3 +70,7 @@ metal = [
     "candle-nn/metal",
     "candle-transformers/metal",
 ]
+
+# Audio processing features
+audio = []  # Placeholder for audio processing
+resample = []  # Placeholder for resampling

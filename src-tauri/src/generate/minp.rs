@@ -1,4 +1,5 @@
 use candle::Tensor;
+use crate::log_infer;
 
 pub struct MinPFilter {
     min_p: Option<f32>,
@@ -14,7 +15,7 @@ impl MinPFilter {
     pub fn apply(&mut self, logits: &Tensor) -> Result<Tensor, String> {
         let min_p = match self.min_p { Some(v) => v, None => return Ok(logits.clone()) };
         if self.temperature <= 0.0 {
-            if self.log_prints < 5 { println!("[infer] min_p ignored because temperature <= 0"); self.log_prints += 1; }
+            if self.log_prints < 5 { log_infer!("min_p ignored because temperature <= 0"); self.log_prints += 1; }
             return Ok(logits.clone());
         }
         let vals: Vec<f32> = logits.to_vec1::<f32>().map_err(|e| e.to_string())?;
@@ -31,7 +32,7 @@ impl MinPFilter {
         if self.log_prints < 5 {
             let delta = max_val - threshold;
             let gap12 = max_val - second_val;
-            println!("[infer] min_p applied: p={:.3}, temp={:.3}, max={:.4}, threshold={:.4}, delta={:.4}, gap12={:.4}, kept={} of {}", min_p, self.temperature, max_val, threshold, delta, gap12, kept, masked.len());
+            log_infer!("min_p applied: p={:.3}, temp={:.3}, max={:.4}, threshold={:.4}, delta={:.4}, gap12={:.4}, kept={} of {}", min_p, self.temperature, max_val, threshold, delta, gap12, kept, masked.len());
             self.log_prints += 1;
         }
         Tensor::new(masked.as_slice(), logits.device()).map_err(|e| e.to_string())

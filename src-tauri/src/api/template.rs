@@ -1,4 +1,5 @@
 use minijinja::{Environment, Value, context};
+use crate::log_template;
 
 pub fn render_prompt(
     chat_template: &Option<String>,
@@ -10,7 +11,7 @@ pub fn render_prompt(
     };
     
     // Лог на вход
-    println!("[template] render: msgs={}, tpl_len={}", messages.len(), tpl.len());
+    log_template!("render: msgs={}, tpl_len={}", messages.len(), tpl.len());
     let msgs = messages;
     let mut env = Environment::new();
     env.add_template("tpl", &tpl).map_err(|e| e.to_string())?;
@@ -22,6 +23,6 @@ pub fn render_prompt(
         .render(context! { messages => msgs_val, add_generation_prompt => true, tools => Vec::<String>::new() })
         .map_err(|e| e.to_string())?;
         
-    println!("[template] render ok, prefix=<<<{}>>>", rendered.chars().take(120).collect::<String>());
+    log_template!("render ok, prefix=<<<{}>>>", rendered.chars().take(120).collect::<String>());
     Ok(rendered)
 }

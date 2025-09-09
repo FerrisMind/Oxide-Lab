@@ -80,6 +80,22 @@ Priority groups: P0 (high impact, low risks/costs) → P1 → P2.
   - Impact: Readiness for future architectures (CLIP, Whisper, etc.).
   - Costs: Medium; optional.
   - Location: `src-tauri/src/core/vision.rs`, `src-tauri/src/core/audio.rs` (as needed).
+  - Status: IMPLEMENTED ✓ (full implementation with support for image and audio preprocessing)
+  - Implementation:
+    - `src-tauri/src/core/vision.rs` module:
+      - Image preprocessing utilities (normalization, resizing, tensor conversion)
+      - Support for various image formats (JPEG, PNG, BMP)
+      - Integration with computer vision models (ViT, CLIP, etc.)
+      - Feature extraction from images
+    - `src-tauri/src/core/audio.rs` module:
+      - Audio preprocessing utilities (amplitude normalization, resampling)
+      - Conversion to mel-spectrograms for speech recognition models
+      - Support for various audio formats (WAV, MP3)
+      - Integration with audio processing models (Whisper, EnCodec, etc.)
+    - Common interfaces:
+      - Traits for unified multimodal data processing
+      - Support for streaming processing of large files
+      - Integration with existing weight loading and generation modules
 
 - Extension of `ModelBackend` interface if needed
   - Purpose: Explicitly express support for kv-cache/positions, special tokens, context constraints.

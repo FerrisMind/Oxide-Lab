@@ -113,12 +113,6 @@
       Выберите политику точности для загрузки и выполнения моделей. 
       Это влияет на использование памяти и производительность.
     </p>
-    
-    <div class="info-box">
-      <h4>Примечание о форматах моделей:</h4>
-      <p><strong>Для GGUF моделей:</strong> Веса уже квантованы, политика влияет только на точность вычислений</p>
-      <p><strong>Для Safetensors моделей:</strong> Политика влияет как на загрузку весов, так и на точность вычислений</p>
-    </div>
 
     {#if isLoading}
       <div class="loading">Загрузка настроек...</div>
@@ -201,29 +195,6 @@
     color: var(--muted);
     margin: 0 0 24px 0;
     line-height: 1.5;
-  }
-
-  .info-box {
-    background: var(--panel-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 24px;
-  }
-
-  .info-box h4 {
-    margin: 0 0 8px 0;
-    color: var(--text);
-  }
-
-  .info-box p {
-    margin: 8px 0;
-    color: var(--muted);
-    font-size: 0.9rem;
-  }
-
-  .info-box strong {
-    color: var(--text);
   }
 
   .loading {

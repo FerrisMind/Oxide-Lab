@@ -12,6 +12,7 @@ use crate::core::tokenizer::{extract_chat_template, mark_special_chat_tokens};
 use crate::models::registry::{get_model_factory, detect_arch_from_config};
 use crate::models::common::model::ModelBackend;
 use crate::core::weights::{hub_list_safetensors, local_list_safetensors, hub_cache_safetensors, validate_safetensors_files, build_varbuilder_with_precision};
+use crate::{log_load, log_local_error, log_hub_error, log_template};
 
 /// Load a model from local safetensors files using the ModelBuilder pattern
 pub fn load_local_safetensors_model(
@@ -22,7 +23,7 @@ pub fn load_local_safetensors_model(
 ) -> Result<(), String> {
     let dev = select_device(device_pref);
     guard.device = dev.clone();
-    println!("[load] device selected: {}", device_label(&guard.device));
+    log_load!("device selected: {}", device_label(&guard.device));
 
     let model_path = Path::new(&model_path);
     if !model_path.exists() {
@@ -47,9 +48,9 @@ pub fn load_local_safetensors_model(
                     mark_special_chat_tokens(&mut tk);
                     tokenizer_opt = Some(tk);
                 }
-                Err(e) => println!("[local] tokenizer.json parse error: {}", e),
+                Err(e) => log_local_error!("tokenizer.json parse error: {}", e),
             },
-            Err(e) => println!("[local] tokenizer.json read error: {}", e),
+            Err(e) => log_local_error!("tokenizer.json read error: {}", e),
         }
     }
 
@@ -63,7 +64,7 @@ pub fn load_local_safetensors_model(
                 Some(json_str)
             }
             Err(e) => {
-                println!("[local] config.json read error: {}", e);
+                log_local_error!("config.json read error: {}", e);
                 None
             }
         }
@@ -84,9 +85,9 @@ pub fn load_local_safetensors_model(
         chat_tpl = extract_chat_template(tk);
         if let Some(tpl) = chat_tpl.as_ref() {
             let head: String = tpl.chars().take(120).collect();
-            println!("[template] detected: len={}, head=<<<{}>>>", tpl.len(), head);
+            log_template!("detected: len={}, head=<<<{}>>>", tpl.len(), head);
         } else {
-            println!("[template] not found in tokenizer.json");
+            log_template!("not found in tokenizer.json");
         }
     }
 
@@ -109,7 +110,7 @@ pub fn load_local_safetensors_model(
                 Ok(model_backend) => {
                     built_model_opt = Some(model_backend);
                 }
-                Err(e) => println!("[local] ModelBuilder failed: {}", e),
+                Err(e) => log_local_error!("ModelBuilder failed: {}", e),
             }
         }
     }
@@ -124,7 +125,7 @@ pub fn load_local_safetensors_model(
     guard.hub_repo_id = None;
     guard.hub_revision = None;
     guard.safetensors_files = Some(filenames);
-    println!("[load] local safetensors loaded with ModelBuilder, context_length={}", guard.context_length);
+    log_load!("local safetensors loaded with ModelBuilder, context_length={}", guard.context_length);
     
     Ok(())
 }
@@ -139,7 +140,7 @@ pub fn load_hub_safetensors_model(
 ) -> Result<(), String> {
     let dev = select_device(device_pref);
     guard.device = dev.clone();
-    println!("[load] device selected: {}", device_label(&guard.device));
+    log_load!("device selected: {}", device_label(&guard.device));
 
     // Настраиваем API и репозиторий
     let api = Api::new().map_err(|e| e.to_string())?;
@@ -158,9 +159,9 @@ pub fn load_hub_safetensors_model(
                     mark_special_chat_tokens(&mut tk);
                     tokenizer_opt = Some(tk);
                 }
-                Err(e) => println!("[hub] tokenizer.json parse error: {}", e),
+                Err(e) => log_hub_error!("tokenizer.json parse error: {}", e),
             },
-            Err(e) => println!("[hub] tokenizer.json read error: {}", e),
+            Err(e) => log_hub_error!("tokenizer.json read error: {}", e),
         }
     }
 
@@ -173,7 +174,7 @@ pub fn load_hub_safetensors_model(
                 Some(json_str)
             }
             Err(e) => {
-                println!("[hub] config.json read error: {}", e);
+                log_hub_error!("config.json read error: {}", e);
                 None
             }
         }
@@ -198,9 +199,9 @@ pub fn load_hub_safetensors_model(
         chat_tpl = extract_chat_template(tk);
         if let Some(tpl) = chat_tpl.as_ref() {
             let head: String = tpl.chars().take(120).collect();
-            println!("[template] detected: len={}, head=<<<{}>>>", tpl.len(), head);
+            log_template!("detected: len={}, head=<<<{}>>>", tpl.len(), head);
         } else {
-            println!("[template] not found in tokenizer.json");
+            log_template!("not found in tokenizer.json");
         }
     }
 
@@ -223,7 +224,7 @@ pub fn load_hub_safetensors_model(
                 Ok(model_backend) => {
                     built_model_opt = Some(model_backend);
                 }
-                Err(e) => println!("[hub] ModelBuilder failed: {}", e),
+                Err(e) => log_hub_error!("ModelBuilder failed: {}", e),
             }
         }
     }
@@ -238,7 +239,7 @@ pub fn load_hub_safetensors_model(
     guard.hub_repo_id = Some(repo_id);
     guard.hub_revision = Some(rev);
     guard.safetensors_files = Some(cached_filenames);
-    println!("[load] hub safetensors loaded with ModelBuilder, context_length={}", guard.context_length);
+    log_load!("hub safetensors loaded with ModelBuilder, context_length={}", guard.context_length);
     
     Ok(())
 }

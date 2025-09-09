@@ -12,6 +12,7 @@ use candle_nn::VarBuilder;
 use std::collections::HashSet;
 use std::path::Path;
 use crate::core::precision::{self, PrecisionPolicy};
+use crate::{log_hub, log_hub_error, log_local_error, log_validate};
 
 /// Lists safetensors files from a Hugging Face Hub repository.
 /// 
@@ -44,12 +45,12 @@ pub fn hub_list_safetensors(api: &hf_hub::api::sync::ApiRepo) -> Result<Vec<Stri
                         }
                     }
                     Err(e) => {
-                        eprintln!("[hub] Failed to parse model.safetensors.index.json: {}", e);
+                        log_hub_error!("Failed to parse model.safetensors.index.json: {}", e);
                     }
                 }
             }
             Err(e) => {
-                eprintln!("[hub] Failed to read model.safetensors.index.json: {}", e);
+                log_hub_error!("Failed to read model.safetensors.index.json: {}", e);
             }
         }
     }
@@ -61,7 +62,7 @@ pub fn hub_list_safetensors(api: &hf_hub::api::sync::ApiRepo) -> Result<Vec<Stri
                 safetensors_files.push("model.safetensors".to_string());
             }
             Err(e) => {
-                eprintln!("[hub] model.safetensors not found: {}", e);
+                log_hub_error!("model.safetensors not found: {}", e);
             }
         }
     }
@@ -115,7 +116,7 @@ pub fn local_list_safetensors<P: AsRef<Path>>(path: P) -> Result<Vec<String>, St
                                     if file_path.exists() {
                                         set.insert(f.to_string()); 
                                     } else {
-                                        eprintln!("[local] Referenced safetensors file not found: {}", file_path.display());
+                                        log_local_error!("Referenced safetensors file not found: {}", file_path.display());
                                     }
                                 }
                             }
@@ -123,12 +124,12 @@ pub fn local_list_safetensors<P: AsRef<Path>>(path: P) -> Result<Vec<String>, St
                         }
                     }
                     Err(e) => {
-                        eprintln!("[local] Failed to parse model.safetensors.index.json: {}", e);
+                        log_local_error!("Failed to parse model.safetensors.index.json: {}", e);
                     }
                 }
             }
             Err(e) => {
-                eprintln!("[local] Failed to read model.safetensors.index.json: {}", e);
+                log_local_error!("Failed to read model.safetensors.index.json: {}", e);
             }
         }
     }
@@ -154,30 +155,22 @@ pub fn local_list_safetensors<P: AsRef<Path>>(path: P) -> Result<Vec<String>, St
     Ok(full_paths)
 }
 
-/// Builds a VarBuilder from safetensors files with unified dtype policy.
-/// 
-/// This function applies a unified dtype policy based on the device by delegating
-/// to the centralized precision policy in `core::precision`.
-/// 
+///   Builds a VarBuilder from safetensors files with unified dtype policy.
+///
+/// This function handles loading multiple safetensors files and applies a consistent
+/// dtype conversion policy across all tensors. It's designed to work with models
+/// that may have tensors saved in different precisions (f32, f16, bf16, etc.)
+/// but need to be loaded with a unified dtype for inference or training.
+///
 /// # Arguments
-/// * `safetensors_paths` - List of paths to safetensors files
-/// * `device` - Target device for the model
-/// 
+///
+/// * `paths` - Vector of paths to safetensors files to load
+/// * `device` - Target device for the tensors (CPU, CUDA, etc.)
+/// * `policy` - Precision policy to apply to all loaded tensors
+///
 /// # Returns
-/// * `Ok(VarBuilder<'static>)` - Configured VarBuilder instance
-/// * `Err(String)` - Error message if VarBuilder creation fails
-
-/// Builds a VarBuilder from safetensors files with unified dtype policy.
-/// 
-/// This function applies a unified dtype policy based on the device by delegating
-/// to the centralized precision policy in `core::precision`.
-/// 
-/// # Arguments
-/// * `safetensors_paths` - List of paths to safetensors files
-/// * `device` - Target device for the model
-/// 
-/// # Returns
-/// * `Ok(VarBuilder<'static>)` - Configured VarBuilder instance
+///
+/// * `Ok(VarBuilder)` - Successfully created VarBuilder with all tensors loaded and converted
 /// * `Err(String)` - Error message if VarBuilder creation fails
 pub fn build_varbuilder(
     safetensors_paths: &[String], 
@@ -185,7 +178,7 @@ pub fn build_varbuilder(
 ) -> Result<VarBuilder<'static>, String> {
     build_varbuilder_with_precision(safetensors_paths, device, None)
 }
-/// 
+///
 /// This function applies a unified dtype policy based on the device and precision policy.
 /// 
 /// # Arguments
@@ -255,7 +248,7 @@ pub fn hub_cache_safetensors(
     for fname in safetensors_files {
         match api.get(fname) {
             Ok(path) => {
-                println!("[hub] safetensors cached: {}", path.display());
+                log_hub!("safetensors cached: {}", path.display());
                 cached_paths.push(path.to_string_lossy().to_string());
             }
             Err(e) => {
@@ -297,7 +290,7 @@ pub fn validate_safetensors_files(safetensors_paths: &[String]) -> Result<(), St
         match std::fs::File::open(path_buf) {
             Ok(_) => {
                 // File can be opened, which is a basic validation
-                println!("[validate] Safetensors file is accessible: {}", path);
+                log_validate!("Safetensors file is accessible: {}", path);
             }
             Err(e) => {
                 return Err(format!("Cannot access safetensors file {}: {}", path, e));

@@ -7,3 +7,7 @@ pub mod weights;
 pub mod prompt;
 pub mod config;
 pub mod precision;
+pub mod vision;
+pub mod audio;
+pub mod multimodal;
+pub mod log;

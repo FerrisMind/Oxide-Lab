@@ -4,6 +4,7 @@
 
 use minijinja::{Environment, Value, context};
 use serde::{Deserialize, Serialize};
+use crate::{log_template, log_template_error};
 
 /// Represents a chat message with role and content
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,7 +37,7 @@ impl PromptBuilder {
         };
 
         // Log input
-        println!("[template] render: msgs={}, tpl_len={}", messages.len(), tpl.len());
+        log_template!("render: msgs={}, tpl_len={}", messages.len(), tpl.len());
         
         let mut env = Environment::new();
         env.add_template("tpl", &tpl).map_err(|e| e.to_string())?;
@@ -52,7 +53,7 @@ impl PromptBuilder {
             })
             .map_err(|e| e.to_string())?;
             
-        println!("[template] render ok, prefix=<<<{}>>>", rendered.chars().take(120).collect::<String>());
+        log_template!("render ok, prefix=<<<{}>>>", rendered.chars().take(120).collect::<String>());
         Ok(rendered)
     }
 
@@ -90,7 +91,7 @@ impl PromptBuilder {
                     return rendered;
                 },
                 Err(e) => {
-                    println!("[template] render failed: {}", e);
+                    log_template_error!("render failed: {}", e);
                     // Fall through to fallback
                 }
             }

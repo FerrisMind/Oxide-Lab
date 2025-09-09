@@ -3,7 +3,8 @@
 module.exports = [
   // Global defaults and ignores
   {
-    ignores: ['example/**', 'node_modules/**'],
+    // ESLint v9 flat config `ignores` replaces the deprecated .eslintignore
+    ignores: ['example/**', 'node_modules/**', 'build/**', 'static/**'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -26,7 +27,8 @@ module.exports = [
     },
     rules: {
       // Minimal TS rules; add more as needed
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      // Treat unused vars as warnings, but ignore names starting with `_`
+      '@typescript-eslint/no-unused-vars': ['warn', { args: 'after-used', argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true }],
     },
   },
 

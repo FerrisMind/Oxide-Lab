@@ -11,6 +11,7 @@ use crate::core::types::GenerateRequest;
 use super::{sampling::build_logits_processor_from_options, minp::MinPFilter, emit::ChunkEmitter, ctx::ContextSlice};
 use super::cancel::CANCEL_GENERATION;
 use std::sync::atomic::Ordering;
+use crate::{log_infer, log_template_error};
 
 pub async fn generate_stream_cmd(
     app: tauri::AppHandle,
@@ -50,7 +51,7 @@ fn generate_stream_impl(
 
     // Если обнаружили режим no_think, логируем это отдельно
     if is_no_think {
-        println!("[infer] no_think detected in prompt");
+        log_infer!("no_think detected in prompt");
     }
     // Дефолты семплинга не зависят от режима размышлений.
     let (def_temp, def_top_p, def_min_p, def_top_k) = (0.7_f64, Some(0.9_f64), Some(0.0_f64), Some(20_usize));
@@ -65,8 +66,8 @@ fn generate_stream_impl(
     let min_p: Option<f64> = if req.use_custom_params { req.min_p } else { def_min_p };
     // Включаем лёгкий repeat_penalty по умолчанию только когда пользовательские параметры выключены
     let repeat_penalty: Option<f32> = if req.use_custom_params { req.repeat_penalty } else { Some(1.1_f32) };
-    println!(
-        "[infer] request: prompt_len={}, temperature={:.3}, top_k={:?}, top_p={:?}, min_p={:?}, repeat_penalty={:?}, repeat_last_n={}, use_custom_params={}, no_think_detected={}",
+    log_infer!(
+        "request: prompt_len={}, temperature={:.3}, top_k={:?}, top_p={:?}, min_p={:?}, repeat_penalty={:?}, repeat_last_n={}, use_custom_params={}, no_think_detected={}",
         req.prompt.len(), temperature, top_k, top_p, min_p, repeat_penalty, req.repeat_last_n, req.use_custom_params, is_no_think
     );
     let _ = app.emit("token", String::new());
@@ -86,12 +87,12 @@ fn generate_stream_impl(
     let ctx_slice = ContextSlice::new(full_context_tokens.clone(), guard.context_length.max(1));
     let effective_context_tokens: Vec<u32> = ctx_slice.effective_context_tokens.clone();
     if ctx_slice.base_context_len != ctx_slice.encoded_len {
-        println!(
-            "[infer] context: encoded={}, using={}, truncated_by={}",
+        log_infer!(
+            "context: encoded={}, using={}, truncated_by={}",
             ctx_slice.encoded_len, ctx_slice.base_context_len, ctx_slice.encoded_len.saturating_sub(ctx_slice.base_context_len)
         );
     } else {
-        println!("[infer] context: encoded={}, using=encoded (no truncation)", ctx_slice.encoded_len);
+        log_infer!("context: encoded={}, using=encoded (no truncation)", ctx_slice.encoded_len);
     }
 
     let to_sample_soft_cap = guard.context_length.saturating_sub(ctx_slice.base_context_len).saturating_sub(1);
@@ -106,7 +107,7 @@ fn generate_stream_impl(
         repeat_last_n: req.repeat_last_n,
     };
     let (mut logits_processor, sampling_desc) = build_logits_processor_from_options(&sampling_options);
-    println!("[infer] sampling strategy: {}", sampling_desc);
+    log_infer!("sampling strategy: {}", sampling_desc);
     let mut minp = MinPFilter::new(min_p, temperature);
 
     let _vocab = tos.tokenizer().get_vocab(true);
@@ -146,7 +147,7 @@ fn generate_stream_impl(
 
     let mut all_tokens: Vec<u32> = vec![next_token];
     for index in 0..to_sample_soft_cap {
-        if CANCEL_GENERATION.load(Ordering::SeqCst) { println!("[infer] cancelled by user"); break; }
+        if CANCEL_GENERATION.load(Ordering::SeqCst) { log_infer!("cancelled by user"); break; }
         let input = Tensor::new(&[next_token], &guard.device)
             .map_err(|e| e.to_string())?
             .unsqueeze(0)
@@ -166,7 +167,7 @@ fn generate_stream_impl(
         let mut logits = logits.squeeze(0).map_err(|e| e.to_string())?;
         if let Some(rp) = repeat_penalty {
             if (rp - 1.0).abs() > f32::EPSILON {
-                if index == 0 { println!("[infer] repeat_penalty enabled: value={:.3}, last_n={}", rp, req.repeat_last_n); }
+                if index == 0 { log_infer!("repeat_penalty enabled: value={:.3}, last_n={}", rp, req.repeat_last_n); }
                 let start_at = all_tokens.len().saturating_sub(req.repeat_last_n);
                 logits = candle_transformers::utils::apply_repeat_penalty(&logits, rp, &all_tokens[start_at..]).map_err(|e| e.to_string())?;
             }
@@ -203,7 +204,7 @@ pub fn build_prompt_with_template(
         match builder.render_prompt(prompt_messages.clone()) {
             Ok(rendered) => Ok(rendered),
             Err(e) => {
-                println!("[template] render failed: {}, falling back to custom formatting", e);
+                log_template_error!("render failed: {}, falling back to custom formatting", e);
                 Ok(builder.build_fallback_prompt(prompt_messages))
             }
         }

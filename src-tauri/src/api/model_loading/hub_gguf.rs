@@ -4,6 +4,7 @@ use crate::core::state::ModelState;
 use crate::core::tokenizer::{mark_special_chat_tokens, tokenizer_from_gguf_metadata, extract_chat_template, find_chat_template_in_metadata};
 use crate::models::registry::{detect_arch, get_model_factory};
 use crate::models::common::model::ModelBackend;
+use crate::{log_hub, log_load, log_template};
 
 pub fn load_hub_gguf_model(
     guard: &mut ModelState<Box<dyn ModelBackend + Send>>,
@@ -14,7 +15,7 @@ pub fn load_hub_gguf_model(
     _device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
     let revision = revision.unwrap_or_else(|| "main".to_string());
-    println!("[hub] loading {} from {}", filename, repo_id);
+    log_hub!("loading {} from {}", filename, repo_id);
     let api = hf_hub::api::sync::Api::new().map_err(|e| e.to_string())?;
     let repo = hf_hub::Repo::with_revision(
         repo_id,
@@ -27,7 +28,7 @@ pub fn load_hub_gguf_model(
     let model_path = api
         .get(&filename)
         .map_err(|e| format!("hf_hub get {} failed: {}", filename, e))?;
-    println!("[hub] gguf cached at {}", model_path.display());
+    log_hub!("gguf cached at {}", model_path.display());
     let mut file = File::open(&model_path).map_err(|e| e.to_string())?;
     let content = gguf_file::Content::read(&mut file)
         .map_err(|e| format!("{}", e.with_path(model_path.clone())))?;
@@ -39,9 +40,9 @@ pub fn load_hub_gguf_model(
     match &chat_tpl {
         Some(tpl) => {
             let head: String = tpl.chars().take(120).collect();
-            println!("[template] detected: len={}, head=<<<{}>>>", tpl.len(), head);
+            log_template!("detected: len={}, head=<<<{}>>>", tpl.len(), head);
         }
-        None => println!("[template] not found in tokenizer.json"),
+        None => log_template!("not found in tokenizer.json"),
     }
 
     let arch = detect_arch(&content.metadata).ok_or_else(|| "Unsupported GGUF architecture".to_string())?;
@@ -66,7 +67,7 @@ pub fn load_hub_gguf_model(
     guard.context_length = ctx;
     guard.model_path = Some(model_path.to_string_lossy().to_string());
     guard.tokenizer_path = None;
-    println!("[load] hub gguf loaded, context_length={}, tokenizer_source=embedded/bpe", guard.context_length);
+    log_load!("hub gguf loaded, context_length={}, tokenizer_source=embedded/bpe", guard.context_length);
     
     Ok(())
 }

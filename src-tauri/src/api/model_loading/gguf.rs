@@ -6,6 +6,7 @@ use crate::core::state::ModelState;
 use crate::core::tokenizer::{mark_special_chat_tokens, tokenizer_from_gguf_metadata, extract_chat_template, find_chat_template_in_metadata};
 use crate::models::registry::{detect_arch, get_model_factory};
 use crate::models::common::model::ModelBackend;
+use crate::{log_load, log_template};
 
 pub fn load_gguf_model(
     guard: &mut ModelState<Box<dyn ModelBackend + Send>>,
@@ -15,7 +16,7 @@ pub fn load_gguf_model(
 ) -> Result<(), String> {
     let dev = select_device(device_pref);
     guard.device = dev;
-    println!("[load] device selected: {}", device_label(&guard.device));
+    log_load!("device selected: {}", device_label(&guard.device));
 
     let mut file = File::open(&model_path).map_err(|e| e.to_string())?;
     let content = gguf_file::Content::read(&mut file)
@@ -27,9 +28,9 @@ pub fn load_gguf_model(
     match &chat_tpl {
         Some(tpl) => {
             let head: String = tpl.chars().take(120).collect();
-            println!("[template] detected: len={}, head=<<<{}>>>", tpl.len(), head);
+            log_template!("detected: len={}, head=<<<{}>>>", tpl.len(), head);
         }
-        None => println!("[template] not found in tokenizer.json"),
+        None => log_template!("not found in tokenizer.json"),
     }
     
     let arch = detect_arch(&content.metadata).ok_or_else(|| "Unsupported GGUF architecture".to_string())?;
@@ -54,7 +55,7 @@ pub fn load_gguf_model(
     guard.context_length = ctx;
     guard.model_path = Some(model_path);
     guard.tokenizer_path = None;
-    println!("[load] gguf loaded, context_length={}, tokenizer_source=embedded/bpe", guard.context_length);
+    log_load!("gguf loaded, context_length={}, tokenizer_source=embedded/bpe", guard.context_length);
     
     Ok(())
 }

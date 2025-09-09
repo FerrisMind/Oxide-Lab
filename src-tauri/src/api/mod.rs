@@ -4,6 +4,7 @@ use crate::core::precision::PrecisionPolicy;
 use crate::generate;
 use crate::models::common::model::ModelBackend;
 use serde::{Deserialize, Serialize};
+use crate::{log_load, log_template};
 
 // Import our new modules
 mod model_loading;
@@ -39,7 +40,7 @@ pub fn unload_model(state: tauri::State<SharedState<Box<dyn ModelBackend + Send>
     guard.gguf_file = None;
     guard.tokenizer = None;
     *guard = ModelState::new(device);
-    println!("[unload] hard reset: freed model/tokenizer and reset state (preserved device)");
+    log_load!("hard reset: freed model/tokenizer and reset state (preserved device)");
     Ok(())
 }
 
@@ -50,7 +51,7 @@ pub async fn generate_stream(
     req: GenerateRequest,
 ) -> Result<(), String> {
     if let Ok(guard) = state.lock() {
-        println!("[template] present_at_generate={}", guard.chat_template.as_ref().map(|_| true).unwrap_or(false));
+        log_template!("present_at_generate={}", guard.chat_template.as_ref().map(|_| true).unwrap_or(false));
     }
     generate::generate_stream_cmd(app, state, req).await
 }

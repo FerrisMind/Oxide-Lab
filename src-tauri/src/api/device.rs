@@ -8,6 +8,7 @@ use crate::core::tokenizer::{mark_special_chat_tokens, tokenizer_from_gguf_metad
 use crate::models::qwen3::ModelWeights as Qwen3Gguf;
 use crate::models::registry::{detect_arch, ArchKind};
 use crate::models::common::model::{AnyModel, ModelBackend};
+use crate::{log_device, log_device_error, log_load};
 
 pub fn set_device(
     guard: &mut ModelState<Box<dyn ModelBackend + Send>>,
@@ -44,10 +45,10 @@ pub fn set_device(
                 match candle::Device::new_cuda(0) {
                     Ok(dev) => {
                         guard.device = dev;
-                        println!("[device] auto -> CUDA");
+                        log_device!("auto -> CUDA");
                     }
                     Err(e) => {
-                        println!("[device] CUDA init failed: {}, fallback to CPU", e);
+                        log_device_error!("CUDA init failed: {}, fallback to CPU", e);
                         guard.device = candle::Device::Cpu;
                     }
                 }
@@ -55,21 +56,21 @@ pub fn set_device(
                 match candle::Device::new_metal(0) {
                     Ok(dev) => {
                         guard.device = dev;
-                        println!("[device] auto -> Metal");
+                        log_device!("auto -> Metal");
                     }
                     Err(e) => {
-                        println!("[device] Metal init failed: {}, fallback to CPU", e);
+                        log_device_error!("Metal init failed: {}, fallback to CPU", e);
                         guard.device = candle::Device::Cpu;
                     }
                 }
             } else {
                 guard.device = candle::Device::Cpu;
-                println!("[device] auto -> CPU");
+                log_device!("auto -> CPU");
             }
         }
     }
     let label = device_label(&guard.device);
-    println!("[device] switched -> {}", label);
+    log_device!("switched -> {}", label);
     // Если модель загружена — перезагрузим её под выбранное устройство
     if guard.gguf_model.is_some() {
         // Перечитываем с диска по сохранённому пути
@@ -106,7 +107,7 @@ pub fn set_device(
         guard.gguf_file = Some(file);
         guard.tokenizer = Some(tokenizer);
         guard.chat_template = chat_tpl;
-        println!("[device] model reloaded for {}", label);
+        log_load!("model reloaded for {}", label);
     }
     Ok(())
 }
