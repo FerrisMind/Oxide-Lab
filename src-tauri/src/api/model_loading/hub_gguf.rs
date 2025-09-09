@@ -1,7 +1,5 @@
 use std::fs::File;
-use hf_hub::{api::sync::Api, Repo, RepoType};
 use candle::quantized::gguf_file;
-use crate::core::device::{device_label, select_device};
 use crate::core::state::ModelState;
 use crate::core::tokenizer::{mark_special_chat_tokens, tokenizer_from_gguf_metadata, extract_chat_template, find_chat_template_in_metadata};
 use crate::models::qwen3::ModelWeights as Qwen3Gguf;
@@ -14,17 +12,16 @@ pub fn load_hub_gguf_model(
     revision: Option<String>,
     filename: String,
     context_length: usize,
-    device_pref: Option<crate::core::types::DevicePreference>,
+    _device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
-    let dev = select_device(device_pref);
-    guard.device = dev;
-    println!("[load] device selected: {}", device_label(&guard.device));
-
-    // Инициализация HF Hub API c локальным кэшем
-    let api = Api::new().map_err(|e| e.to_string())?;
-    if !repo_id.contains('/') { return Err("repo_id должен быть в формате 'owner/repo'".into()); }
-    let rev = revision.unwrap_or_else(|| "main".to_string());
-    let repo = Repo::with_revision(repo_id.clone(), RepoType::Model, rev);
+    let revision = revision.unwrap_or_else(|| "main".to_string());
+    println!("[hub] loading {} from {}", filename, repo_id);
+    let api = hf_hub::api::sync::Api::new().map_err(|e| e.to_string())?;
+    let repo = hf_hub::Repo::with_revision(
+        repo_id,
+        hf_hub::RepoType::Model,
+        revision,
+    );
     let api = api.repo(repo);
 
     // Скачиваем GGUF-файл в кэш и открываем
@@ -62,6 +59,10 @@ pub fn load_hub_gguf_model(
             let m = Qwen3Gguf::from_gguf(content, &mut file, &guard.device, context_length, false)
                 .map_err(|e| e.to_string())?;
             AnyModel::from_qwen3(m)
+        }
+        // For all other architectures, return an error indicating they're not yet supported
+        _ => {
+            return Err(format!("Architecture {:?} detected but not yet supported. Only Qwen3 is currently supported.", arch));
         }
     };
 

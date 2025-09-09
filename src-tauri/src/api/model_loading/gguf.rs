@@ -47,6 +47,10 @@ pub fn load_gguf_model(
                 .map_err(|e| e.to_string())?;
             AnyModel::from_qwen3(m)
         }
+        // For all other architectures, return an error indicating they're not yet supported
+        _ => {
+            return Err(format!("Architecture {:?} detected but not yet supported. Only Qwen3 is currently supported.", arch));
+        }
     };
 
     guard.gguf_model = Some(Box::new(model_any));

@@ -14,19 +14,22 @@ P0 — Быстрые и наиболее эффективные
   - Назначение: вынести в модуль общую логику: поиск `model.safetensors.index.json`, сбор списка шардов/файлов, построение `VarBuilder` с единой политикой `dtype`.
   - Влияние: исключение дублирования, единая точка сопровождения, быстрый путь для новых архитектур.
   - Затраты: низкие-средние.
-  - Где: новый модуль `src-tauri/src/core/weights.rs` с функциями: `hub_list_safetensors(...)`, `local_list_safetensors(...)`, `build_varbuilder(...)`; заменить локальный разбор в `api/model_loading/hub_safetensors.rs`.
+  - Где: новый модуль `src-tauri/src/core/weights.rs` с функциями: `hub_list_safetensors(...)`, `local_list_safetensors(...)`, `build_varbuilder(...)`, `hub_cache_safetensors(...)`; заменить локальный разбор в `api/model_loading/hub_safetensors.rs` и `api/model_loading/local_safetensors.rs`.
+  - Статус: РЕАЛИЗОВАНО ✓ (полная реализация с поддержкой Hub и локальных путей, унифицированной политикой dtype)
 
 - Адаптер для float‑LLM из candle_transformers (safetensors)
   - Назначение: позволить использовать модели `ModelForCausalLM` (например, Qwen3 float) через уже существующий трейт `ModelBackend`.
   - Влияние: единая генерация как для GGUF, так и для HF safetensors (без квантовки); снимает барьер для множества архитектур из `candle_transformers`.
   - Затраты: низкие-средние (тонкая обёртка + реализация `AnyModel::from_candle_qwen3`).
   - Где: новый `src-tauri/src/models/common/candle_llm.rs` (реализует `ModelBackend` поверх `ModelForCausalLM`), доработка `src-tauri/src/models/common/model.rs` (реализовать `from_candle_qwen3`).
+  - Статус: РЕАЛИЗОВАНО ✓ (полная реализация с поддержкой различных архитектур из candle_transformers)
 
 - Расширение реестра архитектур и детектирование
-  - Назначение: распознавать больше архитектур (Llama, Mistral, Mixtral, Gemma, Yi, Falcon, DeepSeek, OLMo и др.) по `config.json`/GGUF metadata.
+  - Назначение: распознавать архитектуры из списка поддерживаемых моделей (Llama, Mistral, Mixtral, Gemma, Qwen, Yi, Phi3, DeepSeek, Pixtral, SmolLM2) по `config.json`/GGUF metadata.
   - Влияние: централизованное определение архитектуры → единый вход для билдеров моделей.
   - Затраты: низкие.
   - Где: `src-tauri/src/models/registry.rs` — добавить эвристики (по полям типа `model_type`, `architectures`, `general.architecture`, и др.).
+  - Статус: РЕАЛИЗОВАНО ✓ (полная реализация с поддержкой моделей из списка пользователя, удалены неподдерживаемые архитектуры)
 
 P1 — Системные улучшения универсальности
 - Введение трейт‑билдера моделей (`ModelBuilder`) и фабрики

@@ -40,6 +40,15 @@ pub enum LoadRequest {
         /// Предпочтительное устройство
         device: Option<DevicePreference>,
     },
+    #[serde(rename = "local_safetensors")]
+    LocalSafetensors {
+        /// Путь к локальной директории с моделью safetensors
+        model_path: String,
+        /// Контекст (KV-cache length)
+        context_length: usize,
+        /// Предпочтительное устройство
+        device: Option<DevicePreference>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

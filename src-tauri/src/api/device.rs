@@ -28,61 +28,43 @@ pub fn set_device(
         crate::core::types::DevicePreference::Cpu => {
             guard.device = candle::Device::Cpu;
         }
-        crate::core::types::DevicePreference::Auto => {
-            // Авто-выбор устройства CUDA → Metal → CPU, как в примерах Candle
-            guard.device = {
-                // Проверяем CUDA только если фича включена при компиляции
-                if cuda_is_available() {
-                    match candle::Device::new_cuda(0) {
-                        Ok(device) => {
-                            println!("[device] auto-selected CUDA");
-                            device
-                        }
-                        Err(e) => {
-                            eprintln!("[device] CUDA init failed: {}, falling back to next option", e);
-                            
-                            // Проверяем Metal только если фича включена при компиляции
-                            if metal_is_available() {
-                                match candle::Device::new_metal(0) {
-                                    Ok(device) => {
-                                        println!("[device] auto-selected Metal");
-                                        device
-                                    }
-                                    Err(e) => {
-                                        eprintln!("[device] Metal init failed: {}, falling back to CPU", e);
-                                        candle::Device::Cpu
-                                    }
-                                }
-                            } else {
-                                candle::Device::Cpu
-                            }
-                        }
-                    }
-                } else if metal_is_available() {
-                    match candle::Device::new_metal(0) {
-                        Ok(device) => {
-                            println!("[device] auto-selected Metal");
-                            device
-                        }
-                        Err(e) => {
-                            eprintln!("[device] Metal init failed: {}, falling back to CPU", e);
-                            candle::Device::Cpu
-                        }
-                    }
-                } else {
-                    println!("[device] auto-selected CPU");
-                    candle::Device::Cpu
-                }
-            };
-        }
         crate::core::types::DevicePreference::Metal => {
             match candle::Device::new_metal(0) {
-                Ok(device) => {
-                    guard.device = device;
+                Ok(dev) => {
+                    guard.device = dev;
                 }
                 Err(e) => {
                     return Err(format!("Metal init failed: {}", e));
                 }
+            }
+        }
+        crate::core::types::DevicePreference::Auto => {
+            // Авто-выбор с предпочтением CUDA → Metal → CPU
+            if cuda_is_available() {
+                match candle::Device::new_cuda(0) {
+                    Ok(dev) => {
+                        guard.device = dev;
+                        println!("[device] auto -> CUDA");
+                    }
+                    Err(e) => {
+                        println!("[device] CUDA init failed: {}, fallback to CPU", e);
+                        guard.device = candle::Device::Cpu;
+                    }
+                }
+            } else if metal_is_available() {
+                match candle::Device::new_metal(0) {
+                    Ok(dev) => {
+                        guard.device = dev;
+                        println!("[device] auto -> Metal");
+                    }
+                    Err(e) => {
+                        println!("[device] Metal init failed: {}, fallback to CPU", e);
+                        guard.device = candle::Device::Cpu;
+                    }
+                }
+            } else {
+                guard.device = candle::Device::Cpu;
+                println!("[device] auto -> CPU");
             }
         }
     }
@@ -112,6 +94,10 @@ pub fn set_device(
         let model = match arch {
             ArchKind::Qwen3 => Qwen3Gguf::from_gguf(content, &mut file, &guard.device, ctx_len, false)
                 .map_err(|e| e.to_string())?,
+            // For all other architectures, return an error indicating they're not yet supported
+            _ => {
+                return Err(format!("Architecture {:?} detected but not yet supported. Only Qwen3 is currently supported.", arch));
+            }
         };
 
         // Wrap concrete model into AnyModel and box as trait object

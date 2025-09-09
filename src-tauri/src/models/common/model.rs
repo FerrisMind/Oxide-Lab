@@ -15,9 +15,28 @@ impl AnyModel {
         AnyModel { inner: Box::new(m) }
     }
 
-    pub fn from_candle_qwen3(_m: candle_transformers::models::qwen3::ModelForCausalLM) -> Self {
-        // For now, we do not have a direct candle wrapper; implement later if needed
-        unimplemented!("from_candle_qwen3 is not implemented yet")
+    pub fn from_candle_qwen3(m: candle_transformers::models::qwen3::ModelForCausalLM) -> Self {
+        // Wrap the candle model to implement ModelBackend
+        let wrapper = crate::models::common::candle_llm::Qwen3CandleAdapter::new(m);
+        AnyModel { inner: Box::new(wrapper) }
+    }
+    
+    /// Create AnyModel from any Qwen2 model from candle_transformers
+    pub fn from_candle_qwen2(m: candle_transformers::models::qwen2::ModelForCausalLM) -> Self {
+        let wrapper = crate::models::common::candle_llm::Qwen2CandleAdapter::new(m);
+        AnyModel { inner: Box::new(wrapper) }
+    }
+    
+    /// Create AnyModel from any Llama model from candle_transformers
+    pub fn from_candle_llama(m: candle_transformers::models::llama::Llama) -> Self {
+        let wrapper = crate::models::common::candle_llm::LlamaCandleAdapter::new(m);
+        AnyModel { inner: Box::new(wrapper) }
+    }
+    
+    /// Create AnyModel from any Phi model from candle_transformers
+    pub fn from_candle_phi(m: candle_transformers::models::phi::Model) -> Self {
+        let wrapper = crate::models::common::candle_llm::PhiCandleAdapter::new(m);
+        AnyModel { inner: Box::new(wrapper) }
     }
 }
 
@@ -26,5 +45,3 @@ impl ModelBackend for AnyModel {
         self.inner.forward_layered(input, position)
     }
 }
-
-

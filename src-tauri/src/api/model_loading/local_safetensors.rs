@@ -1,15 +1,19 @@
-use hf_hub::{api::sync::Api, Repo, RepoType};
+//! Local safetensors model loader.
+//! 
+//! This module provides functionality for loading safetensors models from local paths,
+//! using the universal weights utilities.
+
 use crate::core::device::{device_label, select_device};
 use crate::core::state::ModelState;
 use crate::core::tokenizer::{mark_special_chat_tokens, extract_chat_template};
 use crate::models::common::model::ModelBackend;
 // Import our new weights module
 use crate::core::weights;
+use std::path::Path;
 
-pub fn load_hub_safetensors_model(
+pub fn load_local_safetensors_model(
     guard: &mut ModelState<Box<dyn ModelBackend + Send>>,
-    repo_id: String,
-    revision: Option<String>,
+    model_path: String,
     context_length: usize,
     device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
@@ -17,44 +21,48 @@ pub fn load_hub_safetensors_model(
     guard.device = dev;
     println!("[load] device selected: {}", device_label(&guard.device));
 
-    // Настраиваем API и репозиторий
-    let api = Api::new().map_err(|e| e.to_string())?;
-    if !repo_id.contains('/') { return Err("repo_id должен быть в формате 'owner/repo'".into()); }
-    let rev = revision.clone().unwrap_or_else(|| "main".to_string());
-    let repo = Repo::with_revision(repo_id.clone(), RepoType::Model, rev.clone());
-    let api = api.repo(repo);
+    let model_path = Path::new(&model_path);
+    if !model_path.exists() {
+        return Err(format!("Model path does not exist: {}", model_path.display()));
+    }
 
-    // Загружаем tokenizer.json (если есть)
-    let tokenizer_path = api.get("tokenizer.json").ok();
+    // Determine if it's a directory or file
+    let model_dir = if model_path.is_file() {
+        // If it's a file, assume it's in a model directory
+        model_path.parent().ok_or("Cannot determine parent directory")?
+    } else {
+        model_path
+    };
+
+    // Load tokenizer.json (если есть)
+    let tokenizer_path = model_dir.join("tokenizer.json");
     let mut tokenizer_opt = None;
-    if let Some(path) = tokenizer_path.as_ref() {
-        match std::fs::read(path) {
+    if tokenizer_path.exists() {
+        match std::fs::read(&tokenizer_path) {
             Ok(bytes) => match tokenizers::Tokenizer::from_bytes(&bytes) {
                 Ok(mut tk) => {
                     mark_special_chat_tokens(&mut tk);
                     tokenizer_opt = Some(tk);
                 }
-                Err(e) => println!("[hub] tokenizer.json parse error: {}", e),
+                Err(e) => println!("[local] tokenizer.json parse error: {}", e),
             },
-            Err(e) => println!("[hub] tokenizer.json read error: {}", e),
+            Err(e) => println!("[local] tokenizer.json read error: {}", e),
         }
     }
 
-    // Загружаем config.json (если есть) и сохраняем как строку
-    if let Ok(cfg_path) = api.get("config.json") {
-        if let Ok(bytes) = std::fs::read(&cfg_path) {
+    // Load config.json (если есть) и сохраняем как строку
+    let config_path = model_dir.join("config.json");
+    if config_path.exists() {
+        if let Ok(bytes) = std::fs::read(&config_path) {
             guard.model_config_json = Some(String::from_utf8_lossy(&bytes).to_string());
         }
     }
 
     // Используем универсальный загрузчик весов для определения списка файлов safetensors
-    let safetensors_files = weights::hub_list_safetensors(&api)?;
-    
-    // Предзагрузим все файлы в кэш (скачать/проверить наличие)
-    let cached_weight_paths = weights::hub_cache_safetensors(&api, &safetensors_files)?;
+    let safetensors_files = weights::local_list_safetensors(model_dir)?;
 
-    // Validate the downloaded safetensors files
-    weights::validate_safetensors_files(&cached_weight_paths)?;
+    // Validate the local safetensors files
+    weights::validate_safetensors_files(&safetensors_files)?;
 
     // Инициализируем tokenizer и chat_template
     let mut chat_tpl = None;
@@ -68,21 +76,21 @@ pub fn load_hub_safetensors_model(
         }
     }
 
-    // Попытаемся построить модель из safetensors используя VarBuilder как в candle-examples
-    // Если не удалось — оставляем состояние в режиме «prepared» (весa закешированы)
+    // Попытаемся построить модель из safetensors используя VarBuilder
     let mut built_model_opt: Option<Box<dyn crate::models::common::model::ModelBackend + Send>> = None;
-    if let Ok(cfg_path) = api.get("config.json") {
-        if let Ok(bytes) = std::fs::read(&cfg_path) {
+    
+    if config_path.exists() {
+        if let Ok(bytes) = std::fs::read(&config_path) {
             // Пробуем определить архитектуру по config.json
             if let Ok(_cfg_str) = String::from_utf8(bytes) {
                 // Попробуем собрать candle-модель через VarBuilder используя универсальный подход
                 let device = guard.device.clone();
                 
                 // Используем универсальный VarBuilder с единым подходом к dtype
-                let vb = weights::build_varbuilder(&cached_weight_paths, &device)?;
+                let vb = weights::build_varbuilder(&safetensors_files, &device)?;
                 
                 // Загружаем конфиг в candle_transformers
-                if let Ok(cfg_bytes) = std::fs::read(&cfg_path) {
+                if let Ok(cfg_bytes) = std::fs::read(&config_path) {
                     if let Ok(cfg_val) = serde_json::from_slice::<serde_json::Value>(&cfg_bytes) {
                         // Для Qwen3: используем candle_transformers::models::qwen3::ModelForCausalLM
                         if cfg_val.to_string().to_lowercase().contains("qwen") {
@@ -94,7 +102,7 @@ pub fn load_hub_safetensors_model(
                                         let any = crate::models::common::model::AnyModel::from_candle_qwen3(m);
                                         built_model_opt = Some(Box::new(any));
                                     }
-                                    Err(e) => println!("[hub] candle qwen3 model build failed: {}", e),
+                                    Err(e) => println!("[local] candle qwen3 model build failed: {}", e),
                                 }
                             }
                         }
@@ -109,12 +117,12 @@ pub fn load_hub_safetensors_model(
     guard.tokenizer = tokenizer_opt;
     guard.chat_template = chat_tpl;
     guard.context_length = context_length.max(1);
-    guard.model_path = None;
-    guard.tokenizer_path = tokenizer_path.map(|p| p.to_string_lossy().to_string());
-    guard.hub_repo_id = Some(repo_id);
-    guard.hub_revision = Some(rev);
-    guard.safetensors_files = Some(cached_weight_paths);
-    println!("[load] hub safetensors prepared (weights cached, tokenizer/config loaded), context_length={}", guard.context_length);
+    guard.model_path = Some(model_path.to_string_lossy().to_string());
+    guard.tokenizer_path = tokenizer_path.exists().then(|| tokenizer_path.to_string_lossy().to_string());
+    guard.hub_repo_id = None;
+    guard.hub_revision = None;
+    guard.safetensors_files = Some(safetensors_files);
+    println!("[load] local safetensors loaded, context_length={}", guard.context_length);
     
     Ok(())
 }
