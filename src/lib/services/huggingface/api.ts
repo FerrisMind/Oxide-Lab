@@ -1,8 +1,16 @@
 // API-related operations for Hugging Face service
 
-import type { HFModel, HFModelFile, HFSearchResponse } from './interfaces';
-import { buildSearchUrl } from './utils';
-import { transformApiModel, extractDescriptionFromReadme, stripFrontMatter } from './models';
+import type {
+  HFModel as _HFModel,
+  HFModelFile,
+  HFSearchResponse as _HFSearchResponse,
+} from './interfaces';
+import { buildSearchUrl as _buildSearchUrl } from './utils';
+import {
+  transformApiModel as _transformApiModel,
+  extractDescriptionFromReadme as _extractDescriptionFromReadme,
+  stripFrontMatter,
+} from './models';
 
 export class HuggingFaceAPI {
   private baseUrl = 'https://huggingface.co/api';

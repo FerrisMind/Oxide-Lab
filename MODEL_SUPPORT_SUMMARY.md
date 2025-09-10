@@ -57,6 +57,7 @@ These models are not directly supported by Candle and would require custom imple
 ## Priority Implementation Order
 
 ### Tier 1 (High Priority - Immediate Implementation)
+
 1. Llama 2/3 variants (already supported)
 2. Qwen 2/3 variants (already supported)
 3. Mistral 7B (already supported)
@@ -67,17 +68,21 @@ These models are not directly supported by Candle and would require custom imple
 8. Yi (already supported)
 
 ### Tier 2 (Medium Priority - Soon Implementation)
+
 1. CodeLlama (part of Llama support)
 2. Pixtral (multimodal, partial support exists)
 3. DeepSeek (partial support exists)
 
 ### Tier 3 (Low Priority - Future Implementation)
+
 1. All other models not listed above
 
 ## Implementation Details
 
 ### Architecture Registry
+
 The architecture registry has been updated to include only models from the user's list that are supported by Candle:
+
 - Llama
 - Mistral
 - Mixtral
@@ -92,12 +97,16 @@ The architecture registry has been updated to include only models from the user'
 All other architectures have been removed from the registry.
 
 ### Detection Logic
+
 The detection logic in `src-tauri/src/models/registry.rs` has been updated to:
+
 1. First try to detect from the `general.architecture` field in GGUF files
 2. Fall back to heuristic detection based on model names and descriptions
 
 ### Tests
+
 Comprehensive tests have been added to verify the detection logic:
+
 - Direct architecture detection from GGUF metadata
 - Fallback detection using heuristics
 - All tests are passing

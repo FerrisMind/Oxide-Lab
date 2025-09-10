@@ -4,8 +4,8 @@ DeepSeek-V3
 DeepSeek-R1-0528-Qwen3-8B
 DeepSeek-R1-Distill Llama 3
 DeepSeek-R1-Distill Llama 3.3
-DeepSeek-R1-Distill Qwen 2.5 
-Llama 4 
+DeepSeek-R1-Distill Qwen 2.5
+Llama 4
 Llama 3/3.1/3.2/3.3
 Llama 2
 CodeLlama
@@ -45,6 +45,7 @@ Yi
 # Candle Support Analysis
 
 ## Models with Native GGUF Support (High Priority - Easy Implementation)
+
 1. **Llama 2/3/3.1/3.2/3.3** - Fully supported via `quantized-llama` example
 2. **CodeLlama** - Supported as part of Llama family
 3. **Gemma 2** - Fully supported via `quantized-gemma` example
@@ -56,6 +57,7 @@ Yi
 9. **Yi** - Supported in candle_transformers
 
 ## Models with Native Safetensors Support (Medium Priority - Medium Implementation)
+
 1. **Llama 2/3/3.1/3.2/3.3** - Fully supported via `candle_transformers::models::llama`
 2. **CodeLlama** - Supported as part of Llama family
 3. **Gemma 2/3** - Fully supported via `candle_transformers::models::gemma` and `gemma2`
@@ -67,6 +69,7 @@ Yi
 9. **DeepSeek** - Partially supported via `candle_transformers::models::deepseek2`
 
 ## Models Requiring Implementation (Low Priority - High Effort)
+
 1. **gpt-oss** - OpenAI model, not directly supported by Candle (requires API access)
 2. **FLUX.1 Kontext-dev** - Not directly supported, would need custom implementation
 3. **DeepSeek-V3** - Not directly supported
@@ -92,6 +95,7 @@ Yi
 ## Priority Implementation Order
 
 ### Tier 1 (High Priority - Immediate Implementation)
+
 1. Llama 2/3 variants (already supported)
 2. Qwen 2/3 variants (already supported)
 3. Mistral 7B (already supported)
@@ -102,6 +106,7 @@ Yi
 8. Yi (already supported)
 
 ### Tier 2 (Medium Priority - Soon Implementation)
+
 1. CodeLlama (part of Llama support)
 2. Gemma 3 (requires adding support)
 3. Qwen 2.5 (similar to Qwen2)
@@ -109,5 +114,6 @@ Yi
 5. DeepSeek (partial support exists)
 
 ### Tier 3 (Low Priority - Future Implementation)
+
 1. All other models not listed above
 2. **gpt-oss** - Note that this is an OpenAI model that would require API access rather than local inference

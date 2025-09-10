@@ -49,6 +49,7 @@ fn build_varbuilder(safetensors_paths: &[String], device: &Device) -> Result<Var
 ```
 
 The function applies a unified dtype policy:
+
 - CPU: F32 for compatibility
 - CUDA/Metal: BF16 for better performance
 
@@ -82,16 +83,16 @@ use candle::Device;
 // Setup API and repository
 let api = Api::new().map_err(|e| e.to_string())?;
 let repo = api.repo(Repo::new("owner/repo".to_string(), RepoType::Model));
-  
+
 // List safetensors files
 let safetensors_files = weights::hub_list_safetensors(&repo)?;
-  
+
 // Download files to cache
 let cached_paths = weights::hub_cache_safetensors(&repo, &safetensors_files)?;
-  
+
 // Validate files
 weights::validate_safetensors_files(&cached_paths)?;
-  
+
 // Build VarBuilder
 let device = Device::Cpu;
 let vb = weights::build_varbuilder(&cached_paths, &device)?;
@@ -107,10 +108,10 @@ use std::path::Path;
 // List safetensors files
 let model_dir = Path::new("/path/to/model");
 let safetensors_files = weights::local_list_safetensors(model_dir)?;
-  
+
 // Validate files
 weights::validate_safetensors_files(&safetensors_files)?;
-  
+
 // Build VarBuilder
 let device = Device::Cpu;
 let vb = weights::build_varbuilder(&safetensors_files, &device)?;
@@ -119,6 +120,7 @@ let vb = weights::build_varbuilder(&safetensors_files, &device)?;
 ## Integration with Model Loading
 
 The weight loader is integrated with both Hub and local model loading in:
+
 - [src-tauri/src/api/model_loading/hub_safetensors.rs](file:///D:/GitHub/Oxide-Lab/src-tauri/src/api/model_loading/hub_safetensors.rs)
 - [src-tauri/src/api/model_loading/local_safetensors.rs](file:///D:/GitHub/Oxide-Lab/src-tauri/src/api/model_loading/local_safetensors.rs)
 

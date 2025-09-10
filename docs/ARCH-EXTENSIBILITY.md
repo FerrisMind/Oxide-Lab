@@ -5,6 +5,7 @@ Goal: Minimize architecture-dependent code and simplify adding new architectures
 Priority groups: P0 (high impact, low risks/costs) → P1 → P2.
 
 ## P0 — Fast and Most Effective
+
 - Auto-device selection CUDA → Metal → CPU
   - Purpose: Automatically select the best available device, as in Candle examples.
   - Impact: More predictable performance without extra configuration; unified default policy.
@@ -34,6 +35,7 @@ Priority groups: P0 (high impact, low risks/costs) → P1 → P2.
   - Status: IMPLEMENTED ✓ (full implementation with support for user's model list, unsupported architectures removed)
 
 ## P1 — System Universality Improvements
+
 - Introduction of model trait-builder (`ModelBuilder`) and factory
   - Purpose: Unify model creation from GGUF and from VarBuilder+config (`from_gguf(...)`, `from_varbuilder(...)`).
   - Impact: Minimize architectural code to local adapters; simplify connecting new architectures.
@@ -69,6 +71,7 @@ Priority groups: P0 (high impact, low risks/costs) → P1 → P2.
   - Location: (Optional) `src-tauri/src/core/error.rs`/`log.rs`; apply in loaders and generation.
 
 ## P2 — Reliability and Growth Readiness
+
 - Minimal smoke tests for key components
   - Purpose: Check `tokenizer_from_gguf_metadata`, EOS extraction, prompt builder, `ModelBackend` interface (prefill/decode steps on small inputs).
   - Impact: Reduces regressions when adding architectures; speeds up review.
@@ -104,9 +107,11 @@ Priority groups: P0 (high impact, low risks/costs) → P1 → P2.
   - Location: `src-tauri/src/models/common/model.rs` (trait and adapter extension).
 
 ## Recommended Implementation Order (by Priority)
-1) P0: auto-device; `core/weights.rs` module; float-LLM adapter; architecture detection extension.
-2) P1: `ModelBuilder`+factory; prompt builder; `SamplingOptions`; `precision` policy; unified logging.
-3) P2: smoke tests; multimodal utilities; `ModelBackend` evolution as needed.
+
+1. P0: auto-device; `core/weights.rs` module; float-LLM adapter; architecture detection extension.
+2. P1: `ModelBuilder`+factory; prompt builder; `SamplingOptions`; `precision` policy; unified logging.
+3. P2: smoke tests; multimodal utilities; `ModelBackend` evolution as needed.
 
 ## Expected Result
+
 - Adding a new architecture comes down to: (a) add detection in `registry`, (b) implement adapter/builder in `models/<arch>.rs` (GGUF and/or VarBuilder), (c) configure prompt-builder if needed. Everything else (weight loading, dtype policy, device, generation, tokenization, logs) is universal and unchanged.

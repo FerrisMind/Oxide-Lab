@@ -1,17 +1,26 @@
 import type { StreamSegment } from './render_types.js';
 import { appendThinkAwareHtml } from './think_html.js';
 import {
-  assistantBubbleEls,
+  _assistantBubbleEls,
   bubbleCtxs,
   getAssistantBubbleEl as _getAssistantBubbleEl,
   registerAssistantBubble as _registerAssistantBubble,
 } from './bubble_ctx.js';
-import { ensureMarkdownContainer, appendMarkdownText, finalizeMarkdownStreaming } from './markdown_block.js';
+import {
+  ensureMarkdownContainer,
+  appendMarkdownText,
+  finalizeMarkdownStreaming,
+} from './markdown_block.js';
 
 export const getAssistantBubbleEl = _getAssistantBubbleEl;
 export const registerAssistantBubble = _registerAssistantBubble;
 
-export function appendSegments(index: number, bubble: HTMLDivElement, segments: StreamSegment[], isStreaming: boolean = true) {
+export function appendSegments(
+  index: number,
+  bubble: HTMLDivElement,
+  segments: StreamSegment[],
+  isStreaming: boolean = true,
+) {
   let ctx = (bubbleCtxs.get(index) ?? {
     inThink: false,
     thinkPre: null,

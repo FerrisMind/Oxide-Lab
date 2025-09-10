@@ -67,7 +67,7 @@
     --streaming-text-primary: #000;
     --streaming-text-secondary: #333;
   }
-  
+
   @media (prefers-color-scheme: dark) {
     :root {
       --streaming-border-color: #fff;
@@ -86,11 +86,11 @@
   .expand-icon {
     transition: none !important;
   }
-  
+
   .progress-icon svg {
     animation: none !important;
   }
-  
+
   .progress-line {
     animation: none !important;
     transform: none !important;

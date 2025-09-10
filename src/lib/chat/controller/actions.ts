@@ -14,7 +14,7 @@ export function createActions(ctx: ChatControllerCtx) {
   const stream = createStreamListener(ctx);
 
   // Handler for attaching text files from UI
-  async function handleAttachFile(payload: { filename: string; content: string }) {
+  async function _handleAttachFile(payload: { filename: string; content: string }) {
     try {
       // Прикреплённый файл добавляем как пользовательское сообщение с меткой
       const display = `\n[Прикреплён файл: ${payload.filename}]\n\n${payload.content}`;

@@ -1,5 +1,5 @@
 import { createEventDispatcher } from 'svelte';
-import type { SearchEvent } from './filter-types';
+import type { SearchEvent as _SearchEvent } from './filter-types';
 import {
   createSearchEvent,
   toggleFormat,

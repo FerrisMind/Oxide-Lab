@@ -2,7 +2,10 @@ import { mount, unmount } from 'svelte';
 import Eye from 'phosphor-svelte/lib/Eye';
 import EyeSlash from 'phosphor-svelte/lib/EyeSlash';
 import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
-import { getCodeMirrorRenderer, cleanupRenderer } from '$lib/chat/codemirror-renderer';
+import {
+  getCodeMirrorRenderer,
+  cleanupRenderer as _cleanupRenderer,
+} from '$lib/chat/codemirror-renderer';
 import { enableExternalLinks } from '$lib/chat/external-links';
 import { StreamingCodeBlock } from '$lib/components/streaming-code';
 import type { BubbleCtx } from './bubble_ctx';
@@ -29,7 +32,7 @@ export function ensureMarkdownContainer(ctx: BubbleCtx, bubble: HTMLDivElement):
     if (ctx.mdContentEl) {
       cleanupStreamingCodeComponents(ctx.mdContentEl);
     }
-    
+
     ctx.mdEl = document.createElement('div');
     ctx.mdEl.className = 'md-stream';
 
@@ -93,53 +96,55 @@ function hasStreamingCodeBlocks(text: string): boolean {
 }
 
 // Extract code blocks for streaming
-function extractCodeBlocks(text: string): Array<{ language: string; code: string; isComplete: boolean }> {
+function extractCodeBlocks(
+  text: string,
+): Array<{ language: string; code: string; isComplete: boolean }> {
   const codeBlocks: Array<{ language: string; code: string; isComplete: boolean }> = [];
   const regex = /```(\w*)\n([\s\S]*?)(?:```|$)/g;
   let match;
-  
+
   while ((match = regex.exec(text)) !== null) {
     const language = match[1] || 'text';
     const code = match[2];
     const isComplete = match[0].endsWith('```');
-    
+
     codeBlocks.push({ language, code, isComplete });
   }
-  
+
   return codeBlocks;
 }
 
 // Replace code blocks with streaming components
-function renderMarkdownWithStreamingCode(text: string, isStreaming: boolean = false): string {
+function renderMarkdownWithStreamingCode(text: string, _isStreaming: boolean = false): string {
   if (!hasStreamingCodeBlocks(text)) {
     return renderMarkdownToSafeHtml(text);
   }
-  
+
   const codeBlocks = extractCodeBlocks(text);
   let processedText = text;
-  
+
   codeBlocks.forEach((block, index) => {
     const blockId = `streaming-code-${index}`;
-    const placeholder = `<div id="${blockId}" class="streaming-code-placeholder" data-language="${block.language}" data-code="${encodeURIComponent(block.code)}" data-streaming="${isStreaming && !block.isComplete}"></div>`;
-    
+    const placeholder = `<div id="${blockId}" class="streaming-code-placeholder" data-language="${block.language}" data-code="${encodeURIComponent(block.code)}" data-streaming="${_isStreaming && !block.isComplete}"></div>`;
+
     // Replace the code block with placeholder
     const codeBlockRegex = new RegExp(`\`\`\`${block.language}\\n[\\s\\S]*?(?:\`\`\`|$)`, 'g');
     processedText = processedText.replace(codeBlockRegex, placeholder);
   });
-  
+
   return renderMarkdownToSafeHtml(processedText);
 }
 
 // Mount streaming code components
-function mountStreamingCodeComponents(container: HTMLElement, isStreaming: boolean = false) {
+function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: boolean = false) {
   const placeholders = container.querySelectorAll('.streaming-code-placeholder');
-  
+
   placeholders.forEach((placeholder) => {
     const element = placeholder as HTMLElement;
     const language = element.dataset.language || '';
     const code = decodeURIComponent(element.dataset.code || '');
     const streaming = element.dataset.streaming === 'true';
-    
+
     try {
       const component = mount(StreamingCodeBlock, {
         target: element,
@@ -148,10 +153,10 @@ function mountStreamingCodeComponents(container: HTMLElement, isStreaming: boole
           language,
           isStreaming: streaming,
           readonly: true,
-          showLineNumbers: true
-        }
+          showLineNumbers: true,
+        },
       });
-      
+
       // Store component reference for cleanup
       (element as any).__streamingCodeComponent = component;
     } catch (error) {
@@ -165,11 +170,11 @@ function mountStreamingCodeComponents(container: HTMLElement, isStreaming: boole
 // Cleanup streaming code components
 function cleanupStreamingCodeComponents(container: HTMLElement) {
   const placeholders = container.querySelectorAll('.streaming-code-placeholder');
-  
+
   placeholders.forEach((placeholder) => {
     const element = placeholder as HTMLElement;
     const component = (element as any).__streamingCodeComponent;
-    
+
     if (component) {
       try {
         unmount(component);
@@ -181,14 +186,18 @@ function cleanupStreamingCodeComponents(container: HTMLElement) {
   });
 }
 
-export function appendMarkdownText(ctx: BubbleCtx, text: string, isStreaming: boolean = false): BubbleCtx {
+export function appendMarkdownText(
+  ctx: BubbleCtx,
+  text: string,
+  isStreaming: boolean = false,
+): BubbleCtx {
   const normalized = text.replace(/\r/g, '');
   ctx.mdText += normalized;
-  
+
   if (ctx.mdContentEl) {
     // Cleanup existing streaming components
     cleanupStreamingCodeComponents(ctx.mdContentEl);
-    
+
     // Render markdown with streaming code support
     ctx.mdContentEl.innerHTML = renderMarkdownWithStreamingCode(ctx.mdText, isStreaming);
 
@@ -209,11 +218,11 @@ export function appendMarkdownText(ctx: BubbleCtx, text: string, isStreaming: bo
       console.error('Failed to apply CodeMirror rendering:', error);
     }
   }
-  
+
   if (ctx.mdRawEl) {
     ctx.mdRawEl.textContent = ctx.mdText;
   }
-  
+
   // Показываем/скрываем кнопку-глаз только если есть элементы Markdown
   try {
     if (ctx.mdControlsEl) {
@@ -222,7 +231,7 @@ export function appendMarkdownText(ctx: BubbleCtx, text: string, isStreaming: bo
         : 'none';
     }
   } catch {}
-  
+
   ctx.lastKind = 'text';
   return ctx;
 }
@@ -232,11 +241,11 @@ export function finalizeMarkdownStreaming(ctx: BubbleCtx): BubbleCtx {
   if (ctx.mdContentEl) {
     // Update all streaming code components to completed state
     const placeholders = ctx.mdContentEl.querySelectorAll('.streaming-code-placeholder');
-    
+
     placeholders.forEach((placeholder) => {
       const element = placeholder as HTMLElement;
       const component = (element as any).__streamingCodeComponent;
-      
+
       if (component) {
         // Update component props to stop streaming
         try {
@@ -247,6 +256,6 @@ export function finalizeMarkdownStreaming(ctx: BubbleCtx): BubbleCtx {
       }
     });
   }
-  
+
   return ctx;
 }

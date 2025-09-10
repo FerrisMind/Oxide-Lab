@@ -21,7 +21,7 @@
 ```svelte
 <script>
   import { StreamingCodeBlock } from '$lib/components/streaming-code';
-  
+
   let code = '';
   let isStreaming = true;
 </script>
@@ -53,30 +53,30 @@ ctx = finalizeMarkdownStreaming(ctx);
 
 ### StreamingCodeBlock Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `code` | `string` | `''` | Содержимое кода |
-| `language` | `string` | `''` | Язык программирования |
-| `isStreaming` | `boolean` | `false` | Флаг активного стриминга |
-| `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Тема оформления |
-| `showLineNumbers` | `boolean` | `true` | Показывать номера строк |
-| `readonly` | `boolean` | `true` | Режим только для чтения |
+| Prop              | Type                          | Default  | Description              |
+| ----------------- | ----------------------------- | -------- | ------------------------ |
+| `code`            | `string`                      | `''`     | Содержимое кода          |
+| `language`        | `string`                      | `''`     | Язык программирования    |
+| `isStreaming`     | `boolean`                     | `false`  | Флаг активного стриминга |
+| `theme`           | `'light' \| 'dark' \| 'auto'` | `'auto'` | Тема оформления          |
+| `showLineNumbers` | `boolean`                     | `true`   | Показывать номера строк  |
+| `readonly`        | `boolean`                     | `true`   | Режим только для чтения  |
 
 ### События
 
-| Event | Detail | Description |
-|-------|--------|-------------|
-| `change` | `{ code: string }` | Изменение кода (только в режиме редактирования) |
-| `toggle` | `{ expanded: boolean }` | Переключение состояния разворачивания |
-| `streamingTimeout` | `void` | Timeout стриминга (30 секунд) |
+| Event              | Detail                  | Description                                     |
+| ------------------ | ----------------------- | ----------------------------------------------- |
+| `change`           | `{ code: string }`      | Изменение кода (только в режиме редактирования) |
+| `toggle`           | `{ expanded: boolean }` | Переключение состояния разворачивания           |
+| `streamingTimeout` | `void`                  | Timeout стриминга (30 секунд)                   |
 
 ### ProgressBar Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `language` | `string` | `''` | Язык программирования |
+| Prop          | Type      | Default | Description              |
+| ------------- | --------- | ------- | ------------------------ |
+| `language`    | `string`  | `''`    | Язык программирования    |
 | `isStreaming` | `boolean` | `false` | Флаг активного стриминга |
-| `isExpanded` | `boolean` | `false` | Состояние разворачивания |
+| `isExpanded`  | `boolean` | `false` | Состояние разворачивания |
 
 ## Поддерживаемые языки
 
@@ -109,11 +109,9 @@ editorView.dispatch({
   changes: {
     from: currentLength,
     to: currentLength,
-    insert: newContent
+    insert: newContent,
   },
-  effects: [
-    EditorView.scrollIntoView(newLength, { y: 'end' })
-  ]
+  effects: [EditorView.scrollIntoView(newLength, { y: 'end' })],
 });
 ```
 

@@ -350,7 +350,7 @@ function renderMarkdownContent(markdownText: string): string {
 }
 
 // Получение заголовка по умолчанию для типа callout
-function getDefaultCalloutTitle(type: string): string {
+function _getDefaultCalloutTitle(type: string): string {
   const titles: Record<string, string> = {
     NOTE: 'Note',
     TIP: 'Tip',

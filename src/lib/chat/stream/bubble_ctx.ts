@@ -1,5 +1,8 @@
 import { unmount } from 'svelte';
-import { getCodeMirrorRenderer, cleanupRenderer } from '$lib/chat/codemirror-renderer';
+import {
+  getCodeMirrorRenderer as _getCodeMirrorRenderer,
+  cleanupRenderer,
+} from '$lib/chat/codemirror-renderer';
 
 export type StreamSegment = { kind: 'html' | 'text'; data: string };
 
@@ -23,15 +26,15 @@ export type BubbleCtx = {
   codeMirrorWatching: boolean;
 };
 
-export const assistantBubbleEls = new Map<number, HTMLDivElement>();
+export const _assistantBubbleEls = new Map<number, HTMLDivElement>();
 export const bubbleCtxs = new Map<number, BubbleCtx>();
 
 export function getAssistantBubbleEl(index: number): HTMLDivElement | undefined {
-  return assistantBubbleEls.get(index);
+  return _assistantBubbleEls.get(index);
 }
 
 export function registerAssistantBubble(node: HTMLDivElement, params: { index: number }) {
-  assistantBubbleEls.set(params.index, node);
+  _assistantBubbleEls.set(params.index, node);
   bubbleCtxs.set(params.index, {
     inThink: false,
     thinkPre: null,
@@ -59,8 +62,8 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
 
   return {
     update(newParams: { index: number }) {
-      assistantBubbleEls.delete(params.index);
-      assistantBubbleEls.set(newParams.index, node);
+      _assistantBubbleEls.delete(params.index);
+      _assistantBubbleEls.set(newParams.index, node);
       const prev = bubbleCtxs.get(params.index);
       bubbleCtxs.set(
         newParams.index,
@@ -110,7 +113,7 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
         } catch {}
       }
       node.removeEventListener('scroll', onScroll as any);
-      assistantBubbleEls.delete(params.index);
+      _assistantBubbleEls.delete(params.index);
       bubbleCtxs.delete(params.index);
     },
   };

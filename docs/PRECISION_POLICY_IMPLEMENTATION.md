@@ -70,6 +70,7 @@ The precision policy feature provides users with control over the data type prec
 Users can access the precision policy settings through the "Settings" navigation item in the sidebar. The selected policy will be applied to all subsequent model loading operations.
 
 The policy affects:
+
 - Memory consumption during model loading
 - Inference performance
 - Numerical precision of results
@@ -77,6 +78,7 @@ The policy affects:
 ## Testing
 
 The implementation includes:
+
 - Unit tests for precision policy conversion functions
 - Integration tests for model loading with different policies
 - UI tests for settings page functionality

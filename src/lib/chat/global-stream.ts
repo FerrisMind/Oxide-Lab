@@ -40,7 +40,10 @@ async function startListenerIfNeeded() {
       const { segments, remainder } = streamParser.parse(streamBuf);
       streamBuf = remainder;
       if (segments.length === 0) return;
-      const onlyText = segments.filter((s) => s.kind === 'text').map((s) => s.data).join('');
+      const onlyText = segments
+        .filter((s) => s.kind === 'text')
+        .map((s) => s.data)
+        .join('');
       if (!onlyText) return;
       if (!uiActive) {
         chatState.update((s) => {

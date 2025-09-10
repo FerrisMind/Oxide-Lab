@@ -8,11 +8,11 @@ export function createStreamParser() {
   let thinkBuf = '';
   let inCode = false;
   let codeLang: string | null = null;
-  let codeBuf = '';
+  let _codeBuf = '';
   let inToolCall = false;
-  let toolCallBuf = '';
+  let _toolCallBuf = '';
   let inToolResponse = false;
-  let toolResponseBuf = '';
+  let _toolResponseBuf = '';
   let inMedia: null | 'image' | 'audio' | 'video' = null;
   let mediaBuf = '';
 
@@ -74,16 +74,16 @@ export function createStreamParser() {
         const endIdx = buf.indexOf(close, i);
         if (endIdx === -1) {
           const chunk = buf.slice(i);
-          codeBuf += chunk;
+          _codeBuf += chunk;
           segments.push({ kind: 'html', data: escapeHtml(chunk) });
           i = buf.length;
           break;
         }
         const chunk = buf.slice(i, endIdx);
-        codeBuf += chunk;
+        _codeBuf += chunk;
         segments.push({ kind: 'html', data: escapeHtml(chunk) + `</code></pre>` });
         // textOut формируем минимально, чтобы не дублировать HTML
-        codeBuf = '';
+        _codeBuf = '';
         inCode = false;
         codeLang = null;
         i = endIdx + close.length;
@@ -95,15 +95,15 @@ export function createStreamParser() {
         const endIdx = buf.indexOf('</tool_call>', i);
         if (endIdx === -1) {
           const chunk = buf.slice(i);
-          toolCallBuf += chunk;
+          _toolCallBuf += chunk;
           segments.push({ kind: 'html', data: escapeHtml(chunk) });
           i = buf.length;
           break;
         }
         const chunk = buf.slice(i, endIdx);
-        toolCallBuf += chunk;
+        _toolCallBuf += chunk;
         segments.push({ kind: 'html', data: escapeHtml(chunk) + `</pre></div>` });
-        toolCallBuf = '';
+        _toolCallBuf = '';
         inToolCall = false;
         i = endIdx + '</tool_call>'.length;
         continue;
@@ -114,15 +114,15 @@ export function createStreamParser() {
         const endIdx = buf.indexOf('</tool_response>', i);
         if (endIdx === -1) {
           const chunk = buf.slice(i);
-          toolResponseBuf += chunk;
+          _toolResponseBuf += chunk;
           segments.push({ kind: 'html', data: escapeHtml(chunk) });
           i = buf.length;
           break;
         }
         const chunk = buf.slice(i, endIdx);
-        toolResponseBuf += chunk;
+        _toolResponseBuf += chunk;
         segments.push({ kind: 'html', data: escapeHtml(chunk) + `</pre></div>` });
-        toolResponseBuf = '';
+        _toolResponseBuf = '';
         inToolResponse = false;
         i = endIdx + '</tool_response>'.length;
         continue;
@@ -262,7 +262,7 @@ export function createStreamParser() {
       // Tool calling
       if (rest.startsWith('<tool_call>')) {
         inToolCall = true;
-        toolCallBuf = '';
+        _toolCallBuf = '';
         i += '<tool_call>'.length;
         segments.push({
           kind: 'html',
@@ -272,7 +272,7 @@ export function createStreamParser() {
       }
       if (rest.startsWith('<tool_response>')) {
         inToolResponse = true;
-        toolResponseBuf = '';
+        _toolResponseBuf = '';
         i += '<tool_response>'.length;
         segments.push({
           kind: 'html',
@@ -285,7 +285,7 @@ export function createStreamParser() {
       if (rest.startsWith('<|code|>')) {
         inCode = true;
         codeLang = null;
-        codeBuf = '';
+        _codeBuf = '';
         i += '<|code|>'.length;
         const cls = codeLang ? ` class=\\"language-${escapeAttr(codeLang)}\\"` : '';
         segments.push({ kind: 'html', data: `<pre class=\"code\"><code${cls}>` });
@@ -294,7 +294,7 @@ export function createStreamParser() {
       if (rest.startsWith('<|python|>')) {
         inCode = true;
         codeLang = 'python';
-        codeBuf = '';
+        _codeBuf = '';
         i += '<|python|>'.length;
         const cls = codeLang ? ` class=\\"language-${escapeAttr(codeLang)}\\"` : '';
         segments.push({ kind: 'html', data: `<pre class=\"code\"><code${cls}>` });
@@ -368,11 +368,11 @@ export function createStreamParser() {
     thinkBuf = '';
     inCode = false;
     codeLang = null;
-    codeBuf = '';
+    _codeBuf = '';
     inToolCall = false;
-    toolCallBuf = '';
+    _toolCallBuf = '';
     inToolResponse = false;
-    toolResponseBuf = '';
+    _toolResponseBuf = '';
     inMedia = null;
     mediaBuf = '';
   }

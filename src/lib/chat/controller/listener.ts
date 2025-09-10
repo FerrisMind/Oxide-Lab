@@ -59,7 +59,7 @@ export function createStreamListener(ctx: ChatControllerCtx) {
           isStreaming = true;
           return;
         }
-        
+
         if (token === '[DONE]') {
           // End of stream
           isStreaming = false;
@@ -70,7 +70,7 @@ export function createStreamListener(ctx: ChatControllerCtx) {
           }
           return;
         }
-        
+
         streamBuf += token;
         scheduleFlush();
       });
