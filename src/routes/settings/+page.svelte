@@ -4,8 +4,8 @@
   import type { PrecisionPolicy } from '$lib/types';
 
   let currentPolicy: PrecisionPolicy = { Default: null };
-  let isLoading = true;
-  let error: string | null = null;
+  let isLoading = $state(true);
+  let error: string | null = $state(null);
 
   onMount(async () => {
     await loadPrecisionPolicy();
@@ -112,7 +112,7 @@
     <p class="settings-description">
       Выберите политику точности для загрузки и выполнения моделей. 
       Это влияет на использование памяти и производительность.<br>
-      <span style="color: var(--warning, #eab308); font-size: 0.98em;">
+      <span class="warning-text">
         <b>Внимание:</b> параметр precision влияет только на <b>не квантизованные</b> модели (float32/float16). Для квантизованных моделей (4-bit/8-bit) точность весов фиксирована, настройка влияет только на промежуточные вычисления.
       </span>
     </p>
@@ -124,8 +124,8 @@
         <div class="option-card {isPolicySelected('Default') ? 'selected' : ''}" 
              role="button"
              tabindex="0"
-             on:click={() => selectPolicy('Default')}
-             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPolicy('Default'); }}}>
+             onclick={() => selectPolicy('Default')}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPolicy('Default'); }}}>
           <h3>Стандартная</h3>
           <p>CPU: F32, GPU: BF16</p>
           <p class="option-description">Оптимальный баланс между производительностью и точностью</p>
@@ -134,8 +134,8 @@
         <div class="option-card {isPolicySelected('MemoryEfficient') ? 'selected' : ''}" 
              role="button"
              tabindex="0"
-             on:click={() => selectPolicy('MemoryEfficient')}
-             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPolicy('MemoryEfficient'); }}}>
+             onclick={() => selectPolicy('MemoryEfficient')}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPolicy('MemoryEfficient'); }}}>
           <h3>Экономия памяти</h3>
           <p>CPU: F32, GPU: F16</p>
           <p class="option-description">Меньше использование памяти, немного ниже точность</p>
@@ -144,8 +144,8 @@
         <div class="option-card {isPolicySelected('MaximumPrecision') ? 'selected' : ''}" 
              role="button"
              tabindex="0"
-             on:click={() => selectPolicy('MaximumPrecision')}
-             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPolicy('MaximumPrecision'); }}}>
+             onclick={() => selectPolicy('MaximumPrecision')}
+             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPolicy('MaximumPrecision'); }}}>
           <h3>Максимальная точность</h3>
           <p>CPU: F32, GPU: F32</p>
           <p class="option-description">Наивысшая точность, больше использование памяти</p>
@@ -164,8 +164,12 @@
 <style>
   .settings-page {
     padding: 24px;
+    width: 100%;
     max-width: 800px;
     margin: 0 auto;
+    box-sizing: border-box;
+    height: 100%;
+    overflow: auto;
   }
 
   .settings-header {
@@ -185,6 +189,8 @@
     padding: 24px;
     margin-bottom: 24px;
     border: 1px solid var(--border-color);
+    box-sizing: border-box;
+    width: 100%;
   }
 
   .settings-section h2 {
@@ -200,6 +206,11 @@
     line-height: 1.5;
   }
 
+  .warning-text {
+    color: var(--warning, #eab308);
+    font-size: 0.98em;
+  }
+
   .loading {
     text-align: center;
     padding: 24px;
@@ -208,8 +219,10 @@
 
   .precision-options {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .option-card {
@@ -219,6 +232,9 @@
     cursor: default;
     transition: all 0.2s ease;
     background: var(--panel-bg);
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
   }
 
   .option-card:hover {
@@ -236,18 +252,21 @@
     font-weight: 600;
     color: var(--text);
     margin: 0 0 8px 0;
+    word-wrap: break-word;
   }
 
   .option-card p {
     color: var(--muted);
     margin: 4px 0;
     font-size: 0.9rem;
+    word-wrap: break-word;
   }
 
   .option-description {
     color: var(--text);
     font-size: 0.95rem;
     margin-top: 12px !important;
+    word-wrap: break-word;
   }
 
   .error-message {
@@ -257,8 +276,10 @@
     border: 1px solid #fcc;
     border-radius: 6px;
     color: #c33;
+    word-wrap: break-word;
   }
 
+  /* Responsive styles */
   @media (max-width: 768px) {
     .settings-page {
       padding: 16px;
@@ -268,8 +289,70 @@
       padding: 16px;
     }
     
+    .settings-header h1 {
+      font-size: 1.5rem;
+    }
+    
+    .settings-section h2 {
+      font-size: 1.25rem;
+    }
+    
     .precision-options {
       grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    
+    .option-card {
+      padding: 16px;
+    }
+    
+    .option-card h3 {
+      font-size: 1.1rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .settings-page {
+      padding: 12px;
+    }
+    
+    .settings-section {
+      padding: 16px;
+    }
+    
+    .settings-header h1 {
+      font-size: 1.3rem;
+    }
+    
+    .settings-section h2 {
+      font-size: 1.1rem;
+    }
+    
+    .precision-options {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    
+    .option-card {
+      padding: 12px;
+    }
+    
+    .option-card h3 {
+      font-size: 1rem;
+    }
+    
+    .option-card p {
+      font-size: 0.85rem;
+    }
+  }
+  
+  @media (min-width: 1200px) {
+    .settings-page {
+      max-width: 1000px;
+    }
+    
+    .precision-options {
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     }
   }
 </style>
