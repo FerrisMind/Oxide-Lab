@@ -2,7 +2,6 @@
   import { createEventDispatcher } from "svelte";
   import DeviceSelector from "./loader/DeviceSelector.svelte";
   import ContextLengthSelector from "./loader/ContextLengthSelector.svelte";
-  import ThinkingModeToggle from "./loader/ThinkingModeToggle.svelte";
   import HubModelForm from "./loader/HubModelForm.svelte";
   import LoadingStatus from "./loader/LoadingStatus.svelte";
   
@@ -15,7 +14,7 @@
   export let hubGgufFilename = "";
   // deprecated: токенизатор берётся из GGUF
   // export let tokenizerPath = "";
-  export let enable_thinking = false;
+  // removed: enable_thinking toggle (no_think detection removed)
   export let ctx_limit_value = 4096;
   // Убран offloading: настройка слоёв на GPU удалена
   export let isLoadingModel = false;
@@ -55,7 +54,7 @@
       on:device-toggle={(e) => dispatch('device-toggle', e.detail)} 
     />
     
-    <ThinkingModeToggle bind:enable_thinking />
+    <!-- thinking toggle removed -->
     
     <ContextLengthSelector bind:ctx_limit_value />
     

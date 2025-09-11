@@ -50,7 +50,7 @@
   // Длина контекста (всегда активна и передаётся при загрузке)
   let ctx_limit_value: number = 4096;
   // Управление размышлениями (enable_thinking)
-  let enable_thinking: boolean = false;
+  // removed: enable_thinking (no_think detection removed)
   // Режим использования пользовательских параметров
   let use_custom_params: boolean = false;
   // Убран offloading: слои на GPU больше не настраиваются
@@ -85,7 +85,7 @@
     get repeat_penalty_enabled() { return repeat_penalty_enabled; }, set repeat_penalty_enabled(v) { repeat_penalty_enabled = v; },
     get repeat_penalty_value() { return repeat_penalty_value; }, set repeat_penalty_value(v) { repeat_penalty_value = v; },
     get ctx_limit_value() { return ctx_limit_value; }, set ctx_limit_value(v) { ctx_limit_value = v; },
-    get enable_thinking() { return enable_thinking; }, set enable_thinking(v) { enable_thinking = v; },
+    // enable_thinking removed from controller API
     get use_custom_params() { return use_custom_params; }, set use_custom_params(v) { use_custom_params = v; },
     get use_gpu() { return use_gpu; }, set use_gpu(v) { use_gpu = v; },
     get cuda_available() { return cuda_available; }, set cuda_available(v) { cuda_available = v; },
@@ -143,7 +143,7 @@
       repeat_penalty_enabled,
       repeat_penalty_value,
       ctx_limit_value,
-      enable_thinking,
+      // enable_thinking removed from persisted state
       use_custom_params,
 
       use_gpu,
@@ -201,7 +201,7 @@
       min_p_enabled = s.min_p_enabled; min_p_value = s.min_p_value;
       repeat_penalty_enabled = s.repeat_penalty_enabled; repeat_penalty_value = s.repeat_penalty_value;
       ctx_limit_value = s.ctx_limit_value;
-      enable_thinking = s.enable_thinking;
+      // enable_thinking removed from persisted state
       use_custom_params = s.use_custom_params;
 
       use_gpu = s.use_gpu;
@@ -271,7 +271,7 @@
     bind:repoId
     bind:revision
     bind:hubGgufFilename
-    bind:enable_thinking
+    
     bind:ctx_limit_value
     bind:isLoadingModel
     bind:isUnloadingModel
@@ -285,7 +285,7 @@
     bind:use_gpu
     bind:cuda_available
     bind:cuda_build
-    on:device-toggle={(e) => setDeviceByToggle(!!e.detail?.checked)}
+    on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
   >
     <!-- Параметры инференса -->
     {#if isLoaded}

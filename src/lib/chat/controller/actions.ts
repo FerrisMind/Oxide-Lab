@@ -213,10 +213,9 @@ export function createActions(ctx: ChatControllerCtx) {
       });
       return;
     }
-    // В UI не показываем управляющие теги — очищаем их из отображаемого сообщения
-    const textUi = text.replace(/^\s*\/(?:think|no_think)\b[ \t]*/i, '');
+    // Сохраняем явные управляющие команды (/think, /no_think) в истории как есть
     const msgs = ctx.messages;
-    msgs.push({ role: 'user', content: textUi } as any);
+    msgs.push({ role: 'user', content: text } as any);
     msgs.push({ role: 'assistant', content: '' } as any);
     ctx.messages = msgs;
     ctx.prompt = '';
@@ -238,19 +237,10 @@ export function createActions(ctx: ChatControllerCtx) {
         msgs[msgs.length - 1]?.role === 'assistant' && msgs[msgs.length - 1]?.content === ''
           ? msgs.slice(0, -1)
           : msgs.slice();
-      // В историю для промпта подмешиваем управляющий тег только для последнего пользовательского сообщения
-      for (let i = hist.length - 1; i >= 0; i--) {
-        const m: any = hist[i];
-        if (m && m.role === 'user') {
-          const hasCtrl = /^\s*\/(think|no_think)\b/i.test(m.content ?? '');
-          if (!hasCtrl) {
-            const controlPrefix = ctx.enable_thinking ? '/think ' : '/no_think ';
-            hist = hist.slice();
-            hist[i] = { ...m, content: controlPrefix + (m.content ?? '') };
-          }
-          break;
-        }
-      }
+      // Раньше здесь автоматически подмешивался префикс `/think` или `/no_think`
+      // на основе флага `enable_thinking`. Флаг удалён из UI — не изменяем
+      // историю и позволяем явным управляющим командам (/think, /no_think)
+      // оставаться только если пользователь их ввёл самостоятельно.
       const chatPrompt = await buildPromptWithChatTemplate(hist as any);
       console.log('[infer] frontend params', {
         use_custom_params: ctx.use_custom_params,

@@ -28,7 +28,6 @@ build/
 .output/
 .out/
 .turbo/
-.qoder/
 
 # Logs
 logs/

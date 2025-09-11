@@ -56,8 +56,7 @@ export type ChatControllerCtx = {
   set repeat_penalty_value(v: number);
   get ctx_limit_value(): number;
   set ctx_limit_value(v: number);
-  get enable_thinking(): boolean;
-  set enable_thinking(v: boolean);
+  // enable_thinking removed: UI no longer exposes thinking toggle
   get use_custom_params(): boolean;
   set use_custom_params(v: boolean);
   // Устройство инференса

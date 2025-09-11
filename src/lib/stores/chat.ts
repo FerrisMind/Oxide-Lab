@@ -36,7 +36,7 @@ export type ChatPersistedState = {
   repeat_penalty_enabled: boolean;
   repeat_penalty_value: number;
   ctx_limit_value: number;
-  enable_thinking: boolean;
+  // enable_thinking removed
   use_custom_params: boolean;
 
   // Device state
@@ -78,7 +78,7 @@ export function getDefaultChatState(): ChatPersistedState {
     repeat_penalty_enabled: false,
     repeat_penalty_value: 1.1,
     ctx_limit_value: 4096,
-    enable_thinking: false,
+    // enable_thinking: false,
     use_custom_params: false,
 
     use_gpu: false,

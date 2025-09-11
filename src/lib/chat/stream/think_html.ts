@@ -33,36 +33,36 @@ export function appendThinkAwareHtml(
       if (pos !== -1) {
         const before = s.slice(0, pos);
         if (before) bubble.insertAdjacentHTML('beforeend', before);
-        // Only render the think block if shouldRenderThink is true
-        if (ctx.shouldRenderThink) {
-          const openHtml = s.slice(pos, pos + openLen);
-          bubble.insertAdjacentHTML('beforeend', openHtml);
-          ctx.inThink = true;
-          const pres = bubble.getElementsByClassName('cot-pre');
-          ctx.thinkPre = pres[pres.length - 1] as HTMLElement;
-          const summaries = bubble.getElementsByTagName('summary');
-          ctx.thinkSummary = summaries[summaries.length - 1] as HTMLElement;
-          const caretHosts = bubble.getElementsByClassName('caret-host');
-          ctx.thinkCaretHost = caretHosts[caretHosts.length - 1] as HTMLElement;
-          const brainHosts = bubble.getElementsByClassName('brain-host');
-          ctx.thinkBrainHost = brainHosts[brainHosts.length - 1] as HTMLElement;
-          if (ctx.thinkSummary && ctx.thinkCaretHost) {
-            try {
-              ctx.thinkSummary.appendChild(ctx.thinkCaretHost);
-            } catch {}
-          }
-          if (ctx.thinkCaretHost) {
-            ctx.thinkCaretIcon = mount(CaretRight, {
-              target: ctx.thinkCaretHost as HTMLElement,
-              props: { size: 16, weight: 'bold' },
-            });
-          }
-          if (ctx.thinkBrainHost) {
-            ctx.thinkBrainIcon = mount(Brain, {
-              target: ctx.thinkBrainHost as HTMLElement,
-              props: { size: 16, weight: 'regular' },
-            });
-          }
+        // Парсер эмитирует открывающий HTML только для непустого блока,
+        // поэтому если мы видим открывающий HTML — вставляем его и
+        // переводим контекст в состояние inThink.
+        const openHtml = s.slice(pos, pos + openLen);
+        bubble.insertAdjacentHTML('beforeend', openHtml);
+        ctx.inThink = true;
+        const pres = bubble.getElementsByClassName('cot-pre');
+        ctx.thinkPre = pres[pres.length - 1] as HTMLElement;
+        const summaries = bubble.getElementsByTagName('summary');
+        ctx.thinkSummary = summaries[summaries.length - 1] as HTMLElement;
+        const caretHosts = bubble.getElementsByClassName('caret-host');
+        ctx.thinkCaretHost = caretHosts[caretHosts.length - 1] as HTMLElement;
+        const brainHosts = bubble.getElementsByClassName('brain-host');
+        ctx.thinkBrainHost = brainHosts[brainHosts.length - 1] as HTMLElement;
+        if (ctx.thinkSummary && ctx.thinkCaretHost) {
+          try {
+            ctx.thinkSummary.appendChild(ctx.thinkCaretHost);
+          } catch {}
+        }
+        if (ctx.thinkCaretHost) {
+          ctx.thinkCaretIcon = mount(CaretRight, {
+            target: ctx.thinkCaretHost as HTMLElement,
+            props: { size: 16, weight: 'bold' },
+          });
+        }
+        if (ctx.thinkBrainHost) {
+          ctx.thinkBrainIcon = mount(Brain, {
+            target: ctx.thinkBrainHost as HTMLElement,
+            props: { size: 16, weight: 'regular' },
+          });
         }
         s = s.slice(pos + openLen);
         continue;
@@ -72,19 +72,17 @@ export function appendThinkAwareHtml(
     } else {
       const pos = s.indexOf(THINK_CLOSE);
       if (pos !== -1) {
-        // Only process content if we should render the think block
-        if (ctx.shouldRenderThink) {
-          const inner = s.slice(0, pos);
-          if (inner && ctx.thinkPre) ctx.thinkPre.insertAdjacentHTML('beforeend', inner);
-          bubble.insertAdjacentHTML('beforeend', THINK_CLOSE);
-        }
+        // Закрывающий HTML пришёл — вставляем содержимое (если есть) и закрываем блок.
+        const inner = s.slice(0, pos);
+        if (inner && ctx.thinkPre) ctx.thinkPre.insertAdjacentHTML('beforeend', inner);
+        bubble.insertAdjacentHTML('beforeend', THINK_CLOSE);
         ctx.inThink = false;
         ctx.thinkPre = null;
-        ctx.shouldRenderThink = false; // Reset the flag for next think block
+        ctx.shouldRenderThink = false; // На всякий случай сбрасываем флаг
         s = s.slice(pos + THINK_CLOSE.length);
       } else {
-        // Only process content if we should render the think block
-        if (ctx.shouldRenderThink && ctx.thinkPre) {
+        // Внутри открытого блока без закрытия — добавляем всё во внутренний pre
+        if (ctx.thinkPre) {
           ctx.thinkPre.insertAdjacentHTML('beforeend', s);
         }
         s = '';
