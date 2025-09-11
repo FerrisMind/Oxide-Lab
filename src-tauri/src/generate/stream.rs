@@ -29,11 +29,6 @@ pub async fn generate_stream_cmd(
     res
 }
 
-pub fn detect_no_think(req: &GenerateRequest) -> bool {
-    let prompt_lower = req.prompt.to_lowercase();
-    prompt_lower.contains("<think>") && prompt_lower.contains("</think>")
-}
-
 fn generate_stream_impl(
     app: tauri::AppHandle,
     state: SharedState<Box<dyn ModelBackend + Send>>,
@@ -46,13 +41,7 @@ fn generate_stream_impl(
     };
 
     let mut tos = TokenOutputStream::new(tokenizer);
-    // Детекция наличия тега <think>...</think> в промпте. Учитываем возможные вариации регистра.
-    let is_no_think = detect_no_think(&req);
 
-    // Если обнаружили режим no_think, логируем это отдельно
-    if is_no_think {
-        log_infer!("no_think detected in prompt");
-    }
     // Дефолты семплинга не зависят от режима размышлений.
     let (def_temp, def_top_p, def_min_p, def_top_k) = (0.7_f64, Some(0.9_f64), Some(0.0_f64), Some(20_usize));
     // Вычисляем эффективные значения. Если пользовательские параметры включены,
@@ -67,8 +56,8 @@ fn generate_stream_impl(
     // Включаем лёгкий repeat_penalty по умолчанию только когда пользовательские параметры выключены
     let repeat_penalty: Option<f32> = if req.use_custom_params { req.repeat_penalty } else { Some(1.1_f32) };
     log_infer!(
-        "request: prompt_len={}, temperature={:.3}, top_k={:?}, top_p={:?}, min_p={:?}, repeat_penalty={:?}, repeat_last_n={}, use_custom_params={}, no_think_detected={}",
-        req.prompt.len(), temperature, top_k, top_p, min_p, repeat_penalty, req.repeat_last_n, req.use_custom_params, is_no_think
+        "request: prompt_len={}, temperature={:.3}, top_k={:?}, top_p={:?}, min_p={:?}, repeat_penalty={:?}, repeat_last_n={}, use_custom_params={}",
+        req.prompt.len(), temperature, top_k, top_p, min_p, repeat_penalty, req.repeat_last_n, req.use_custom_params
     );
     let _ = app.emit("token", String::new());
 
@@ -135,7 +124,7 @@ fn generate_stream_impl(
         logits_processor.sample(&logits).map_err(|e| e.to_string())?
     };
 
-    let mut emitter = ChunkEmitter::new(app.clone(), is_no_think);
+    let mut emitter = ChunkEmitter::new(app.clone());
 
     if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? { emitter.push_maybe_emit(&t); }
 

@@ -78,7 +78,6 @@ export function appendThinkAwareHtml(
         bubble.insertAdjacentHTML('beforeend', THINK_CLOSE);
         ctx.inThink = false;
         ctx.thinkPre = null;
-        ctx.shouldRenderThink = false; // На всякий случай сбрасываем флаг
         s = s.slice(pos + THINK_CLOSE.length);
       } else {
         // Внутри открытого блока без закрытия — добавляем всё во внутренний pre

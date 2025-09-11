@@ -8,7 +8,6 @@ export type StreamSegment = { kind: 'html' | 'text'; data: string };
 
 export type BubbleCtx = {
   inThink: boolean;
-  shouldRenderThink: boolean; // New: flag to determine if think block should be rendered
   thinkPre: HTMLElement | null;
   thinkSummary: HTMLElement | null;
   thinkCaretHost: HTMLElement | null;
@@ -38,7 +37,6 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
   _assistantBubbleEls.set(params.index, node);
   bubbleCtxs.set(params.index, {
     inThink: false,
-    shouldRenderThink: false, // New: flag to determine if think block should be rendered
     thinkPre: null,
     thinkSummary: null,
     thinkCaretHost: null,
@@ -71,7 +69,6 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
         newParams.index,
         prev ?? {
           inThink: false,
-          shouldRenderThink: false, // New: flag to determine if think block should be rendered
           thinkPre: null,
           thinkSummary: null,
           thinkCaretHost: null,

@@ -78,18 +78,15 @@ impl PromptBuilder {
     }
 
     /// Build a prompt with support for special control commands
-    pub fn build_prompt_with_control(&self, messages: Vec<ChatMessage>, control: Option<&str>) -> String {
+    pub fn build_prompt_with_control(&self, messages: Vec<ChatMessage>, _control: Option<&str>) -> String {
         // Try to render with template first
         if self.has_template() {
             match self.render_prompt(messages.clone()) {
-                Ok(mut rendered) => {
-                    // If no_think control is active and template doesn't contain think tags,
-                    // add empty think block
-                    if control == Some("no_think") && !rendered.contains("\u{1f60a}") {
-                        rendered += "\n\u{1f60a}\n\n\u{1f60a}\n\n";
-                    }
+                Ok(rendered) => {
+                    // Backend no longer injects empty think blocks for no_think control;
+                    // render logic for think blocks moved to frontend parser/renderer.
                     return rendered;
-                },
+                }
                 Err(e) => {
                     log_template_error!("render failed: {}", e);
                     // Fall through to fallback
