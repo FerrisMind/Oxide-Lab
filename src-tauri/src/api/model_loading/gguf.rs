@@ -40,7 +40,30 @@ pub fn load_gguf_model(
     if CANCEL_LOADING.load(Ordering::SeqCst) { emit_load_progress(app, "cancel", 28, Some("Отменено"), true, Some("cancelled")); return Err("cancelled".into()); }
 
     // Попытка достать токенизатор строго из GGUF (с расширенными эвристиками внутри tokenizer_from_gguf_metadata)
-    let mut tokenizer = tokenizer_from_gguf_metadata(&content.metadata)?;
+    let (mut tokenizer, tokenizer_source): (tokenizers::Tokenizer, &'static str) = match tokenizer_from_gguf_metadata(&content.metadata) {
+        Ok(tk) => (tk, "embedded"),
+        Err(e) => {
+            // Фоллбек: попробуем найти tokenizer.json рядом с GGUF-файлом
+            use std::path::Path;
+            let path = Path::new(&model_path);
+            let candidate = path.parent().map(|p| p.join("tokenizer.json"));
+            match candidate.filter(|p| p.exists()) {
+                Some(file_path) => {
+                    match std::fs::read(&file_path).ok().and_then(|b| tokenizers::Tokenizer::from_bytes(&b).ok()) {
+                        Some(tk) => (tk, "external_file"),
+                        None => return Err(format!(
+                            "Tokenizer not embedded in GGUF and failed to read external tokenizer.json ({}): {}",
+                            file_path.display(), e
+                        )),
+                    }
+                }
+                None => return Err(format!(
+                    "GGUF has no embedded tokenizer.json and BPE reconstruction not possible (no merges). Place tokenizer.json next to the model or load from Hub. Cause: {}",
+                    e
+                )),
+            }
+        }
+    };
     mark_special_chat_tokens(&mut tokenizer);
     let chat_tpl = extract_chat_template(&tokenizer).or_else(|| find_chat_template_in_metadata(&content.metadata));
     match &chat_tpl {
@@ -87,7 +110,7 @@ pub fn load_gguf_model(
     guard.context_length = ctx;
     guard.model_path = Some(model_path);
     guard.tokenizer_path = None;
-    log_load!("gguf loaded, context_length={}, tokenizer_source=embedded/bpe", guard.context_length);
+    log_load!("gguf loaded, context_length={}, tokenizer_source={}", guard.context_length, tokenizer_source);
     emit_load_progress(app, "finalize", 95, Some("Состояние обновлено"), false, None);
     emit_load_progress(app, "complete", 100, Some("Готово"), true, None);
     

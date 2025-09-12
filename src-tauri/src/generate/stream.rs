@@ -91,7 +91,16 @@ fn generate_stream_impl(
         log_infer!("context: encoded={}, using=encoded (no truncation)", ctx_slice.encoded_len);
     }
 
-    let to_sample_soft_cap = guard.context_length.saturating_sub(ctx_slice.base_context_len).saturating_sub(1);
+    // Effective soft cap for new tokens: honor request.max_new_tokens if provided,
+    // otherwise allow full remaining context budget.
+    let context_slack = guard
+        .context_length
+        .saturating_sub(ctx_slice.base_context_len)
+        .saturating_sub(1);
+    let to_sample_soft_cap = req
+        .max_new_tokens
+        .unwrap_or(context_slack)
+        .min(context_slack);
     let seed: u64 = req.seed.unwrap_or(42);
     let sampling_options = SamplingOptions {
         temperature,
@@ -142,6 +151,7 @@ fn generate_stream_impl(
     let eos_token = stop_ids[0];
 
     let mut all_tokens: Vec<u32> = vec![next_token];
+    let mut stop_text_buf = String::new();
     for index in 0..to_sample_soft_cap {
         if CANCEL_GENERATION.load(Ordering::SeqCst) { log_infer!("cancelled by user"); break; }
         let input = Tensor::new(&[next_token], &guard.device)
@@ -171,7 +181,21 @@ fn generate_stream_impl(
         let logits = minp.apply(&logits)?;
         next_token = logits_processor.sample(&logits).map_err(|e| e.to_string())?;
         all_tokens.push(next_token);
-        if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? { emitter.push_maybe_emit(&t); }
+        if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
+            emitter.push_maybe_emit(&t);
+            // textual stop patterns for models that emit plain tags instead of special ids
+            stop_text_buf.push_str(&t);
+            if stop_text_buf.len() > 128 { // keep small window, ensure char boundary
+                let mut cut = stop_text_buf.len() - 128;
+                while cut < stop_text_buf.len() && !stop_text_buf.is_char_boundary(cut) {
+                    cut += 1;
+                }
+                if cut > 0 && cut <= stop_text_buf.len() { let _ = stop_text_buf.drain(..cut); }
+            }
+            if stop_text_buf.contains("<end_of_turn>") || stop_text_buf.contains("<|eot_id|>") || stop_text_buf.contains("</s>") {
+                break;
+            }
+        }
         if next_token == eos_token || stop_ids.contains(&next_token) { break; }
     }
 
@@ -208,6 +232,16 @@ pub fn build_prompt_with_template_bos(
     } else {
         Ok(builder.build_fallback_prompt(prompt_messages))
     }
+}
+
+
+/// Backward-compatible helper without explicit BOS argument.
+/// Delegates to `build_prompt_with_template_bos` with `bos_token=None`.
+pub fn build_prompt_with_template(
+    chat_template: &Option<String>,
+    messages: Vec<crate::core::types::ChatMessage>,
+) -> Result<String, String> {
+    build_prompt_with_template_bos(chat_template, messages, None)
 }
 
 

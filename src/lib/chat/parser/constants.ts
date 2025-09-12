@@ -1,6 +1,8 @@
 export const KNOWN_TAG_PREFIXES = [
   '<think>',
   '</think>',
+  '<start_of_turn>',
+  '<end_of_turn>',
   '<|im_start|>',
   '<|im_end|>',
   '<|user|>',

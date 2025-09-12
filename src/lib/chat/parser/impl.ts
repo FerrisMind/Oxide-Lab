@@ -208,6 +208,17 @@ export function createStreamParser() {
       }
 
       // ChatML / роли
+      // Gemma-style turn markers
+      if (rest.startsWith('<start_of_turn>')) {
+        i += '<start_of_turn>'.length;
+        continue;
+      }
+      if (rest.startsWith('<end_of_turn>')) {
+        i += '<end_of_turn>'.length;
+        continue;
+      }
+
+      // ChatML / роли
       if (rest.startsWith('<|im_start|>')) {
         i += '<|im_start|>'.length;
         const nl = buf.indexOf('\n', i);

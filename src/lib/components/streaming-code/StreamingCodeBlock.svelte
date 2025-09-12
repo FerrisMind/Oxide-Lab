@@ -234,9 +234,10 @@
     // Ensure widget styles are present
     ensureProgressWidgetStyles();
 
-    // Insert progress widget plugin so CodeMirror renders an editor-integrated
-    // progress bar. The widget reflects the current `isStreaming` state.
-    extensions.unshift(createProgressExtension(isStreaming));
+    // Insert progress widget only while streaming; hide after completion
+    if (isStreaming) {
+      extensions.unshift(createProgressExtension(true));
+    }
 
     const state = EditorState.create({
       doc: code,
@@ -344,10 +345,9 @@
   }
 
   function handleProgressBarClick() {
-    if (!isStreaming) {
-      isExpanded = !isExpanded;
-      dispatch('toggle', { expanded: isExpanded });
-    }
+    // Allow toggling even while streaming
+    isExpanded = !isExpanded;
+    dispatch('toggle', { expanded: isExpanded });
   }
 
   function handleStreamingTimeout() {
@@ -363,14 +363,7 @@
     }, 30000);
   }
 
-  onMount(() => {
-    if (isExpanded || !isStreaming) {
-      createEditor();
-    } else if (!isExpanded && isStreaming) {
-      // show compact progress widget when collapsed and streaming
-      createCompactEditor();
-    }
-  });
+  onMount(() => { createEditor(); });
 
   function handleCopyFromProgressBar() {
     if (editorView) {
@@ -394,25 +387,9 @@
   // React to streaming state changes
   $: if (isStreaming) {
     handleStreamingTimeout();
-    if (isExpanded && editorView) {
+    if (editorView) {
       // Use incremental updates during streaming
       updateEditorIncremental(code);
-    }
-    // If collapsed, ensure compact view exists and is configured for streaming
-    if (!isExpanded) {
-      if (compactView) {
-        // Reconfigure decorations to streaming mode without recreating the view
-        try {
-          compactView.dispatch({ effects: StateEffect.reconfigure.of([createProgressExtension(isStreaming)]) });
-          console.log('[StreamingCodeBlock] reconfigured compactView -> streaming');
-        } catch (err) {
-          console.warn('[StreamingCodeBlock] failed to reconfigure compactView, recreating', err);
-          destroyCompactEditor();
-          createCompactEditor();
-        }
-      } else {
-        createCompactEditor();
-      }
     }
   } else {
     // Clear timeout when streaming stops
@@ -420,40 +397,13 @@
       clearTimeout(streamingTimeout);
       streamingTimeout = null;
     }
-    
     // Full update when streaming completes
-    if (isExpanded && editorView) {
+    if (editorView) {
       updateEditorFull(code);
-    }
-    // Keep a non-streaming compact progress widget when collapsed; try to reconfigure
-    if (!isExpanded) {
-      if (compactView) {
-        try {
-          compactView.dispatch({ effects: StateEffect.reconfigure.of([createProgressExtension(isStreaming)]) });
-          console.log('[StreamingCodeBlock] reconfigured compactView -> not streaming');
-        } catch (err) {
-          console.warn('[StreamingCodeBlock] failed to reconfigure compactView, recreating', err);
-          destroyCompactEditor();
-          createCompactEditor();
-        }
-      } else {
-        createCompactEditor();
-      }
     }
   }
 
-  // React to expansion state changes
-  $: if (isExpanded && !editorView && container) {
-    // switching to expanded: destroy compact editor and create full editor
-    destroyCompactEditor();
-    createEditor();
-  } else if (!isExpanded && editorView) {
-    // switching to collapsed: destroy full editor and create compact view if streaming
-    destroyEditor();
-    if (isStreaming) {
-      createCompactEditor();
-    }
-  }
+  // No expand/collapse: editor is always visible
 
   // React to other prop changes
   $: if (editorView && !isStreaming && code !== undefined) {
@@ -464,6 +414,14 @@
     destroyEditor();
     createEditor();
   }
+
+  // Recreate editor when streaming state changes to add/remove inline header
+  let __prevStreaming = isStreaming;
+  $: if (container && editorView && isStreaming !== __prevStreaming) {
+    destroyEditor();
+    createEditor();
+  }
+  $: __prevStreaming = isStreaming;
 
   // Track code length changes for streaming detection
   $: if (code.length !== lastCodeLength) {
@@ -490,20 +448,8 @@
   });
 </script>
 
-<div class="streaming-code-block" class:streaming={isStreaming} class:expanded={isExpanded}>
-  <!-- Compact header (ProgressBar replaced by CodeMirror in-editor widget) -->
-  <div class="streaming-compact-header">
-    <span class="streaming-lang-label">{language || 'text'}</span>
-    <div bind:this={compactContainer} class="compact-codemirror-host"></div>
-  </div>
-  
-  {#if isExpanded}
-    <div 
-      bind:this={container} 
-      class="codemirror-wrapper"
-      class:streaming-editor={isStreaming}
-    ></div>
-  {/if}
+<div class="streaming-code-block" class:streaming={isStreaming}>
+  <div bind:this={container} class="codemirror-wrapper" class:streaming-editor={isStreaming}></div>
 </div>
 
 <style>

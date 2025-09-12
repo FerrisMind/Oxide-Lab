@@ -82,14 +82,14 @@ impl PromptBuilder {
             if m.role == "user" {
                 // For user messages, strip any special command prefixes but keep content
                 let payload = m.content.trim();
-                text += &format!("{}{}\n", "\u{1f60a}user\n", payload);
+                text += &format!("{}{}\n", "user\n", payload);
             } else {
-                text += &format!("{}{}\n", "\u{1f60a}assistant\n", m.content.trim());
+                text += &format!("{}{}\n", "assistant\n", m.content.trim());
             }
         }
 
         // Open assistant for current step response
-        text += "\u{1f60a}assistant\n";
+        text += "assistant\n";
         text
     }
 

@@ -45,17 +45,25 @@ fn get_string_array(md: &HashMap<String, gguf_file::Value>, key: &str) -> Option
 }
 
 pub fn try_reconstruct_tokenizer_from_bpe(md: &HashMap<String, gguf_file::Value>) -> Option<String> {
+    // Reconstruct only if we have both tokens AND merges. Without merges it's very likely
+    // not a GPT-2 style BPE (e.g. SentencePiece/Unigram), and producing a ByteLevel/BPE
+    // tokenizer will yield completely wrong ids and gibberish output.
     let vocab_list = get_string_array(md, "tokenizer.ggml.tokens").or_else(|| get_string_array(md, "tokenizer.vocab"))?;
-    let merges_list = get_string_array(md, "tokenizer.ggml.merges")
+    let merges_list_opt = get_string_array(md, "tokenizer.ggml.merges")
         .or_else(|| get_string_array(md, "tokenizer.ggml.bpe_merges"))
-        .or_else(|| get_string_array(md, "tokenizer.merges"))
-        .unwrap_or_default();
+        .or_else(|| get_string_array(md, "tokenizer.merges"));
+    let merges_list = match merges_list_opt {
+        Some(m) if !m.is_empty() => m,
+        _ => return None, // do not attempt incorrect BPE reconstruction
+    };
+
     let mut vocab_obj: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
     for (i, tok) in vocab_list.iter().enumerate() { vocab_obj.insert(tok.clone(), serde_json::json!(i as u32)); }
     let json = serde_json::json!({
         "version": "1.0",
-        "pre_tokenizer": { "type": "ByteLevel", "add_prefix_space": false, "trim_offsets": true },
-        "decoder": { "type": "ByteLevel", "add_prefix_space": false, "trim_offsets": true },
+        // ByteLevel with add_prefix_space=true better matches GPT-2 style BPE vocabs
+        "pre_tokenizer": { "type": "ByteLevel", "add_prefix_space": true, "trim_offsets": true },
+        "decoder": { "type": "ByteLevel", "add_prefix_space": true, "trim_offsets": true },
         "model": { "type": "BPE", "vocab": vocab_obj, "merges": merges_list },
     });
     Some(json.to_string())
@@ -116,7 +124,14 @@ pub fn extract_eos_ids(tokenizer: &Tokenizer) -> Vec<u32> {
                         if let Some(tok) = content {
                             if let Some(&id) = vocab.get(tok) {
                                 // Грубая эвристика: role=="eos" либо имя/контент содержит признаки EOS
-                                if role == Some("eos") || tok.eq_ignore_ascii_case("</s>") || tok.contains("eot") || tok.contains("im_end") || tok.contains("endoftext") {
+                                if role == Some("eos")
+                                    || tok.eq_ignore_ascii_case("</s>")
+                                    || tok.eq_ignore_ascii_case("<eos>")
+                                    || tok.contains("end_of_turn")
+                                    || tok.contains("eot")
+                                    || tok.contains("im_end")
+                                    || tok.contains("endoftext")
+                                {
                                     ids.push(id);
                                 }
                             }
@@ -128,7 +143,10 @@ pub fn extract_eos_ids(tokenizer: &Tokenizer) -> Vec<u32> {
     }
     // 2) Резервные эвристики по известным строкам
     let vocab = tokenizer.get_vocab(true);
-    for key in ["<|im_end|>", "<|eot_id|>", "<|endoftext|>", "</s>", "<s>"] {
+    for key in [
+        "<|im_end|>", "<|eot_id|>", "<|endoftext|>", "</s>",
+        "<end_of_turn>", "<eos>",
+    ] {
         if let Some(&id) = vocab.get(key) { if !ids.contains(&id) { ids.push(id); } }
     }
     ids

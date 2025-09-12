@@ -125,12 +125,9 @@ function renderMarkdownWithStreamingCode(text: string, _isStreaming: boolean = f
 
   codeBlocks.forEach((block, index) => {
     const blockId = `streaming-code-${index}`;
-    // Placeholder structure: header with language label and mount point for Svelte component
+    // Minimal placeholder: only mount point for Svelte component (no external header/labels)
     const placeholder = `
 <div id="${blockId}" class="streaming-code-placeholder" data-language="${block.language}" data-code="${encodeURIComponent(block.code)}" data-streaming="${_isStreaming && !block.isComplete}">
-  <div class="streaming-code-header">
-    <span class="streaming-code-lang">${block.language || 'text'}</span>
-  </div>
   <div class="streaming-code-mount"></div>
 </div>`;
 
@@ -173,8 +170,8 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
       (element as any).__streamingCodeComponent = component;
     } catch (error) {
       console.error('Failed to mount StreamingCodeBlock:', error);
-      // Fallback to regular code block
-      element.innerHTML = `<div class="streaming-code-header"><span class="streaming-code-lang">${language || 'text'}</span></div><pre><code class="language-${language}">${code}</code></pre>`;
+      // Fallback to regular code block without external header/labels
+      element.innerHTML = `<pre><code class="language-${language}">${code}</code></pre>`;
     }
   });
 }

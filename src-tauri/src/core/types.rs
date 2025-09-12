@@ -62,6 +62,8 @@ pub struct GenerateRequest {
     pub prompt: String,
     #[serde(default)]
     pub messages: Option<Vec<ChatMessage>>,
+    #[serde(default)]
+    pub max_new_tokens: Option<usize>,
     pub temperature: Option<f64>,
     pub top_p: Option<f64>,
     pub top_k: Option<usize>,
