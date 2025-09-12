@@ -4,6 +4,7 @@
   import ContextLengthSelector from "./loader/ContextLengthSelector.svelte";
   import HubModelForm from "./loader/HubModelForm.svelte";
   import LoadingStatus from "./loader/LoadingStatus.svelte";
+  import LoadButton from "./loader/LoadButton.svelte";
   
   const dispatch = createEventDispatcher();
   
@@ -116,4 +117,38 @@
     />
   {/if}
   <slot />
+
+  <!-- Main action button (Load/Unload/Cancel) centered -->
+  {#if typeof onMainAction === 'function'}
+    <div class="main-action-row">
+      <LoadButton
+        {isLoadingModel}
+        {isUnloadingModel}
+        {isCancelling}
+        {isLoaded}
+        {busy}
+        {loadingStage}
+        {loadingProgress}
+        {unloadingProgress}
+        {repoId}
+        {hubGgufFilename}
+        {format}
+        onMainAction={onMainAction}
+      />
+    </div>
+  {/if}
 </section>
+
+<style>
+  .main-action-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 6px;
+  }
+  /* Ensure button is optically centered and not baseline-shifted */
+  .main-action-row :global(button.primary) {
+    align-self: center;
+    line-height: 1;
+  }
+</style>

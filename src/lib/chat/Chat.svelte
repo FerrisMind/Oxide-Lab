@@ -109,6 +109,22 @@
 
   const stopGenerate = controller.stopGenerate;
 
+  function mainAction() {
+    try {
+      if (isLoadingModel && typeof cancelLoading === 'function') {
+        return cancelLoading();
+      }
+      if (isLoaded && typeof unloadGGUF === 'function') {
+        return unloadGGUF();
+      }
+      if (typeof loadGGUF === 'function') {
+        return loadGGUF();
+      }
+    } catch (e) {
+      console.error('mainAction error', e);
+    }
+  }
+
   onDestroy(() => {
     chatUiMounted.set(false);
     // Persist chat/model state across navigation
@@ -285,6 +301,7 @@
     bind:use_gpu
     bind:cuda_available
     bind:cuda_build
+    onMainAction={mainAction}
     on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
   >
     <!-- Параметры инференса -->
