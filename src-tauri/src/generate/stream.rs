@@ -4,7 +4,7 @@ use tauri::Emitter;
 use crate::core::state::SharedState;
 use crate::models::common::model::ModelBackend;
 use crate::core::token_output_stream::TokenOutputStream;
-use crate::core::tokenizer::extract_eos_ids;
+use crate::core::tokenizer::{extract_eos_ids, extract_bos_token_str};
 use crate::core::prompt::PromptBuilder;
 use crate::core::config::SamplingOptions;
 use crate::core::types::GenerateRequest;
@@ -40,6 +40,8 @@ fn generate_stream_impl(
         _ => return Err("Model/tokenizer is not loaded".into()),
     };
 
+    // Extract BOS token before moving tokenizer into the stream helper
+    let bos_opt = extract_bos_token_str(&tokenizer);
     let mut tos = TokenOutputStream::new(tokenizer);
 
     // Дефолты семплинга не зависят от режима размышлений.
@@ -63,8 +65,8 @@ fn generate_stream_impl(
 
     // Use chat messages if provided, otherwise use the prompt directly
     let prompt = if let Some(messages) = req.messages {
-        // Build prompt using chat template
-        build_prompt_with_template(&guard.chat_template, messages)?
+        // Build prompt using chat template (inject bos if template expects it)
+        build_prompt_with_template_bos(&guard.chat_template, messages, bos_opt)?
     } else {
         req.prompt
     };
@@ -73,6 +75,11 @@ fn generate_stream_impl(
         .encode(prompt, true)
         .map_err(|e| e.to_string())?;
     let full_context_tokens = tokens.get_ids().to_vec();
+    {
+        let mut sample: Vec<u32> = full_context_tokens.iter().copied().take(16).collect();
+        if sample.len() < full_context_tokens.len() { sample.push(0xFFFF_FFFF); }
+        log_infer!("encoded token ids (first ~16): {:?}", sample);
+    }
     let ctx_slice = ContextSlice::new(full_context_tokens.clone(), guard.context_length.max(1));
     let effective_context_tokens: Vec<u32> = ctx_slice.effective_context_tokens.clone();
     if ctx_slice.base_context_len != ctx_slice.encoded_len {
@@ -174,11 +181,12 @@ fn generate_stream_impl(
 }
 
 /// Build a prompt using the prompt builder with chat template support
-pub fn build_prompt_with_template(
+pub fn build_prompt_with_template_bos(
     chat_template: &Option<String>,
     messages: Vec<crate::core::types::ChatMessage>,
+    bos_token: Option<String>,
 ) -> Result<String, String> {
-    let builder = PromptBuilder::new(chat_template.clone());
+    let builder = PromptBuilder::new(chat_template.clone()).with_bos(bos_token);
     
     // Convert core::types::ChatMessage to core::prompt::ChatMessage
     let prompt_messages: Vec<crate::core::prompt::ChatMessage> = messages.into_iter().map(|msg| {

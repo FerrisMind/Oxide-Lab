@@ -125,10 +125,18 @@ function renderMarkdownWithStreamingCode(text: string, _isStreaming: boolean = f
 
   codeBlocks.forEach((block, index) => {
     const blockId = `streaming-code-${index}`;
-    const placeholder = `<div id="${blockId}" class="streaming-code-placeholder" data-language="${block.language}" data-code="${encodeURIComponent(block.code)}" data-streaming="${_isStreaming && !block.isComplete}"></div>`;
+    // Placeholder structure: header with language label and mount point for Svelte component
+    const placeholder = `
+<div id="${blockId}" class="streaming-code-placeholder" data-language="${block.language}" data-code="${encodeURIComponent(block.code)}" data-streaming="${_isStreaming && !block.isComplete}">
+  <div class="streaming-code-header">
+    <span class="streaming-code-lang">${block.language || 'text'}</span>
+  </div>
+  <div class="streaming-code-mount"></div>
+</div>`;
 
-    // Replace the code block with placeholder
-    const codeBlockRegex = new RegExp(`\`\`\`${block.language}\\n[\\s\\S]*?(?:\`\`\`|$)`, 'g');
+    // Replace the code block with placeholder (match fences loosely to keep streaming segments)
+    // Use string concatenation to avoid embedding backticks in template literal
+    const codeBlockRegex = new RegExp('```' + block.language + '\\n[\\s\\S]*?(?:```|$)', 'g');
     processedText = processedText.replace(codeBlockRegex, placeholder);
   });
 
@@ -146,8 +154,10 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
     const streaming = element.dataset.streaming === 'true';
 
     try {
+      // Mount Svelte component into the mount node if present, otherwise mount into element
+      const mountTarget = element.querySelector('.streaming-code-mount') ?? element;
       const component = mount(StreamingCodeBlock, {
-        target: element,
+        target: mountTarget as Element,
         props: {
           code,
           language,
@@ -157,12 +167,14 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
         },
       });
 
+      // No copy button wiring here — streaming handled via CodeMirror in component
+
       // Store component reference for cleanup
       (element as any).__streamingCodeComponent = component;
     } catch (error) {
       console.error('Failed to mount StreamingCodeBlock:', error);
       // Fallback to regular code block
-      element.innerHTML = `<pre><code class="language-${language}">${code}</code></pre>`;
+      element.innerHTML = `<div class="streaming-code-header"><span class="streaming-code-lang">${language || 'text'}</span></div><pre><code class="language-${language}">${code}</code></pre>`;
     }
   });
 }

@@ -38,6 +38,7 @@ pub fn run() {
             api::greet,
             api::load_model,
             api::unload_model,
+            api::cancel_model_loading,
             api::generate_stream,
             api::cancel_generation,
             api::set_device,
@@ -48,6 +49,8 @@ pub fn run() {
             api::probe_cuda,
             api::get_precision_policy,
             api::set_precision_policy,
+            api::get_precision,
+            api::set_precision,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -16,12 +16,19 @@ pub struct ChatMessage {
 /// Prompt builder for creating prompts from chat templates
 pub struct PromptBuilder {
     chat_template: Option<String>,
+    bos_token: Option<String>,
 }
 
 impl PromptBuilder {
     /// Create a new prompt builder with an optional chat template
     pub fn new(chat_template: Option<String>) -> Self {
-        Self { chat_template }
+        Self { chat_template, bos_token: None }
+    }
+
+    /// Create with explicit bos token variable (for templates that reference it)
+    pub fn with_bos(mut self, bos_token: Option<String>) -> Self {
+        self.bos_token = bos_token;
+        self
     }
 
     /// Check if a chat template is available
@@ -45,12 +52,21 @@ impl PromptBuilder {
         
         // Create minijinja context
         let msgs_val: Vec<Value> = messages.iter().map(Value::from_serialize).collect();
-        let rendered = tmpl
-            .render(context! { 
-                messages => msgs_val, 
-                add_generation_prompt => true, 
-                tools => Vec::<String>::new() 
+        // Inject optional bos_token if provided (needed by many LLaMA/Gemma templates)
+        let rendered = if let Some(bos) = &self.bos_token {
+            tmpl.render(context! {
+                messages => msgs_val,
+                add_generation_prompt => true,
+                tools => Vec::<String>::new(),
+                bos_token => bos,
             })
+        } else {
+            tmpl.render(context! {
+                messages => msgs_val,
+                add_generation_prompt => true,
+                tools => Vec::<String>::new(),
+            })
+        }
             .map_err(|e| e.to_string())?;
             
         log_template!("render ok, prefix=<<<{}>>>", rendered.chars().take(120).collect::<String>());

@@ -1,10 +1,12 @@
 use crate::core::state::{ModelState, SharedState};
 use crate::core::types::{DevicePreference, GenerateRequest, LoadRequest};
-use crate::core::precision::PrecisionPolicy;
+use crate::core::precision::{PrecisionPolicy, Precision};
 use crate::generate;
 use crate::models::common::model::ModelBackend;
 use serde::{Deserialize, Serialize};
 use crate::{log_load, log_template};
+use crate::generate::cancel::{CANCEL_LOADING, cancel_model_loading_cmd};
+use candle::Device;
 
 // Import our new modules
 mod model_loading;
@@ -13,33 +15,50 @@ mod device;
 mod template;
 
 #[tauri::command]
-pub fn load_model(state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>, req: LoadRequest) -> Result<(), String> {
+pub fn load_model(app: tauri::AppHandle, state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>, req: LoadRequest) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
+    // Сбрасываем флаг отмены перед новой загрузкой
+    CANCEL_LOADING.store(false, std::sync::atomic::Ordering::SeqCst);
 
-    match req {
+    let res = match req {
         LoadRequest::Gguf { model_path, tokenizer_path: _tokenizer_path, context_length, device } => {
-            gguf::load_gguf_model(&mut guard, model_path, context_length, device)
+            gguf::load_gguf_model(&app, &mut guard, model_path, context_length, device)
         }
         LoadRequest::HubGguf { repo_id, revision, filename, context_length, device } => {
-            hub_gguf::load_hub_gguf_model(&mut guard, repo_id, revision, filename, context_length, device)
+            hub_gguf::load_hub_gguf_model(&app, &mut guard, repo_id, revision, filename, context_length, device)
         }
         LoadRequest::HubSafetensors { repo_id, revision, context_length, device } => {
-            safetensors::load_hub_safetensors_model(&mut guard, repo_id, revision, context_length, device)
+            safetensors::load_hub_safetensors_model(&app, &mut guard, repo_id, revision, context_length, device)
         }
         LoadRequest::LocalSafetensors { model_path, context_length, device } => {
-            safetensors::load_local_safetensors_model(&mut guard, model_path, context_length, device)
+            safetensors::load_local_safetensors_model(&app, &mut guard, model_path, context_length, device)
         }
+    };
+    if let Err(ref e) = res {
+        // финальный сигнал об ошибке
+        crate::api::model_loading::emit_load_progress(&app, "error", 0, None, true, Some(e));
     }
+    res
 }
 
 #[tauri::command]
-pub fn unload_model(state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>) -> Result<(), String> {
+pub fn cancel_model_loading() -> Result<(), String> {
+    cancel_model_loading_cmd()
+}
+
+#[tauri::command]
+pub fn unload_model(app: tauri::AppHandle, state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     let device = guard.device.clone();
+    // Эмиссия упрощённого прогресса выгрузки
+    crate::api::model_loading::emit_load_progress(&app, "unload_start", 0, None, false, None);
     guard.gguf_model = None;
+    crate::api::model_loading::emit_load_progress(&app, "unload_model", 40, None, false, None);
     guard.gguf_file = None;
     guard.tokenizer = None;
+    crate::api::model_loading::emit_load_progress(&app, "unload_tokenizer", 70, None, false, None);
     *guard = ModelState::new(device);
+    crate::api::model_loading::emit_load_progress(&app, "unload_complete", 100, Some("Выгружено"), true, None);
     log_load!("hard reset: freed model/tokenizer and reset state (preserved device)");
     Ok(())
 }
@@ -143,4 +162,35 @@ pub fn set_precision_policy(state: tauri::State<'_, SharedState<Box<dyn ModelBac
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     guard.precision_policy = policy;
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_precision(app: tauri::AppHandle, _state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<Precision, String> {
+    let precision = ModelState::<Box<dyn ModelBackend + Send>>::load_precision(&app).map_err(|e| e.to_string())?;
+    Ok(precision)
+}
+
+#[tauri::command]
+pub fn set_precision(app: tauri::AppHandle, state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>, precision_str: String) -> Result<(), String> {
+    let precision = match precision_str.as_str() {
+        "f16" => Precision::F16,
+        "f32" => Precision::F32,
+        "int8" => Precision::Int8,
+        _ => return Err("Invalid precision: must be 'f16', 'f32', or 'int8'".to_string()),
+    };
+
+    // Hardware check: Int8 only on CPU for simplicity
+    let guard = state.lock().map_err(|e| e.to_string())?;
+    if matches!(precision, Precision::Int8) && !matches!(guard.device, Device::Cpu) {
+        return Err("Int8 precision only supported on CPU".to_string());
+    }
+    drop(guard);
+
+    let mut guard = state.lock().map_err(|e| e.to_string())?;
+    guard.precision_policy = match precision {
+        Precision::F16 => PrecisionPolicy::MemoryEfficient,
+        Precision::F32 => PrecisionPolicy::Default,
+        Precision::Int8 => PrecisionPolicy::MemoryEfficient,
+    };
+    guard.save_precision(&app).map_err(|e| e.to_string())
 }

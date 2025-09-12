@@ -11,6 +11,36 @@
   export let loadingProgress = 0;
   export let errorText = "";
   export let format: "gguf" | "hub_gguf" | "hub_safetensors" = "gguf";
+
+  function stageText(stage: string): string {
+    switch (stage) {
+      case 'start': return 'Инициализация загрузки...';
+      case 'device': return 'Выбор устройства...';
+      case 'open_file': return 'Открытие файла модели...';
+      case 'read_header': return 'Чтение метаданных GGUF...';
+      case 'tokenizer': return 'Инициализация токенизатора...';
+      case 'detect_arch': return 'Определение архитектуры...';
+      case 'build_model': return 'Создание модели...';
+      case 'build_model_done': return 'Модель создана';
+      case 'hub_get': return 'Загрузка из HF Hub...';
+      case 'hub_list': return 'Чтение списка весов...';
+      case 'hub_cache': return 'Кэширование весов...';
+      case 'scan_weights': return 'Проверка весов...';
+      case 'config': return 'Чтение config.json...';
+      case 'finalize': return 'Завершение...';
+      case 'complete': return 'Готово';
+      case 'model': return 'Загрузка модели...';
+      case 'cancelling': return 'Отмена загрузки...';
+      case 'cancel': return 'Загрузка отменена';
+      case 'error': return 'Ошибка при загрузке';
+      case 'unload_start': return 'Начало выгрузки...';
+      case 'unload_model': return 'Освобождение модели...';
+      case 'unload_tokenizer': return 'Освобождение токенизатора...';
+      case 'unload_complete': return 'Выгружено';
+      default:
+        return stage ? `Этап: ${stage}` : '';
+    }
+  }
 </script>
 
 {#if isLoadingModel}
@@ -18,24 +48,10 @@
     <div class="loading-stage">
       {#if isCancelling}
         <span class="stage-icon"><Stop size={16} weight="bold" /></span> Отмена загрузки...
-      {:else if loadingStage === "model"}
-        <span class="stage-icon"><Package size={16} weight="bold" /></span> 
-        {#if format === "hub_gguf"}
-          Загрузка GGUF из HF Hub...
-        {:else if format === "hub_safetensors"}
-          Кэширование файлов safetensors и метаданных...
-        {:else}
-          Загрузка модели GGUF в память...
-        {/if}
-      {:else if loadingStage === "tokenizer"}
-        <span class="stage-icon"><TextT size={16} weight="bold" /></span> 
-        {#if format === "hub_safetensors"}
-          Инициализация токенизатора...
-        {:else}
-          Инициализация токенизатора из GGUF...
-        {/if}
       {:else if loadingStage === "complete"}
         <span class="stage-icon"><CheckCircle size={16} weight="bold" /></span> Модель и токенизатор готовы к работе!
+      {:else}
+        <span class="stage-icon"><Package size={16} weight="bold" /></span> {stageText(loadingStage)}
       {/if}
     </div>
     {#if !isCancelling}

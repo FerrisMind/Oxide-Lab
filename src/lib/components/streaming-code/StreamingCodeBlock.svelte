@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-  import { EditorView, keymap, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
+  import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
   import { EditorState, StateEffect } from '@codemirror/state';
   import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
   import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
@@ -15,7 +15,7 @@
   import { xml } from '@codemirror/lang-xml';
   import { sql } from '@codemirror/lang-sql';
   import { oneDark } from '@codemirror/theme-one-dark';
-  import ProgressBar from './ProgressBar.svelte';
+  // CodeMirror widget utilities for in-editor progress UI
 
   export let code: string = '';
   export let language: string = '';
@@ -27,10 +27,94 @@
   const dispatch = createEventDispatcher();
   
   let container: HTMLElement;
+  let compactContainer: HTMLElement | null = null;
   let editorView: EditorView | null = null;
+  let compactView: EditorView | null = null;
   let isExpanded: boolean = false;
   let lastCodeLength: number = 0;
   let streamingTimeout: number | null = null;
+
+  // Top-level widget class (moved out of factory to avoid Svelte nested-class warning)
+  class ProgressWidget extends WidgetType {
+    streaming: boolean;
+    constructor(streaming: boolean) { super(); this.streaming = streaming; }
+    toDOM() {
+      const root = document.createElement('div');
+      root.className = 'cm-progress-widget';
+
+      const content = document.createElement('div');
+      content.className = 'cm-progress-content';
+
+      const langSpan = document.createElement('span');
+      langSpan.className = 'cm-progress-lang';
+      langSpan.textContent = language || 'text';
+
+      const statusSpan = document.createElement('span');
+      statusSpan.className = 'cm-progress-status';
+      statusSpan.textContent = this.streaming ? 'Выполняется' : 'Готово';
+
+      content.appendChild(langSpan);
+      content.appendChild(statusSpan);
+
+      if (this.streaming) {
+        const bar = document.createElement('div');
+        bar.className = 'cm-progress-bar';
+        const line = document.createElement('div');
+        line.className = 'cm-progress-line';
+        bar.appendChild(line);
+        content.appendChild(bar);
+      }
+
+      root.appendChild(content);
+      return root;
+    }
+    ignoreEvent() { return false; }
+  }
+
+  // Create a CodeMirror widget extension that renders a progress bar at the
+  // top of the editor. We recreate the editor when `isStreaming` changes to
+  // apply the appropriate decoration.
+  function createProgressExtension(streaming: boolean) {
+    const plugin = ViewPlugin.fromClass(
+      class {
+        view: EditorView;
+        decorations: any;
+        constructor(view: EditorView) {
+          this.view = view;
+          this.decorations = Decoration.set([
+            Decoration.widget({ widget: new ProgressWidget(streaming), side: -1 }).range(0),
+          ]);
+        }
+        update(_update: ViewUpdate) {
+          // no-op; widget will be recreated when editor is recreated
+        }
+        destroy() {
+          // cleanup is automatic for widgets; nothing extra required
+        }
+      },
+      { decorations: (v: any) => v.decorations }
+    );
+
+    return plugin;
+  }
+
+  // CSS for the inline widget is added to the document head so the widget
+  // looks consistent with existing UI. We only inject once.
+  function ensureProgressWidgetStyles() {
+    if (document.getElementById('cm-progress-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'cm-progress-styles';
+    style.textContent = `
+    .cm-progress-widget { padding: 8px 12px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color); }
+    .cm-progress-content { display:flex; align-items:center; gap:12px; }
+    .cm-progress-lang { font-weight:600; color:var(--text-primary); }
+    .cm-progress-status { font-size:12px; color:var(--text-secondary); }
+    .cm-progress-bar { flex:1; height:4px; background:var(--border-color); border-radius:2px; overflow:hidden; }
+    .cm-progress-line { height:100%; background:var(--accent-color); width:100%; animation:progress-slide 2s linear infinite; }
+    @keyframes progress-slide { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
+    `;
+    document.head.appendChild(style);
+  }
 
   // Language mappings
   const languageExtensions: Record<string, () => any> = {
@@ -147,6 +231,13 @@
       }));
     }
 
+    // Ensure widget styles are present
+    ensureProgressWidgetStyles();
+
+    // Insert progress widget plugin so CodeMirror renders an editor-integrated
+    // progress bar. The widget reflects the current `isStreaming` state.
+    extensions.unshift(createProgressExtension(isStreaming));
+
     const state = EditorState.create({
       doc: code,
       extensions,
@@ -168,6 +259,31 @@
       editorView.dispatch({
         effects: StateEffect.reconfigure.of([...extensions, updateListener])
       });
+    }
+  }
+
+  // Create a minimal, compact CodeMirror instance inside the compact header
+  // to render the progress widget when the block is collapsed.
+  function createCompactEditor() {
+    if (!compactContainer) return;
+    ensureProgressWidgetStyles();
+
+    const extensions = [
+      createProgressExtension(isStreaming),
+      EditorView.theme({ '&': { padding: '0', border: 'none', background: 'transparent' } }),
+      EditorState.readOnly.of(true),
+    ];
+
+    const state = EditorState.create({ doc: '', extensions });
+    compactView = new EditorView({ state, parent: compactContainer });
+    console.log('[StreamingCodeBlock] createCompactEditor: isStreaming=', isStreaming);
+  }
+
+  function destroyCompactEditor() {
+    if (compactView) {
+      compactView.destroy();
+      compactView = null;
+      console.log('[StreamingCodeBlock] destroyCompactEditor');
     }
   }
 
@@ -250,8 +366,23 @@
   onMount(() => {
     if (isExpanded || !isStreaming) {
       createEditor();
+    } else if (!isExpanded && isStreaming) {
+      // show compact progress widget when collapsed and streaming
+      createCompactEditor();
     }
   });
+
+  function handleCopyFromProgressBar() {
+    if (editorView) {
+      try {
+        const text = editorView.state.doc.toString();
+        navigator.clipboard.writeText(text);
+        dispatch('copied');
+      } catch (err) {
+        console.error('Failed to copy CodeMirror content', err);
+      }
+    }
+  }
 
   onDestroy(() => {
     destroyEditor();
@@ -267,6 +398,22 @@
       // Use incremental updates during streaming
       updateEditorIncremental(code);
     }
+    // If collapsed, ensure compact view exists and is configured for streaming
+    if (!isExpanded) {
+      if (compactView) {
+        // Reconfigure decorations to streaming mode without recreating the view
+        try {
+          compactView.dispatch({ effects: StateEffect.reconfigure.of([createProgressExtension(isStreaming)]) });
+          console.log('[StreamingCodeBlock] reconfigured compactView -> streaming');
+        } catch (err) {
+          console.warn('[StreamingCodeBlock] failed to reconfigure compactView, recreating', err);
+          destroyCompactEditor();
+          createCompactEditor();
+        }
+      } else {
+        createCompactEditor();
+      }
+    }
   } else {
     // Clear timeout when streaming stops
     if (streamingTimeout) {
@@ -278,13 +425,34 @@
     if (isExpanded && editorView) {
       updateEditorFull(code);
     }
+    // Keep a non-streaming compact progress widget when collapsed; try to reconfigure
+    if (!isExpanded) {
+      if (compactView) {
+        try {
+          compactView.dispatch({ effects: StateEffect.reconfigure.of([createProgressExtension(isStreaming)]) });
+          console.log('[StreamingCodeBlock] reconfigured compactView -> not streaming');
+        } catch (err) {
+          console.warn('[StreamingCodeBlock] failed to reconfigure compactView, recreating', err);
+          destroyCompactEditor();
+          createCompactEditor();
+        }
+      } else {
+        createCompactEditor();
+      }
+    }
   }
 
   // React to expansion state changes
   $: if (isExpanded && !editorView && container) {
+    // switching to expanded: destroy compact editor and create full editor
+    destroyCompactEditor();
     createEditor();
   } else if (!isExpanded && editorView) {
+    // switching to collapsed: destroy full editor and create compact view if streaming
     destroyEditor();
+    if (isStreaming) {
+      createCompactEditor();
+    }
   }
 
   // React to other prop changes
@@ -323,12 +491,11 @@
 </script>
 
 <div class="streaming-code-block" class:streaming={isStreaming} class:expanded={isExpanded}>
-  <ProgressBar 
-    {language} 
-    {isStreaming} 
-    {isExpanded}
-    on:click={handleProgressBarClick}
-  />
+  <!-- Compact header (ProgressBar replaced by CodeMirror in-editor widget) -->
+  <div class="streaming-compact-header">
+    <span class="streaming-lang-label">{language || 'text'}</span>
+    <div bind:this={compactContainer} class="compact-codemirror-host"></div>
+  </div>
   
   {#if isExpanded}
     <div 

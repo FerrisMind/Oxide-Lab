@@ -21,6 +21,7 @@ pub type BuildResult<T> = Result<T, String>;
 /// we'll use an enum-based approach instead
 pub enum ModelBuilder {
     Qwen3(crate::models::qwen3_builder::Qwen3ModelBuilder),
+    Gemma3(crate::models::gemma3_builder::Gemma3ModelBuilder),
     // Add other model builders here as they are implemented
 }
 
@@ -36,6 +37,7 @@ impl ModelBuilder {
     ) -> BuildResult<Box<dyn ModelBackend>> {
         match self {
             ModelBuilder::Qwen3(builder) => builder.from_gguf(content, reader, device, context_length, flag),
+            ModelBuilder::Gemma3(builder) => builder.from_gguf(content, reader, device, context_length, flag),
         }
     }
     
@@ -49,6 +51,7 @@ impl ModelBuilder {
     ) -> BuildResult<Box<dyn ModelBackend>> {
         match self {
             ModelBuilder::Qwen3(builder) => builder.from_varbuilder(vb, config, device, dtype),
+            ModelBuilder::Gemma3(builder) => builder.from_varbuilder(vb, config, device, dtype),
         }
     }
     
@@ -56,6 +59,7 @@ impl ModelBuilder {
     pub fn detect_gguf_arch(&self, metadata: &HashMap<String, candle::quantized::gguf_file::Value>) -> Option<ArchKind> {
         match self {
             ModelBuilder::Qwen3(builder) => builder.detect_gguf_arch(metadata),
+            ModelBuilder::Gemma3(builder) => builder.detect_gguf_arch(metadata),
         }
     }
     
@@ -63,6 +67,7 @@ impl ModelBuilder {
     pub fn detect_config_arch(&self, config: &serde_json::Value) -> Option<ArchKind> {
         match self {
             ModelBuilder::Qwen3(builder) => builder.detect_config_arch(config),
+            ModelBuilder::Gemma3(builder) => builder.detect_config_arch(config),
         }
     }
     
@@ -70,6 +75,7 @@ impl ModelBuilder {
     pub fn arch_kind(&self) -> ArchKind {
         match self {
             ModelBuilder::Qwen3(builder) => builder.arch_kind(),
+            ModelBuilder::Gemma3(builder) => builder.arch_kind(),
         }
     }
 }

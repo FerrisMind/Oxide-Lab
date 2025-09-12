@@ -8,4 +8,12 @@ pub fn cancel_generation_cmd() -> Result<(), String> {
     Ok(())
 }
 
+// Глобальный флаг отмены загрузки модели
+pub(crate) static CANCEL_LOADING: AtomicBool = AtomicBool::new(false);
+
+pub fn cancel_model_loading_cmd() -> Result<(), String> {
+    CANCEL_LOADING.store(true, Ordering::SeqCst);
+    Ok(())
+}
+
 

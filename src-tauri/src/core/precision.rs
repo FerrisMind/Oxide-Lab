@@ -18,6 +18,27 @@ pub enum PrecisionPolicy {
     MaximumPrecision,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub enum Precision {
+    F16,
+    #[default]
+    F32,
+    Int8,
+}
+
+pub fn precision_to_dtype(precision: &Precision, device: &Device) -> DType {
+    match precision {
+        Precision::F32 => DType::F32,
+        Precision::F16 => {
+            if matches!(device, Device::Cuda(_) | Device::Metal(_)) {
+                DType::BF16
+            } else {
+                DType::F16
+            }
+        }
+        Precision::Int8 => DType::F32, // Fallback, as Candle safetensors loading primarily supports float dtypes
+    }
+}
 /// Precision policy configuration
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrecisionConfig {

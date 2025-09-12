@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 use crate::models::common::builder::ModelFactory;
 use crate::models::qwen3_builder::Qwen3ModelBuilder;
+use crate::models::gemma3_builder::Gemma3ModelBuilder;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ArchKind {
@@ -31,6 +32,8 @@ pub fn get_model_factory() -> &'static ModelFactory {
         
         // Register Qwen3 builder
         factory.register_builder(crate::models::common::builder::ModelBuilder::Qwen3(Qwen3ModelBuilder::new()));
+        // Register Gemma3 builder
+        factory.register_builder(crate::models::common::builder::ModelBuilder::Gemma3(Gemma3ModelBuilder::new()));
         
         // TODO: Register other builders as they are implemented
         // factory.register_builder(crate::models::common::builder::ModelBuilder::Llama(LlamaModelBuilder::new()));

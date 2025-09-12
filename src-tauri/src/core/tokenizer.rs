@@ -4,14 +4,31 @@ use tokenizers::{AddedToken, Tokenizer};
 use serde::Deserialize;
 
 pub fn find_tokenizer_json_in_metadata(md: &HashMap<String, gguf_file::Value>) -> Option<String> {
+    // 1) Прямые известные ключи
     for key in [
         "tokenizer.json",
-        "qwen3.tokenizer_json",
         "general.tokenizer_json",
-        "tokenizer.ggml",
+        "qwen3.tokenizer_json",
+        "llama.tokenizer_json",
+        "gemma.tokenizer_json",
+        "tokenizer.ggml.json",
+        "tokenizer_json",
         "tokenizer",
     ] {
-        if let Some(v) = md.get(key) { if let Ok(s) = v.to_string() { return Some(s.clone()); } }
+        if let Some(v) = md.get(key) {
+            if let Ok(s) = v.to_string() { return Some(s.clone()); }
+        }
+    }
+    // 2) Эвристика: найти любой строковый JSON, который успешно парсится как tokenizers JSON
+    for (_k, v) in md.iter() {
+        if let Ok(s) = v.to_string() {
+            let st = s.trim();
+            if st.starts_with('{') && st.ends_with('}')
+                && tokenizers::Tokenizer::from_bytes(st.as_bytes()).is_ok()
+            {
+                return Some(s.clone());
+            }
+        }
     }
     None
 }
@@ -48,7 +65,9 @@ pub fn mark_special_chat_tokens(tokenizer: &mut Tokenizer) {
     let vocab = tokenizer.get_vocab(true);
     let specials = [
         "<|im_start|>", "<|im_end|>", "<|user|>", "<|assistant|>", "<|system|>",
-        "<|eot_id|>", "<|endoftext|>", "</s>", "<s>"
+        "<|eot_id|>", "<|endoftext|>", "</s>", "<s>",
+        // Gemma/Gemma2/Gemma3 style
+        "<start_of_turn>", "<end_of_turn>", "<eos>"
     ];
     let mut to_add: Vec<AddedToken> = Vec::new();
     for &tok in specials.iter() {
@@ -63,12 +82,13 @@ pub fn mark_special_chat_tokens(tokenizer: &mut Tokenizer) {
 
 pub fn tokenizer_from_gguf_metadata(md: &HashMap<String, gguf_file::Value>) -> Result<Tokenizer, String> {
     if let Some(json) = find_tokenizer_json_in_metadata(md) {
-        Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string())
-    } else if let Some(json) = try_reconstruct_tokenizer_from_bpe(md) {
-        Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string())
-    } else {
-        Err("GGUF: embedded tokenizer not found and cannot reconstruct from metadata".into())
+        return Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string());
     }
+    // Если не нашли полноценный JSON, пробуем реконструировать BPE (только если поля BPE действительно есть)
+    if let Some(json) = try_reconstruct_tokenizer_from_bpe(md) {
+        return Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string());
+    }
+    Err("GGUF: embedded tokenizer.json не найден; реконструкция невозможна".into())
 }
 
 #[derive(Debug, Deserialize)]
@@ -114,6 +134,35 @@ pub fn extract_eos_ids(tokenizer: &Tokenizer) -> Vec<u32> {
     ids
 }
 
+/// Try to extract BOS token string from tokenizer config or known specials
+pub fn extract_bos_token_str(tokenizer: &Tokenizer) -> Option<String> {
+    // Parse JSON to search for role-specific tokens
+    if let Ok(json) = tokenizer.to_string(true) {
+        if let Ok(cfg) = serde_json::from_str::<TokenizerConfig>(&json) {
+            let vocab = tokenizer.get_vocab(true);
+            for entry in cfg.special_tokens.iter().chain(cfg.added_tokens.iter()) {
+                if let Some(obj) = entry.as_object() {
+                    let content = obj.get("content").and_then(|v| v.as_str());
+                    let special = obj.get("special").and_then(|v| v.as_bool()).unwrap_or(false);
+                    let role = obj.get("role").and_then(|v| v.as_str());
+                    if special && role == Some("bos") {
+                        if let Some(tok) = content {
+                            if vocab.contains_key(tok) {
+                                return Some(tok.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+            // Heuristics: common BOS strings
+            for key in ["<s>", "<bos>", "<BOS>", "<|begin_of_text|>"] {
+                if tokenizer.get_vocab(true).contains_key(key) { return Some(key.to_string()); }
+            }
+        }
+    }
+    None
+}
+
 pub fn extract_chat_template(tokenizer: &Tokenizer) -> Option<String> {
     let json = tokenizer.to_string(true).ok()?;
     let cfg: TokenizerConfig = serde_json::from_str(&json).ok()?;
@@ -121,6 +170,7 @@ pub fn extract_chat_template(tokenizer: &Tokenizer) -> Option<String> {
 }
 
 pub fn find_chat_template_in_metadata(md: &HashMap<String, gguf_file::Value>) -> Option<String> {
+    // 1) Прямые известные ключи
     for key in [
         "tokenizer.chat_template",
         "tokenizer.ggml.chat_template",
@@ -131,7 +181,18 @@ pub fn find_chat_template_in_metadata(md: &HashMap<String, gguf_file::Value>) ->
             if let Ok(s) = v.to_string() { return Some(s.clone()); }
         }
     }
-    None
+    // 2) Эвристика: ищем большие строковые значения, содержащие конструкции Jinja
+    let mut best: Option<String> = None;
+    for (_k, v) in md.iter() {
+        if let Ok(s) = v.to_string() {
+            if (s.contains("add_generation_prompt") || s.contains("messages") && s.contains("role"))
+                && best.as_ref().is_none_or(|cur| s.len() > cur.len())
+            {
+                best = Some(s.clone());
+            }
+        }
+    }
+    best
 }
 
 

@@ -268,9 +268,10 @@ fn test_model_loading_from_real_gguf() {
     let mut file = File::open(model_path).expect("Failed to open model file");
     let content = candle::quantized::gguf_file::Content::read(&mut file)
         .expect("Failed to read GGUF content");
+    let metadata = content.metadata.clone();
     
     // Detect architecture
-    let arch = detect_arch(&content.metadata);
+    let arch = detect_arch(&metadata);
     assert!(arch.is_some(), "Failed to detect architecture from real model");
     
     // Try to build the model using the model factory
@@ -278,25 +279,43 @@ fn test_model_loading_from_real_gguf() {
     let factory = get_model_factory();
     let result = factory.build_from_gguf(arch.unwrap(), content, &mut file, &device, 256, false);
     
-    // This might fail due to missing tensors or other issues, but we should at least attempt it
     match result {
         Ok(mut model) => {
             println!("Successfully built model from GGUF");
-            // Test a simple forward pass with a small input
-            let input_data = vec![1u32, 2, 3];
-            let input_tensor = Tensor::from_slice(&input_data, input_data.len(), &Device::Cpu)
-                .expect("Failed to create input tensor");
+            // Create tokenizer for small input
+            let tokenizer_result = tokenizer_from_gguf_metadata(&metadata);
+            assert!(tokenizer_result.is_ok(), "Failed to create tokenizer");
+            let tokenizer = tokenizer_result.unwrap();
             
-            let forward_result = model.forward_layered(&input_tensor, 0);
-            // We don't assert on this since the model might not be fully initialized
-            match forward_result {
-                Ok(_) => println!("Forward pass successful"),
-                Err(e) => println!("Forward pass failed (expected): {}", e),
+            // Small prompt for prefill
+            let prompt = "Hello";
+            let encoding = tokenizer.encode(prompt, false).unwrap();
+            let input_ids: Vec<u32> = encoding.get_ids().to_vec();
+            
+            if input_ids.is_empty() {
+                println!("Skipping inference: empty input IDs");
+                return;
             }
+            
+            let input_tensor = Tensor::from_vec(vec![input_ids[0] as i64], (1, 1), &device)
+                .expect("Failed to create input tensor for prefill");
+            
+            // Prefill step (forward on initial input)
+            let prefill_result = model.forward_layered(&input_tensor, 0);
+            assert!(prefill_result.is_ok(), "Prefill forward failed: {:?}", prefill_result.err());
+            println!("Prefill successful");
+            
+            // Decode step (simulate next token generation with small input)
+            let decode_input = Tensor::from_vec(vec![1i64], (1, 1), &device)
+                .expect("Failed to create decode input tensor");
+            let decode_result = model.forward_layered(&decode_input, 1);
+            assert!(decode_result.is_ok(), "Decode forward failed: {:?}", decode_result.err());
+            println!("Decode successful");
+            
         },
         Err(e) => {
-            println!("Failed to build model (might be expected): {}", e);
-            // This is expected to fail in some cases due to missing implementation details
+            println!("Failed to build model: {}", e);
+            // Accept failure for smoke test if model loading is partial
         }
     }
 }

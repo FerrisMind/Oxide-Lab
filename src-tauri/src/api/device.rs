@@ -5,9 +5,9 @@ use candle::utils::{cuda_is_available, metal_is_available};
 use crate::core::device::device_label;
 use crate::core::state::ModelState;
 use crate::core::tokenizer::{mark_special_chat_tokens, tokenizer_from_gguf_metadata, extract_chat_template, find_chat_template_in_metadata};
-use crate::models::qwen3::ModelWeights as Qwen3Gguf;
-use crate::models::registry::{detect_arch, ArchKind};
-use crate::models::common::model::{AnyModel, ModelBackend};
+use crate::models::registry::{detect_arch};
+use crate::models::common::model::{ModelBackend};
+use crate::models::registry::get_model_factory;
 use crate::{log_device, log_device_error, log_load};
 
 pub fn set_device(
@@ -91,19 +91,12 @@ pub fn set_device(
         // Архитектура
         let arch = detect_arch(&content.metadata).ok_or_else(|| "Unsupported GGUF architecture".to_string())?;
 
-        // Создание модели на новом устройстве
-        let model = match arch {
-            ArchKind::Qwen3 => Qwen3Gguf::from_gguf(content, &mut file, &guard.device, ctx_len, false)
-                .map_err(|e| e.to_string())?,
-            // For all other architectures, return an error indicating they're not yet supported
-            _ => {
-                return Err(format!("Architecture {:?} detected but not yet supported. Only Qwen3 is currently supported.", arch));
-            }
-        };
+        // Универсальное создание модели через фабрику (под выбранное устройство)
+        let model_backend = get_model_factory()
+            .build_from_gguf(arch, content, &mut file, &guard.device, ctx_len, false)
+            .map_err(|e| format!("Failed to rebuild model for new device: {}", e))?;
 
-        // Wrap concrete model into AnyModel and box as trait object
-        let any = AnyModel::from_qwen3(model);
-        guard.gguf_model = Some(Box::new(any));
+        guard.gguf_model = Some(model_backend);
         guard.gguf_file = Some(file);
         guard.tokenizer = Some(tokenizer);
         guard.chat_template = chat_tpl;

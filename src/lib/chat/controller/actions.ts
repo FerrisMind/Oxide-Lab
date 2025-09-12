@@ -7,11 +7,42 @@ try {
 } catch {}
 import { open, message } from '@tauri-apps/plugin-dialog';
 import type { ChatControllerCtx } from './types';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { createStreamListener } from './listener';
 import { buildPromptWithChatTemplate } from '$lib/chat/prompts';
 
 export function createActions(ctx: ChatControllerCtx) {
   const stream = createStreamListener(ctx);
+
+  // Реальный прогресс загрузки из Rust
+  type LoadProgressEvent = { stage: string; progress: number; message?: string; done?: boolean; error?: string };
+  let loadUnlisten: UnlistenFn | null = null;
+  async function ensureLoadProgressListener() {
+    if (loadUnlisten) return;
+    try {
+      loadUnlisten = await listen<LoadProgressEvent>('load_progress', async (e) => {
+        const p = e.payload || ({} as any);
+        if (typeof p.progress === 'number') ctx.loadingProgress = Math.max(0, Math.min(100, Math.floor(p.progress)));
+        if (typeof p.stage === 'string') ctx.loadingStage = p.stage;
+        if (p.message) ctx.errorText = '';
+        if (p.error) ctx.errorText = String(p.error);
+
+        // Если это стартовые стадии — гарантируем, что индикаторы включены
+        if (p.stage === 'start') {
+          ctx.isLoadingModel = true;
+          ctx.busy = true;
+          ctx.isLoaded = false;
+        }
+        if (p.done) {
+          ctx.isLoadingModel = false;
+          ctx.busy = false;
+          if (!p.error && ctx.loadingProgress >= 100) ctx.isLoaded = true;
+        }
+      });
+    } catch (err) {
+      console.warn('failed to attach load_progress listener', err);
+    }
+  }
 
   // Handler for attaching text files from UI
   async function _handleAttachFile(payload: { filename: string; content: string }) {
@@ -63,33 +94,23 @@ export function createActions(ctx: ChatControllerCtx) {
   function cancelLoading() {
     ctx.isCancelling = true;
     ctx.loadingStage = 'cancelling';
-    setTimeout(() => {
-      ctx.isLoadingModel = false;
-      ctx.loadingProgress = 0;
-      ctx.loadingStage = '';
-      ctx.isCancelling = false;
-      ctx.busy = false;
-    }, 500);
+    // Сигнал на бэкенд — реальная отмена загрузки
+    try { void invoke('cancel_model_loading'); } catch {}
   }
 
   async function loadGGUF() {
     ctx.isLoadingModel = true;
     ctx.loadingProgress = 0;
-    ctx.loadingStage = 'model';
+    ctx.loadingStage = 'start';
     ctx.busy = true;
     ctx.isLoaded = false;
     ctx.errorText = '';
     try {
-      const modelLoadInterval = setInterval(() => {
-        if (ctx.isCancelling) return;
-        if (ctx.loadingProgress < 60) ctx.loadingProgress += Math.random() * 8 + 2;
-      }, 150);
+      await ensureLoadProgressListener();
       await stream.ensureListener();
       const context_length = Math.max(1, Math.floor(ctx.ctx_limit_value));
       console.log('[load] frontend params', { context_length, format: ctx.format });
       if (ctx.isCancelling) return;
-      ctx.loadingStage = 'model';
-      ctx.loadingProgress = 30;
       // CPU по умолчанию. Если пользователь явно включил GPU и он доступен — переключим на CUDA после загрузки.
       if (ctx.format === 'gguf') {
         if (!ctx.modelPath) {
@@ -143,21 +164,6 @@ export function createActions(ctx: ChatControllerCtx) {
       }
       await refreshDeviceInfo();
       if (ctx.isCancelling) return;
-      ctx.loadingStage = 'tokenizer';
-      ctx.loadingProgress = 70;
-      const tokenizerLoadInterval = setInterval(() => {
-        if (ctx.isCancelling) return;
-        if (ctx.loadingProgress < 95) ctx.loadingProgress += Math.random() * 3 + 1;
-      }, 100);
-      await new Promise((r) => setTimeout(r, 800));
-      if (ctx.isCancelling) return;
-      clearInterval(modelLoadInterval);
-      clearInterval(tokenizerLoadInterval);
-      ctx.loadingStage = 'complete';
-      ctx.loadingProgress = 100;
-      await new Promise((r) => setTimeout(r, 500));
-      if (ctx.isCancelling) return;
-      ctx.isLoaded = true;
     } catch (e) {
       const err = String(e ?? 'Unknown error');
       ctx.errorText = err;
@@ -165,10 +171,7 @@ export function createActions(ctx: ChatControllerCtx) {
         await message(err, { title: 'Ошибка загрузки модели', kind: 'error' });
       } catch {}
     } finally {
-      ctx.isLoadingModel = false;
-      ctx.loadingProgress = 0;
-      ctx.loadingStage = '';
-      ctx.busy = false;
+      // Управление состоянием происходит через события load_progress
     }
   }
 

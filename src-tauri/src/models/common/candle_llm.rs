@@ -179,3 +179,22 @@ mod tests {
         assert!(true);
     }
 }
+
+/// Adapter for Gemma models from candle_transformers
+pub struct GemmaCandleAdapter {
+    /// The inner Gemma model
+    inner: candle_transformers::models::gemma::Model,
+}
+
+impl GemmaCandleAdapter {
+    /// Create a new GemmaCandleAdapter
+    pub fn new(model: candle_transformers::models::gemma::Model) -> Self {
+        Self { inner: model }
+    }
+}
+
+impl ModelBackend for GemmaCandleAdapter {
+    fn forward_layered(&mut self, input: &Tensor, position: usize) -> Result<Tensor, String> {
+        self.inner.forward(input, position).map_err(|e| e.to_string())
+    }
+}

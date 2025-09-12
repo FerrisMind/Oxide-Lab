@@ -14,6 +14,10 @@
   function handleClick() {
     dispatch('click');
   }
+  function handleCopyClick(e: Event) {
+    e.stopPropagation();
+    dispatch('copy');
+  }
 
   function getLanguageDisplayName(lang: string): string {
     const langMap: Record<string, string> = {
@@ -69,6 +73,19 @@
       {:else}
         <CaretDown size={16} weight="regular" />
       {/if}
+    </div>
+    <!-- Copy control (use div to avoid nested button issues) -->
+    <div class="copy-container">
+      <div
+        class="copy-btn"
+        role="button"
+        tabindex="0"
+        on:click|stopPropagation={handleCopyClick}
+        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleCopyClick(e); } }}
+        aria-label="Copy code"
+      >
+        Copy
+      </div>
     </div>
   </div>
   
