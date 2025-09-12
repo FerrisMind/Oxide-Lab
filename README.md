@@ -79,9 +79,8 @@ Download a model in `.gguf` format and `tokenizer.json` file:
 
 1. Open Oxide Lab
 2. Click **"Select Model File"** and specify path to `.gguf` file
-3. Click **"Select Tokenizer"** and specify path to `tokenizer.json`
-4. Optionally configure inference parameters
-5. Click **"Load"**
+3. Optionally configure inference parameters
+4. Click **"Load"**
 
 ### 3️⃣ **Start Chatting**
 
