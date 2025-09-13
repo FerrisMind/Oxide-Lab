@@ -7,12 +7,79 @@ use serde::{Deserialize, Serialize};
 use crate::{log_load, log_template};
 use crate::generate::cancel::{CANCEL_LOADING, cancel_model_loading_cmd};
 use candle::Device;
+use std::path::Path;
+use candle::quantized::gguf_file;
 
 // Import our new modules
 mod model_loading;
 use model_loading::{gguf, hub_gguf, safetensors};
 mod device;
 mod template;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ModalitySupportDto { pub text: bool, pub image: bool, pub audio: bool, pub video: bool }
+
+#[tauri::command]
+pub fn get_modality_support(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<ModalitySupportDto, String> {
+    let mut cfg_json: Option<serde_json::Value> = None;
+    if let Ok(guard) = state.lock() {
+        // Try config captured during loading first
+        if let Some(s) = guard.model_config_json.as_ref() {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(s) { cfg_json = Some(v); }
+        }
+
+        // Fallbacks
+        if cfg_json.is_none() {
+            // GGUF: reopen file and try to extract config.json from metadata
+            if let Some(path_str) = guard.model_path.as_ref() {
+                let p = Path::new(path_str);
+                if p.is_file() && p.extension().and_then(|e| e.to_str()).map(|s| s.eq_ignore_ascii_case("gguf")).unwrap_or(false) {
+                    if let Ok(mut f) = std::fs::File::open(p) {
+                        if let Ok(content) = gguf_file::Content::read(&mut f) {
+                            if let Some(s) = content.metadata.get("config.json").and_then(|v| v.to_string().ok()).cloned()
+                                .or_else(|| content.metadata.get("tokenizer.ggml.config").and_then(|v| v.to_string().ok()).cloned())
+                                .or_else(|| content.metadata.get("general.config_json").and_then(|v| v.to_string().ok()).cloned())
+                            {
+                                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) { cfg_json = Some(v); }
+                            } else {
+                                // Heuristic from GGUF metadata keys if no embedded config JSON
+                                let mut flags = crate::core::modality::ModalitySupportDto { text: true, image: false, audio: false, video: false };
+                                let has_key = |needle: &str| content.metadata.keys().any(|k| k.to_lowercase().contains(needle));
+                                // image: any vision/image-related key or known multimodal arch
+                                flags.image = has_key("vision") || has_key("image_") || has_key("mm_vision") || has_key("llava") || has_key("onevision");
+                                // audio: any audio-related key or arch
+                                flags.audio = has_key("audio");
+                                // video: explicit video flags or keys
+                                flags.video = flags.image && (has_key("video") || has_key("time_instruction") || has_key("faster_video"));
+                                // Return early via JSON constructed from flags
+                                return Ok(ModalitySupportDto { text: flags.text, image: flags.image, audio: flags.audio, video: flags.video });
+                            }
+                        }
+                    }
+                } else if p.is_dir() {
+                    // Safetensors local: read config.json from directory
+                    let cfg = p.join("config.json");
+                    if cfg.exists() {
+                        if let Ok(bytes) = std::fs::read(&cfg) {
+                            if let Ok(s) = String::from_utf8(bytes) {
+                                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) { cfg_json = Some(v); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Derive flags
+    let out = if let Some(cfg) = cfg_json {
+        crate::core::modality::detect_from_config(&cfg)
+    } else {
+        // Default to text only if no config is available
+        crate::core::modality::ModalitySupportDto { text: true, image: false, audio: false, video: false }
+    };
+    Ok(ModalitySupportDto { text: out.text, image: out.image, audio: out.audio, video: out.video })
+}
 
 #[tauri::command]
 pub fn load_model(app: tauri::AppHandle, state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>, req: LoadRequest) -> Result<(), String> {

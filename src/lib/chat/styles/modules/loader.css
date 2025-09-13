@@ -12,6 +12,26 @@
   box-sizing: border-box;
 }
 
+/* Row of content-type icons (above device selector) */
+.loader .icon-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 22px;
+  margin-top: -6px; /* nudge a bit higher */
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+
+/* Make content-type segmented block purely indicative (no hover/focus) */
+.loader .content-type-toggle .indicator {
+  cursor: default;
+  pointer-events: none;
+}
+.loader .content-type-toggle .indicator:not(.supported) {
+  opacity: 0.35;
+}
+
 /* Center the main Load/Unload button inside loader panel */
 
 

@@ -11,3 +11,4 @@ pub mod vision;
 pub mod audio;
 pub mod multimodal;
 pub mod log;
+pub mod modality;

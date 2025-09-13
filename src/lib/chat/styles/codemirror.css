@@ -87,17 +87,21 @@
 }
 
 /* Hide gutters (line numbers, fold markers) globally for chat code blocks */
+
 .codemirror-container :global(.cm-gutters) {
   display: none !important;
 }
 
 /* Keep a subtle active line background even without gutters */
+
 .codemirror-container :global(.cm-activeLine) {
   background: rgb(0 0 0 / 0.02) !important;
 }
 
 /* No lineNumbers visible; rule left intentionally empty */
+
 .codemirror-container :global(.cm-lineNumbers) {
+  display: none !important;
 }
 
 .codemirror-container :global(.cm-activeLine) {

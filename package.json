@@ -16,7 +16,6 @@
     "tauri:dev:cuda": "tauri dev -f cuda",
     "tauri:build:cpu": "tauri build -- --no-default-features",
     "tauri:build:cuda": "tauri build -f cuda",
-    "prepare": "husky install",
     "format": "prettier --write ."
   },
   "license": "MIT",
@@ -58,7 +57,6 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-svelte": "^3.11.0",
-    "husky": "^8.0.0",
     "prettier": "3.6.2",
     "stylelint": "^16.23.1",
     "stylelint-config-standard-scss": "^15.0.1",
@@ -68,9 +66,5 @@
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "vitest": "^3.2.4"
-  },
-  "lint-staged": {
-    "*.{ts,js,svelte}": "npx eslint --cache --fix",
-    "*.css": "npx stylelint --fix"
   }
 }

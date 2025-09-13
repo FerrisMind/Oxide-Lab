@@ -51,6 +51,7 @@ pub fn run() {
             api::set_precision_policy,
             api::get_precision,
             api::set_precision,
+            api::get_modality_support,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

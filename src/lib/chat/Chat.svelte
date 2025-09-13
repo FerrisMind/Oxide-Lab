@@ -12,6 +12,7 @@
   import InferenceParams from "$lib/chat/components/InferenceParams.svelte";
   import { chatState, chatUiMounted, getDefaultChatState } from "$lib/stores/chat";
   import { get as getStore } from "svelte/store";
+  import { invoke } from '@tauri-apps/api/core';
 
   let modelPath = "";
   let repoId: string = "";
@@ -29,6 +30,48 @@
   let cuda_available: boolean = false;
   let cuda_build: boolean = false;
   let current_device: string = "CPU";
+  
+  // Поддержка модальностей (эвристика по имени модели)
+  let supports_text: boolean = true;
+  let supports_image: boolean = false;
+  let supports_audio: boolean = false;
+  let supports_video: boolean = false;
+
+  async function refreshModalities() {
+    try {
+      const r: { text: boolean; image: boolean; audio: boolean; video: boolean } = await invoke('get_modality_support');
+      supports_text = !!r.text;
+      supports_image = !!r.image;
+      supports_audio = !!r.audio;
+      supports_video = !!r.video;
+    } catch (e) {
+      // default to text-only
+      supports_text = true;
+      supports_image = false;
+      supports_audio = false;
+      supports_video = false;
+    }
+  }
+  $: if (isLoaded) { void refreshModalities(); } else {
+    supports_text = true; supports_image = false; supports_audio = false; supports_video = false;
+  }
+
+  function detectModalities() {
+    try {
+      const s = `${modelPath} ${repoId} ${hubGgufFilename}`.toLowerCase();
+      const has = (hints: string[]) => hints.some((h) => s.includes(h));
+      const videoHints = ['vtt', 'video', 'onevision', 'llava'];
+      const imageHints = ['itt', 'image', 'vision', 'gemma3', 'siglip'];
+      const audioHints = ['att', 'audio', 'qwen2audio', 'whisper'];
+      const any2anyHints = ['ata', 'any-to-any', 'multi_modality', 'multimodal', 'omni'];
+
+      supports_text = true;
+      supports_video = has(videoHints);
+      supports_image = has(imageHints) || supports_video || has(any2anyHints);
+      supports_audio = has(audioHints) || has(any2anyHints);
+    } catch {}
+  }
+  $: detectModalities();
   
   // Состояние загрузки модели
   let isLoadingModel = false;
@@ -258,6 +301,10 @@
         bind:prompt 
         {busy} 
         {isLoaded} 
+        {supports_text}
+        {supports_image}
+        {supports_audio}
+        {supports_video}
         on:send={handleSend} 
         on:stop={stopGenerate}
         on:attach={(e) => {
@@ -301,6 +348,10 @@
     bind:use_gpu
     bind:cuda_available
     bind:cuda_build
+    {supports_text}
+    {supports_image}
+    {supports_audio}
+    {supports_video}
     onMainAction={mainAction}
     on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
   >

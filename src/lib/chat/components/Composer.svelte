@@ -16,6 +16,21 @@
   let attachError: string | null = null;
   let selectedFileName: string | null = null;
 
+  // Поддерживаемые модальности (из родителя)
+  export let supports_text: boolean = true;
+  export let supports_image: boolean = false;
+  export let supports_audio: boolean = false;
+  export let supports_video: boolean = false;
+
+  // Строка для accept у input[type=file]
+  let accept = '.txt,.md,.json';
+  $: accept = [
+    supports_text ? '.txt,.md,.json' : '',
+    supports_image ? '.png,.jpg,.jpeg,.webp,.gif' : '',
+    supports_audio ? '.wav,.mp3,.ogg,.flac,.m4a' : '',
+    supports_video ? '.mp4,.webm,.mov,.mkv' : '',
+  ].filter(Boolean).join(',');
+
   function onSend() { dispatch("send"); }
   function onStop() { dispatch("stop"); }
   function onAttachClick() {
@@ -40,14 +55,54 @@
     }
     // remember selected file name for indicator
     selectedFileName = file.name;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const content = typeof reader.result === 'string' ? reader.result : '';
-      dispatch('attach', { filename: file.name, content });
-      // clear input so same file can be selected again
+
+    // Определяем тип на основе MIME и расширения
+    const mime = file.type || '';
+    const top = mime.split('/')[0];
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+
+    const isTextLike = top === 'text' || ['txt', 'md', 'json'].includes(ext) || mime === 'application/json';
+    const isImage = top === 'image' || ['png','jpg','jpeg','webp','gif'].includes(ext);
+    const isAudio = top === 'audio' || ['wav','mp3','ogg','flac','m4a'].includes(ext);
+    const isVideo = top === 'video' || ['mp4','webm','mov','mkv'].includes(ext);
+
+    // Проверяем поддержку модальностей
+    if (isImage && !supports_image) {
+      attachError = 'Модель не поддерживает изображения';
+      return;
+    }
+    if (isAudio && !supports_audio) {
+      attachError = 'Модель не поддерживает аудио';
+      return;
+    }
+    if (isVideo && !supports_video) {
+      attachError = 'Модель не поддерживает видео';
+      return;
+    }
+
+    if (isTextLike) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const content = typeof reader.result === 'string' ? reader.result : '';
+        dispatch('attach', { filename: file.name, content });
+        if (fileInput) fileInput.value = '';
+      };
+      reader.readAsText(file);
+      return;
+    }
+
+    // Для media создаём object URL и вставляем маркеры в текст чата
+    const url = URL.createObjectURL(file);
+    let marker: string | null = null;
+    if (isImage) marker = `[image: ${url}]`;
+    else if (isAudio) marker = `[audio: ${url}]`;
+    else if (isVideo) marker = `[video: ${url}]`;
+    if (marker) {
+      dispatch('attach', { filename: file.name, content: marker });
       if (fileInput) fileInput.value = '';
-    };
-    reader.readAsText(file);
+    } else {
+      attachError = 'Неподдерживаемый тип файла';
+    }
   }
 
   function removeSelectedFile() {

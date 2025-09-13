@@ -11,9 +11,9 @@ module.exports = [
     },
   },
 
-  // JS/TS files
+  // Typed JS/TS files — run project-based rules ONLY on `src/` to avoid tsconfig mismatches
   {
-    files: ['**/*.{ts,js}'],
+    files: ['src/**/*.{ts,js}'],
     languageOptions: {
       parser: require('@typescript-eslint/parser'),
       parserOptions: {
@@ -26,8 +26,35 @@ module.exports = [
       '@typescript-eslint': require('@typescript-eslint/eslint-plugin'),
     },
     rules: {
-      // Minimal TS rules; add more as needed
-      // Treat unused vars as warnings, but ignore names starting with `_`
+      // Minimal TS rules for typed project files
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          args: 'after-used',
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
+    },
+  },
+
+  // Other JS/TS files — do not use `project` (prevents parsing errors for files outside tsconfig)
+  {
+    files: ['**/*.{ts,js}', '!src/**/*.{ts,js}'],
+    languageOptions: {
+      parser: require('@typescript-eslint/parser'),
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+        createDefaultProgram: true,
+      },
+    },
+    plugins: {
+      '@typescript-eslint': require('@typescript-eslint/eslint-plugin'),
+    },
+    rules: {
+      // Linting without type-aware rules to avoid TS config issues
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {

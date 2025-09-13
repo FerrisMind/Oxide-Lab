@@ -4,6 +4,10 @@
   import ContextLengthSelector from "./loader/ContextLengthSelector.svelte";
   import HubModelForm from "./loader/HubModelForm.svelte";
   import LoadingStatus from "./loader/LoadingStatus.svelte";
+  import Image from "phosphor-svelte/lib/Image";
+  import MusicNotes from "phosphor-svelte/lib/MusicNotes";
+  import TextT from "phosphor-svelte/lib/TextT";
+  import Video from "phosphor-svelte/lib/Video";
   
   const dispatch = createEventDispatcher();
   
@@ -30,6 +34,11 @@
   export let use_gpu = false; // CPU по умолчанию
   export let cuda_available = false;
   export let cuda_build = false;
+  // Поддержка модальностей (индикаторы)
+  export let supports_text: boolean = true;
+  export let supports_image: boolean = false;
+  export let supports_audio: boolean = false;
+  export let supports_video: boolean = false;
 
   // Коллбеки, реализуются родителем
   export let onMainAction: (() => void) | undefined = undefined;
@@ -45,6 +54,23 @@
 
 <section class="loader">
   <!-- format selection buttons removed (GGUF / HF Hub) — upload controls moved to header -->
+  <!-- Content type icons row -->
+  <div class="icon-row" aria-hidden="true">
+    <div class="segmented-toggle content-type-toggle" data-role="indicators">
+      <div class="segment indicator" role="img" aria-label="Текст" class:supported={supports_text}>
+        <TextT size={18} />
+      </div>
+      <div class="segment indicator" role="img" aria-label="Изображение" class:supported={supports_image}>
+        <Image size={18} />
+      </div>
+      <div class="segment indicator" role="img" aria-label="Музыка" class:supported={supports_audio}>
+        <MusicNotes size={18} />
+      </div>
+      <div class="segment indicator" role="img" aria-label="Видео" class:supported={supports_video}>
+        <Video size={18} />
+      </div>
+    </div>
+  </div>
 
   {#if format === 'gguf'}
     <DeviceSelector 

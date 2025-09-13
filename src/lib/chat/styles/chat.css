@@ -319,6 +319,12 @@
   color: #1c1c1c;
 }
 
+/* Indicative segmented block: highlight supported icons similarly to active */
+.segmented-toggle .indicator.supported {
+  background: linear-gradient(135deg, var(--accent-2), #d4b8ff);
+  color: #1c1c1c;
+}
+
 .segmented-toggle .segment:disabled {
   opacity: 0.6;
   cursor: default;
@@ -436,6 +442,10 @@
   }
 
   .segmented-toggle .segment.active {
+    background: linear-gradient(135deg, #695b99, #5a4b8a);
+    color: #fff;
+  }
+  .segmented-toggle .indicator.supported {
     background: linear-gradient(135deg, #695b99, #5a4b8a);
     color: #fff;
   }
