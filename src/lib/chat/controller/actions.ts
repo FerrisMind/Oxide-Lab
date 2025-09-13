@@ -15,14 +15,21 @@ export function createActions(ctx: ChatControllerCtx) {
   const stream = createStreamListener(ctx);
 
   // Реальный прогресс загрузки из Rust
-  type LoadProgressEvent = { stage: string; progress: number; message?: string; done?: boolean; error?: string };
+  type LoadProgressEvent = {
+    stage: string;
+    progress: number;
+    message?: string;
+    done?: boolean;
+    error?: string;
+  };
   let loadUnlisten: UnlistenFn | null = null;
   async function ensureLoadProgressListener() {
     if (loadUnlisten) return;
     try {
       loadUnlisten = await listen<LoadProgressEvent>('load_progress', async (e) => {
         const p = e.payload || ({} as any);
-        if (typeof p.progress === 'number') ctx.loadingProgress = Math.max(0, Math.min(100, Math.floor(p.progress)));
+        if (typeof p.progress === 'number')
+          ctx.loadingProgress = Math.max(0, Math.min(100, Math.floor(p.progress)));
         if (typeof p.stage === 'string') ctx.loadingStage = p.stage;
         if (p.message) ctx.errorText = '';
         if (p.error) ctx.errorText = String(p.error);
@@ -95,7 +102,9 @@ export function createActions(ctx: ChatControllerCtx) {
     ctx.isCancelling = true;
     ctx.loadingStage = 'cancelling';
     // Сигнал на бэкенд — реальная отмена загрузки
-    try { void invoke('cancel_model_loading'); } catch {}
+    try {
+      void invoke('cancel_model_loading');
+    } catch {}
   }
 
   async function loadGGUF() {

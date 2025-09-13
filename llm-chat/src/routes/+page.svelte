@@ -217,7 +217,8 @@
     border-radius: 10px;
     padding: 12px;
     flex: 1 1 auto;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -233,6 +234,8 @@
     background: #eae6f8;
     color: var(--text);
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .message.user .bubble { background: var(--accent-2); }
   .message.assistant .bubble { background: #e8f0f8; }

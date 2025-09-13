@@ -62,7 +62,9 @@
   padding: 6px;
   background: var(--panel-bg);
   border-radius: 8px;
-  overflow: auto;
+  /* Vertical only to prevent horizontal scrollbar */
+  overflow-y: auto;
+  overflow-x: hidden;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -93,7 +95,9 @@
   padding: 8px;
   background: var(--panel-bg);
   border-radius: 8px;
-  overflow: auto;
+  /* Vertical only to prevent horizontal scrollbar */
+  overflow-y: auto;
+  overflow-x: hidden;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;

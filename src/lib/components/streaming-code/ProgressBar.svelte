@@ -257,10 +257,6 @@
       transition: none;
     }
     
-    .progress-icon :global(.spinning) {
-      animation: none;
-    }
-    
     .progress-line {
       animation: none;
       transform: none;

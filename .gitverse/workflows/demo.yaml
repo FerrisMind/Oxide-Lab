@@ -1,6 +1,6 @@
 name: Простой пример использования GitVerse CI/CD
 on:
- push:
+  push:
 jobs:
   build-test:
     name: Test context

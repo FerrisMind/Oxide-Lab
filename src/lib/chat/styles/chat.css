@@ -19,7 +19,9 @@
   border-radius: 10px;
   padding: 12px;
   flex: 1 1 auto;
-  overflow: auto;
+  /* Only vertical scroll; prevent horizontal scrollbar */
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -462,6 +464,8 @@
     grid-column: unset;
     grid-row: unset;
     min-height: 0;
-    overflow: auto;
+    /* Only vertical scroll to avoid horizontal scrollbar */
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }

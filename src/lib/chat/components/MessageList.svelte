@@ -38,8 +38,9 @@
     justify-content: space-between;
     margin-bottom: 4px;
     margin-top: -10px;
-    margin-left: -6px;
-    margin-right: -6px;
+    /* Remove negative side margins to avoid horizontal overflow */
+    margin-left: 0;
+    margin-right: 0;
   }
   
   .toolbar-button {

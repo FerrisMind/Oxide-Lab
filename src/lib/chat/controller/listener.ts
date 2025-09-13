@@ -20,6 +20,11 @@ export function createStreamListener(ctx: ChatControllerCtx) {
       if (last && last.role === 'assistant') {
         const idx = msgs.length - 1;
         const el = getAssistantBubbleEl(idx);
+        // Capture whether the user was pinned to bottom BEFORE DOM updates
+        const container = ctx.messagesEl;
+        const wasPinnedToBottom =
+          !!container && container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
+
         if (el) appendSegments(idx, el, segments, isStreaming);
         const onlyText = segments
           .filter((s) => s.kind === 'text')
@@ -29,14 +34,18 @@ export function createStreamListener(ctx: ChatControllerCtx) {
           last.content += onlyText;
           ctx.messages = msgs;
         }
-        queueMicrotask(() => {
-          const container = ctx.messagesEl;
-          if (!container) return;
-          const threshold = 32;
-          const atBottom =
-            container.scrollTop + container.clientHeight >= container.scrollHeight - threshold;
-          if (atBottom) container.scrollTop = container.scrollHeight;
-        });
+        // Scroll after DOM commit; use one or two rAFs to account for async mounts (e.g., CodeMirror)
+        if (wasPinnedToBottom) {
+          requestAnimationFrame(() => {
+            const c1 = ctx.messagesEl;
+            if (c1) c1.scrollTop = c1.scrollHeight;
+            // Schedule a second frame in case nested components expand after first paint
+            requestAnimationFrame(() => {
+              const c2 = ctx.messagesEl;
+              if (c2) c2.scrollTop = c2.scrollHeight;
+            });
+          });
+        }
       }
       streamBuf = remainder;
     });

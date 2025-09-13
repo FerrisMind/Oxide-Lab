@@ -27,7 +27,7 @@ export function mountCodeMirrorComponent(target: HTMLElement, code: string, lang
       language: language,
       readonly: true,
       theme: 'auto',
-      showLineNumbers: true,
+      showLineNumbers: false,
       wrap: true,
     },
   });

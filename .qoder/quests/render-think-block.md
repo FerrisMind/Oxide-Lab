@@ -20,7 +20,6 @@ The current implementation always renders a think block when it encounters a `<t
 1. Render think blocks only when:
    - The model generates `<think>` tags
    - The content between `<think>` and `</think>` is not empty
-   
 2. Do not render think blocks when:
    - The model does not generate `<think>` tags
    - The content between `<think>` and `</think>` is empty
@@ -51,8 +50,8 @@ Add a new state to track whether a think block should be rendered:
 type BubbleCtx = {
   // ... existing properties
   inThink: boolean;
-  thinkBuf: string;  // New: accumulate think content
-  shouldRenderThink: boolean;  // New: flag to determine if think block should be rendered
+  thinkBuf: string; // New: accumulate think content
+  shouldRenderThink: boolean; // New: flag to determine if think block should be rendered
   thinkPre: HTMLElement | null;
   // ... rest of properties
 };
@@ -67,7 +66,7 @@ sequenceDiagram
     participant P as Parser
     participant T as ThinkHTML
     participant B as Bubble
-    
+
     P->>T: Process think content
     T->>T: Accumulate content in buffer
     T->>T: Check if content is non-empty

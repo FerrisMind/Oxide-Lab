@@ -14,22 +14,6 @@
 
 /* Center the main Load/Unload button inside loader panel */
 
-.loader .main-action-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 8px;
-}
-
-.loader .main-action-row .primary {
-  line-height: 1;
-  margin-top: 0 !important; /* override global .primary margin */
-  height: 36px; /* align with inputs and controls */
-  display: inline-flex;
-  align-items: center;
-  position: relative;
-  top: -2px; /* raise visually by 2px as requested */
-}
 
 /* Text / path inputs */
 

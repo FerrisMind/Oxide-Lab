@@ -86,15 +86,18 @@
   outline: none !important;
 }
 
+/* Hide gutters (line numbers, fold markers) globally for chat code blocks */
 .codemirror-container :global(.cm-gutters) {
-  background: var(--panel-alt-bg) !important;
-  border-right: 1px solid var(--border-color) !important;
-  color: var(--muted) !important;
+  display: none !important;
 }
 
+/* Keep a subtle active line background even without gutters */
+.codemirror-container :global(.cm-activeLine) {
+  background: rgb(0 0 0 / 0.02) !important;
+}
+
+/* No lineNumbers visible; rule left intentionally empty */
 .codemirror-container :global(.cm-lineNumbers) {
-  color: var(--muted) !important;
-  font-size: 12px !important;
 }
 
 .codemirror-container :global(.cm-activeLine) {

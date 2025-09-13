@@ -54,7 +54,9 @@
   color: var(--text);
   border: 1px dashed var(--border-color);
   border-radius: 8px;
-  overflow: auto;
+  /* Allow vertical scroll in raw view without causing horizontal scrollbars */
+  overflow-y: auto;
+  overflow-x: hidden;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;

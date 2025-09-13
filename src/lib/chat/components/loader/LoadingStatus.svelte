@@ -10,7 +10,6 @@
   export let loadingStage = "";
   export let loadingProgress = 0;
   export let errorText = "";
-  export let format: "gguf" | "hub_gguf" | "hub_safetensors" = "gguf";
 
   function stageText(stage: string): string {
     switch (stage) {

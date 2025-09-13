@@ -88,6 +88,9 @@
     align-self: center;
     height: 36px;
     transform: none !important;
+    margin-top: 0 !important; /* avoid baseline shift from global .primary */
+    position: relative;
+    top: -1px; /* lower by 1px from previous adjustment */
   }
   /* classic toolbar-like hover: slight lift, subtle shadow, color shift */
   .primary:hover {

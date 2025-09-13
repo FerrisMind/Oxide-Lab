@@ -6,7 +6,9 @@ pre.code {
   background: var(--code-bg);
   color: var(--code-fg);
   border-radius: 8px;
-  overflow: auto;
+  /* Vertical-only scroll inside code blocks */
+  overflow-y: auto;
+  overflow-x: hidden;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -87,7 +89,9 @@ pre.code code {
   background: var(--code-bg);
   color: var(--code-fg);
   border-radius: 8px;
-  overflow: auto;
+  /* Vertical-only scroll inside markdown code blocks */
+  overflow-y: auto;
+  overflow-x: hidden;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;

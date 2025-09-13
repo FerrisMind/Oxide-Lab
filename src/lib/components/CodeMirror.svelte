@@ -1,26 +1,20 @@
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { EditorView, keymap, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
-  import { EditorState, StateEffect } from '@codemirror/state';
+  import { EditorState, StateEffect, Compartment } from '@codemirror/state';
   import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
   import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
   import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
   import { foldGutter, bracketMatching, foldKeymap, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
   import { lineNumbers, highlightSpecialChars, drawSelection, dropCursor, rectangularSelection, crosshairCursor } from '@codemirror/view';
-  import { javascript } from '@codemirror/lang-javascript';
-  import { python } from '@codemirror/lang-python';
-  import { html } from '@codemirror/lang-html';
-  import { css } from '@codemirror/lang-css';
-  import { json } from '@codemirror/lang-json';
-  import { xml } from '@codemirror/lang-xml';
-  import { sql } from '@codemirror/lang-sql';
-  import { oneDark } from '@codemirror/theme-one-dark';
+  // Theme kept as optional lazy import; loaded on demand
+  let oneDark: any = null;
 
   export let code: string = '';
   export let language: string = '';
   export let readonly: boolean = true;
   export let theme: 'light' | 'dark' | 'auto' = 'auto';
-  export let showLineNumbers: boolean = true;
+  export let showLineNumbers: boolean = false;
   export const wrap: boolean = true;
 
   const dispatch = createEventDispatcher();
@@ -28,22 +22,70 @@
   let container: HTMLElement;
   let editorView: EditorView | null = null;
 
-  // Language mappings
-  const languageExtensions: Record<string, () => any> = {
-    'javascript': () => javascript(),
-    'js': () => javascript(),
-    'typescript': () => javascript({ typescript: true }),
-    'ts': () => javascript({ typescript: true }),
-    'python': () => python(),
-    'py': () => python(),
-    'html': () => html(),
-    'css': () => css(),
-    'json': () => json(),
-    'xml': () => xml(),
-    'sql': () => sql(),
-    'jsx': () => javascript({ jsx: true }),
-    'tsx': () => javascript({ typescript: true, jsx: true }),
-  };
+  // Compartments for dynamic reconfiguration
+  const compTheme = new Compartment();
+  const compDark = new Compartment();
+  const compLang = new Compartment();
+  const compReadonly = new Compartment();
+  const compLineNumbers = new Compartment();
+  const compWrapping = new Compartment();
+
+  // Lazy language loaders to enable tree-shaking and reduce initial bundle
+  async function loadLanguageExtension(langName: string) {
+    const lang = (langName || '').toLowerCase();
+    try {
+      switch (lang) {
+        case 'javascript':
+        case 'js': {
+          const m = await import('@codemirror/lang-javascript');
+          return m.javascript();
+        }
+        case 'typescript':
+        case 'ts': {
+          const m = await import('@codemirror/lang-javascript');
+          return m.javascript({ typescript: true });
+        }
+        case 'jsx': {
+          const m = await import('@codemirror/lang-javascript');
+          return m.javascript({ jsx: true });
+        }
+        case 'tsx': {
+          const m = await import('@codemirror/lang-javascript');
+          return m.javascript({ typescript: true, jsx: true });
+        }
+        case 'python':
+        case 'py': {
+          const m = await import('@codemirror/lang-python');
+          return m.python();
+        }
+        case 'html': {
+          const m = await import('@codemirror/lang-html');
+          return m.html();
+        }
+        case 'css': {
+          const m = await import('@codemirror/lang-css');
+          return m.css();
+        }
+        case 'json': {
+          const m = await import('@codemirror/lang-json');
+          return m.json();
+        }
+        case 'xml': {
+          const m = await import('@codemirror/lang-xml');
+          return m.xml();
+        }
+        case 'sql': {
+          const m = await import('@codemirror/lang-sql');
+          return m.sql();
+        }
+        default:
+          return [];
+      }
+    } catch (e) {
+      console.warn('Failed to lazy-load language:', lang, e);
+      return [];
+    }
+  }
 
   // Theme detection
   function getTheme(): 'light' | 'dark' {
@@ -53,24 +95,16 @@
     return theme;
   }
 
-  function getLanguageExtension() {
-    const lang = language.toLowerCase();
-    if (languageExtensions[lang]) {
-      try {
-        return languageExtensions[lang]();
-      } catch (error) {
-        console.warn('Failed to load language extension for:', lang, error);
-        return null;
-      }
-    }
-    return null;
+  async function applyLanguage() {
+    if (!editorView) return;
+    const ext = await loadLanguageExtension(language);
+    editorView.dispatch({ effects: compLang.reconfigure(ext) });
   }
 
-  function createEditor() {
+  async function createEditor() {
     if (!container) return;
 
     const extensions = [
-      lineNumbers(),
       highlightActiveLineGutter(),
       highlightSpecialChars(),
       history(),
@@ -94,7 +128,7 @@
         ...foldKeymap,
         ...completionKeymap,
       ]),
-      EditorView.theme({
+      compTheme.of(EditorView.theme({
         '&': {
           fontSize: '14px',
           border: '1px solid var(--border-color)',
@@ -114,33 +148,26 @@
         '.cm-scroller': {
           lineHeight: '1.5',
         }
-      }),
-      EditorView.lineWrapping,
+      })),
+      compWrapping.of(wrap ? EditorView.lineWrapping : []),
+      compLang.of([]),
+      compReadonly.of(readonly ? EditorState.readOnly.of(true) : []),
+      compLineNumbers.of(
+        showLineNumbers
+          ? lineNumbers()
+          : EditorView.theme({ '.cm-gutters': { display: 'none' } })
+      ),
     ];
 
-    // Add language support
-    const langExt = getLanguageExtension();
-    if (langExt) {
-      extensions.push(langExt);
-    }
-
-    // Add theme
+    // Add theme (dark) if applicable
     const currentTheme = getTheme();
     if (currentTheme === 'dark') {
-      extensions.push(oneDark);
-    }
-
-    // Configure readonly mode
-    if (readonly) {
-      extensions.push(EditorState.readOnly.of(true));
-    }
-
-    // Line numbers
-    if (!showLineNumbers) {
-      extensions.push(EditorView.theme({
-        '.cm-lineNumbers': { display: 'none' },
-        '.cm-gutters': { display: 'none' }
-      }));
+      if (!oneDark) {
+        try { oneDark = (await import('@codemirror/theme-one-dark')).oneDark; } catch {}
+      }
+      extensions.push(compDark.of(oneDark || []));
+    } else {
+      extensions.push(compDark.of([]));
     }
 
     const state = EditorState.create({
@@ -165,6 +192,9 @@
         effects: StateEffect.reconfigure.of([...extensions, updateListener])
       });
     }
+
+    // Apply language asynchronously after view is ready
+    applyLanguage();
   }
 
   function updateEditor() {
@@ -202,9 +232,35 @@
     updateEditor();
   }
 
-  $: if (container && (language || theme)) {
-    destroyEditor();
-    createEditor();
+  // Dynamic theme changes via Compartment
+  $: if (editorView) {
+    const currentTheme = getTheme();
+    (async () => {
+      if (currentTheme === 'dark') {
+        if (!oneDark) {
+          try { oneDark = (await import('@codemirror/theme-one-dark')).oneDark; } catch {}
+        }
+        if (oneDark) editorView && editorView.dispatch({ effects: compDark.reconfigure(oneDark) });
+      } else {
+        editorView && editorView.dispatch({ effects: compDark.reconfigure([]) });
+      }
+    })();
+  }
+
+  // Dynamic language change
+  $: if (editorView && language !== undefined) {
+    applyLanguage();
+  }
+
+  // Dynamic toggles
+  $: if (editorView) {
+    editorView.dispatch({ effects: [
+      compReadonly.reconfigure(readonly ? EditorState.readOnly.of(true) : []),
+      compLineNumbers.reconfigure(
+        showLineNumbers ? lineNumbers() : EditorView.theme({ '.cm-gutters': { display: 'none' } })
+      ),
+      compWrapping.reconfigure(wrap ? EditorView.lineWrapping : [])
+    ]});
   }
 
   // Listen for theme changes
@@ -213,8 +269,17 @@
     if (theme === 'auto') {
       mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleChange = () => {
-        destroyEditor();
-        createEditor();
+        if (editorView) {
+          const isDark = mediaQuery.matches;
+          (async () => {
+            if (isDark) {
+              if (!oneDark) { try { oneDark = (await import('@codemirror/theme-one-dark')).oneDark; } catch {} }
+              editorView && editorView.dispatch({ effects: compDark.reconfigure(oneDark || []) });
+            } else {
+              editorView && editorView.dispatch({ effects: compDark.reconfigure([]) });
+            }
+          })();
+        }
       };
       mediaQuery.addEventListener('change', handleChange);
       

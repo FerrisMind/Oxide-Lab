@@ -24,7 +24,9 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    overflow: auto;
+    /* Vertical-only scrolling */
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   /* messages area should grow to fill available space */
@@ -40,7 +42,9 @@
   .loader {
     box-sizing: border-box;
     max-height: 100%;
-    overflow: auto !important;
+    /* Only vertical scrolling to avoid horizontal scrollbars in panels */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
   }
 
   /* prevent children margins from expanding container */
