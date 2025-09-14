@@ -35,7 +35,7 @@
   export let cuda_available = false;
   export let cuda_build = false;
   // Поддержка модальностей (индикаторы)
-  export let supports_text: boolean = true;
+  export let supports_text: boolean = false;
   export let supports_image: boolean = false;
   export let supports_audio: boolean = false;
   export let supports_video: boolean = false;

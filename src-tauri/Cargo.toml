@@ -43,6 +43,7 @@ image = "0.25"
 
 # Random number generation
 rand = "0.8"
+base64 = "0.22"
 
 # Логирование
 log = "0.4"

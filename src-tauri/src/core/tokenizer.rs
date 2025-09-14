@@ -75,7 +75,9 @@ pub fn mark_special_chat_tokens(tokenizer: &mut Tokenizer) {
         "<|im_start|>", "<|im_end|>", "<|user|>", "<|assistant|>", "<|system|>",
         "<|eot_id|>", "<|endoftext|>", "</s>", "<s>",
         // Gemma/Gemma2/Gemma3 style
-        "<start_of_turn>", "<end_of_turn>", "<eos>"
+        "<start_of_turn>", "<end_of_turn>", "<eos>",
+        // Multimodal sentinel used by many HF templates
+        "<image>"
     ];
     let mut to_add: Vec<AddedToken> = Vec::new();
     for &tok in specials.iter() {

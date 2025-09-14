@@ -8,10 +8,13 @@ use crate::core::tokenizer::{extract_eos_ids, extract_bos_token_str};
 use crate::core::prompt::PromptBuilder;
 use crate::core::config::SamplingOptions;
 use crate::core::types::GenerateRequest;
+use crate::core::types::Attachment;
 use super::{sampling::build_logits_processor_from_options, minp::MinPFilter, emit::ChunkEmitter, ctx::ContextSlice};
 use super::cancel::CANCEL_GENERATION;
 use std::sync::atomic::Ordering;
 use crate::{log_infer, log_template_error};
+use crate::models::registry::ArchKind;
+use crate::core::attachments::augment_with_attachments;
 
 pub async fn generate_stream_cmd(
     app: tauri::AppHandle,
@@ -63,13 +66,21 @@ fn generate_stream_impl(
     );
     let _ = app.emit("token", String::new());
 
-    // Use chat messages if provided, otherwise use the prompt directly
-    let prompt = if let Some(messages) = req.messages {
-        // Build prompt using chat template (inject bos if template expects it)
+    // Augment messages/prompt with attachments depending on architecture
+    let arch_opt = guard.arch.clone();
+    let attachments = req.attachments.clone().unwrap_or_default();
+    let aug = augment_with_attachments(
+        arch_opt,
+        &guard.device,
+        req.messages.clone(),
+        if req.prompt.is_empty() { None } else { Some(req.prompt.clone()) },
+        attachments,
+    )?;
+
+    // Use chat messages if provided (augmented), otherwise use the (augmented) prompt directly
+    let prompt = if let Some(messages) = aug.messages {
         build_prompt_with_template_bos(&guard.chat_template, messages, bos_opt)?
-    } else {
-        req.prompt
-    };
+    } else if let Some(p) = aug.prompt { p } else { String::new() };
     let tokens = tos
         .tokenizer()
         .encode(prompt, true)
@@ -243,5 +254,6 @@ pub fn build_prompt_with_template(
 ) -> Result<String, String> {
     build_prompt_with_template_bos(chat_template, messages, None)
 }
+
 
 

@@ -3,13 +3,14 @@ use candle::Device;
 use candle::Tensor;
 use candle::quantized::gguf_file::Content;
 
-/// Обёртка над quantized Gemma (использует реализацию из candle_transformers)
+/// Wrapper around candle_transformers' quantized Gemma3 implementation
 pub struct ModelWeights {
     inner: candle_transformers::models::quantized_gemma3::ModelWeights,
 }
 
 impl ModelWeights {
-    /// Построить модель из содержимого GGUF и ридера
+    /// Build from GGUF content and reader. We ignore context-specific knobs
+    /// as candle_transformers handles necessary metadata internally.
     pub fn from_gguf<R: Read + Seek>(
         content: Content,
         reader: &mut R,

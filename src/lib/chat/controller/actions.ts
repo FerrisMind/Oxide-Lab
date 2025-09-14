@@ -46,6 +46,14 @@ export function createActions(ctx: ChatControllerCtx) {
           if (!p.error && ctx.loadingProgress >= 100) ctx.isLoaded = true;
         }
       });
+      // Доп. канал: ранний сигнал о модальностях из backend
+      await listen<any>('modality_support', (e) => {
+        const m = e.payload || {};
+        if (typeof m.text === 'boolean') ctx.supports_text = m.text;
+        if (typeof m.image === 'boolean') ctx.supports_image = m.image;
+        if (typeof m.audio === 'boolean') ctx.supports_audio = m.audio;
+        if (typeof m.video === 'boolean') ctx.supports_video = m.video;
+      });
     } catch (err) {
       console.warn('failed to attach load_progress listener', err);
     }

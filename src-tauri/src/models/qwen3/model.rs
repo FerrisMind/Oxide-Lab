@@ -11,7 +11,13 @@ pub struct ModelWeights {
 impl ModelWeights {
     /// Build from GGUF content and reader. We ignore `context_length` and `flag`
     /// as candle_transformers handles necessary metadata internally.
-    pub fn from_gguf<R: Read + Seek>(content: Content, reader: &mut R, device: &Device, _context_length: usize, _flag: bool) -> Result<Self, String> {
+    pub fn from_gguf<R: Read + Seek>(
+        content: Content,
+        reader: &mut R,
+        device: &Device,
+        _context_length: usize,
+        _flag: bool,
+    ) -> Result<Self, String> {
         let cw = candle_transformers::models::quantized_qwen3::ModelWeights::from_gguf(content, reader, device)
             .map_err(|e| e.to_string())?;
         Ok(ModelWeights { inner: cw })
@@ -23,3 +29,4 @@ impl crate::models::common::model::ModelBackend for ModelWeights {
         self.inner.forward(input, position).map_err(|e| e.to_string())
     }
 }
+

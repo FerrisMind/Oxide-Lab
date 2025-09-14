@@ -16,70 +16,7 @@ use model_loading::{gguf, hub_gguf, safetensors};
 mod device;
 mod template;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ModalitySupportDto { pub text: bool, pub image: bool, pub audio: bool, pub video: bool }
-
-#[tauri::command]
-pub fn get_modality_support(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<ModalitySupportDto, String> {
-    let mut cfg_json: Option<serde_json::Value> = None;
-    if let Ok(guard) = state.lock() {
-        // Try config captured during loading first
-        if let Some(s) = guard.model_config_json.as_ref() {
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(s) { cfg_json = Some(v); }
-        }
-
-        // Fallbacks
-        if cfg_json.is_none() {
-            // GGUF: reopen file and try to extract config.json from metadata
-            if let Some(path_str) = guard.model_path.as_ref() {
-                let p = Path::new(path_str);
-                if p.is_file() && p.extension().and_then(|e| e.to_str()).map(|s| s.eq_ignore_ascii_case("gguf")).unwrap_or(false) {
-                    if let Ok(mut f) = std::fs::File::open(p) {
-                        if let Ok(content) = gguf_file::Content::read(&mut f) {
-                            if let Some(s) = content.metadata.get("config.json").and_then(|v| v.to_string().ok()).cloned()
-                                .or_else(|| content.metadata.get("tokenizer.ggml.config").and_then(|v| v.to_string().ok()).cloned())
-                                .or_else(|| content.metadata.get("general.config_json").and_then(|v| v.to_string().ok()).cloned())
-                            {
-                                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) { cfg_json = Some(v); }
-                            } else {
-                                // Heuristic from GGUF metadata keys if no embedded config JSON
-                                let mut flags = crate::core::modality::ModalitySupportDto { text: true, image: false, audio: false, video: false };
-                                let has_key = |needle: &str| content.metadata.keys().any(|k| k.to_lowercase().contains(needle));
-                                // image: any vision/image-related key or known multimodal arch
-                                flags.image = has_key("vision") || has_key("image_") || has_key("mm_vision") || has_key("llava") || has_key("onevision");
-                                // audio: any audio-related key or arch
-                                flags.audio = has_key("audio");
-                                // video: explicit video flags or keys
-                                flags.video = flags.image && (has_key("video") || has_key("time_instruction") || has_key("faster_video"));
-                                // Return early via JSON constructed from flags
-                                return Ok(ModalitySupportDto { text: flags.text, image: flags.image, audio: flags.audio, video: flags.video });
-                            }
-                        }
-                    }
-                } else if p.is_dir() {
-                    // Safetensors local: read config.json from directory
-                    let cfg = p.join("config.json");
-                    if cfg.exists() {
-                        if let Ok(bytes) = std::fs::read(&cfg) {
-                            if let Ok(s) = String::from_utf8(bytes) {
-                                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) { cfg_json = Some(v); }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Derive flags
-    let out = if let Some(cfg) = cfg_json {
-        crate::core::modality::detect_from_config(&cfg)
-    } else {
-        // Default to text only if no config is available
-        crate::core::modality::ModalitySupportDto { text: true, image: false, audio: false, video: false }
-    };
-    Ok(ModalitySupportDto { text: out.text, image: out.image, audio: out.audio, video: out.video })
-}
+// Модальная индикация удалена: проект реализует единую обработку вложений независимо от модели.
 
 #[tauri::command]
 pub fn load_model(app: tauri::AppHandle, state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>, req: LoadRequest) -> Result<(), String> {
@@ -260,4 +197,40 @@ pub fn set_precision(app: tauri::AppHandle, state: tauri::State<'_, SharedState<
         Precision::Int8 => PrecisionPolicy::MemoryEfficient,
     };
     guard.save_precision(&app).map_err(|e| e.to_string())
+}
+
+// --- GGUF metadata helpers ---
+
+#[tauri::command]
+pub fn gguf_list_metadata_keys_from_path(path: String) -> Result<Vec<String>, String> {
+    let p = Path::new(&path);
+    if !p.is_file() {
+        return Err(format!("Not a file: {}", path));
+    }
+    if !p.extension().and_then(|e| e.to_str()).map(|s| s.eq_ignore_ascii_case("gguf")).unwrap_or(false) {
+        return Err("Path is not a .gguf file".to_string());
+    }
+    let mut f = std::fs::File::open(p).map_err(|e| e.to_string())?;
+    let content = gguf_file::Content::read(&mut f).map_err(|e| e.to_string())?;
+    let mut keys: Vec<String> = content.metadata.keys().cloned().collect();
+    keys.sort();
+    Ok(keys)
+}
+
+#[tauri::command]
+pub fn gguf_list_metadata_keys(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<Vec<String>, String> {
+    let guard = state.lock().map_err(|e| e.to_string())?;
+    let path_str = guard.model_path.as_ref().ok_or_else(|| "No model loaded".to_string())?;
+    let p = Path::new(path_str);
+    if !p.is_file() {
+        return Err(format!("Not a file: {}", path_str));
+    }
+    if !p.extension().and_then(|e| e.to_str()).map(|s| s.eq_ignore_ascii_case("gguf")).unwrap_or(false) {
+        return Err("Loaded model is not a .gguf file".to_string());
+    }
+    let mut f = std::fs::File::open(p).map_err(|e| e.to_string())?;
+    let content = gguf_file::Content::read(&mut f).map_err(|e| e.to_string())?;
+    let mut keys: Vec<String> = content.metadata.keys().cloned().collect();
+    keys.sort();
+    Ok(keys)
 }

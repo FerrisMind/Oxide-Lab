@@ -18,6 +18,8 @@ pub struct ModelState<M> {
     pub(crate) model_path: Option<String>,
     pub(crate) tokenizer_path: Option<String>,
     pub(crate) model_config_json: Option<String>,
+    /// Detected architecture kind
+    pub(crate) arch: Option<crate::models::registry::ArchKind>,
     pub(crate) chat_template: Option<String>,
     // HF Hub (safetensors) связанные артефакты
     pub(crate) hub_repo_id: Option<String>,
@@ -39,6 +41,7 @@ impl<M> ModelState<M> {
             tokenizer_path: None,
             model_config_json: None,
             chat_template: None,
+            arch: None,
             hub_repo_id: None,
             hub_revision: None,
             safetensors_files: None,

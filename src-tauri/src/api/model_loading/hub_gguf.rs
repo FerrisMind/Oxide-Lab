@@ -8,6 +8,7 @@ use crate::{log_hub, log_load, log_template};
 use super::emit_load_progress;
 use crate::generate::cancel::CANCEL_LOADING;
 use std::sync::atomic::Ordering;
+use tauri::Emitter;
 
 pub fn load_hub_gguf_model(
     app: &tauri::AppHandle,
@@ -47,6 +48,11 @@ pub fn load_hub_gguf_model(
         })?;
     emit_load_progress(app, "read_header", 30, Some("GGUF заголовок прочитан"), false, None);
     if CANCEL_LOADING.load(Ordering::SeqCst) { emit_load_progress(app, "cancel", 32, Some("Отменено"), true, Some("cancelled")); return Err("cancelled".into()); }
+
+    // Определяем архитектуру и выставляем модальности согласно политике по архитектуре
+    if let Some(arch) = crate::models::registry::detect_arch(&content.metadata) {
+        // Модальная индикация удалена.
+    }
 
     // Токенизатор и шаблон чата: сначала пробуем из GGUF, если нет — скачиваем tokenizer.json из репо
     let mut tokenizer = match tokenizer_from_gguf_metadata(&content.metadata) {

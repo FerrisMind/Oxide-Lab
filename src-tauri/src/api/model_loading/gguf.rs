@@ -10,6 +10,7 @@ use crate::{log_load, log_template};
 use super::emit_load_progress;
 use crate::generate::cancel::CANCEL_LOADING;
 use std::sync::atomic::Ordering;
+use tauri::Emitter;
 
 pub fn load_gguf_model(
     app: &tauri::AppHandle,
@@ -75,12 +76,16 @@ pub fn load_gguf_model(
     }
     emit_load_progress(app, "tokenizer", 35, Some("Инициализирован"), false, None);
 
+    // Модальности теперь определяются строго по архитектуре
     let arch = detect_arch(&content.metadata).ok_or_else(|| {
         let err = "Unsupported GGUF architecture".to_string();
         emit_load_progress(app, "detect_arch", 38, None, false, Some(&err));
         err
     })?;
     emit_load_progress(app, "detect_arch", 40, Some(&format!("{:?}", arch)), false, None);
+    // Модальная индикация удалена: единая обработка вложений реализуется на уровне проекта.
+    // Persist detected architecture in state
+    guard.arch = Some(arch.clone());
     if CANCEL_LOADING.load(Ordering::SeqCst) { emit_load_progress(app, "cancel", 42, Some("Отменено"), true, Some("cancelled")); return Err("cancelled".into()); }
 
     if let Some(gg) = content.metadata.get("config.json").and_then(|v| v.to_string().ok()).cloned()

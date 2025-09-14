@@ -63,6 +63,8 @@ pub struct GenerateRequest {
     #[serde(default)]
     pub messages: Option<Vec<ChatMessage>>,
     #[serde(default)]
+    pub attachments: Option<Vec<Attachment>>, // Optional file attachments (paperclip)
+    #[serde(default)]
     pub max_new_tokens: Option<usize>,
     pub temperature: Option<f64>,
     pub top_p: Option<f64>,
@@ -74,6 +76,21 @@ pub struct GenerateRequest {
     pub use_custom_params: bool,
     #[serde(default)]
     pub seed: Option<u64>,
+}
+
+/// Attachment metadata passed from UI via the paperclip.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Attachment {
+    /// Logical kind of attachment; typical values: "image", "text", "file"
+    pub kind: Option<String>,
+    /// Optional MIME type, e.g. image/png
+    pub mime: Option<String>,
+    /// Optional display name / filename
+    pub name: Option<String>,
+    /// Optional absolute or app-local path to the file
+    pub path: Option<String>,
+    /// Optional base64-encoded content (if path is not provided)
+    pub bytes_b64: Option<String>,
 }
 
 

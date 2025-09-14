@@ -68,5 +68,14 @@ export type ChatControllerCtx = {
   set cuda_build(v: boolean);
   get current_device(): string;
   set current_device(v: string);
+  // Модальности
+  get supports_text(): boolean;
+  set supports_text(v: boolean);
+  get supports_image(): boolean;
+  set supports_image(v: boolean);
+  get supports_audio(): boolean;
+  set supports_audio(v: boolean);
+  get supports_video(): boolean;
+  set supports_video(v: boolean);
   // Offloading удалён
 };

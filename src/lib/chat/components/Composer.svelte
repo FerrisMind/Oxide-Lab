@@ -17,7 +17,7 @@
   let selectedFileName: string | null = null;
 
   // Поддерживаемые модальности (из родителя)
-  export let supports_text: boolean = true;
+  export let supports_text: boolean = false;
   export let supports_image: boolean = false;
   export let supports_audio: boolean = false;
   export let supports_video: boolean = false;

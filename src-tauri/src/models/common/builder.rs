@@ -20,8 +20,8 @@ pub type BuildResult<T> = Result<T, String>;
 /// Since we can't make traits with generic methods into trait objects,
 /// we'll use an enum-based approach instead
 pub enum ModelBuilder {
-    Qwen3(crate::models::qwen3_builder::Qwen3ModelBuilder),
-    Gemma3(crate::models::gemma3_builder::Gemma3ModelBuilder),
+    Qwen3(crate::models::qwen3::builder::Qwen3ModelBuilder),
+    Gemma3(crate::models::gemma3::builder::Gemma3ModelBuilder),
     // Add other model builders here as they are implemented
 }
 
@@ -97,6 +97,13 @@ impl ModelFactory {
     pub fn register_builder(&mut self, builder: ModelBuilder) {
         let arch_kind = builder.arch_kind();
         self.builders.insert(arch_kind, builder);
+    }
+
+    /// Register an explicit alias mapping: use the given builder to handle a specified `arch`.
+    /// Useful when the same loader implementation supports multiple closely related architectures
+    /// (e.g., Gemma and Gemma3) but we want distinct ArchKind values for policy decisions.
+    pub fn register_builder_for_arch(&mut self, arch: ArchKind, builder: ModelBuilder) {
+        self.builders.insert(arch, builder);
     }
     
     /// Build a model from GGUF content

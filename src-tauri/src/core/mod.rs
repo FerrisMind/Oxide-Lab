@@ -11,4 +11,5 @@ pub mod vision;
 pub mod audio;
 pub mod multimodal;
 pub mod log;
-pub mod modality;
+// modality module removed: modality indication is handled project-wide via attachments routing
+pub mod attachments;

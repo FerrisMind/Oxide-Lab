@@ -3921,6 +3921,7 @@ dependencies = [
 name = "oxide-lab"
 version = "0.10.23"
 dependencies = [
+ "base64 0.22.1",
  "candle-core",
  "candle-nn",
  "candle-transformers",

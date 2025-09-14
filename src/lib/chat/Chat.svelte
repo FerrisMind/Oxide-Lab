@@ -31,8 +31,8 @@
   let cuda_build: boolean = false;
   let current_device: string = "CPU";
   
-  // Поддержка модальностей (эвристика по имени модели)
-  let supports_text: boolean = true;
+  // Поддержка модальностей (из backend во время загрузки)
+  let supports_text: boolean = false;
   let supports_image: boolean = false;
   let supports_audio: boolean = false;
   let supports_video: boolean = false;
@@ -45,33 +45,17 @@
       supports_audio = !!r.audio;
       supports_video = !!r.video;
     } catch (e) {
-      // default to text-only
-      supports_text = true;
+      // default: пока ничего не подсвечиваем
+      supports_text = false;
       supports_image = false;
       supports_audio = false;
       supports_video = false;
     }
   }
-  $: if (isLoaded) { void refreshModalities(); } else {
-    supports_text = true; supports_image = false; supports_audio = false; supports_video = false;
+  // Обновляем модальности во время загрузки (когда приходят события) и после загрузки
+  $: if (isLoadingModel || isLoaded) { void refreshModalities(); } else {
+    supports_text = false; supports_image = false; supports_audio = false; supports_video = false;
   }
-
-  function detectModalities() {
-    try {
-      const s = `${modelPath} ${repoId} ${hubGgufFilename}`.toLowerCase();
-      const has = (hints: string[]) => hints.some((h) => s.includes(h));
-      const videoHints = ['vtt', 'video', 'onevision', 'llava'];
-      const imageHints = ['itt', 'image', 'vision', 'gemma3', 'siglip'];
-      const audioHints = ['att', 'audio', 'qwen2audio', 'whisper'];
-      const any2anyHints = ['ata', 'any-to-any', 'multi_modality', 'multimodal', 'omni'];
-
-      supports_text = true;
-      supports_video = has(videoHints);
-      supports_image = has(imageHints) || supports_video || has(any2anyHints);
-      supports_audio = has(audioHints) || has(any2anyHints);
-    } catch {}
-  }
-  $: detectModalities();
   
   // Состояние загрузки модели
   let isLoadingModel = false;
@@ -134,6 +118,10 @@
     get cuda_available() { return cuda_available; }, set cuda_available(v) { cuda_available = v; },
     get cuda_build() { return cuda_build; }, set cuda_build(v) { cuda_build = v; },
     get current_device() { return current_device; }, set current_device(v) { current_device = v; },
+    get supports_text() { return supports_text; }, set supports_text(v) { supports_text = v; },
+    get supports_image() { return supports_image; }, set supports_image(v) { supports_image = v; },
+    get supports_audio() { return supports_audio; }, set supports_audio(v) { supports_audio = v; },
+    get supports_video() { return supports_video; }, set supports_video(v) { supports_video = v; },
   });
 
   const cancelLoading = controller.cancelLoading;

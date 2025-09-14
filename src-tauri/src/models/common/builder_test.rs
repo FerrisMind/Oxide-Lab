@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod tests {
     use crate::models::common::builder::ModelFactory;
-    use crate::models::qwen3_builder::Qwen3ModelBuilder;
+    use crate::models::qwen3::builder::Qwen3ModelBuilder;
     use crate::models::registry::ArchKind;
     use std::collections::HashMap;
 

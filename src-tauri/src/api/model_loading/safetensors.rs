@@ -16,6 +16,7 @@ use crate::{log_load, log_local_error, log_hub_error, log_template};
 use super::emit_load_progress;
 use crate::generate::cancel::CANCEL_LOADING;
 use std::sync::atomic::Ordering;
+use tauri::Emitter;
 
 /// Load a model from local safetensors files using the ModelBuilder pattern
 pub fn load_local_safetensors_model(
@@ -108,6 +109,8 @@ pub fn load_local_safetensors_model(
 
         // Detect the architecture
         if let Some(arch) = detect_arch_from_config(&config) {
+            // Set modality support based on architecture
+            // Модальная индикация удалена.
             // Convert PrecisionPolicy to Precision for the dtype conversion
             let precision = match guard.precision_policy {
                 crate::core::precision::PrecisionPolicy::Default => crate::core::precision::Precision::F32,
@@ -238,6 +241,8 @@ pub fn load_hub_safetensors_model(
 
         // Detect the architecture
         if let Some(arch) = detect_arch_from_config(&config) {
+            // Set modality support based on architecture
+            // Модальная индикация удалена.
             // Convert PrecisionPolicy to Precision for the dtype conversion
             let precision = match guard.precision_policy {
                 crate::core::precision::PrecisionPolicy::Default => crate::core::precision::Precision::F32,

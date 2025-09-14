@@ -1,200 +1,93 @@
-//! Adapter for float LLM models from candle_transformers (safetensors format).
-//! 
-//! This module provides adapters that allow using models from candle_transformers
-//! with the existing ModelBackend trait.
-//! 
-//! The adapters wrap the candle_transformers models and implement the ModelBackend
-//! trait, enabling unified generation API for both GGUF quantized models and
-//! float safetensors models.
+use candle_core::{Device, Tensor, DType, Result as CandleResult};
+use candle_nn::VarBuilder;
+use candle_transformers::models::qwen::{Config, Model as QwenModel};
+use candle_transformers::models::qwen::tokenizer::Tokenizer;
+use candle_transformers::generation::LogitsProcessor;
+use anyhow::Result;
+use serde_json;
+use std::path::Path;
+use std::fs;
 
-use candle::Tensor;
-use crate::models::common::model::ModelBackend;
-
-/// Adapter for Qwen3 models from candle_transformers
-/// 
-/// This struct wraps the Qwen3 ModelForCausalLM and adapts it to the ModelBackend trait.
-pub struct Qwen3CandleAdapter {
-    /// The inner Qwen3 model
-    inner: candle_transformers::models::qwen3::ModelForCausalLM,
+pub struct CandleLLM {
+    model: Option<QwenModel>,
+    tokenizer: Option<Tokenizer>,
+    device: Device,
 }
 
-impl Qwen3CandleAdapter {
-    /// Create a new Qwen3CandleAdapter
-    /// 
-    /// # Arguments
-    /// * `model` - The Qwen3 ModelForCausalLM
-    /// 
-    /// # Returns
-    /// * `Qwen3CandleAdapter` - Adapter that implements ModelBackend
-    pub fn new(model: candle_transformers::models::qwen3::ModelForCausalLM) -> Self {
-        Self { inner: model }
+impl CandleLLM {
+    pub fn new(device: Device) -> Self {
+        Self { model: None, tokenizer: None, device }
+    }
+
+    pub fn load_model(&mut self, model_dir: &str) -> Result<()> {
+        let dir_path = Path::new(model_dir);
+        let config_path = dir_path.join("config.json");
+        let tokenizer_path = dir_path.join("tokenizer.json");
+
+        // Load config
+        let config_str = fs::read_to_string(&config_path)?;
+        let config: Config = serde_json::from_str(&config_str)?;
+
+        // Load tokenizer
+        self.tokenizer = Some(Tokenizer::from_file(&tokenizer_path, &self.device)?);
+
+        // Collect safetensors files
+        let mut safetensors_paths = vec![];
+        for entry in fs::read_dir(dir_path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("safetensors") {
+                safetensors_paths.push(path);
+            }
+        }
+
+        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&safetensors_paths, DType::F16, &self.device)? };
+        self.model = Some(QwenModel::load(&vb, &config)?);
+        Ok(())
+    }
+
+    pub fn generate(&self, prompt: &str, max_tokens: usize, temperature: f64) -> Result<String> {
+        if self.model.is_none() || self.tokenizer.is_none() {
+            return Err(anyhow::anyhow!("Model or tokenizer not loaded"));
+        }
+        let model = self.model.as_ref().unwrap();
+        let tokenizer = self.tokenizer.as_ref().unwrap();
+
+        // Tokenize
+        let tokens = tokenizer.encode(prompt, true)?.get_ids().to_vec();
+        let mut generated_tokens = tokens.clone();
+
+        let eos_token_id = 151643; // EOS token for Qwen
+
+        for _ in 0..max_tokens {
+            if generated_tokens.last() == Some(&eos_token_id) { break; }
+
+            let seq_len = generated_tokens.len();
+            let input = Tensor::new(&generated_tokens, &self.device)?.unsqueeze(0)?;
+            let position_ids = Tensor::arange(0u32, seq_len as u32, &self.device)?.unsqueeze(0)?;
+            let logits = model.forward(&input, &position_ids)?;
+
+            // Last token logits
+            let last_logits = logits.narrow(1, (seq_len - 1) as i64, 1)?.squeeze(1)?.squeeze(0)?;
+
+            let mut logits_processor = LogitsProcessor::new(temperature, 1.0, true);
+            let processed_logits = logits_processor.process(&last_logits, seq_len - 1)?;
+
+            let next_token_id = if temperature > 0.0 {
+                let probs = candle_nn::ops::softmax(&processed_logits, 0)?;
+                let next_token = candle_nn::ops::multinomial(&probs.unsqueeze(0)?, 1)?;
+                next_token.squeeze(1)?.to_scalar::<u32>()? as usize
+            } else {
+                processed_logits.argmax(0)?.to_scalar::<u32>()? as usize
+            };
+
+            generated_tokens.push(next_token_id);
+            if next_token_id == eos_token_id { break; }
+        }
+
+        let output_tokens = &generated_tokens[tokens.len()..];
+        let generated = tokenizer.decode(output_tokens)?;
+        Ok(generated.trim().to_string())
     }
 }
 
-impl ModelBackend for Qwen3CandleAdapter {
-    /// Forward pass through the model
-    /// 
-    /// # Arguments
-    /// * `input` - Input tensor (typically token IDs)
-    /// * `position` - Position in the sequence (for positional embeddings)
-    /// 
-    /// # Returns
-    /// * `Result<Tensor, String>` - Output logits tensor or error message
-    fn forward_layered(&mut self, input: &Tensor, position: usize) -> Result<Tensor, String> {
-        self.inner.forward(input, position).map_err(|e| e.to_string())
-    }
-}
-
-/// Adapter for Qwen2 models from candle_transformers
-pub struct Qwen2CandleAdapter {
-    /// The inner Qwen2 model
-    inner: candle_transformers::models::qwen2::ModelForCausalLM,
-}
-
-impl Qwen2CandleAdapter {
-    /// Create a new Qwen2CandleAdapter
-    /// 
-    /// # Arguments
-    /// * `model` - The Qwen2 ModelForCausalLM
-    /// 
-    /// # Returns
-    /// * `Qwen2CandleAdapter` - Adapter that implements ModelBackend
-    pub fn new(model: candle_transformers::models::qwen2::ModelForCausalLM) -> Self {
-        Self { inner: model }
-    }
-}
-
-impl ModelBackend for Qwen2CandleAdapter {
-    /// Forward pass through the model
-    /// 
-    /// # Arguments
-    /// * `input` - Input tensor (typically token IDs)
-    /// * `position` - Position in the sequence (for positional embeddings)
-    /// 
-    /// # Returns
-    /// * `Result<Tensor, String>` - Output logits tensor or error message
-    fn forward_layered(&mut self, input: &Tensor, position: usize) -> Result<Tensor, String> {
-        self.inner.forward(input, position).map_err(|e| e.to_string())
-    }
-}
-
-/// Adapter for Llama models from candle_transformers
-pub struct LlamaCandleAdapter {
-    /// The inner Llama model
-    inner: candle_transformers::models::llama::Llama,
-}
-
-impl LlamaCandleAdapter {
-    /// Create a new LlamaCandleAdapter
-    /// 
-    /// # Arguments
-    /// * `model` - The Llama model
-    /// 
-    /// # Returns
-    /// * `LlamaCandleAdapter` - Adapter that implements ModelBackend
-    pub fn new(model: candle_transformers::models::llama::Llama) -> Self {
-        Self { inner: model }
-    }
-}
-
-impl ModelBackend for LlamaCandleAdapter {
-    /// Forward pass through the model
-    /// 
-    /// # Arguments
-    /// * `input` - Input tensor (typically token IDs)
-    /// * `position` - Position in the sequence (for positional embeddings)
-    /// 
-    /// # Returns
-    /// * `Result<Tensor, String>` - Output logits tensor or error message
-    fn forward_layered(&mut self, input: &Tensor, position: usize) -> Result<Tensor, String> {
-        // For Llama models, we need to create a cache and pass it
-        // This is a simplified implementation - in practice, you would need to manage the cache properly
-        let mut cache = candle_transformers::models::llama::Cache::new(
-            true, // use_kv_cache
-            input.dtype(),
-            &candle_transformers::models::llama::Config {
-                hidden_size: 4096,
-                intermediate_size: 11008,
-                vocab_size: 32000,
-                num_hidden_layers: 32,
-                num_attention_heads: 32,
-                num_key_value_heads: 32,
-                rms_norm_eps: 1e-5,
-                rope_theta: 10000.0,
-                use_flash_attn: false,
-                bos_token_id: None,
-                eos_token_id: None,
-                rope_scaling: None,
-                max_position_embeddings: 4096,
-                tie_word_embeddings: false,
-            },
-            input.device()
-        ).map_err(|e| e.to_string())?;
-        
-        self.inner.forward(input, position, &mut cache).map_err(|e| e.to_string())
-    }
-}
-
-/// Adapter for Phi models from candle_transformers
-pub struct PhiCandleAdapter {
-    /// The inner Phi model
-    inner: candle_transformers::models::phi::Model,
-}
-
-impl PhiCandleAdapter {
-    /// Create a new PhiCandleAdapter
-    /// 
-    /// # Arguments
-    /// * `model` - The Phi model
-    /// 
-    /// # Returns
-    /// * `PhiCandleAdapter` - Adapter that implements ModelBackend
-    pub fn new(model: candle_transformers::models::phi::Model) -> Self {
-        Self { inner: model }
-    }
-}
-
-impl ModelBackend for PhiCandleAdapter {
-    /// Forward pass through the model
-    /// 
-    /// # Arguments
-    /// * `input` - Input tensor (typically token IDs)
-    /// * `position` - Position in the sequence (for positional embeddings)
-    /// 
-    /// # Returns
-    /// * `Result<Tensor, String>` - Output logits tensor or error message
-    fn forward_layered(&mut self, input: &Tensor, _position: usize) -> Result<Tensor, String> {
-        // Phi models don't use position parameter in the same way
-        self.inner.forward(input).map_err(|e| e.to_string())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    
-    #[test]
-    fn test_adapter_creation() {
-        // This is a placeholder test - actual testing would require model weights
-        // and would be more complex
-        assert!(true);
-    }
-}
-
-/// Adapter for Gemma models from candle_transformers
-pub struct GemmaCandleAdapter {
-    /// The inner Gemma model
-    inner: candle_transformers::models::gemma::Model,
-}
-
-impl GemmaCandleAdapter {
-    /// Create a new GemmaCandleAdapter
-    pub fn new(model: candle_transformers::models::gemma::Model) -> Self {
-        Self { inner: model }
-    }
-}
-
-impl ModelBackend for GemmaCandleAdapter {
-    fn forward_layered(&mut self, input: &Tensor, position: usize) -> Result<Tensor, String> {
-        self.inner.forward(input, position).map_err(|e| e.to_string())
-    }
-}

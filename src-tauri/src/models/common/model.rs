@@ -10,7 +10,7 @@ pub struct AnyModel {
 }
 
 impl AnyModel {
-    pub fn from_qwen3(m: crate::models::qwen3::ModelWeights) -> Self {
+    pub fn from_qwen3(m: crate::models::qwen3::model::ModelWeights) -> Self {
         // The Qwen3 ModelWeights should implement ModelBackend; we box it
         AnyModel { inner: Box::new(m) }
     }

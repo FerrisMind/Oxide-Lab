@@ -1,11 +1,10 @@
 pub mod common;
-pub mod qwen3;
-pub mod qwen3_builder;
-pub mod gemma3;
-pub mod gemma3_builder;
 pub mod registry;
 
-// Re-export common types for convenience
-// re-exports retained for compatibility (uncomment if needed elsewhere)
+// Per-model namespaces
+pub mod qwen3;
+pub mod gemma3;
+
+// Re-exports (enable as needed)
 // pub use common::model::{AnyModel, ModelBackend};
 

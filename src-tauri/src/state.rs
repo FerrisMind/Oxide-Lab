@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
 use candle::Device;
 use tokenizers::Tokenizer;
-use crate::models::qwen3::ModelWeights as Qwen3Gguf;
+use crate::models::qwen3::model::ModelWeights as Qwen3Gguf;
 use crate::core::precision::Precision;
 use crate::models::common::model::ModelBackend;
 use std::boxed::Box;
