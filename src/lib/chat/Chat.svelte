@@ -4,7 +4,6 @@
   import Composer from "$lib/chat/components/Composer.svelte";
   import LoaderPanel from "$lib/chat/components/LoaderPanel.svelte";
   import MessageList from "$lib/chat/components/MessageList.svelte";
-  import ChatPlaceholder from "$lib/chat/components/ChatPlaceholder.svelte";
   // Chat styles are loaded globally from layout to avoid UI changes when navigating between pages
   // Убрали переключатель «сырого» Markdown
   import type { ChatMessage } from "$lib/chat/types";
@@ -31,8 +30,8 @@
   let cuda_build: boolean = false;
   let current_device: string = "CPU";
   
-  // Поддержка модальностей (из backend во время загрузки)
-  let supports_text: boolean = false;
+  // Поддержка модальностей (эвристика по имени модели)
+  let supports_text: boolean = true;
   let supports_image: boolean = false;
   let supports_audio: boolean = false;
   let supports_video: boolean = false;
@@ -45,17 +44,33 @@
       supports_audio = !!r.audio;
       supports_video = !!r.video;
     } catch (e) {
-      // default: пока ничего не подсвечиваем
-      supports_text = false;
+      // default to text-only
+      supports_text = true;
       supports_image = false;
       supports_audio = false;
       supports_video = false;
     }
   }
-  // Обновляем модальности во время загрузки (когда приходят события) и после загрузки
-  $: if (isLoadingModel || isLoaded) { void refreshModalities(); } else {
-    supports_text = false; supports_image = false; supports_audio = false; supports_video = false;
+  $: if (isLoaded) { void refreshModalities(); } else {
+    supports_text = true; supports_image = false; supports_audio = false; supports_video = false;
   }
+
+  function detectModalities() {
+    try {
+      const s = `${modelPath} ${repoId} ${hubGgufFilename}`.toLowerCase();
+      const has = (hints: string[]) => hints.some((h) => s.includes(h));
+      const videoHints = ['vtt', 'video', 'onevision', 'llava'];
+      const imageHints = ['itt', 'image', 'vision', 'gemma3', 'siglip'];
+      const audioHints = ['att', 'audio', 'qwen2audio', 'whisper'];
+      const any2anyHints = ['ata', 'any-to-any', 'multi_modality', 'multimodal', 'omni'];
+
+      supports_text = true;
+      supports_video = has(videoHints);
+      supports_image = has(imageHints) || supports_video || has(any2anyHints);
+      supports_audio = has(audioHints) || has(any2anyHints);
+    } catch {}
+  }
+  $: detectModalities();
   
   // Состояние загрузки модели
   let isLoadingModel = false;
@@ -118,10 +133,6 @@
     get cuda_available() { return cuda_available; }, set cuda_available(v) { cuda_available = v; },
     get cuda_build() { return cuda_build; }, set cuda_build(v) { cuda_build = v; },
     get current_device() { return current_device; }, set current_device(v) { current_device = v; },
-    get supports_text() { return supports_text; }, set supports_text(v) { supports_text = v; },
-    get supports_image() { return supports_image; }, set supports_image(v) { supports_image = v; },
-    get supports_audio() { return supports_audio; }, set supports_audio(v) { supports_audio = v; },
-    get supports_video() { return supports_video; }, set supports_video(v) { supports_video = v; },
   });
 
   const cancelLoading = controller.cancelLoading;
@@ -282,39 +293,37 @@
 
 <main class="wrap">
   <!-- удалено дублирование заголовка -->
-  {#if isLoaded}
-    <section class="chat">
-      <MessageList bind:messages bind:messagesEl />
-      <Composer 
-        bind:prompt 
-        {busy} 
-        {isLoaded} 
-        {supports_text}
-        {supports_image}
-        {supports_audio}
-        {supports_video}
-        on:send={handleSend} 
-        on:stop={stopGenerate}
-        on:attach={(e) => {
-          // e.detail: { filename, content }
-          // Forward to controller's attach handler
+  <section class="chat">
+    <MessageList
+      bind:messages
+      bind:messagesEl
+      showModelNotice={!isLoaded}
+    />
+    <Composer 
+      bind:prompt 
+      {busy} 
+      {isLoaded} 
+      {supports_text}
+      {supports_image}
+      {supports_audio}
+      {supports_video}
+      on:send={handleSend} 
+      on:stop={stopGenerate}
+      on:attach={(e) => {
+        // e.detail: { filename, content }
+        // Forward to controller's attach handler
+        // @ts-ignore
+        const actions: any = controller;
+        if (actions && typeof actions.handleAttachFile === 'function') {
           // @ts-ignore
-          const actions: any = controller;
-          if (actions && typeof actions.handleAttachFile === 'function') {
-            // @ts-ignore
-            actions.handleAttachFile(e.detail);
-          } else {
-            console.log('Прикреплён файл', e.detail?.filename);
-          }
-        }}
-        on:voice={() => console.log('Голосовое сообщение')}
-      />
-    </section>
-  {:else}
-    <section class="chat">
-      <ChatPlaceholder />
-    </section>
-  {/if}
+          actions.handleAttachFile(e.detail);
+        } else {
+          console.log('Прикреплён файл', e.detail?.filename);
+        }
+      }}
+      on:voice={() => console.log('Голосовое сообщение')}
+    />
+  </section>
 
   <LoaderPanel
     bind:format
@@ -361,7 +370,6 @@
     {/if}
   </LoaderPanel>
 </main>
-
 
 
 
