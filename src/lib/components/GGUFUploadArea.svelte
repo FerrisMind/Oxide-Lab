@@ -15,7 +15,23 @@
     if (!ox) return;
     if ($chatState.isLoadingModel && ox.cancelLoading) return ox.cancelLoading();
     if ($chatState.isLoaded && ox.unloadGGUF) return ox.unloadGGUF();
-    if (ox.loadGGUF) return ox.loadGGUF();
+    
+    // Prevent loading if no model is selected
+    if (ox.loadGGUF) {
+      // Check if a model is selected based on the current format
+      if ($chatState.format === 'gguf' && !$chatState.modelPath) {
+        // Don't start loading if no GGUF file is selected
+        return;
+      } else if (($chatState.format === 'hub_gguf' && (!$chatState.repoId || !$chatState.hubGgufFilename))) {
+        // Don't start loading if HF Hub GGUF info is incomplete
+        return;
+      } else if ($chatState.format === 'hub_safetensors' && !$chatState.repoId) {
+        // Don't start loading if HF Hub safetensors repoId is missing
+        return;
+      }
+      // If we passed all checks, proceed with loading
+      return ox.loadGGUF();
+    }
   }
 </script>
 

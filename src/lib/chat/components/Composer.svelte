@@ -1,5 +1,14 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
+  import ArrowUp from "phosphor-svelte/lib/ArrowUp";
+  import Stop from "phosphor-svelte/lib/Stop";
+  import Paperclip from "phosphor-svelte/lib/Paperclip";
+  import Broom from "phosphor-svelte/lib/Broom";
+  import Microphone from "phosphor-svelte/lib/Microphone";
+  import SlidersHorizontal from "phosphor-svelte/lib/SlidersHorizontal";
+  import ArrowClockwise from "phosphor-svelte/lib/ArrowClockwise";
+  import File from "phosphor-svelte/lib/File";
+  import X from "phosphor-svelte/lib/X";
 
   type AttachDetail = {
     filename: string;
@@ -14,9 +23,10 @@
   const dispatch = createEventDispatcher<{
     send: void;
     stop: void;
-    regenerate: void;
     clear: void;
     attach: AttachDetail;
+    'toggle-loader-panel': void;
+    regenerate: void;
   }>();
 
   export let prompt: string = "";
@@ -24,16 +34,25 @@
   export let isLoaded: boolean = false;
   export let canStop: boolean = false;
   export let canRegenerate: boolean = false;
+  export let isRecording: boolean = false;
   export let supports_text: boolean = true;
   export let supports_image: boolean = false;
   export let supports_audio: boolean = false;
   export let supports_video: boolean = false;
+  export let isLoaderPanelVisible: boolean = false;
 
   let fileInput: HTMLInputElement | null = null;
+  let textareaElement: HTMLTextAreaElement | null = null;
   const MAX_FILE_SIZE = 20 * 1024 * 1024;
   let attachError: string | null = null;
   let errorTimer: ReturnType<typeof setTimeout> | null = null;
   let accept = DEFAULT_TEXT_ACCEPT;
+  let attachedFiles: AttachDetail[] = [];
+  
+  // Переменные для автоматического изменения высоты
+  let textareaHeight = 34; // Стандартная высота однострочного поля
+  const MIN_HEIGHT = 34; // Минимальная высота (как у кнопок)
+  const MAX_HEIGHT = 102; // Максимальная высота (3 строки)
 
   function triggerSend() {
     if (busy || !isLoaded || !prompt.trim()) return;
@@ -45,10 +64,6 @@
     dispatch("stop");
   }
 
-  function triggerRegenerate() {
-    if (!canRegenerate || busy || !isLoaded) return;
-    dispatch("regenerate");
-  }
 
   function triggerClear() {
     if (!prompt && !attachError) return;
@@ -56,6 +71,31 @@
     attachError = null;
     clearErrorTimer();
     dispatch("clear");
+  }
+
+  function triggerVoiceInput() {
+    if (isRecording) {
+      // Остановить запись
+      isRecording = false;
+      console.log("Остановка записи голоса");
+    } else {
+      // Начать запись
+      isRecording = true;
+      console.log("Начало записи голоса");
+    }
+  }
+
+  function triggerSettings() {
+    dispatch("toggle-loader-panel");
+  }
+
+  function triggerRegenerate() {
+    if (!canRegenerate) return;
+    dispatch("regenerate");
+  }
+
+  function removeAttachment(index: number) {
+    attachedFiles = attachedFiles.filter((_, i) => i !== index);
   }
 
   function triggerAttach() {
@@ -129,7 +169,9 @@
 
       if (isTextLike) {
         const content = await file.text();
-        dispatch("attach", { filename: name, content });
+        const attachment = { filename: name, content };
+        attachedFiles = [...attachedFiles, attachment];
+        dispatch("attach", attachment);
         attachError = null;
         clearErrorTimer();
         return;
@@ -148,7 +190,9 @@
       }
 
       if (marker) {
-        dispatch("attach", { filename: name, content: marker });
+        const attachment = { filename: name, content: marker };
+        attachedFiles = [...attachedFiles, attachment];
+        dispatch("attach", attachment);
         attachError = null;
         clearErrorTimer();
       } else {
@@ -168,63 +212,146 @@
       triggerSend();
     }
   }
+
+  function adjustTextareaHeight() {
+    if (!textareaElement) return;
+    
+    // Сбрасываем высоту для корректного расчета
+    textareaElement.style.height = 'auto';
+    
+    // Получаем scrollHeight для определения необходимой высоты
+    const scrollHeight = textareaElement.scrollHeight;
+    
+    // Ограничиваем высоту минимальными и максимальными значениями
+    if (scrollHeight <= MIN_HEIGHT) {
+      textareaHeight = MIN_HEIGHT;
+    } else if (scrollHeight >= MAX_HEIGHT) {
+      textareaHeight = MAX_HEIGHT;
+    } else {
+      textareaHeight = scrollHeight;
+    }
+    
+    // Применяем новую высоту
+    textareaElement.style.height = `${textareaHeight}px`;
+  }
+
+  function handleTextareaInput() {
+    adjustTextareaHeight();
+  }
+
+  // Реактивное обновление высоты при изменении prompt
+  $: if (prompt !== undefined) {
+    // Используем setTimeout для корректного обновления после рендера
+    setTimeout(() => {
+      adjustTextareaHeight();
+    }, 0);
+  }
 </script>
 
 <div class="composer-wrapper">
   <div class="composer">
+    {#if attachedFiles.length > 0}
+      <div class="composer__row composer__row--attachments">
+        {#each attachedFiles as attachment, index}
+          <div class="composer__attachment">
+            <div class="composer__attachment-icon">
+              <File size={16} weight="bold" />
+            </div>
+            <span class="composer__attachment-name">{attachment.filename}</span>
+            <button
+              type="button"
+              class="composer__attachment-remove"
+              on:click={() => removeAttachment(index)}
+              aria-label="Удалить файл"
+            >
+              <X size={12} weight="bold" />
+            </button>
+          </div>
+        {/each}
+      </div>
+    {/if}
     <div class="composer__row composer__row--input">
       <textarea
         class="composer__input"
         bind:value={prompt}
+        bind:this={textareaElement}
         placeholder="Напишите сообщение..."
         rows="1"
         on:keydown={handleKeydown}
+        on:input={handleTextareaInput}
+        style="height: {textareaHeight}px; overflow-y: {textareaHeight >= MAX_HEIGHT ? 'auto' : 'hidden'};"
       ></textarea>
     </div>
     <div class="composer__row composer__row--controls">
       <div class="composer__controls composer__controls--left">
         <button
           type="button"
-          class="composer__button"
+          class="composer__button composer__button--icon"
           on:click={triggerAttach}
           disabled={busy}
           aria-label="Прикрепить файл"
         >
-          Прикрепить
+          <Paperclip size={16} weight="bold" />
         </button>
         <button
           type="button"
-          class="composer__button"
-          on:click={triggerClear}
-          disabled={busy || (!prompt && !attachError)}
+          class="composer__button composer__button--icon"
+          class:composer__button--settings-active={isLoaderPanelVisible}
+          on:click={triggerSettings}
+          disabled={busy}
+          aria-label="Настройки лоадер панели"
         >
-          Очистить
+          <SlidersHorizontal size={16} weight="bold" />
         </button>
+        {#if canRegenerate}
+          <button
+            type="button"
+            class="composer__button composer__button--icon"
+            on:click={triggerRegenerate}
+            disabled={busy}
+            aria-label="Регенерировать ответ"
+          >
+            <ArrowClockwise size={16} weight="bold" />
+          </button>
+        {/if}
+        {#if prompt || attachError}
+          <button
+            type="button"
+            class="composer__button composer__button--icon"
+            on:click={triggerClear}
+            disabled={busy}
+            aria-label="Очистить"
+          >
+            <Broom size={16} weight="bold" />
+          </button>
+        {/if}
       </div>
       <div class="composer__controls composer__controls--right">
         <button
           type="button"
-          class="composer__button"
-          on:click={triggerStop}
-          disabled={!canStop}
+          class="composer__button composer__button--icon"
+          on:click={triggerVoiceInput}
+          disabled={busy}
+          aria-label={isRecording ? 'Остановить запись' : 'Начать запись голоса'}
         >
-          Стоп
-        </button>
-        <button
-          type="button"
-          class="composer__button"
-          on:click={triggerRegenerate}
-          disabled={!canRegenerate || busy || !isLoaded}
-        >
-          Перегенерировать
+          {#if isRecording}
+            <Stop size={16} weight="bold" />
+          {:else}
+            <Microphone size={16} weight="bold" />
+          {/if}
         </button>
         <button
           type="button"
           class="composer__button composer__button--primary"
-          on:click={triggerSend}
-          disabled={busy || !isLoaded || !prompt.trim()}
+          on:click={busy ? triggerStop : triggerSend}
+          disabled={!isLoaded || (!busy && !prompt.trim())}
+          aria-label={busy ? 'Стоп' : 'Отправить'}
         >
-          Отправить
+          {#if busy}
+            <Stop size={16} weight="bold" />
+          {:else}
+            <ArrowUp size={16} weight="bold" />
+          {/if}
         </button>
       </div>
     </div>
@@ -260,21 +387,20 @@
     --composer-control-bg: rgba(255, 255, 255, 0.7);
     --composer-control-hover-bg: rgba(255, 255, 255, 0.95);
     --composer-control-border: rgba(0, 0, 0, 0.12);
+    --composer-control-radius: 12px;
     --composer-primary: var(--accent-2, #e2c6ff);
     --composer-primary-strong: rgba(43, 42, 41, 0.92);
     --composer-primary-strong-hover: rgba(43, 42, 41, 0.82);
     --composer-primary-text: #fdfbf8;
 
-    display: grid;
-    grid-template-rows: repeat(2, var(--composer-row-height));
+    display: flex;
+    flex-direction: column;
     gap: 12px;
-    background: var(--composer-bg);
-    border: 2px solid var(--composer-primary);
+    background: #1a1a1a;
+    border: 2px solid transparent;
     border-radius: 16px;
     padding: 12px;
-    box-shadow:
-      0 0 0 2px rgba(226, 198, 255, 0.25),
-      0 8px 24px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
     flex-shrink: 0;
     width: 100%;
     transition:
@@ -282,12 +408,9 @@
       box-shadow 0.2s ease;
   }
 
-  .composer:hover,
   .composer:focus-within {
-    border-color: var(--composer-primary);
-    box-shadow:
-      0 0 0 3px rgba(226, 198, 255, 0.35),
-      0 8px 24px rgba(0, 0, 0, 0.04);
+    border-color: rgba(226, 198, 255, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
   }
 
   .composer__row {
@@ -305,23 +428,116 @@
     gap: 12px;
   }
 
+  .composer__row--attachments {
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .composer__attachment {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--composer-control-radius);
+    padding: 0 8px;
+    width: auto;
+    height: var(--composer-row-height);
+    font-size: 11px;
+    color: var(--composer-text);
+    position: relative;
+    transition: background 0.2s ease;
+    box-sizing: border-box;
+    min-width: 120px;
+    max-width: 200px;
+  }
+
+  .composer__attachment:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .composer__attachment-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.7);
+    flex-shrink: 0;
+  }
+
+  .composer__attachment-name {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+    line-height: 1.2;
+    flex-grow: 1;
+  }
+
+  .composer__attachment-remove {
+    display: flex;
+    background: none;
+    border: none;
+    color: var(--composer-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: color 0.2s ease, background 0.2s ease;
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .composer__attachment-remove:hover {
+    color: var(--composer-text);
+    background: rgba(255, 255, 255, 0.2);
+  }
+
   .composer__input {
     width: 100%;
-    height: 100%;
+    min-height: var(--composer-row-height);
+    max-height: calc(var(--composer-row-height) * 3);
     resize: none;
-    border: 1px solid var(--composer-control-border);
-    border-radius: 12px;
-    padding: 0 8px;
-    font-size: 12px;
-    line-height: calc(var(--composer-row-height) - 4px);
-    color: var(--composer-text);
-    background: var(--composer-control-bg);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--composer-control-radius);
+    padding: 8px 16px;
+    font-size: 14px;
+    line-height: 1.2;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
     outline: none;
-    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.03);
+    box-shadow: 
+      inset 0 1px 3px rgba(0, 0, 0, 0.1),
+      0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: 
+      height 0.2s ease,
+      border-color 0.2s ease,
+      background-color 0.2s ease,
+      box-shadow 0.2s ease;
+    overflow-y: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-sizing: border-box;
+    display: block;
+  }
+
+  .composer__input:focus {
+    border-color: rgba(226, 198, 255, 0.6);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 
+      inset 0 1px 3px rgba(0, 0, 0, 0.1),
+      0 0 0 3px rgba(226, 198, 255, 0.1),
+      0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .composer__input::placeholder {
-    color: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
   }
 
   .composer__controls {
@@ -336,58 +552,181 @@
   }
 
   .composer__button {
-    border: 1px solid var(--composer-control-border);
-    background: var(--composer-control-bg);
-    color: var(--composer-text);
-    border-radius: 999px;
-    padding: 0 14px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border-radius: var(--composer-control-radius);
+    padding: 10px 16px;
     height: var(--composer-row-height);
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: default;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    transition: 
+      transform 0.2s ease, 
+      box-shadow 0.2s ease, 
+      background 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
     min-width: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .composer__button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
   }
 
   .composer__button:not(:disabled) {
     cursor: pointer;
-    color: var(--composer-text);
+    color: #ffffff;
   }
 
   .composer__button:not(:disabled):hover {
-    transform: translateY(-1px);
-    background: var(--composer-control-hover-bg);
-    border-color: rgba(0, 0, 0, 0.18);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    transform: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 8px 25px rgba(0, 0, 0, 0.15),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .composer__button:not(:disabled):hover::before {
+    left: 100%;
   }
 
   .composer__button:not(:disabled):active {
-    transform: translateY(0);
-    box-shadow: none;
+    transform: translateY(-1px);
+    box-shadow: 
+      0 4px 15px rgba(0, 0, 0, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
   .composer__button:disabled {
-    opacity: 0.6;
-    color: var(--composer-muted);
+    opacity: 0.4;
+    color: rgba(255, 255, 255, 0.3);
+    cursor: not-allowed;
+    transform: none;
   }
 
   .composer__button--primary {
-    background: var(--composer-primary-strong);
-    border-color: transparent;
-    color: var(--composer-primary-text);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 2px solid transparent;
+    color: #ffffff;
     font-weight: 600;
+    box-shadow: 
+      0 4px 15px rgba(102, 126, 234, 0.3),
+      0 2px 8px rgba(0, 0, 0, 0.1);
+    width: var(--composer-row-height);
+    height: var(--composer-row-height);
+    padding: 0;
+    border-radius: var(--composer-control-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .composer__button--primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%, rgba(255, 255, 255, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
 
   .composer__button--primary:not(:disabled):hover {
-    background: var(--composer-primary-strong-hover);
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    box-shadow: 
+      0 8px 25px rgba(102, 126, 234, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: none;
+    scale: 1.05;
+  }
+
+  .composer__button--primary:not(:disabled):hover::before {
+    opacity: 1;
+  }
+
+  .composer__button--primary:not(:disabled):active {
+    transform: none;
+    scale: 1.02;
+    box-shadow: 
+      0 4px 15px rgba(102, 126, 234, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.2);
   }
 
   .composer__button--primary:disabled {
-    background: rgba(0, 0, 0, 0.1);
-    color: rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    border-color: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    box-shadow: none;
+    transform: none;
+  }
+
+  .composer__button--icon {
+    width: var(--composer-row-height);
+    height: var(--composer-row-height);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--composer-control-radius);
+    position: relative;
+  }
+
+  .composer__button--icon:not(:disabled):hover {
+    transform: none;
+    scale: 1.1;
+  }
+
+  .composer__button--icon:not(:disabled):active {
+    transform: none;
+    scale: 1.05;
+  }
+
+  /* Стили для кнопки настроек в зависимости от состояния панели */
+  .composer__button--icon.composer__button--settings-active {
+    background: rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.3);
+  }
+
+  .composer__button--icon.composer__button--settings-active:not(:disabled):hover {
+    transform: none;
+    background: rgba(102, 126, 234, 0.25);
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 
+      0 8px 25px rgba(102, 126, 234, 0.3),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .composer__button--icon.composer__button--settings-active:not(:disabled):active {
+    transform: none;
+    background: rgba(102, 126, 234, 0.35);
+    border-color: rgba(102, 126, 234, 0.6);
+  }
+
+  /* Отключаем ховер для кнопки настроек когда панель неактивна */
+  .composer__button--icon:not(.composer__button--settings-active):not(:disabled):hover {
+    transform: none;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
   }
 
   .composer__file-input {
@@ -403,7 +742,7 @@
 
   @media (max-width: 720px) {
     .composer {
-      grid-template-rows: repeat(2, minmax(52px, auto));
+      gap: 16px;
     }
 
     .composer__row--controls {
@@ -416,6 +755,20 @@
       width: 100%;
       justify-content: center;
     }
+
+    .composer__attachment {
+      min-width: 100px;
+      max-width: 150px;
+      padding: 0 6px;
+    }
+
+    .composer__attachment-icon {
+      margin-bottom: 0;
+    }
+
+    .composer__attachment-name {
+      font-size: 10px;
+    }
   }
 
   .composer__error {
@@ -424,4 +777,5 @@
     color: var(--danger, #c45555);
     width: 100%;
   }
+
 </style>

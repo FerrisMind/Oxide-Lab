@@ -1,22 +1,27 @@
 <script lang="ts">
   import type { ChatMessage } from "$lib/chat/types";
   import { registerAssistantBubble } from "$lib/chat/stream_render";
-  import SidebarSimple from "phosphor-svelte/lib/SidebarSimple";
+  import ChatPlaceholder from "./ChatPlaceholder.svelte";
+
   export let messages: ChatMessage[] = [];
   export let messagesEl: HTMLDivElement | null = null;
+  export let showModelNotice = false;
+
+  const baseBackground = '#2d2d2d';
+  $: placeholderOnly = showModelNotice && messages.length === 0;
 </script>
 
-<div class="messages-toolbar">
-  <button class="toolbar-button left">
-    <SidebarSimple size="20" />
-  </button>
-  <button class="toolbar-button right">
-    <SidebarSimple size="20" />
-  </button>
-</div>
-
-<div class="messages" bind:this={messagesEl}>
-  {#if messages.length === 0}
+<div
+  class="messages"
+  bind:this={messagesEl}
+  class:placeholder-only={placeholderOnly}
+  class:with-placeholder={showModelNotice}
+  style:background-color={baseBackground}
+>
+  {#if showModelNotice}
+    <ChatPlaceholder variant="inline" />
+  {/if}
+  {#if messages.length === 0 && !showModelNotice}
     <div class="empty">Нет сообщений. Напишите что-нибудь…</div>
   {/if}
   {#each messages as m, i}
@@ -31,40 +36,3 @@
     </div>
   {/each}
 </div>
-
-<style>
-  .messages-toolbar {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-    margin-top: -10px;
-    /* Remove negative side margins to avoid horizontal overflow */
-    margin-left: 0;
-    margin-right: 0;
-  }
-  
-  .toolbar-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text);
-  }
-  
-  .toolbar-button:hover {
-    background-color: var(--border-color);
-  }
-  
-  .toolbar-button.left {
-    margin-right: auto;
-  }
-  
-  .toolbar-button.right {
-    margin-left: auto;
-    transform: scaleX(-1);
-  }
-</style>

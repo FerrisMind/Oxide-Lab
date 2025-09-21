@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { headerSearchQuery } from '$lib/stores/search';
+  import { headerSearchQuery as _headerSearchQuery } from '$lib/stores/search';
   import ModelSearchFilters from '$lib/components/ModelSearchFilters.svelte';
   import SearchManager from '$lib/components/search/SearchManager.svelte';
   import SearchResults from '$lib/components/search/SearchResults.svelte';
@@ -18,13 +18,10 @@
                let:error
                let:hasSearched
                let:hasMore
-               let:nextOffset
                let:totalCount
                let:selectedModel
-               let:modelDetailLoading
                let:searchModels
                let:loadMoreModels
-               let:addModelToManager
                let:handleModelSelect>
   <main class="wrap">
     <div class="search-page">

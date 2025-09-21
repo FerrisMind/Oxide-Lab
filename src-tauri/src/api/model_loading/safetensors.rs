@@ -16,7 +16,6 @@ use crate::{log_load, log_local_error, log_hub_error, log_template};
 use super::emit_load_progress;
 use crate::generate::cancel::CANCEL_LOADING;
 use std::sync::atomic::Ordering;
-use tauri::Emitter;
 
 /// Load a model from local safetensors files using the ModelBuilder pattern
 pub fn load_local_safetensors_model(

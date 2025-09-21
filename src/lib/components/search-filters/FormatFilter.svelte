@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { FilterOption } from './filter-types';
+  import type { FilterOption as _FilterOption } from './filter-types';
   import { availableFormats, toggleInArray } from './filter-types';
   import { createEventDispatcher } from 'svelte';
 

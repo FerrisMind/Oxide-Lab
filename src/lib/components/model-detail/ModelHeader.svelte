@@ -2,7 +2,7 @@
   import type { HFModel } from '$lib/services/huggingface';
   import { formatNumber } from './formatters';
   import { createIconManager } from './icon-manager';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount as _onMount, onDestroy } from 'svelte';
 
   export let model: HFModel;
 

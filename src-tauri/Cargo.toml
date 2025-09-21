@@ -34,8 +34,7 @@ candle-transformers = { git = "https://github.com/huggingface/candle.git", defau
 tokenizers = { version = "0.21", features = ["onig"] }
 minijinja = "2"
 
-# Image processing
-image = "0.25"
+# Image processing (removed multimodality)
 
 # Audio processing
 # rodio = { version = "0.21", optional = true }
@@ -73,5 +72,4 @@ metal = [
 ]
 
 # Audio processing features
-audio = []  # Placeholder for audio processing
-resample = []  # Placeholder for resampling
+## no extra features

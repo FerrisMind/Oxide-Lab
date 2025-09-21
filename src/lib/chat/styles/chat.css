@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  gap: 16px;
 }
 
 .chat {
@@ -77,168 +78,6 @@
 
 .message.assistant .bubble {
   background: #e8f0f8;
-}
-
-.composer {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  position: relative;
-}
-
-.composer textarea {
-  flex: 1;
-  border: 1px solid #e8e6e3;
-  background: #fcfbfa;
-  color: var(--text);
-  border-radius: 10px;
-  padding: 10px 12px;
-  padding-right: 60px;
-  outline: none;
-  resize: none;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.composer textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgb(179 205 224 / 0.1);
-}
-
-.composer-buttons {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  gap: 6px;
-}
-
-.composer-btn {
-  /* smaller, compact icon buttons matching global UI */
-  width: clamp(36px, 44px);
-  height: clamp(36px, 44px);
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease,
-    background-color 0.12s ease;
-  color: var(--text);
-  font-weight: 600;
-  position: relative;
-  overflow: hidden;
-  background: transparent;
-}
-
-.composer .composer-buttons .composer-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgb(0 0 0 / 0.08);
-}
-
-.composer .composer-buttons .composer-btn:active {
-  transform: translateY(0);
-}
-
-.composer .composer-buttons .composer-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-  transform: none;
-  box-shadow: none;
-}
-
-/* Force icon pixel sizes inside composer buttons to avoid being scaled down by other rules */
-
-.composer .composer-buttons .composer-btn svg {
-  width: 20px !important;
-  height: 20px !important;
-}
-
-/* Стили для кнопок скрепки и микрофона */
-
-.attach-btn {
-  background: var(--card);
-  border: 1px solid var(--border-color);
-  color: var(--text);
-}
-
-.attach-btn:hover:not(:disabled) {
-  filter: brightness(0.98);
-}
-
-.voice-btn {
-  background: var(--card);
-  border: 1px solid var(--border-color);
-  color: var(--text);
-}
-
-.voice-btn:hover:not(:disabled) {
-  filter: brightness(0.98);
-}
-
-.send-btn {
-  background: var(--accent);
-  color: var(--text);
-  border: none;
-}
-
-.send-btn:hover:not(:disabled) {
-  filter: brightness(0.95);
-}
-
-.stop-btn {
-  background: var(--stop-bg, #ff6b6b);
-  color: #fff;
-}
-
-.stop-btn:hover {
-  filter: brightness(0.95);
-}
-
-/* Disabled send visual when model not loaded */
-
-.send-disabled {
-  background: var(--card) !important;
-  color: var(--muted) !important;
-  border: 1px solid var(--border-color) !important;
-}
-
-.send-btn:not(:disabled)::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: rgb(255 255 255 / 0.2);
-  transition: left 0.5s ease;
-}
-
-.send-btn:not(:disabled):hover::before {
-  left: 100%;
-}
-
-.stop-btn::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: rgb(255 255 255 / 0.3);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: all 0.3s ease;
-}
-
-.stop-btn:hover::after {
-  width: 100%;
-  height: 100%;
 }
 
 /* Modern toggle switch */
@@ -379,50 +218,7 @@
     color: #eee;
   }
 
-  .composer textarea {
-    background: #2d2d2d;
-    border-color: #3a3a3a;
-    color: #eee;
-  }
-
   /* Темная тема для кнопок скрепки и микрофона */
-
-  .attach-btn {
-    background: linear-gradient(135deg, #495057, #343a40);
-  }
-
-  .attach-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #343a40, #495057);
-  }
-
-  .voice-btn {
-    background: linear-gradient(135deg, #1e7e34, #17a2b8);
-  }
-
-  .voice-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #17a2b8, #1e7e34);
-  }
-
-  .send-btn {
-    background: linear-gradient(135deg, #695b99, #5a4b8a);
-  }
-
-  .send-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #5a4b8a, #695b99);
-  }
-
-  .stop-btn {
-    background: linear-gradient(135deg, #d32f2f, #b71c1c);
-  }
-
-  .stop-btn:hover {
-    background: linear-gradient(135deg, #b71c1c, #d32f2f);
-  }
-
-  .composer textarea:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgb(91 124 153 / 0.2);
-  }
 
   .slider {
     background: #555;

@@ -8,7 +8,6 @@ use crate::{log_hub, log_load, log_template};
 use super::emit_load_progress;
 use crate::generate::cancel::CANCEL_LOADING;
 use std::sync::atomic::Ordering;
-use tauri::Emitter;
 
 pub fn load_hub_gguf_model(
     app: &tauri::AppHandle,
@@ -49,23 +48,12 @@ pub fn load_hub_gguf_model(
     emit_load_progress(app, "read_header", 30, Some("GGUF заголовок прочитан"), false, None);
     if CANCEL_LOADING.load(Ordering::SeqCst) { emit_load_progress(app, "cancel", 32, Some("Отменено"), true, Some("cancelled")); return Err("cancelled".into()); }
 
-    // Определяем архитектуру и выставляем модальности согласно политике по архитектуре
-    if let Some(arch) = crate::models::registry::detect_arch(&content.metadata) {
-        // Модальная индикация удалена.
-    }
+    // Определение архитектуры для индикации больше не требуется
 
-    // Токенизатор и шаблон чата: сначала пробуем из GGUF, если нет — скачиваем tokenizer.json из репо
+    // Токенизатор должен присутствовать в метаданных GGUF; не допускается использование внешнего tokenizer.json
     let mut tokenizer = match tokenizer_from_gguf_metadata(&content.metadata) {
         Ok(tk) => tk,
-        Err(_) => {
-            match api.get("tokenizer.json") {
-                Ok(path) => match std::fs::read(&path).ok().and_then(|b| tokenizers::Tokenizer::from_bytes(&b).ok()) {
-                    Some(tk) => tk,
-                    None => return Err("Failed to read tokenizer.json from Hub".into()),
-                },
-                Err(_) => return Err("Tokenizer not embedded in GGUF and tokenizer.json missing in repo".into()),
-            }
-        }
+        Err(e) => return Err(format!("Tokenizer must be embedded in GGUF metadata: {}", e)),
     };
     mark_special_chat_tokens(&mut tokenizer);
     let chat_tpl = extract_chat_template(&tokenizer).or_else(|| find_chat_template_in_metadata(&content.metadata));
@@ -89,17 +77,34 @@ pub fn load_hub_gguf_model(
         .or_else(|| content.metadata.get("tokenizer.ggml.config").and_then(|v| v.to_string().ok()).cloned())
         .or_else(|| content.metadata.get("general.config_json").and_then(|v| v.to_string().ok()).cloned())
     {
-        guard.model_config_json = Some(gg);
+        guard.model_config_json = Some(gg.clone());
+        // Попытка распарсить и применить конфиг перед созданием модели если доступен
+        // Попытка распарсить конфиг, но не используем значение здесь — применим после сборки модели
+        if serde_json::from_str::<serde_json::Value>(&gg).is_err() {
+            log_hub!("config.json in metadata is present but failed to parse as JSON");
+        }
     }
 
     // Use the model factory to build the model
     emit_load_progress(app, "build_model", 60, None, false, None);
-    let model_backend = get_model_factory()
+    // Build model
+    let mut model_backend = get_model_factory()
         .build_from_gguf(arch, content, &mut file, &guard.device, context_length, false)
         .map_err(|e| {
             emit_load_progress(app, "build_model", 65, None, false, Some(&e));
             format!("Failed to build model: {}", e)
         })?;
+
+    // Если есть JSON-конфигурация в guard.model_config_json — применим её
+    if let Some(gg) = guard.model_config_json.as_ref() {
+        if let Ok(cfg_val) = serde_json::from_str::<serde_json::Value>(gg) {
+            if let Err(e) = model_backend.apply_config(&cfg_val) {
+                emit_load_progress(app, "apply_config", 75, None, false, Some(&format!("Model apply_config failed: {}", e)));
+            } else {
+                emit_load_progress(app, "apply_config", 75, None, false, Some("Model config applied"));
+            }
+        }
+    }
     emit_load_progress(app, "build_model_done", 85, Some("Модель сконструирована"), false, None);
     if CANCEL_LOADING.load(Ordering::SeqCst) { emit_load_progress(app, "cancel", 90, Some("Отменено"), true, Some("cancelled")); return Err("cancelled".into()); }
 

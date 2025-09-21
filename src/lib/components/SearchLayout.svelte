@@ -8,7 +8,7 @@
   export const error: string | null = null;
   export let totalCount: number = 0;
   
-  import { createEventDispatcher, mount, unmount, onMount } from 'svelte';
+  import { createEventDispatcher, mount, unmount, onMount as _onMount } from 'svelte';
   import ModelList from './ModelList.svelte';
   import ModelDetail from './ModelDetail.svelte';
   import Robot from 'phosphor-svelte/lib/Robot';

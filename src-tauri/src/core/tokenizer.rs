@@ -76,8 +76,7 @@ pub fn mark_special_chat_tokens(tokenizer: &mut Tokenizer) {
         "<|eot_id|>", "<|endoftext|>", "</s>", "<s>",
         // Gemma/Gemma2/Gemma3 style
         "<start_of_turn>", "<end_of_turn>", "<eos>",
-        // Multimodal sentinel used by many HF templates
-        "<image>"
+        // Убрали мультимодальные сентинелы
     ];
     let mut to_add: Vec<AddedToken> = Vec::new();
     for &tok in specials.iter() {
@@ -98,7 +97,46 @@ pub fn tokenizer_from_gguf_metadata(md: &HashMap<String, gguf_file::Value>) -> R
     if let Some(json) = try_reconstruct_tokenizer_from_bpe(md) {
         return Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string());
     }
+    // Если BPE реконструкция невозможна, попробуем собрать простой WordLevel токенизатор из списка токенов
+    if let Some(json) = try_build_wordlevel_tokenizer_from_tokens(md) {
+        return Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string());
+    }
     Err("GGUF: embedded tokenizer.json не найден; реконструкция невозможна".into())
+}
+
+/// Построить минимальный JSON для `tokenizers` на основе массива токенов в метаданных.
+/// Возвращает строку JSON или None если токены не найдены.
+pub fn try_build_wordlevel_tokenizer_from_tokens(md: &HashMap<String, gguf_file::Value>) -> Option<String> {
+    // Попробуем найти список токенов в известных ключах
+    let tokens = get_string_array(md, "tokenizer.ggml.tokens")
+        .or_else(|| get_string_array(md, "tokenizer.vocab"))
+        .or_else(|| get_string_array(md, "tokenizer.tokens"))?;
+
+    let mut vocab_obj: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    for (i, tok) in tokens.iter().enumerate() {
+        // Преобразуем токен в пользовательский вид
+        vocab_obj.insert(tok.clone(), serde_json::json!(i as u32));
+    }
+
+    // Опционально определяем unk token
+    let unk = md.get("tokenizer.ggml.unknown_token")
+        .and_then(|v| v.to_string().ok().map(|s| s.clone()))
+        .unwrap_or_else(|| "<unk>".to_string());
+
+    // Собираем Value вручную, чтобы избежать проблем с временной областью жизни строк
+    let mut root_map: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    root_map.insert("version".to_string(), serde_json::Value::String("1.0".to_string()));
+
+    let mut model_map: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    model_map.insert("type".to_string(), serde_json::Value::String("WordLevel".to_string()));
+    model_map.insert("vocab".to_string(), serde_json::Value::Object(vocab_obj));
+    model_map.insert("unk_token".to_string(), serde_json::Value::String(unk.clone()));
+    root_map.insert("model".to_string(), serde_json::Value::Object(model_map));
+
+    root_map.insert("pre_tokenizer".to_string(), serde_json::json!({ "type": "Whitespace" }));
+    root_map.insert("decoder".to_string(), serde_json::json!({ "type": "WordLevel" }));
+
+    Some(serde_json::Value::Object(root_map).to_string())
 }
 
 #[derive(Debug, Deserialize)]

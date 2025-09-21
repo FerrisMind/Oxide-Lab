@@ -46,7 +46,7 @@ export function createActions(ctx: ChatControllerCtx) {
           if (!p.error && ctx.loadingProgress >= 100) ctx.isLoaded = true;
         }
       });
-      // Доп. канал: ранний сигнал о модальностях из backend
+      // Доп. канал: ранний сигнал о модальностями из backend
       await listen<any>('modality_support', (e) => {
         const m = e.payload || {};
         if (typeof m.text === 'boolean') ctx.supports_text = m.text;
@@ -59,16 +59,18 @@ export function createActions(ctx: ChatControllerCtx) {
     }
   }
 
-  // Handler for attaching text files from UI
-  async function _handleAttachFile(payload: { filename: string; content: string }) {
+  // Обработчик вложений: НЕ запускает генерацию автоматически.
+  // Добавляет содержимое вложения в поле ввода (prompt), чтобы пользователь сам отправил сообщение.
+  async function _handleAttachFile(_payload: { filename: string; content: string }) {
     try {
-      // Прикреплённый файл добавляем как пользовательское сообщение с меткой
-      const display = `\n[Прикреплён файл: ${payload.filename}]\n\n${payload.content}`;
-      const msgs = ctx.messages;
-      msgs.push({ role: 'user', content: display } as any);
-      msgs.push({ role: 'assistant', content: '' } as any);
-      ctx.messages = msgs;
-      await generateFromHistory();
+      // Убираем добавление информации о прикрепленных файлах в поле ввода
+      // const prefix = `\n[Прикреплён файл: ${payload.filename}]\n\n`;
+      // const addition = `${prefix}${payload.content}`;
+      // const has = ctx.prompt && ctx.prompt.trim().length > 0;
+      // ctx.prompt = has ? `${ctx.prompt}\n\n${addition}` : addition;
+
+      // Просто игнорируем прикрепленные файлы в поле ввода
+      return;
     } catch (e) {
       console.error('Attach handler failed', e);
     }
@@ -360,6 +362,7 @@ export function createActions(ctx: ChatControllerCtx) {
     loadGGUF,
     unloadGGUF,
     handleSend,
+    handleAttachFile: _handleAttachFile,
     generateFromHistory,
     stopGenerate,
     pickModel,

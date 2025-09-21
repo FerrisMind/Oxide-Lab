@@ -11,7 +11,7 @@ pub enum ArchKind {
     Mistral,    // Covers Mistral 7B, Mistral Small, Mistral NeMo, Mistral Large
     Mixtral,
     Gemma,      // Gemma 2 (text-only in this app)
-    Gemma3,     // Gemma 3 (multimodal: text + image)
+    Gemma3,     // Gemma 3 (используем только текст, без мультимодальности)
     Qwen3,      // Covers Qwen 2, 2.5, 3, 3 Coder
     Yi,
     Phi3,       // Covers Phi-3, Phi-3.5

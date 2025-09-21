@@ -89,12 +89,12 @@
           // compute available height inside wrap
           const wrapRect = wrap.getBoundingClientRect();
           const header = document.querySelector('.app-header');
-          const headerH = header ? header.getBoundingClientRect().height : 0;
-          const targetH = wrapRect.height;
+          const _headerH = header ? header.getBoundingClientRect().height : 0;
+          const _targetH = wrapRect.height;
 
           // don't force loader height here — let CSS/flex handle sizing and allow loader internal scroll
         }
-      } catch (e) {
+      } catch (_e) {
         // ignore
       }
     };

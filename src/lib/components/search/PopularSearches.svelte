@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { HFModel } from '$lib/services/huggingface';
+  import type { HFModel as _HFModel } from '$lib/services/huggingface';
   
   export let searchQuery = '';
   export let selectedFormats: string[] = [];

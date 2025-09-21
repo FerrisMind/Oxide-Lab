@@ -7,9 +7,6 @@ pub mod weights;
 pub mod prompt;
 pub mod config;
 pub mod precision;
-pub mod vision;
-pub mod audio;
-pub mod multimodal;
 pub mod log;
-// modality module removed: modality indication is handled project-wide via attachments routing
-pub mod attachments;
+// Убрали мультимодальность: vision/audio/multimodal/attachments/attachment_router удалены
+pub mod attachments_text;

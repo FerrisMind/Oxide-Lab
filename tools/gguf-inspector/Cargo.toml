@@ -1,0 +1,23 @@
+[package]
+name = "gguf-inspector"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+candle = { version = "0.9.1", package = "candle-core" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+structopt = "0.3"
+eframe = "0.32"
+egui = "0.32"
+rfd = "0.15"
+base64 = "0.22"
+csv = "1.3"
+serde_yaml = "0.9"
+opener = "0.8"
+tokenizers = "0.15"
+
+[features]
+default = []
+
+

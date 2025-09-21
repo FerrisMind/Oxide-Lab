@@ -2,10 +2,7 @@ import { mount, unmount } from 'svelte';
 import Eye from 'phosphor-svelte/lib/Eye';
 import EyeSlash from 'phosphor-svelte/lib/EyeSlash';
 import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
-import {
-  getCodeMirrorRenderer,
-  cleanupRenderer as _cleanupRenderer,
-} from '$lib/chat/codemirror-renderer';
+// CodeMirror renderer removed — using Shiki-based StreamingCodeBlock for highlighting
 import { enableExternalLinks } from '$lib/chat/external-links';
 import { StreamingCodeBlock } from '$lib/components/streaming-code';
 import type { BubbleCtx } from './bubble_ctx';
@@ -127,7 +124,7 @@ function renderMarkdownWithStreamingCode(text: string, _isStreaming: boolean = f
     const blockId = `streaming-code-${index}`;
     // Minimal placeholder: only mount point for Svelte component (no external header/labels)
     const placeholder = `
-<div id="${blockId}" class="streaming-code-placeholder" data-language="${block.language}" data-code="${encodeURIComponent(block.code)}" data-streaming="${_isStreaming && !block.isComplete}">
+<div id="${blockId}" class="streaming-code-placeholder" data-language="${block.language}" data-code="${encodeURIComponent(block.code)}" data-streaming="${_isStreaming && !block.isComplete}" data-is-complete="${block.isComplete}">
   <div class="streaming-code-mount"></div>
 </div>`;
 
@@ -149,8 +146,30 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
     const language = element.dataset.language || '';
     const code = decodeURIComponent(element.dataset.code || '');
     const streaming = element.dataset.streaming === 'true';
+    const isComplete = element.dataset.isComplete === 'true';
 
     try {
+      // Reuse already-mounted component if present to avoid tearing down during streaming
+      if ((element as any).__streamingCodeComponent) {
+        const existing = (element as any).__streamingCodeComponent;
+        try {
+          existing.$set({
+            code,
+            language,
+            isStreaming: streaming,
+            isComplete,
+            readonly: true,
+            showLineNumbers: false,
+          } as any);
+        } catch {
+          // If update fails, fall back to re-mount
+          try {
+            unmount(existing);
+          } catch {}
+        }
+        return;
+      }
+
       // Mount Svelte component into the mount node if present, otherwise mount into element
       const mountTarget = element.querySelector('.streaming-code-mount') ?? element;
       const component = mount(StreamingCodeBlock, {
@@ -159,14 +178,14 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
           code,
           language,
           isStreaming: streaming,
+          isComplete,
           readonly: true,
-          showLineNumbers: true,
-        },
+          // For streaming UI we hide line numbers by default
+          showLineNumbers: false,
+        } as any,
       });
 
-      // No copy button wiring here — streaming handled via CodeMirror in component
-
-      // Store component reference for cleanup
+      // Store component reference for cleanup and future updates
       (element as any).__streamingCodeComponent = component;
     } catch (error) {
       console.error('Failed to mount StreamingCodeBlock:', error);
@@ -216,16 +235,7 @@ export function appendMarkdownText(
     // Mount streaming code components
     mountStreamingCodeComponents(ctx.mdContentEl, isStreaming);
 
-    // Apply CodeMirror rendering to remaining code blocks (non-streaming)
-    try {
-      if (!ctx.codeMirrorWatching) {
-        const renderer = getCodeMirrorRenderer(ctx.mdContentEl);
-        renderer.startWatching(ctx.mdContentEl);
-        ctx.codeMirrorWatching = true;
-      }
-    } catch (error) {
-      console.error('Failed to apply CodeMirror rendering:', error);
-    }
+    // No CodeMirror rendering anymore — Shiki handles highlighting in streaming components.
   }
 
   if (ctx.mdRawEl) {
@@ -258,7 +268,8 @@ export function finalizeMarkdownStreaming(ctx: BubbleCtx): BubbleCtx {
       if (component) {
         // Update component props to stop streaming
         try {
-          component.$set({ isStreaming: false });
+          const finalCode = decodeURIComponent(element.dataset.code || '');
+          component.$set({ code: finalCode, isStreaming: false, isComplete: true });
         } catch (error) {
           console.error('Failed to update StreamingCodeBlock:', error);
         }

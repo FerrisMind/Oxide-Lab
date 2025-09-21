@@ -21,7 +21,7 @@
 
 - **Фронтенд (SvelteKit 5, SPA)**
   - Корень UI: `src/lib/chat/Chat.svelte` и `src/routes/+page.svelte`.
-  - Компоненты: загрузка/выгрузка (`LoaderPanel.svelte`), композиция сообщения (`Composer.svelte`), список сообщений (`MessageList.svelte`), параметры инференса (`InferenceParams.svelte`).
+  - Компоненты: загрузка/выгрузка (`LoaderPanel.svelte`), список сообщений (`MessageList.svelte`), параметры инференса (`InferenceParams.svelte`).
   - Поток: события `token` → инкрементальный парсер `src/lib/chat/parser/*` → отрисовка сегментов `src/lib/chat/stream/*`.
   - Безопасный Markdown: `marked` + `highlight.js` + очистка через `dompurify`.
   - Диалоги/сообщения: `@tauri-apps/plugin-dialog`.

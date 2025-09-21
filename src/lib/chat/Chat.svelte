@@ -1,9 +1,9 @@
 <script lang="ts">
   // no direct event subscriptions in Chat; streaming handled via controller
   import { onDestroy, onMount } from "svelte";
-  import Composer from "$lib/chat/components/Composer.svelte";
   import LoaderPanel from "$lib/chat/components/LoaderPanel.svelte";
   import MessageList from "$lib/chat/components/MessageList.svelte";
+  import Composer from "$lib/chat/components/Composer.svelte";
   // Chat styles are loaded globally from layout to avoid UI changes when navigating between pages
   // Убрали переключатель «сырого» Markdown
   import type { ChatMessage } from "$lib/chat/types";
@@ -12,6 +12,14 @@
   import { chatState, chatUiMounted, getDefaultChatState } from "$lib/stores/chat";
   import { get as getStore } from "svelte/store";
   import { invoke } from '@tauri-apps/api/core';
+
+  type ComposerAttachment = {
+    filename: string;
+    content: string;
+  };
+
+  // Добавляем состояние видимости лоадер панели
+  let isLoaderPanelVisible = false;
 
   let modelPath = "";
   let repoId: string = "";
@@ -43,7 +51,7 @@
       supports_image = !!r.image;
       supports_audio = !!r.audio;
       supports_video = !!r.video;
-    } catch (e) {
+    } catch (_e) {
       // default to text-only
       supports_text = true;
       supports_image = false;
@@ -133,23 +141,26 @@
     get cuda_available() { return cuda_available; }, set cuda_available(v) { cuda_available = v; },
     get cuda_build() { return cuda_build; }, set cuda_build(v) { cuda_build = v; },
     get current_device() { return current_device; }, set current_device(v) { current_device = v; },
+    // Модальности
+    get supports_text() { return supports_text; }, set supports_text(v) { supports_text = v; },
+    get supports_image() { return supports_image; }, set supports_image(v) { supports_image = v; },
+    get supports_audio() { return supports_audio; }, set supports_audio(v) { supports_audio = v; },
+    get supports_video() { return supports_video; }, set supports_video(v) { supports_video = v; },
   });
 
   const cancelLoading = controller.cancelLoading;
-  const refreshDeviceInfo = controller.refreshDeviceInfo;
+  const _refreshDeviceInfo = controller.refreshDeviceInfo;
   const setDeviceByToggle = controller.setDeviceByToggle;
 
   const loadGGUF = controller.loadGGUF;
 
   const unloadGGUF = controller.unloadGGUF;
+  const sendMessage = controller.handleSend;
+  const stopGenerate = controller.stopGenerate;
+  const regenerateFromHistory = controller.generateFromHistory;
+  const attachFileToPrompt = controller.handleAttachFile;
 
   // Формирование промпта вынесено в $lib/chat/prompts
-
-  const handleSend = controller.handleSend;
-
-  const generateFromHistory = controller.generateFromHistory;
-
-  const stopGenerate = controller.stopGenerate;
 
   function mainAction() {
     try {
@@ -212,7 +223,7 @@
     controller.destroy();
   });
 
-  const pickModel = controller.pickModel;
+  const _pickModel = controller.pickModel;
   // expose minimal controller API to window for header GGUF control
   if (typeof window !== 'undefined') {
      
@@ -266,11 +277,19 @@
       cuda_available = s.cuda_available;
       cuda_build = s.cuda_build;
       current_device = s.current_device;
-    } catch (e) {
+    } catch (_e) {
       // ignore, fall back to defaults
     }
     // UI остаётся смонтирован, восстановления и доп. переподключений не требуется
   });
+
+  let canRegenerate = false;
+  let canStopGeneration = false;
+
+  $: canRegenerate = messages.some(
+    (m) => m.role === 'assistant' && (m.content ?? '').trim().length > 0,
+  );
+  $: canStopGeneration = busy && isLoaded;
 
   // Keep shared chatState in sync so header and other views get instant truth (no polling flicker)
   $: chatState.update((s) => ({
@@ -299,77 +318,70 @@
       bind:messagesEl
       showModelNotice={!isLoaded}
     />
-    <Composer 
-      bind:prompt 
-      {busy} 
-      {isLoaded} 
+
+    <Composer
+      bind:prompt
+      {busy}
+      {isLoaded}
       {supports_text}
       {supports_image}
       {supports_audio}
       {supports_video}
-      on:send={handleSend} 
-      on:stop={stopGenerate}
-      on:attach={(e) => {
-        // e.detail: { filename, content }
-        // Forward to controller's attach handler
-        // @ts-ignore
-        const actions: any = controller;
-        if (actions && typeof actions.handleAttachFile === 'function') {
-          // @ts-ignore
-          actions.handleAttachFile(e.detail);
-        } else {
-          console.log('Прикреплён файл', e.detail?.filename);
-        }
-      }}
-      on:voice={() => console.log('Голосовое сообщение')}
+      {isLoaderPanelVisible}
+      canRegenerate={canRegenerate}
+      canStop={canStopGeneration}
+      on:send={() => void sendMessage()}
+      on:stop={() => void stopGenerate()}
+      on:regenerate={() => void regenerateFromHistory()}
+      on:attach={(e: CustomEvent<ComposerAttachment>) => void attachFileToPrompt(e.detail)}
+      on:toggle-loader-panel={() => isLoaderPanelVisible = !isLoaderPanelVisible}
     />
   </section>
 
-  <LoaderPanel
-    bind:format
-    bind:modelPath
-    bind:repoId
-    bind:revision
-    bind:hubGgufFilename
-    
-    bind:ctx_limit_value
-    bind:isLoadingModel
-    bind:isUnloadingModel
-    bind:isCancelling
-    bind:loadingStage
-    bind:loadingProgress
-    bind:unloadingProgress
-    bind:errorText
-    bind:busy
-    bind:isLoaded
-    bind:use_gpu
-    bind:cuda_available
-    bind:cuda_build
-    {supports_text}
-    {supports_image}
-    {supports_audio}
-    {supports_video}
-    onMainAction={mainAction}
-    on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
-  >
-    <!-- Параметры инференса -->
-    {#if isLoaded}
-      <InferenceParams
-        bind:use_custom_params
-        bind:temperature_enabled
-        bind:temperature
-        bind:top_k_enabled
-        bind:top_k_value
-        bind:top_p_enabled
-        bind:top_p_value
-        bind:min_p_enabled
-        bind:min_p_value
-        bind:repeat_penalty_enabled
-        bind:repeat_penalty_value
-      />
-    {/if}
-  </LoaderPanel>
+  {#if isLoaderPanelVisible}
+    <LoaderPanel
+      bind:format
+      bind:modelPath
+      bind:repoId
+      bind:revision
+      bind:hubGgufFilename
+      
+      bind:ctx_limit_value
+      bind:isLoadingModel
+      bind:isUnloadingModel
+      bind:isCancelling
+      bind:loadingStage
+      bind:loadingProgress
+      bind:unloadingProgress
+      bind:errorText
+      bind:busy
+      bind:isLoaded
+      bind:use_gpu
+      bind:cuda_available
+      bind:cuda_build
+      {supports_text}
+      {supports_image}
+      {supports_audio}
+      {supports_video}
+      onMainAction={mainAction}
+      on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
+    >
+      <!-- Параметры инференса -->
+      {#if isLoaded}
+        <InferenceParams
+          bind:use_custom_params
+          bind:temperature_enabled
+          bind:temperature
+          bind:top_k_enabled
+          bind:top_k_value
+          bind:top_p_enabled
+          bind:top_p_value
+          bind:min_p_enabled
+          bind:min_p_value
+          bind:repeat_penalty_enabled
+          bind:repeat_penalty_value
+        />
+      {/if}
+    </LoaderPanel>
+  {/if}
 </main>
-
-
-

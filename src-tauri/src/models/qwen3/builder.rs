@@ -10,7 +10,6 @@ use candle_nn::VarBuilder;
 use crate::models::registry::ArchKind;
 use crate::models::common::model::ModelBackend;
 use crate::models::qwen3::model::ModelWeights as Qwen3Gguf;
-use crate::models::common::candle_llm::Qwen3CandleAdapter;
 
 #[derive(Clone)]
 pub struct Qwen3ModelBuilder;
@@ -40,14 +39,8 @@ impl Qwen3ModelBuilder {
         _device: &Device,
         _dtype: DType,
     ) -> Result<Box<dyn ModelBackend>, String> {
-        let config_str = config.to_string();
-        let qwen_config: candle_transformers::models::qwen3::Config = 
-            serde_json::from_str(&config_str)
-                .map_err(|e| format!("Failed to parse Qwen3 config: {}", e))?;
-        let model = candle_transformers::models::qwen3::ModelForCausalLM::new(&qwen_config, vb)
-            .map_err(|e| format!("Failed to load Qwen3 model: {}", e))?;
-        let adapter = Qwen3CandleAdapter::new(model);
-        Ok(Box::new(adapter))
+        let _ = (vb, config);
+        Err("from_varbuilder for Qwen3 is disabled (no adapters)".into())
     }
 
     /// Detect architecture from GGUF metadata
@@ -109,4 +102,3 @@ mod tests {
         assert_eq!(builder.arch_kind(), ArchKind::Qwen3);
     }
 }
-

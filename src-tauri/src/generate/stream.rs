@@ -7,14 +7,13 @@ use crate::core::token_output_stream::TokenOutputStream;
 use crate::core::tokenizer::{extract_eos_ids, extract_bos_token_str};
 use crate::core::prompt::PromptBuilder;
 use crate::core::config::SamplingOptions;
-use crate::core::types::GenerateRequest;
-use crate::core::types::Attachment;
+use crate::core::types::{GenerateRequest, ChatMessage};
+use crate::core::attachments_text::gather_text_from_attachments;
 use super::{sampling::build_logits_processor_from_options, minp::MinPFilter, emit::ChunkEmitter, ctx::ContextSlice};
 use super::cancel::CANCEL_GENERATION;
 use std::sync::atomic::Ordering;
 use crate::{log_infer, log_template_error};
-use crate::models::registry::ArchKind;
-use crate::core::attachments::augment_with_attachments;
+// Мультимодальные вложения отключены
 
 pub async fn generate_stream_cmd(
     app: tauri::AppHandle,
@@ -66,21 +65,34 @@ fn generate_stream_impl(
     );
     let _ = app.emit("token", String::new());
 
-    // Augment messages/prompt with attachments depending on architecture
-    let arch_opt = guard.arch.clone();
-    let attachments = req.attachments.clone().unwrap_or_default();
-    let aug = augment_with_attachments(
-        arch_opt,
-        &guard.device,
-        req.messages.clone(),
-        if req.prompt.is_empty() { None } else { Some(req.prompt.clone()) },
-        attachments,
-    )?;
+    // Текстовые вложения (.txt/.md): читаем и подмешиваем в последний user или в prompt
+    let mut msgs = req.messages.clone();
+    let mut prompt_str = req.prompt.clone();
+    if let Some(attachments) = req.attachments.as_ref() {
+        let combined = gather_text_from_attachments(attachments).map_err(|e| e.to_string())?;
+        if !combined.is_empty() {
+            if let Some(ref mut m) = msgs {
+                if let Some(last) = m.last_mut() {
+                    if last.role.to_lowercase() == "user" {
+                        last.content = format!("{}\n\n{}", last.content, combined);
+                    } else {
+                        m.push(ChatMessage { role: "user".into(), content: combined });
+                    }
+                } else {
+                    m.push(ChatMessage { role: "user".into(), content: combined });
+                }
+            } else if !prompt_str.is_empty() {
+                prompt_str = format!("{}\n\n{}", prompt_str, combined);
+            } else {
+                prompt_str = combined;
+            }
+        }
+    }
 
-    // Use chat messages if provided (augmented), otherwise use the (augmented) prompt directly
-    let prompt = if let Some(messages) = aug.messages {
+    // Используем либо чат, либо чистый prompt
+    let prompt = if let Some(messages) = msgs {
         build_prompt_with_template_bos(&guard.chat_template, messages, bos_opt)?
-    } else if let Some(p) = aug.prompt { p } else { String::new() };
+    } else { prompt_str };
     let tokens = tos
         .tokenizer()
         .encode(prompt, true)

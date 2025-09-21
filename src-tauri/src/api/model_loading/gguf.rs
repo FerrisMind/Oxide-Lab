@@ -10,7 +10,6 @@ use crate::{log_load, log_template};
 use super::emit_load_progress;
 use crate::generate::cancel::CANCEL_LOADING;
 use std::sync::atomic::Ordering;
-use tauri::Emitter;
 
 pub fn load_gguf_model(
     app: &tauri::AppHandle,
@@ -40,30 +39,10 @@ pub fn load_gguf_model(
     emit_load_progress(app, "read_header", 25, Some("GGUF заголовок прочитан"), false, None);
     if CANCEL_LOADING.load(Ordering::SeqCst) { emit_load_progress(app, "cancel", 28, Some("Отменено"), true, Some("cancelled")); return Err("cancelled".into()); }
 
-    // Попытка достать токенизатор строго из GGUF (с расширенными эвристиками внутри tokenizer_from_gguf_metadata)
+    // Токенизатор обязан быть в метаданных GGUF. Никакого внешнего tokenizer.json не допускается.
     let (mut tokenizer, tokenizer_source): (tokenizers::Tokenizer, &'static str) = match tokenizer_from_gguf_metadata(&content.metadata) {
         Ok(tk) => (tk, "embedded"),
-        Err(e) => {
-            // Фоллбек: попробуем найти tokenizer.json рядом с GGUF-файлом
-            use std::path::Path;
-            let path = Path::new(&model_path);
-            let candidate = path.parent().map(|p| p.join("tokenizer.json"));
-            match candidate.filter(|p| p.exists()) {
-                Some(file_path) => {
-                    match std::fs::read(&file_path).ok().and_then(|b| tokenizers::Tokenizer::from_bytes(&b).ok()) {
-                        Some(tk) => (tk, "external_file"),
-                        None => return Err(format!(
-                            "Tokenizer not embedded in GGUF and failed to read external tokenizer.json ({}): {}",
-                            file_path.display(), e
-                        )),
-                    }
-                }
-                None => return Err(format!(
-                    "GGUF has no embedded tokenizer.json and BPE reconstruction not possible (no merges). Place tokenizer.json next to the model or load from Hub. Cause: {}",
-                    e
-                )),
-            }
-        }
+        Err(e) => return Err(format!("Tokenizer must be embedded in GGUF metadata: {}", e)),
     };
     mark_special_chat_tokens(&mut tokenizer);
     let chat_tpl = extract_chat_template(&tokenizer).or_else(|| find_chat_template_in_metadata(&content.metadata));
@@ -98,12 +77,34 @@ pub fn load_gguf_model(
     // Use the model factory to build the model
     emit_load_progress(app, "build_model", 50, None, false, None);
     if CANCEL_LOADING.load(Ordering::SeqCst) { emit_load_progress(app, "cancel", 50, Some("Отменено"), true, Some("cancelled")); return Err("cancelled".into()); }
-    let model_backend = get_model_factory()
+    // Если в метаданных присутствует конфигурация модели, попробуем распарсить и применить её
+    let config_json_opt = content.metadata.get("config.json").and_then(|v| v.to_string().ok()).or_else(|| content.metadata.get("general.config_json").and_then(|v| v.to_string().ok()));
+    let config_value: Option<serde_json::Value> = match config_json_opt {
+        Some(s) => match serde_json::from_str(&s) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                emit_load_progress(app, "build_model", 55, None, false, Some(&format!("Failed to parse config.json from GGUF metadata: {}", e)));
+                None
+            }
+        },
+        None => None,
+    };
+
+    let mut model_backend = get_model_factory()
         .build_from_gguf(arch, content, &mut file, &guard.device, context_length, false)
         .map_err(|e| {
             emit_load_progress(app, "build_model", 60, None, false, Some(&e));
             format!("Failed to build model: {}", e)
         })?;
+
+    // Если модель предоставляет возможность применения конфигурации — применим
+    if let Some(cfg) = config_value.as_ref() {
+        if let Err(e) = model_backend.apply_config(cfg) {
+            emit_load_progress(app, "apply_config", 70, None, false, Some(&format!("Model apply_config failed: {}", e)));
+        } else {
+            emit_load_progress(app, "apply_config", 70, None, false, Some("Model config applied"));
+        }
+    }
     emit_load_progress(app, "build_model_done", 85, Some("Модель сконструирована"), false, None);
 
     if CANCEL_LOADING.load(Ordering::SeqCst) { emit_load_progress(app, "cancel", 90, Some("Отменено"), true, Some("cancelled")); return Err("cancelled".into()); }

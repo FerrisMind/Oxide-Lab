@@ -48,14 +48,8 @@ impl Gemma3ModelBuilder {
         _device: &Device,
         _dtype: DType,
     ) -> Result<Box<dyn ModelBackend>, String> {
-        // Use Gemma (float) implementation from candle_transformers
-        let cfg_str = config.to_string();
-        let cfg: candle_transformers::models::gemma::Config = serde_json::from_str(&cfg_str)
-            .map_err(|e| format!("Failed to parse Gemma config: {}", e))?;
-        let model = candle_transformers::models::gemma::Model::new(false, &cfg, vb)
-            .map_err(|e| format!("Failed to build Gemma model: {}", e))?;
-        let adapter = crate::models::common::candle_llm::GemmaCandleAdapter::new(model);
-        Ok(Box::new(adapter))
+        let _ = (vb, config);
+        Err("from_varbuilder for Gemma is disabled (no adapters)".into())
     }
 
     /// Detect architecture from GGUF metadata

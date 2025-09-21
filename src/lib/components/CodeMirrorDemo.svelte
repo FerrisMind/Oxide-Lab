@@ -1,5 +1,5 @@
 <script lang="ts">
-  import CodeMirror from './CodeMirror.svelte';
+  import _CodeMirror from './CodeMirror.svelte';
   import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
   import { getCodeMirrorRenderer, cleanupRenderer } from '$lib/chat/codemirror-renderer';
   import { enableExternalLinks } from '$lib/chat/external-links';

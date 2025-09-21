@@ -43,7 +43,8 @@
     "highlight.js": "^11.11.1",
     "marked": "^16.1.2",
     "marked-highlight": "^2.2.2",
-    "phosphor-svelte": "^2.0.1"
+    "phosphor-svelte": "^2.0.1",
+    "shiki": "^3.12.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

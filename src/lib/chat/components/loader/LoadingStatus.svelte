@@ -1,7 +1,7 @@
 <script lang="ts">
   import Stop from "phosphor-svelte/lib/Stop";
   import Package from "phosphor-svelte/lib/Package";
-  import TextT from "phosphor-svelte/lib/TextT";
+  import _TextT from "phosphor-svelte/lib/TextT";
   import CheckCircle from "phosphor-svelte/lib/CheckCircle";
   import Lightbulb from "phosphor-svelte/lib/Lightbulb";
   
