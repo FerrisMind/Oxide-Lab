@@ -416,16 +416,37 @@
   .composer__row {
     display: flex;
     align-items: stretch;
+    width: 100%;
   }
 
   .composer__row--input {
     overflow: hidden;
+    flex: 1 1 auto;
+    min-width: 0;
   }
+
+  /* Make input field wider */
 
   .composer__row--controls {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+  }
+
+  .composer__controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .composer__controls--left {
+    flex-shrink: 0;
+  }
+
+  .composer__controls--right {
+    margin-left: auto;
+    gap: 8px;
+    flex-shrink: 0;
   }
 
   .composer__row--attachments {
@@ -501,54 +522,38 @@
 
   .composer__input {
     width: 100%;
+    min-width: 0;
     min-height: var(--composer-row-height);
     max-height: calc(var(--composer-row-height) * 3);
     resize: none;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border: none; /* Remove border */
     border-radius: var(--composer-control-radius);
-    padding: 8px 16px;
+    padding: 8px 16px 8px 8px;
     font-size: 14px;
     line-height: 1.2;
     color: #ffffff;
-    background: rgba(255, 255, 255, 0.05);
+    background: #1a1a1a;
     outline: none;
-    box-shadow: 
-      inset 0 1px 3px rgba(0, 0, 0, 0.1),
-      0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: none; /* Remove box shadow */
     transition: 
       height 0.2s ease,
-      border-color 0.2s ease,
-      background-color 0.2s ease,
-      box-shadow 0.2s ease;
+      background-color 0.2s ease; /* Remove border-color and box-shadow transitions */
     overflow-y: hidden;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     box-sizing: border-box;
     display: block;
+    text-align: left;
   }
 
   .composer__input:focus {
-    border-color: rgba(226, 198, 255, 0.6);
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 
-      inset 0 1px 3px rgba(0, 0, 0, 0.1),
-      0 0 0 3px rgba(226, 198, 255, 0.1),
-      0 2px 8px rgba(0, 0, 0, 0.1);
+    border-color: transparent; /* Remove focus border */
+    background: #1a1a1a;
+    box-shadow: none; /* Remove focus shadow */
   }
 
   .composer__input::placeholder {
     color: rgba(255, 255, 255, 0.4);
     font-style: italic;
-  }
-
-  .composer__controls {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .composer__controls--right {
-    margin-left: auto;
-    gap: 8px;
   }
 
   .composer__button {
@@ -750,10 +755,15 @@
       justify-content: center;
     }
 
+    .composer__controls--left {
+      flex-shrink: 1;
+    }
+
     .composer__controls--right {
       margin-left: 0;
       width: 100%;
       justify-content: center;
+      flex-shrink: 1;
     }
 
     .composer__attachment {
@@ -769,6 +779,10 @@
     .composer__attachment-name {
       font-size: 10px;
     }
+    
+    .composer__row--input {
+      flex: 1;
+    }
   }
 
   .composer__error {
@@ -777,5 +791,4 @@
     color: var(--danger, #c45555);
     width: 100%;
   }
-
 </style>
