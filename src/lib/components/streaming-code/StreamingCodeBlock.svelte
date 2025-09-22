@@ -3,44 +3,14 @@
   import CopySimple from 'phosphor-svelte/lib/CopySimple';
   import CircleNotch from 'phosphor-svelte/lib/CircleNotch';
   import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
-  import Prism from 'prismjs';
-  import 'prismjs/components/prism-clike';
-  import 'prismjs/components/prism-markup';
-  import 'prismjs/components/prism-markdown';
-  import 'prismjs/components/prism-bash';
-  import 'prismjs/components/prism-shell-session';
-  import 'prismjs/components/prism-powershell';
-  import 'prismjs/components/prism-docker';
-  import 'prismjs/components/prism-diff';
-  import 'prismjs/components/prism-ini';
-  import 'prismjs/components/prism-json';
-  import 'prismjs/components/prism-typescript';
-  import 'prismjs/components/prism-javascript';
-  import 'prismjs/components/prism-jsx';
-  import 'prismjs/components/prism-tsx';
-  import 'prismjs/components/prism-python';
-  import 'prismjs/components/prism-rust';
-  import 'prismjs/components/prism-go';
-  import 'prismjs/components/prism-java';
-  import 'prismjs/components/prism-c';
-  import 'prismjs/components/prism-cpp';
-  import 'prismjs/components/prism-csharp';
-  import 'prismjs/components/prism-sql';
-  import 'prismjs/components/prism-yaml';
-  import 'prismjs/components/prism-toml';
-  import 'prismjs/components/prism-graphql';
-  import 'prismjs/components/prism-php';
-  import 'prismjs/components/prism-ruby';
-  import 'prismjs/components/prism-lua';
-  import 'prismjs/components/prism-swift';
-  import 'prismjs/components/prism-kotlin';
+  import hljs from 'highlight.js/lib/common';
 
   export let code: string = '';
   export let language: string = '';
   export let isStreaming: boolean = false;
   export let isComplete: boolean = false;
   export let theme: 'light' | 'dark' | 'auto' = 'auto';
-  // Props kept for API совместимости; Prism не использует их напрямую
+  // Props kept for API совместимости; подсветка highlight.js их не использует
   export const showLineNumbers: boolean = false;
   export const readonly: boolean = true;
 
@@ -68,6 +38,49 @@
   let iconTransitionTimer: ReturnType<typeof setTimeout> | null = null;
   // Whether we've already auto-expanded after a streaming session
   let autoExpandedDone: boolean = false;
+  // Streaming spinner state
+  let spinnerStartTime: number | null = null;
+  let spinnerHost: HTMLSpanElement | null = null;
+  let spinnerRaf: number | null = null;
+
+  function nowMs(): number {
+    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+      return performance.now();
+    }
+    return Date.now();
+  }
+
+  function ensureSpinnerAnimation() {
+    if (spinnerStartTime === null) {
+      spinnerStartTime = nowMs();
+    }
+    if (spinnerRaf === null) {
+      spinnerRaf = requestAnimationFrame(spinnerTick);
+    }
+  }
+
+  function spinnerTick() {
+    if (spinnerStartTime === null) {
+      spinnerStartTime = nowMs();
+    }
+    const elapsed = nowMs() - spinnerStartTime;
+    const angle = ((elapsed / 1000) * 360) % 360;
+    if (spinnerHost) {
+      spinnerHost.style.transform = `rotate(${angle}deg)`;
+    }
+    spinnerRaf = requestAnimationFrame(spinnerTick);
+  }
+
+  function stopSpinnerAnimation(resetTransform: boolean = true) {
+    if (spinnerRaf !== null) {
+      cancelAnimationFrame(spinnerRaf);
+      spinnerRaf = null;
+    }
+    if (resetTransform && spinnerHost) {
+      spinnerHost.style.transform = '';
+    }
+    spinnerStartTime = null;
+  }
 
   // Header actions (outside of the editor)
   function copyCurrentCode() {
@@ -78,39 +91,46 @@
     } catch {}
   }
 
-  const prismAliases: Record<string, string> = {
+  const hljsAliases: Record<string, string> = {
+    html: 'xml',
+    xhtml: 'xml',
+    xml: 'xml',
+    svg: 'xml',
+    md: 'markdown',
+    markdown: 'markdown',
     js: 'javascript',
-    jsx: 'jsx',
+    jsx: 'javascript',
     ts: 'typescript',
-    tsx: 'tsx',
+    tsx: 'typescript',
     sh: 'bash',
     shell: 'bash',
     zsh: 'bash',
     console: 'bash',
-    shellsession: 'shell-session',
+    shellsession: 'bash',
     ps1: 'powershell',
     powershell: 'powershell',
     py: 'python',
     rb: 'ruby',
-    md: 'markdown',
-    yml: 'yaml',
     kt: 'kotlin',
     rs: 'rust',
-    plaintext: 'text',
-    text: 'markup',
+    csharp: 'csharp',
+    'c#': 'csharp',
+    golang: 'go',
+    plaintext: 'plaintext',
+    text: 'plaintext',
   };
 
   function activeLanguage(): string {
     const raw = (language || '').toLowerCase().trim();
-    const alias = prismAliases[raw];
+    const alias = hljsAliases[raw];
     if (alias) return alias;
-    return raw.length ? raw : 'markup';
+    return raw.length ? raw : 'plaintext';
   }
 
   function ensureCodeElement() {
     if (!container) return;
     if (!preEl || !codeEl || !container.contains(codeEl)) {
-      const className = 'language-' + activeLanguage();
+      const className = 'hljs language-' + activeLanguage();
       container.innerHTML = '<pre class="' + className + '"><code class="' + className + '"></code></pre>';
       preEl = container.querySelector('pre');
       codeEl = container.querySelector('code');
@@ -124,22 +144,28 @@
 
     renderedCode = codeStr ?? '';
     const lang = activeLanguage();
-    const fallback = prismAliases[lang] ?? lang;
-    const grammar = Prism.languages[lang] ?? Prism.languages[fallback] ?? Prism.languages.markup;
+    let languageUsed = lang;
     let highlighted: string;
     try {
-      highlighted = Prism.highlight(renderedCode, grammar, lang);
+      if (lang && hljs.getLanguage(lang)) {
+        highlighted = hljs.highlight(renderedCode, { language: lang }).value;
+      } else {
+        const auto = hljs.highlightAuto(renderedCode);
+        highlighted = auto.value;
+        languageUsed = auto.language ?? 'plaintext';
+      }
     } catch (_err) {
       highlighted = escapeHtml(renderedCode);
+      languageUsed = 'plaintext';
     }
+
+    const className = 'hljs language-' + (languageUsed || 'plaintext');
+    if (codeEl.className !== className) codeEl.className = className;
+    if (preEl && preEl.className !== className) preEl.className = className;
 
     if (codeEl.innerHTML !== highlighted) {
       codeEl.innerHTML = highlighted;
     }
-
-    const className = 'language-' + lang;
-    if (codeEl.className !== className) codeEl.className = className;
-    if (preEl && preEl.className !== className) preEl.className = className;
 
     if (preEl) {
       preEl.style.margin = '0';
@@ -253,6 +279,7 @@
       cancelAnimationFrame(pendingAnimationFrame);
       pendingAnimationFrame = null;
     }
+    resetSpinnerTiming();
   });
 
   // React to streaming state changes
@@ -272,6 +299,7 @@
       });
     }
     wasStreaming = true;
+    ensureSpinnerTiming();
     // Ensure header shows spinner immediately
     headerIconState = 'spinner';
   } else {
@@ -282,6 +310,7 @@
     }
     // Full update when streaming completes
     updateEditorFull(code);
+    resetSpinnerTiming();
     // If we just finished a streaming session, auto-expand once and then don't auto-toggle anymore
     if (wasStreaming && prevIsStreaming && !isStreaming) {
       // Small delay to avoid races with the final chunk
@@ -312,6 +341,7 @@
     isExpanded = true;
     autoExpandedDone = true;
     // When complete (not streaming) show check briefly then hide
+    resetSpinnerTiming();
     headerIconState = 'check';
     if (iconTransitionTimer) clearTimeout(iconTransitionTimer);
     iconTransitionTimer = setTimeout(() => {
@@ -363,7 +393,7 @@
     <div class="left">
       <span class="header-icon" aria-hidden="true" class:visible={headerIconState !== 'hidden'}>
         {#if headerIconState === 'spinner'}
-          <CircleNotch size={14} weight="bold" class="spinner" />
+          <CircleNotch size={14} weight="bold" class="spinner" style={`animation-delay: ${spinnerAnimationDelay};`} />
         {:else if headerIconState === 'check'}
           <CheckCircle size={14} weight="bold" class="check" />
         {/if}
