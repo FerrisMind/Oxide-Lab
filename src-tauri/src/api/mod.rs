@@ -24,62 +24,91 @@ pub fn load_model(
     state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>,
     req: LoadRequest,
 ) -> Result<(), String> {
-    let mut guard = state.lock().map_err(|e| e.to_string())?;
     // Сбрасываем флаг отмены перед новой загрузкой
     CANCEL_LOADING.store(false, std::sync::atomic::Ordering::SeqCst);
 
-    let res = match req {
-        LoadRequest::Gguf {
-            model_path,
-            tokenizer_path: _tokenizer_path,
-            context_length,
-            device,
-        } => gguf::load_gguf_model(&app, &mut guard, model_path, context_length, device),
-        LoadRequest::HubGguf {
-            repo_id,
-            revision,
-            filename,
-            context_length,
-            device,
-        } => hub_gguf::load_hub_gguf_model(
-            &app,
-            &mut guard,
-            repo_id,
-            revision,
-            filename,
-            context_length,
-            device,
-        ),
-        LoadRequest::HubSafetensors {
-            repo_id,
-            revision,
-            context_length,
-            device,
-        } => safetensors::load_hub_safetensors_model(
-            &app,
-            &mut guard,
-            repo_id,
-            revision,
-            context_length,
-            device,
-        ),
-        LoadRequest::LocalSafetensors {
-            model_path,
-            context_length,
-            device,
-        } => safetensors::load_local_safetensors_model(
-            &app,
-            &mut guard,
-            model_path,
-            context_length,
-            device,
-        ),
-    };
-    if let Err(ref e) = res {
-        // финальный сигнал об ошибке
-        crate::api::model_loading::emit_load_progress(&app, "error", 0, None, true, Some(e));
-    }
-    res
+    // Запускаем тяжёлую загрузку в пуле блокирующих задач, не блокируя IPC/UI
+    let app_clone = app.clone();
+    let state_arc = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut guard = match state_arc.lock() {
+            Ok(g) => g,
+            Err(e) => {
+                crate::api::model_loading::emit_load_progress(
+                    &app_clone,
+                    "error",
+                    0,
+                    None,
+                    true,
+                    Some(&e.to_string()),
+                );
+                return;
+            }
+        };
+
+        let res: Result<(), String> = match req {
+            LoadRequest::Gguf {
+                model_path,
+                tokenizer_path: _tokenizer_path,
+                context_length,
+                device,
+            } => gguf::load_gguf_model(&app_clone, &mut guard, model_path, context_length, device),
+            LoadRequest::HubGguf {
+                repo_id,
+                revision,
+                filename,
+                context_length,
+                device,
+            } => hub_gguf::load_hub_gguf_model(
+                &app_clone,
+                &mut guard,
+                repo_id,
+                revision,
+                filename,
+                context_length,
+                device,
+            ),
+            LoadRequest::HubSafetensors {
+                repo_id,
+                revision,
+                context_length,
+                device,
+            } => safetensors::load_hub_safetensors_model(
+                &app_clone,
+                &mut guard,
+                repo_id,
+                revision,
+                context_length,
+                device,
+            ),
+            LoadRequest::LocalSafetensors {
+                model_path,
+                context_length,
+                device,
+            } => safetensors::load_local_safetensors_model(
+                &app_clone,
+                &mut guard,
+                model_path,
+                context_length,
+                device,
+            ),
+        };
+
+        if let Err(ref e) = res {
+            // финальный сигнал об ошибке
+            crate::api::model_loading::emit_load_progress(
+                &app_clone,
+                "error",
+                0,
+                None,
+                true,
+                Some(e),
+            );
+        }
+    });
+
+    // Немедленно возвращаем управление на фронтенд; прогресс придёт событиями
+    Ok(())
 }
 
 #[tauri::command]
@@ -92,25 +121,43 @@ pub fn unload_model(
     app: tauri::AppHandle,
     state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>,
 ) -> Result<(), String> {
-    let mut guard = state.lock().map_err(|e| e.to_string())?;
-    let device = guard.device.clone();
-    // Эмиссия упрощённого прогресса выгрузки
-    crate::api::model_loading::emit_load_progress(&app, "unload_start", 0, None, false, None);
-    guard.gguf_model = None;
-    crate::api::model_loading::emit_load_progress(&app, "unload_model", 40, None, false, None);
-    guard.gguf_file = None;
-    guard.tokenizer = None;
-    crate::api::model_loading::emit_load_progress(&app, "unload_tokenizer", 70, None, false, None);
-    *guard = ModelState::new(device);
-    crate::api::model_loading::emit_load_progress(
-        &app,
-        "unload_complete",
-        100,
-        Some("Выгружено"),
-        true,
-        None,
-    );
-    log_load!("hard reset: freed model/tokenizer and reset state (preserved device)");
+    let app_clone = app.clone();
+    let state_arc = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut guard = match state_arc.lock() {
+            Ok(g) => g,
+            Err(e) => {
+                crate::api::model_loading::emit_load_progress(
+                    &app_clone,
+                    "error",
+                    0,
+                    None,
+                    true,
+                    Some(&e.to_string()),
+                );
+                return;
+            }
+        };
+        let device = guard.device.clone();
+        // Эмиссия упрощённого прогресса выгрузки
+        crate::api::model_loading::emit_load_progress(&app_clone, "unload_start", 0, None, false, None);
+        guard.gguf_model = None;
+        crate::api::model_loading::emit_load_progress(&app_clone, "unload_model", 40, None, false, None);
+        guard.gguf_file = None;
+        guard.tokenizer = None;
+        crate::api::model_loading::emit_load_progress(&app_clone, "unload_tokenizer", 70, None, false, None);
+        *guard = ModelState::new(device);
+        crate::api::model_loading::emit_load_progress(
+            &app_clone,
+            "unload_complete",
+            100,
+            Some("Выгружено"),
+            true,
+            None,
+        );
+        log_load!("hard reset: freed model/tokenizer and reset state (preserved device)");
+    });
+    // Возвращаем управление сразу
     Ok(())
 }
 
