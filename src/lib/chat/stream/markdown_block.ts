@@ -249,24 +249,16 @@ export function appendMarkdownText(
     // Render markdown with streaming code support
     const newContent = renderMarkdownWithStreamingCode(ctx.mdText, isStreaming);
 
-    // Check if the structure has changed (new code blocks added)
-    const hasStructuralChanges = hasStreamingCodeBlocksChanged(ctx.mdContentEl, newContent);
+    const needsFullRender = hasStreamingCodeBlocksChanged(ctx.mdContentEl, newContent);
 
-    if (hasStructuralChanges) {
-      // Only cleanup and re-render if the structure has changed
+    if (needsFullRender) {
       cleanupStreamingCodeComponents(ctx.mdContentEl);
 
-      // Update the content
       ctx.mdContentEl.innerHTML = newContent;
 
-      // Enable external link handling
       enableExternalLinks(ctx.mdContentEl);
-
-      // Mount streaming code components
       mountStreamingCodeComponents(ctx.mdContentEl, isStreaming);
     } else {
-      // Just update existing components without remounting
-      // During streaming, we need to update the code content in placeholders
       updateStreamingCodeComponents(ctx.mdContentEl, isStreaming, ctx.mdText);
     }
 
@@ -291,24 +283,42 @@ export function appendMarkdownText(
 }
 
 // Check if the structure of code blocks has changed
+function normalizePlaceholderHtml(html: string): string {
+  return html
+    .replace(/data-code="[^"]*"/g, 'data-code=""')
+    .replace(/data-code='[^']*'/g, "data-code=''")
+    .replace(/data-streaming="[^"]*"/g, 'data-streaming=""')
+    .replace(/data-streaming='[^']*'/g, "data-streaming=''")
+    .replace(/data-is-complete="[^"]*"/g, 'data-is-complete=""')
+    .replace(/data-is-complete='[^']*'/g, "data-is-complete=''")
+    .replace(/data-language="[^"]*"/g, 'data-language=""')
+    .replace(/data-language='[^']*'/g, "data-language=''");
+}
+
 function hasStreamingCodeBlocksChanged(container: HTMLElement, newContent: string): boolean {
+  const existingHtml = container.innerHTML;
+  if (!existingHtml) {
+    return true;
+  }
+
+  if (existingHtml === newContent) {
+    return false;
+  }
+
   // Parse the new content to check for structural changes
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = newContent;
   const newPlaceholders = tempDiv.querySelectorAll('.streaming-code-placeholder');
   const existingPlaceholders = container.querySelectorAll('.streaming-code-placeholder');
 
-  // If the number of placeholders is different, there are structural changes
   if (newPlaceholders.length !== existingPlaceholders.length) {
     return true;
   }
 
-  // Compare placeholder attributes for significant changes
   for (let i = 0; i < newPlaceholders.length; i++) {
     const newPlaceholder = newPlaceholders[i] as HTMLElement;
     const existingPlaceholder = existingPlaceholders[i] as HTMLElement;
 
-    // Check if language or completion status changed
     if (
       newPlaceholder.dataset.language !== existingPlaceholder.dataset.language ||
       newPlaceholder.dataset.isComplete !== existingPlaceholder.dataset.isComplete
@@ -317,7 +327,11 @@ function hasStreamingCodeBlocksChanged(container: HTMLElement, newContent: strin
     }
   }
 
-  return false;
+  // Detect content changes outside streaming code placeholders
+  const normalizedExisting = normalizePlaceholderHtml(existingHtml);
+  const normalizedNew = normalizePlaceholderHtml(newContent);
+
+  return normalizedExisting !== normalizedNew;
 }
 
 // Update existing streaming code components without remounting

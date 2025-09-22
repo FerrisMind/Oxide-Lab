@@ -1,19 +1,20 @@
 import { unmount } from 'svelte';
-import {
-  getCodeMirrorRenderer as _getCodeMirrorRenderer,
-  cleanupRenderer,
-} from '$lib/chat/codemirror-renderer';
+import { cleanupRenderer } from '$lib/chat/codemirror-renderer';
 
 export type StreamSegment = { kind: 'html' | 'text'; data: string };
 
 export type BubbleCtx = {
   inThink: boolean;
-  thinkPre: HTMLElement | null;
-  thinkSummary: HTMLElement | null;
-  thinkCaretHost: HTMLElement | null;
-  thinkBrainHost: HTMLElement | null;
-  thinkCaretIcon: any | null;
-  thinkBrainIcon: any | null;
+  thinkBlock: HTMLElement | null;
+  thinkCardEl: HTMLElement | null;
+  thinkBody: HTMLElement | null;
+  thinkToggleBtn: HTMLButtonElement | null;
+  thinkLoaderEl: HTMLElement | null;
+  thinkChevronEl: HTMLElement | null;
+  thinkLabelEl: HTMLElement | null;
+  thinkKey: string | null;
+  thinkExpanded: boolean;
+  thinkToggleHandler: ((event: Event) => void) | null;
   mdEl: HTMLElement | null;
   mdContentEl: HTMLElement | null;
   mdRawEl: HTMLElement | null;
@@ -37,12 +38,16 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
   _assistantBubbleEls.set(params.index, node);
   bubbleCtxs.set(params.index, {
     inThink: false,
-    thinkPre: null,
-    thinkSummary: null,
-    thinkCaretHost: null,
-    thinkBrainHost: null,
-    thinkCaretIcon: null,
-    thinkBrainIcon: null,
+    thinkBlock: null,
+    thinkCardEl: null,
+    thinkBody: null,
+    thinkToggleBtn: null,
+    thinkLoaderEl: null,
+    thinkChevronEl: null,
+    thinkLabelEl: null,
+    thinkKey: null,
+    thinkExpanded: false,
+    thinkToggleHandler: null,
     mdEl: null,
     mdContentEl: null,
     mdRawEl: null,
@@ -69,12 +74,16 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
         newParams.index,
         prev ?? {
           inThink: false,
-          thinkPre: null,
-          thinkSummary: null,
-          thinkCaretHost: null,
-          thinkBrainHost: null,
-          thinkCaretIcon: null,
-          thinkBrainIcon: null,
+          thinkBlock: null,
+          thinkCardEl: null,
+          thinkBody: null,
+          thinkToggleBtn: null,
+          thinkLoaderEl: null,
+          thinkChevronEl: null,
+          thinkLabelEl: null,
+          thinkKey: null,
+          thinkExpanded: false,
+          thinkToggleHandler: null,
           mdEl: null,
           mdContentEl: null,
           mdRawEl: null,
@@ -91,15 +100,11 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
     },
     destroy() {
       const ctx = bubbleCtxs.get(params.index);
-      if (ctx?.thinkCaretIcon) {
+      if (ctx?.thinkToggleBtn && ctx?.thinkToggleHandler) {
         try {
-          unmount(ctx.thinkCaretIcon);
+          ctx.thinkToggleBtn.removeEventListener('click', ctx.thinkToggleHandler);
         } catch {}
-      }
-      if (ctx?.thinkBrainIcon) {
-        try {
-          unmount(ctx.thinkBrainIcon);
-        } catch {}
+        ctx.thinkToggleHandler = null;
       }
       if (ctx?.mdEyeIcon) {
         try {

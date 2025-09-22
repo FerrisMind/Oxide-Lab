@@ -33,3 +33,6 @@ export const KNOWN_TAG_PREFIXES = [
   '<s>',
   '</s>',
 ];
+
+export const THINK_OPEN_TOKEN = '<!--__THINK_OPEN__-->';
+export const THINK_CLOSE_TOKEN = '<!--__THINK_CLOSE__-->';

@@ -1,6 +1,6 @@
 import type { ParseResult, StreamSegment } from './types.js';
 import { escapeAttr, escapeHtml } from './escape.js';
-import { KNOWN_TAG_PREFIXES } from './constants.js';
+import { KNOWN_TAG_PREFIXES, THINK_OPEN_TOKEN, THINK_CLOSE_TOKEN } from './constants.js';
 
 export function createStreamParser() {
   // Состояния парсера для потокового разбора спец-тегов
@@ -52,10 +52,7 @@ export function createStreamParser() {
           // Если содержимое непустое и открытие ещё не было эмитировано — эмитируем открывающий HTML
           if (!thinkOpenEmitted && thinkBuf.trim().length > 0) {
             thinkOpenEmitted = true;
-            segments.push({
-              kind: 'html',
-              data: `<details class="cot"><summary><span class="brain-host"></span><span class="cot-label">Рассуждения</span><span class="caret-host"></span></summary><pre class="cot-pre">`,
-            });
+            segments.push({ kind: 'html', data: THINK_OPEN_TOKEN });
           }
           if (thinkOpenEmitted) {
             segments.push({ kind: 'html', data: escapeHtml(out) });
@@ -70,14 +67,11 @@ export function createStreamParser() {
         if (isFirstPortion) out = out.replace(/^[ \t]*(?:\r?\n)+/, '');
         if (!thinkOpenEmitted && thinkBuf.trim().length > 0) {
           thinkOpenEmitted = true;
-          segments.push({
-            kind: 'html',
-            data: `<details class="cot"><summary><span class="brain-host"></span><span class="cot-label">Рассуждения</span><span class="caret-host"></span></summary><pre class="cot-pre">`,
-          });
+          segments.push({ kind: 'html', data: THINK_OPEN_TOKEN });
         }
         if (thinkOpenEmitted) {
           segments.push({ kind: 'html', data: escapeHtml(out) });
-          segments.push({ kind: 'html', data: `</pre></details>` });
+          segments.push({ kind: 'html', data: THINK_CLOSE_TOKEN });
         }
         thinkBuf = '';
         thinkOpenEmitted = false;
@@ -88,23 +82,38 @@ export function createStreamParser() {
 
       // Внутри кода (инкрементальный вывод)
       if (inCode) {
-        const close = codeLang ? `<|/${codeLang}|>` : `<|endcode|>`;
-        const endIdx = buf.indexOf(close, i);
-        if (endIdx === -1) {
+        const closeCandidates: Array<{ token: string; index: number }> = [];
+        if (codeLang) {
+          const langClose = `<|/${codeLang}|>`;
+          closeCandidates.push({ token: langClose, index: buf.indexOf(langClose, i) });
+        }
+        const genericClose = '<|endcode|>';
+        closeCandidates.push({ token: genericClose, index: buf.indexOf(genericClose, i) });
+
+        let matchedClose: { token: string; index: number } | null = null;
+        for (const candidate of closeCandidates) {
+          if (candidate.index === -1) continue;
+          if (!matchedClose || candidate.index < matchedClose.index) {
+            matchedClose = candidate;
+          }
+        }
+
+        if (!matchedClose) {
           const chunk = buf.slice(i);
           _codeBuf += chunk;
-          segments.push({ kind: 'html', data: escapeHtml(chunk) });
           i = buf.length;
           break;
         }
-        const chunk = buf.slice(i, endIdx);
+
+        const chunk = buf.slice(i, matchedClose.index);
         _codeBuf += chunk;
-        segments.push({ kind: 'html', data: escapeHtml(chunk) + `</code></pre>` });
-        // textOut формируем минимально, чтобы не дублировать HTML
+        const cls = codeLang ? ` class=\\"language-${escapeAttr(codeLang)}\\"` : '';
+        const html = `<pre class=\"code\"><code${cls}>${escapeHtml(_codeBuf)}</code></pre>`;
+        segments.push({ kind: 'html', data: html });
         _codeBuf = '';
         inCode = false;
         codeLang = null;
-        i = endIdx + close.length;
+        i = matchedClose.index + matchedClose.token.length;
         continue;
       }
 
@@ -313,8 +322,6 @@ export function createStreamParser() {
         codeLang = null;
         _codeBuf = '';
         i += '<|code|>'.length;
-        const cls = codeLang ? ` class=\\"language-${escapeAttr(codeLang)}\\"` : '';
-        segments.push({ kind: 'html', data: `<pre class=\"code\"><code${cls}>` });
         continue;
       }
       if (rest.startsWith('<|python|>')) {
@@ -322,8 +329,6 @@ export function createStreamParser() {
         codeLang = 'python';
         _codeBuf = '';
         i += '<|python|>'.length;
-        const cls = codeLang ? ` class=\\"language-${escapeAttr(codeLang)}\\"` : '';
-        segments.push({ kind: 'html', data: `<pre class=\"code\"><code${cls}>` });
         continue;
       }
       if (rest.startsWith('<|endcode|>')) {

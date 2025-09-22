@@ -5,11 +5,15 @@
   import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
   import hljs from 'highlight.js/lib/common';
 
+
   export let code: string = '';
   export let language: string = '';
   export let isStreaming: boolean = false;
   export let isComplete: boolean = false;
   export let theme: 'light' | 'dark' | 'auto' = 'auto';
+  // Spinner control props
+  export let spinnerStartSignal: string = '[CODE]';
+  export let spinnerEndSignal: string = '[CODE_END]';
   // Props kept for API совместимости; подсветка highlight.js их не использует
   export const showLineNumbers: boolean = false;
   export const readonly: boolean = true;
@@ -34,53 +38,42 @@
   let prevIsStreaming: boolean = false;
   let collapseTimer: ReturnType<typeof setTimeout> | null = null;
   // Icon transition state: 'spinner' | 'check' | 'hidden'
-  let headerIconState: 'spinner' | 'check' | 'hidden' = isStreaming ? 'spinner' : 'hidden';
+  let headerIconState: 'spinner' | 'check' | 'hidden' = 'hidden';
+  let isSpinnerActive: boolean = false;
+
+  // Detect spinner signals in code
+  $: {
+    const codeStr = code || '';
+    const hasCodeStart = spinnerStartSignal && codeStr.includes(spinnerStartSignal);
+    const hasCodeEnd = spinnerEndSignal && codeStr.includes(spinnerEndSignal);
+
+    if (hasCodeStart && !isSpinnerActive) {
+      // Start spinning when start signal is detected
+      isSpinnerActive = true;
+      headerIconState = 'spinner';
+    } else if (hasCodeEnd && isSpinnerActive) {
+      // Stop spinning and show check when end signal is detected
+      isSpinnerActive = false;
+      headerIconState = 'check';
+      // Auto-hide check after 1.5s
+      if (iconTransitionTimer) clearTimeout(iconTransitionTimer);
+      iconTransitionTimer = setTimeout(() => {
+        headerIconState = 'hidden';
+        iconTransitionTimer = null;
+      }, 1500);
+    } else if (isSpinnerActive) {
+      // Keep spinner active while spinning
+      headerIconState = 'spinner';
+    } else {
+      // Hide when not active
+      headerIconState = 'hidden';
+    }
+  }
   let iconTransitionTimer: ReturnType<typeof setTimeout> | null = null;
   // Whether we've already auto-expanded after a streaming session
   let autoExpandedDone: boolean = false;
   // Streaming spinner state
-  let spinnerStartTime: number | null = null;
   let spinnerHost: HTMLSpanElement | null = null;
-  let spinnerRaf: number | null = null;
-
-  function nowMs(): number {
-    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
-      return performance.now();
-    }
-    return Date.now();
-  }
-
-  function ensureSpinnerAnimation() {
-    if (spinnerStartTime === null) {
-      spinnerStartTime = nowMs();
-    }
-    if (spinnerRaf === null) {
-      spinnerRaf = requestAnimationFrame(spinnerTick);
-    }
-  }
-
-  function spinnerTick() {
-    if (spinnerStartTime === null) {
-      spinnerStartTime = nowMs();
-    }
-    const elapsed = nowMs() - spinnerStartTime;
-    const angle = ((elapsed / 1000) * 360) % 360;
-    if (spinnerHost) {
-      spinnerHost.style.transform = `rotate(${angle}deg)`;
-    }
-    spinnerRaf = requestAnimationFrame(spinnerTick);
-  }
-
-  function stopSpinnerAnimation(resetTransform: boolean = true) {
-    if (spinnerRaf !== null) {
-      cancelAnimationFrame(spinnerRaf);
-      spinnerRaf = null;
-    }
-    if (resetTransform && spinnerHost) {
-      spinnerHost.style.transform = '';
-    }
-    spinnerStartTime = null;
-  }
 
   // Header actions (outside of the editor)
   function copyCurrentCode() {
@@ -279,7 +272,6 @@
       cancelAnimationFrame(pendingAnimationFrame);
       pendingAnimationFrame = null;
     }
-    resetSpinnerTiming();
   });
 
   // React to streaming state changes
@@ -299,9 +291,6 @@
       });
     }
     wasStreaming = true;
-    ensureSpinnerTiming();
-    // Ensure header shows spinner immediately
-    headerIconState = 'spinner';
   } else {
     // Clear timeout when streaming stops
     if (streamingTimeout) {
@@ -310,7 +299,6 @@
     }
     // Full update when streaming completes
     updateEditorFull(code);
-    resetSpinnerTiming();
     // If we just finished a streaming session, auto-expand once and then don't auto-toggle anymore
     if (wasStreaming && prevIsStreaming && !isStreaming) {
       // Small delay to avoid races with the final chunk
@@ -323,14 +311,7 @@
         wasStreaming = false;
         collapseTimer = null;
 
-        // Start icon transition: spinner -> check -> hidden
-        headerIconState = 'check';
-        if (iconTransitionTimer) clearTimeout(iconTransitionTimer);
-        // after 2s show check, after additional 1.5s hide icon
-        iconTransitionTimer = setTimeout(() => {
-          headerIconState = 'hidden';
-          iconTransitionTimer = null;
-        }, 1500);
+        // Icon transition is now handled by the reactive block above
       }, 120);
     }
   }
@@ -340,14 +321,6 @@
     // Only auto-expand once per block; respect manual user collapse/expand afterwards
     isExpanded = true;
     autoExpandedDone = true;
-    // When complete (not streaming) show check briefly then hide
-    resetSpinnerTiming();
-    headerIconState = 'check';
-    if (iconTransitionTimer) clearTimeout(iconTransitionTimer);
-    iconTransitionTimer = setTimeout(() => {
-      headerIconState = 'hidden';
-      iconTransitionTimer = null;
-    }, 1500);
   }
 
   // Track previous streaming state
@@ -391,9 +364,9 @@
 <div class="streaming-code-block" class:streaming={isStreaming} class:collapsed={!isExpanded}>
   <div class="streaming-code-header" role="button" aria-label="Code header" aria-expanded={isExpanded} aria-disabled={isStreaming} tabindex={isStreaming ? -1 : 0} on:click={handleProgressBarClick} on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleProgressBarClick()}>
     <div class="left">
-      <span class="header-icon" aria-hidden="true" class:visible={headerIconState !== 'hidden'}>
+      <span class="header-icon" aria-hidden="true" class:visible={headerIconState !== 'hidden'} class:spinner={headerIconState === 'spinner'}>
         {#if headerIconState === 'spinner'}
-          <CircleNotch size={14} weight="bold" class="spinner" style={`animation-delay: ${spinnerAnimationDelay};`} />
+          <CircleNotch size={14} weight="bold" class="spinner-icon" />
         {:else if headerIconState === 'check'}
           <CheckCircle size={14} weight="bold" class="check" />
         {/if}
@@ -452,7 +425,9 @@
   .streaming-code-header .header-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; opacity: 0; transition: opacity 200ms linear, transform 200ms ease; }
   .streaming-code-header .header-icon.visible { opacity: 1; transform: translateY(0); }
   .streaming-code-header .header-icon :global(svg) { color: var(--accent-color); width: 18px; height: 18px; display: block; transform-box: fill-box; }
-  :global(.header-icon) :global(.spinner) { animation: cm-spinner-rotate 1s linear infinite; transform-origin: center center; }
+  :global(.header-icon.spinner) { animation: cm-spinner-rotate 1s linear infinite; }
+  :global(.header-icon) :global(.spinner-icon) { animation: cm-spinner-rotate 1s linear infinite; }
+  :global(.header-icon) :global(.spinner-icon) { transform-origin: center center; }
   :global(.header-icon) :global(.check) { transform: scale(0.95); }
   .streaming-code-header[aria-disabled="true"] {
     opacity: 0.75;
@@ -490,4 +465,5 @@
   @keyframes cm-spinner-rotate {
     to { transform: rotate(360deg); }
   }
+
 </style>
