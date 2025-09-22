@@ -15,5 +15,3 @@ pub fn cancel_model_loading_cmd() -> Result<(), String> {
     CANCEL_LOADING.store(true, Ordering::SeqCst);
     Ok(())
 }
-
-

@@ -88,5 +88,3 @@ pub struct Attachment {
     pub path: Option<String>,
     pub bytes_b64: Option<String>,
 }
-
-

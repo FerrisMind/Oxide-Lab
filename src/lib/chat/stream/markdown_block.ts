@@ -89,23 +89,38 @@ export function ensureMarkdownContainer(ctx: BubbleCtx, bubble: HTMLDivElement):
 
 // Detect if text contains streaming code blocks
 function hasStreamingCodeBlocks(text: string): boolean {
+  // Match both complete and incomplete code blocks
   return /```[\w]*\n[\s\S]*?(?:```|$)/.test(text);
 }
 
 // Extract code blocks for streaming
-function extractCodeBlocks(
-  text: string,
-): Array<{ language: string; code: string; isComplete: boolean }> {
-  const codeBlocks: Array<{ language: string; code: string; isComplete: boolean }> = [];
+function extractCodeBlocks(text: string): Array<{
+  language: string;
+  code: string;
+  isComplete: boolean;
+  startIndex: number;
+  endIndex: number;
+}> {
+  const codeBlocks: Array<{
+    language: string;
+    code: string;
+    isComplete: boolean;
+    startIndex: number;
+    endIndex: number;
+  }> = [];
+  // Improved regex to better handle streaming code blocks
+  // Use non-greedy matching to avoid cutting off content after code blocks
   const regex = /```(\w*)\n([\s\S]*?)(?:```|$)/g;
   let match;
 
   while ((match = regex.exec(text)) !== null) {
     const language = match[1] || 'text';
-    const code = match[2];
+    const code = match[2] || '';
     const isComplete = match[0].endsWith('```');
+    const startIndex = match.index;
+    const endIndex = match.index + match[0].length;
 
-    codeBlocks.push({ language, code, isComplete });
+    codeBlocks.push({ language, code, isComplete, startIndex, endIndex });
   }
 
   return codeBlocks;
@@ -118,21 +133,25 @@ function renderMarkdownWithStreamingCode(text: string, _isStreaming: boolean = f
   }
 
   const codeBlocks = extractCodeBlocks(text);
+
   let processedText = text;
 
-  codeBlocks.forEach((block, index) => {
-    const blockId = `streaming-code-${index}`;
+  // Process code blocks in reverse order to maintain correct indices
+  for (let i = codeBlocks.length - 1; i >= 0; i--) {
+    const block = codeBlocks[i];
+    const blockId = `streaming-code-${i}`;
     // Minimal placeholder: only mount point for Svelte component (no external header/labels)
     const placeholder = `
 <div id="${blockId}" class="streaming-code-placeholder" data-language="${block.language}" data-code="${encodeURIComponent(block.code)}" data-streaming="${_isStreaming && !block.isComplete}" data-is-complete="${block.isComplete}">
   <div class="streaming-code-mount"></div>
 </div>`;
 
-    // Replace the code block with placeholder (match fences loosely to keep streaming segments)
-    // Use string concatenation to avoid embedding backticks in template literal
-    const codeBlockRegex = new RegExp('```' + block.language + '\\n[\\s\\S]*?(?:```|$)', 'g');
-    processedText = processedText.replace(codeBlockRegex, placeholder);
-  });
+    // Replace the code block with placeholder using exact indices
+    processedText =
+      processedText.substring(0, block.startIndex) +
+      placeholder +
+      processedText.substring(block.endIndex);
+  }
 
   return renderMarkdownToSafeHtml(processedText);
 }
@@ -153,15 +172,19 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
       if ((element as any).__streamingCodeComponent) {
         const existing = (element as any).__streamingCodeComponent;
         try {
-          existing.$set({
-            code,
-            language,
-            isStreaming: streaming,
-            isComplete,
-            readonly: true,
-            showLineNumbers: false,
-          } as any);
-        } catch {
+          // In Svelte 5, we need to update props directly on the component instance
+          // We'll update each prop individually if they exist on the component
+          if (existing.$$set) {
+            existing.$$set({
+              code,
+              language,
+              isStreaming: streaming,
+              isComplete,
+              readonly: true,
+              showLineNumbers: false,
+            });
+          }
+        } catch (e) {
           // If update fails, fall back to re-mount
           try {
             unmount(existing);
@@ -223,17 +246,29 @@ export function appendMarkdownText(
   ctx.mdText += normalized;
 
   if (ctx.mdContentEl) {
-    // Cleanup existing streaming components
-    cleanupStreamingCodeComponents(ctx.mdContentEl);
-
     // Render markdown with streaming code support
-    ctx.mdContentEl.innerHTML = renderMarkdownWithStreamingCode(ctx.mdText, isStreaming);
+    const newContent = renderMarkdownWithStreamingCode(ctx.mdText, isStreaming);
 
-    // Enable external link handling
-    enableExternalLinks(ctx.mdContentEl);
+    // Check if the structure has changed (new code blocks added)
+    const hasStructuralChanges = hasStreamingCodeBlocksChanged(ctx.mdContentEl, newContent);
 
-    // Mount streaming code components
-    mountStreamingCodeComponents(ctx.mdContentEl, isStreaming);
+    if (hasStructuralChanges) {
+      // Only cleanup and re-render if the structure has changed
+      cleanupStreamingCodeComponents(ctx.mdContentEl);
+
+      // Update the content
+      ctx.mdContentEl.innerHTML = newContent;
+
+      // Enable external link handling
+      enableExternalLinks(ctx.mdContentEl);
+
+      // Mount streaming code components
+      mountStreamingCodeComponents(ctx.mdContentEl, isStreaming);
+    } else {
+      // Just update existing components without remounting
+      // During streaming, we need to update the code content in placeholders
+      updateStreamingCodeComponents(ctx.mdContentEl, isStreaming, ctx.mdText);
+    }
 
     // No CodeMirror rendering anymore — Shiki handles highlighting in streaming components.
   }
@@ -255,6 +290,82 @@ export function appendMarkdownText(
   return ctx;
 }
 
+// Check if the structure of code blocks has changed
+function hasStreamingCodeBlocksChanged(container: HTMLElement, newContent: string): boolean {
+  // Parse the new content to check for structural changes
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = newContent;
+  const newPlaceholders = tempDiv.querySelectorAll('.streaming-code-placeholder');
+  const existingPlaceholders = container.querySelectorAll('.streaming-code-placeholder');
+
+  // If the number of placeholders is different, there are structural changes
+  if (newPlaceholders.length !== existingPlaceholders.length) {
+    return true;
+  }
+
+  // Compare placeholder attributes for significant changes
+  for (let i = 0; i < newPlaceholders.length; i++) {
+    const newPlaceholder = newPlaceholders[i] as HTMLElement;
+    const existingPlaceholder = existingPlaceholders[i] as HTMLElement;
+
+    // Check if language or completion status changed
+    if (
+      newPlaceholder.dataset.language !== existingPlaceholder.dataset.language ||
+      newPlaceholder.dataset.isComplete !== existingPlaceholder.dataset.isComplete
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Update existing streaming code components without remounting
+function updateStreamingCodeComponents(
+  container: HTMLElement,
+  isStreaming: boolean,
+  mdText: string = '',
+) {
+  const placeholders = container.querySelectorAll('.streaming-code-placeholder');
+
+  // Extract current code blocks from the full markdown text
+  const codeBlocks = extractCodeBlocks(mdText);
+
+  placeholders.forEach((placeholder, index) => {
+    const element = placeholder as HTMLElement;
+    const component = (element as any).__streamingCodeComponent;
+
+    if (component && index < codeBlocks.length) {
+      try {
+        const block = codeBlocks[index];
+        const code = block.code;
+        const language = block.language;
+        const isComplete = block.isComplete;
+        const streaming = isStreaming && !isComplete;
+
+        // Update the data attributes on the element
+        element.dataset.code = encodeURIComponent(code);
+        element.dataset.language = language;
+        element.dataset.streaming = streaming.toString();
+        element.dataset.isComplete = isComplete.toString();
+
+        // Update component props using Svelte 5 API
+        // In Svelte 5, we use the $$set method if available
+        if (component.$$set) {
+          component.$$set({
+            code,
+            language,
+            isStreaming: streaming,
+            isComplete,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to update StreamingCodeBlock:', error);
+      }
+    }
+  });
+}
+
 // Finalize streaming - convert streaming components to final state
 export function finalizeMarkdownStreaming(ctx: BubbleCtx): BubbleCtx {
   if (ctx.mdContentEl) {
@@ -269,7 +380,10 @@ export function finalizeMarkdownStreaming(ctx: BubbleCtx): BubbleCtx {
         // Update component props to stop streaming
         try {
           const finalCode = decodeURIComponent(element.dataset.code || '');
-          component.$set({ code: finalCode, isStreaming: false, isComplete: true });
+          // Use Svelte 5 API for updating props
+          if (component.$$set) {
+            component.$$set({ code: finalCode, isStreaming: false, isComplete: true });
+          }
         } catch (error) {
           console.error('Failed to update StreamingCodeBlock:', error);
         }

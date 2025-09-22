@@ -2,20 +2,22 @@
 //! Provides concrete implementations of the ModelBuilder trait
 //! for the Qwen3 architecture, supporting GGUF and safetensors.
 
+use candle::{DType, Device};
+use candle_nn::VarBuilder;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
-use candle::{Device, DType};
-use candle_nn::VarBuilder;
 
-use crate::models::registry::ArchKind;
 use crate::models::common::model::ModelBackend;
 use crate::models::qwen3::model::ModelWeights as Qwen3Gguf;
+use crate::models::registry::ArchKind;
 
 #[derive(Clone)]
 pub struct Qwen3ModelBuilder;
 
 impl Qwen3ModelBuilder {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 
     /// Build a model from GGUF content
     pub fn from_gguf<R: Read + Seek>(
@@ -44,7 +46,10 @@ impl Qwen3ModelBuilder {
     }
 
     /// Detect architecture from GGUF metadata
-    pub fn detect_gguf_arch(&self, metadata: &HashMap<String, candle::quantized::gguf_file::Value>) -> Option<ArchKind> {
+    pub fn detect_gguf_arch(
+        &self,
+        metadata: &HashMap<String, candle::quantized::gguf_file::Value>,
+    ) -> Option<ArchKind> {
         if let Some(arch_value) = metadata.get("general.architecture") {
             if let Ok(arch_str) = arch_value.to_string() {
                 match arch_str.to_lowercase().as_str() {
@@ -86,11 +91,15 @@ impl Qwen3ModelBuilder {
         None
     }
 
-    pub fn arch_kind(&self) -> ArchKind { ArchKind::Qwen3 }
+    pub fn arch_kind(&self) -> ArchKind {
+        ArchKind::Qwen3
+    }
 }
 
 impl Default for Qwen3ModelBuilder {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]

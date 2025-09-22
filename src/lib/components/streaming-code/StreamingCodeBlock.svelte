@@ -3,25 +3,54 @@
   import CopySimple from 'phosphor-svelte/lib/CopySimple';
   import CircleNotch from 'phosphor-svelte/lib/CircleNotch';
   import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
-  let _oneDark: any = null;
-  // Shiki will be dynamically imported to allow ESM-bundle usage and Tauri offline loading
+  import Prism from 'prismjs';
+  import 'prismjs/components/prism-clike';
+  import 'prismjs/components/prism-markup';
+  import 'prismjs/components/prism-markdown';
+  import 'prismjs/components/prism-bash';
+  import 'prismjs/components/prism-shell-session';
+  import 'prismjs/components/prism-powershell';
+  import 'prismjs/components/prism-docker';
+  import 'prismjs/components/prism-diff';
+  import 'prismjs/components/prism-ini';
+  import 'prismjs/components/prism-json';
+  import 'prismjs/components/prism-typescript';
+  import 'prismjs/components/prism-javascript';
+  import 'prismjs/components/prism-jsx';
+  import 'prismjs/components/prism-tsx';
+  import 'prismjs/components/prism-python';
+  import 'prismjs/components/prism-rust';
+  import 'prismjs/components/prism-go';
+  import 'prismjs/components/prism-java';
+  import 'prismjs/components/prism-c';
+  import 'prismjs/components/prism-cpp';
+  import 'prismjs/components/prism-csharp';
+  import 'prismjs/components/prism-sql';
+  import 'prismjs/components/prism-yaml';
+  import 'prismjs/components/prism-toml';
+  import 'prismjs/components/prism-graphql';
+  import 'prismjs/components/prism-php';
+  import 'prismjs/components/prism-ruby';
+  import 'prismjs/components/prism-lua';
+  import 'prismjs/components/prism-swift';
+  import 'prismjs/components/prism-kotlin';
 
   export let code: string = '';
   export let language: string = '';
   export let isStreaming: boolean = false;
   export let isComplete: boolean = false;
   export let theme: 'light' | 'dark' | 'auto' = 'auto';
-  // Props kept for API compatibility; not used by Shiki renderer
+  // Props kept for API совместимости; Prism не использует их напрямую
   export const showLineNumbers: boolean = false;
   export const readonly: boolean = true;
 
   const dispatch = createEventDispatcher();
   
   let container: HTMLElement;
-  // Buffer/state for our simplified Shiki renderer
+  let preEl: HTMLPreElement | null = null;
+  let codeEl: HTMLElement | null = null;
   let lastCodeLength: number = 0;
   let renderedCode: string = '';
-  const highlighterCache: Record<string, any> = {};
   // Buffering state for streaming updates to coalesce rapid incoming chunks
   let pendingStreamingCode: string | null = null;
   let pendingAnimationFrame: number | null = null;
@@ -49,98 +78,130 @@
     } catch {}
   }
 
-  // Lazy language loading to reduce initial bundle size
-  // For Shiki we dynamically create/cached highlighters per (lang,theme).
-  function getHighlighterKey(lang: string, theme: string) {
-    return `${lang}::${theme}`;
+  const prismAliases: Record<string, string> = {
+    js: 'javascript',
+    jsx: 'jsx',
+    ts: 'typescript',
+    tsx: 'tsx',
+    sh: 'bash',
+    shell: 'bash',
+    zsh: 'bash',
+    console: 'bash',
+    shellsession: 'shell-session',
+    ps1: 'powershell',
+    powershell: 'powershell',
+    py: 'python',
+    rb: 'ruby',
+    md: 'markdown',
+    yml: 'yaml',
+    kt: 'kotlin',
+    rs: 'rust',
+    plaintext: 'text',
+    text: 'markup',
+  };
+
+  function activeLanguage(): string {
+    const raw = (language || '').toLowerCase().trim();
+    const alias = prismAliases[raw];
+    if (alias) return alias;
+    return raw.length ? raw : 'markup';
   }
 
-  async function ensureHighlighter(lang: string, theme: string) {
-    const key = getHighlighterKey(lang, theme);
-    if ((highlighterCache as any)[key]) return (highlighterCache as any)[key];
-    // Dynamically import the ESM bundle at runtime — this helps Tauri packaging and avoids build-time resolution errors
-    // @ts-ignore dynamic import of optional bundle for Tauri packaging
-    const mod: any = await import('shiki/bundle/web');
-    // createHighlighter from bundle/web accepts langs/themes arrays
-    const { createHighlighter } = mod;
-    const highlighter = await createHighlighter({ langs: [lang], themes: [theme] });
-    (highlighterCache as any)[key] = highlighter;
-    return highlighter;
-  }
-
-  // Theme detection
-  function getTheme(): 'light' | 'dark' {
-    if (theme === 'auto') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return theme;
-  }
-
-  // Removed CodeMirror compartments and language loader — using Shiki instead
-
-  // Create a simple container-based code render using Shiki
-  async function createEditor() {
+  function ensureCodeElement() {
     if (!container) return;
-    // Initial render
-    await renderHighlightedCode(code);
+    if (!preEl || !codeEl || !container.contains(codeEl)) {
+      const className = 'language-' + activeLanguage();
+      container.innerHTML = '<pre class="' + className + '"><code class="' + className + '"></code></pre>';
+      preEl = container.querySelector('pre');
+      codeEl = container.querySelector('code');
+    }
   }
 
-  // Incremental update for streaming - for Shiki we re-render the highlighted HTML
-  async function updateEditorIncremental(newCode: string) {
-    await renderHighlightedCode(newCode);
+  function renderHighlightedCode(codeStr: string, scrollIntoView = false) {
+    if (!container) return;
+    ensureCodeElement();
+    if (!codeEl) return;
+
+    renderedCode = codeStr ?? '';
+    const lang = activeLanguage();
+    const fallback = prismAliases[lang] ?? lang;
+    const grammar = Prism.languages[lang] ?? Prism.languages[fallback] ?? Prism.languages.markup;
+    let highlighted: string;
+    try {
+      highlighted = Prism.highlight(renderedCode, grammar, lang);
+    } catch (_err) {
+      highlighted = escapeHtml(renderedCode);
+    }
+
+    if (codeEl.innerHTML !== highlighted) {
+      codeEl.innerHTML = highlighted;
+    }
+
+    const className = 'language-' + lang;
+    if (codeEl.className !== className) codeEl.className = className;
+    if (preEl && preEl.className !== className) preEl.className = className;
+
+    if (preEl) {
+      preEl.style.margin = '0';
+      preEl.style.padding = '12px 16px';
+      preEl.style.overflow = 'auto';
+      preEl.style.lineHeight = '1.6';
+      preEl.style.fontSize = '0.85rem';
+      preEl.style.background = 'transparent';
+      preEl.style.color = 'var(--code-fg, var(--text-primary))';
+      preEl.style.fontFamily = 'var(--font-monospace, ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace)';
+    }
+
+    if (codeEl) {
+      codeEl.style.display = 'block';
+      codeEl.style.background = 'transparent';
+    }
+
+    if (scrollIntoView && preEl) {
+      requestAnimationFrame(() => {
+        try { preEl!.scrollTop = preEl!.scrollHeight; } catch {}
+        try { container.scrollIntoView({ block: 'end', behavior: 'auto' }); } catch {}
+      });
+    }
   }
 
-  // Schedule/coalesce streaming updates to avoid rapid re-highlighting
+  function createEditor() {
+    if (!container) return;
+    renderHighlightedCode(code);
+  }
+
+  function updateEditorIncremental(newCode: string) {
+    renderHighlightedCode(newCode, true);
+  }
+
   function scheduleStreamingUpdate(newCode: string) {
     pendingStreamingCode = newCode;
     if (pendingAnimationFrame) return;
-    pendingAnimationFrame = requestAnimationFrame(async () => {
+    pendingAnimationFrame = requestAnimationFrame(() => {
       pendingAnimationFrame = null;
       if (pendingStreamingCode !== null) {
-        try {
-          await updateEditorIncremental(pendingStreamingCode);
-        } catch (_e) {
-          await renderHighlightedCode(pendingStreamingCode);
-        }
+        updateEditorIncremental(pendingStreamingCode);
         pendingStreamingCode = null;
       }
     });
   }
 
-  // Full update for non-streaming changes -> re-render highlighted HTML
-  async function updateEditorFull(newCode: string) {
-    await renderHighlightedCode(newCode);
+  function updateEditorFull(newCode: string) {
+    renderHighlightedCode(newCode, false);
   }
 
   function destroyEditor() {
-    // Clear container
     if (container) container.innerHTML = '';
+    preEl = null;
+    codeEl = null;
     renderedCode = '';
   }
 
-  // Render highlighted HTML using Shiki and insert into container
-  async function renderHighlightedCode(codeStr: string) {
-    if (!container) return;
-    renderedCode = codeStr ?? '';
-    const lang = (language || 'text').toLowerCase();
-    const theme = getTheme() === 'dark' ? 'github-dark' : 'github-light';
-    try {
-      const highlighter = await ensureHighlighter(lang, theme);
-      const html = highlighter.codeToHtml(renderedCode, { lang, theme });
-      // Use innerHTML: we generate HTML ourselves from Shiki -> safe
-      container.innerHTML = html;
-      // Keep container scrolled to end when streaming
-      requestAnimationFrame(() => {
-        try { container.scrollIntoView({ block: 'end', behavior: 'auto' }); } catch {}
-      });
-    } catch (_err) {
-      // Fallback: plain text inside pre
-      container.innerHTML = `<pre><code>${escapeHtml(renderedCode)}</code></pre>`;
-    }
-  }
-
-  function escapeHtml(unsafe: string) {
-    return unsafe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
   function handleProgressBarClick() {
@@ -315,7 +376,7 @@
       </button>
     </div>
   </div>
-  <div bind:this={container} class="codemirror-wrapper" class:streaming-editor={isStreaming}></div>
+  <div bind:this={container} class="code-wrapper" class:streaming-editor={isStreaming}></div>
 </div>
 
 <style>
@@ -332,18 +393,17 @@
     box-shadow: 0 0 0 1px var(--accent-color-alpha);
   }
 
-  .codemirror-wrapper {
+  :global(.code-wrapper) {
     width: 100%;
     transition: opacity 0.3s ease;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    background: var(--code-bg, var(--panel-bg));
   }
 
   .streaming-editor {
     opacity: 0.9;
-  }
-
-  /* Hide gutters (line numbers, fold markers) for streaming editors */
-  :global(.streaming-code-block .cm-gutters) {
-    display: none !important;
   }
 
   .streaming-code-header {
@@ -370,72 +430,34 @@
   }
   .streaming-code-header .status { font-size: 12px; color: var(--muted); }
   .streaming-code-header .copy-btn {
-    display: grid; place-items: center;
-    width: 24px; height: 24px;
-    padding: 0; margin: 0;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    margin: 0;
     border: 1px solid var(--border-color);
-    background: var(--panel-bg); color: var(--text); border-radius: 4px;
+    background: var(--panel-bg);
+    color: var(--text);
+    border-radius: 4px;
   }
-  .codemirror-wrapper { border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 8px 8px; }
 
   /* Collapse styles */
-  .streaming-code-block.collapsed .codemirror-wrapper { display: none; }
+  .streaming-code-block.collapsed .code-wrapper { display: none; }
   .streaming-code-block.collapsed .streaming-code-header {
     border-bottom: 1px solid var(--border-color);
     border-radius: 8px;
   }
 
-  :global(.cm-progress-widget) { cursor: pointer; }
-  :global(.cm-progress-copy) {
-    font-size: 12px;
-    padding: 2px 8px;
-    border: 1px solid var(--border-color);
-    background: var(--panel-bg);
-    color: var(--text-primary);
-    border-radius: 4px;
-  }
-
   /* Reduce motion for accessibility */
   @media (prefers-reduced-motion: reduce) {
     .streaming-code-block,
-    .codemirror-wrapper {
+    .code-wrapper {
       transition: none;
     }
-    /* Keep spinner running even with reduced motion to signal activity */
   }
 
   @keyframes cm-spinner-rotate {
     to { transform: rotate(360deg); }
   }
-
-  :global(.cm-editor) {
-    background: var(--code-bg) !important;
-  }
-
-  :global(.cm-content) {
-    color: var(--code-fg) !important;
-  }
-
-  :global(.cm-gutters) {
-    background: var(--panel-alt-bg) !important;
-    border-right: 1px solid var(--border-color) !important;
-  }
-
-  :global(.cm-lineNumbers .cm-gutterElement) {
-    color: var(--muted) !important;
-  }
-
-  /* Light theme adjustments */
-  :global(.cm-editor:not(.cm-dark)) {
-    background: var(--code-bg) !important;
-    color: var(--code-fg) !important;
-  }
-
-  /* Dark theme adjustments */
-  @media (prefers-color-scheme: dark) {
-    :global(.cm-editor) {
-      background: var(--code-bg) !important;
-    }
-  }
 </style>
-

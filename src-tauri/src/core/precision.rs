@@ -1,5 +1,5 @@
 //! Centralized dtype/precision policy management.
-//! 
+//!
 //! This module provides a unified policy for selecting appropriate data types
 //! based on the target device and user preferences. The policy helps ensure
 //! consistent memory usage and performance across different hardware platforms.
@@ -97,11 +97,11 @@ impl PrecisionConfig {
 }
 
 /// Selects the appropriate dtype based on device and configuration
-/// 
+///
 /// # Arguments
 /// * `device` - Target device for computation
 /// * `config` - Precision configuration policy
-/// 
+///
 /// # Returns
 /// * `DType` - Recommended data type for the given device
 pub fn select_dtype(device: &Device, config: &PrecisionConfig) -> DType {
@@ -112,14 +112,14 @@ pub fn select_dtype(device: &Device, config: &PrecisionConfig) -> DType {
 }
 
 /// Selects the appropriate dtype based on device with default configuration
-/// 
+///
 /// This function uses the default precision configuration which:
 /// - Uses F32 for CPU devices for maximum compatibility
 /// - Uses BF16 for GPU devices for better performance
-/// 
+///
 /// # Arguments
 /// * `device` - Target device for computation
-/// 
+///
 /// # Returns
 /// * `DType` - Recommended data type for the given device
 pub fn select_dtype_default(device: &Device) -> DType {
@@ -127,10 +127,10 @@ pub fn select_dtype_default(device: &Device) -> DType {
 }
 
 /// Converts a PrecisionPolicy to a PrecisionConfig
-/// 
+///
 /// # Arguments
 /// * `policy` - The precision policy to convert
-/// 
+///
 /// # Returns
 /// * `PrecisionConfig` - The corresponding precision configuration
 pub fn policy_to_config(policy: &PrecisionPolicy) -> PrecisionConfig {
@@ -142,11 +142,11 @@ pub fn policy_to_config(policy: &PrecisionPolicy) -> PrecisionConfig {
 }
 
 /// Selects the appropriate dtype based on device and precision policy
-/// 
+///
 /// # Arguments
 /// * `device` - Target device for computation
 /// * `policy` - Precision policy to use
-/// 
+///
 /// # Returns
 /// * `DType` - Recommended data type for the given device and policy
 pub fn select_dtype_by_policy(device: &Device, policy: &PrecisionPolicy) -> DType {
@@ -186,7 +186,7 @@ mod tests {
     fn test_dtype_selection() {
         let cpu_device = Device::Cpu;
         let config = PrecisionConfig::default();
-        
+
         // CPU should use F32
         assert_eq!(select_dtype(&cpu_device, &config), DType::F32);
     }

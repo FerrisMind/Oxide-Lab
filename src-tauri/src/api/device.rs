@@ -1,14 +1,17 @@
-use std::fs::File;
-use std::path::PathBuf;
-use candle::quantized::gguf_file;
-use candle::utils::{cuda_is_available, metal_is_available};
 use crate::core::device::device_label;
 use crate::core::state::ModelState;
-use crate::core::tokenizer::{mark_special_chat_tokens, tokenizer_from_gguf_metadata, extract_chat_template, find_chat_template_in_metadata};
-use crate::models::registry::{detect_arch};
-use crate::models::common::model::{ModelBackend};
+use crate::core::tokenizer::{
+    extract_chat_template, find_chat_template_in_metadata, mark_special_chat_tokens,
+    tokenizer_from_gguf_metadata,
+};
+use crate::models::common::model::ModelBackend;
+use crate::models::registry::detect_arch;
 use crate::models::registry::get_model_factory;
 use crate::{log_device, log_device_error, log_load};
+use candle::quantized::gguf_file;
+use candle::utils::{cuda_is_available, metal_is_available};
+use std::fs::File;
+use std::path::PathBuf;
 
 pub fn set_device(
     guard: &mut ModelState<Box<dyn ModelBackend + Send>>,
@@ -29,16 +32,14 @@ pub fn set_device(
         crate::core::types::DevicePreference::Cpu => {
             guard.device = candle::Device::Cpu;
         }
-        crate::core::types::DevicePreference::Metal => {
-            match candle::Device::new_metal(0) {
-                Ok(dev) => {
-                    guard.device = dev;
-                }
-                Err(e) => {
-                    return Err(format!("Metal init failed: {}", e));
-                }
+        crate::core::types::DevicePreference::Metal => match candle::Device::new_metal(0) {
+            Ok(dev) => {
+                guard.device = dev;
             }
-        }
+            Err(e) => {
+                return Err(format!("Metal init failed: {}", e));
+            }
+        },
         crate::core::types::DevicePreference::Auto => {
             // Авто-выбор с предпочтением CUDA → Metal → CPU
             if cuda_is_available() {
@@ -86,10 +87,12 @@ pub fn set_device(
         // Токенизатор и шаблон чата
         let mut tokenizer = tokenizer_from_gguf_metadata(&content.metadata)?;
         mark_special_chat_tokens(&mut tokenizer);
-        let chat_tpl = extract_chat_template(&tokenizer).or_else(|| find_chat_template_in_metadata(&content.metadata));
+        let chat_tpl = extract_chat_template(&tokenizer)
+            .or_else(|| find_chat_template_in_metadata(&content.metadata));
 
         // Архитектура
-        let arch = detect_arch(&content.metadata).ok_or_else(|| "Unsupported GGUF architecture".to_string())?;
+        let arch = detect_arch(&content.metadata)
+            .ok_or_else(|| "Unsupported GGUF architecture".to_string())?;
 
         // Универсальное создание модели через фабрику (под выбранное устройство)
         let model_backend = get_model_factory()

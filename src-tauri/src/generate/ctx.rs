@@ -14,8 +14,10 @@ impl ContextSlice {
             full_context_tokens.clone()
         };
         let base_context_len = effective_context_tokens.len();
-        Self { encoded_len, base_context_len, effective_context_tokens }
+        Self {
+            encoded_len,
+            base_context_len,
+            effective_context_tokens,
+        }
     }
 }
-
-

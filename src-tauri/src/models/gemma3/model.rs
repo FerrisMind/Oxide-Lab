@@ -1,7 +1,7 @@
-use std::io::{Read, Seek};
+use candle::quantized::gguf_file::Content;
 use candle::Device;
 use candle::Tensor;
-use candle::quantized::gguf_file::Content;
+use std::io::{Read, Seek};
 
 /// Wrapper around candle_transformers' quantized Gemma3 implementation
 pub struct ModelWeights {
@@ -28,7 +28,8 @@ impl ModelWeights {
 
 impl crate::models::common::model::ModelBackend for ModelWeights {
     fn forward_layered(&mut self, input: &Tensor, position: usize) -> Result<Tensor, String> {
-        self.inner.forward(input, position).map_err(|e| e.to_string())
+        self.inner
+            .forward(input, position)
+            .map_err(|e| e.to_string())
     }
 }
-

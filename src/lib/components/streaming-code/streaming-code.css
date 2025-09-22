@@ -6,6 +6,20 @@
   margin: 8px 0;
 }
 
+.codemirror-wrapper {
+  width: 100%;
+  margin: 8px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.streaming-editor {
+  opacity: 0.9;
+  border: 1px solid var(--accent-color);
+  box-shadow: 0 0 0 1px var(--accent-color-alpha);
+}
+
 /* Progress bar animations */
 @keyframes spin {
   from {

@@ -6,15 +6,17 @@
 use hf_hub::{api::sync::Api, Repo, RepoType};
 use std::path::Path;
 
+use super::emit_load_progress;
 use crate::core::device::{device_label, select_device};
 use crate::core::state::ModelState;
 use crate::core::tokenizer::{extract_chat_template, mark_special_chat_tokens};
-use crate::models::registry::{get_model_factory, detect_arch_from_config};
-use crate::models::common::model::ModelBackend;
-use crate::core::weights::{hub_list_safetensors, local_list_safetensors, hub_cache_safetensors, validate_safetensors_files};
-use crate::{log_load, log_local_error, log_hub_error, log_template};
-use super::emit_load_progress;
+use crate::core::weights::{
+    hub_cache_safetensors, hub_list_safetensors, local_list_safetensors, validate_safetensors_files,
+};
 use crate::generate::cancel::CANCEL_LOADING;
+use crate::models::common::model::ModelBackend;
+use crate::models::registry::{detect_arch_from_config, get_model_factory};
+use crate::{log_hub_error, log_load, log_local_error, log_template};
 use std::sync::atomic::Ordering;
 
 /// Load a model from local safetensors files using the ModelBuilder pattern
@@ -25,21 +27,40 @@ pub fn load_local_safetensors_model(
     context_length: usize,
     device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
-    emit_load_progress(app, "start", 0, Some("Начало загрузки локальной модели (safetensors)"), false, None);
+    emit_load_progress(
+        app,
+        "start",
+        0,
+        Some("Начало загрузки локальной модели (safetensors)"),
+        false,
+        None,
+    );
     let dev = select_device(device_pref);
     guard.device = dev.clone();
     log_load!("device selected: {}", device_label(&guard.device));
-    emit_load_progress(app, "device", 5, Some(device_label(&guard.device)), false, None);
+    emit_load_progress(
+        app,
+        "device",
+        5,
+        Some(device_label(&guard.device)),
+        false,
+        None,
+    );
 
     let model_path = Path::new(&model_path);
     if !model_path.exists() {
-        return Err(format!("Model path does not exist: {}", model_path.display()));
+        return Err(format!(
+            "Model path does not exist: {}",
+            model_path.display()
+        ));
     }
 
     // Determine if it's a directory or file
     let model_dir = if model_path.is_file() {
         // If it's a file, assume it's in a model directory
-        model_path.parent().ok_or("Cannot determine parent directory")?
+        model_path
+            .parent()
+            .ok_or("Cannot determine parent directory")?
     } else {
         model_path
     };
@@ -84,8 +105,18 @@ pub fn load_local_safetensors_model(
 
     // Validate the local safetensors files
     validate_safetensors_files(&filenames)?;
-    if CANCEL_LOADING.load(Ordering::SeqCst) { emit_load_progress(app, "cancel", 44, Some("Отменено"), true, Some("cancelled")); return Err("cancelled".into()); }
-    emit_load_progress(app, "scan_weights", 45, Some(&format!("{} файлов", filenames.len())), false, None);
+    if CANCEL_LOADING.load(Ordering::SeqCst) {
+        emit_load_progress(app, "cancel", 44, Some("Отменено"), true, Some("cancelled"));
+        return Err("cancelled".into());
+    }
+    emit_load_progress(
+        app,
+        "scan_weights",
+        45,
+        Some(&format!("{} файлов", filenames.len())),
+        false,
+        None,
+    );
 
     // Инициализируем tokenizer и chat_template
     let mut chat_tpl = None;
@@ -112,24 +143,38 @@ pub fn load_local_safetensors_model(
             // Модальная индикация удалена.
             // Convert PrecisionPolicy to Precision for the dtype conversion
             let precision = match guard.precision_policy {
-                crate::core::precision::PrecisionPolicy::Default => crate::core::precision::Precision::F32,
-                crate::core::precision::PrecisionPolicy::MemoryEfficient => crate::core::precision::Precision::F16,
-                crate::core::precision::PrecisionPolicy::MaximumPrecision => crate::core::precision::Precision::F32,
+                crate::core::precision::PrecisionPolicy::Default => {
+                    crate::core::precision::Precision::F32
+                }
+                crate::core::precision::PrecisionPolicy::MemoryEfficient => {
+                    crate::core::precision::Precision::F16
+                }
+                crate::core::precision::PrecisionPolicy::MaximumPrecision => {
+                    crate::core::precision::Precision::F32
+                }
             };
             // Determine the dtype based on precision and device
             let dtype = crate::core::precision::precision_to_dtype(&precision, &dev);
 
             // Use the model factory to build the model
             emit_load_progress(app, "build_model", 60, None, false, None);
-            match get_model_factory().build_from_safetensors(arch, &filenames, &config, &dev, dtype) {
+            match get_model_factory().build_from_safetensors(arch, &filenames, &config, &dev, dtype)
+            {
                 Ok(model_backend) => {
                     built_model_opt = Some(model_backend);
-                    emit_load_progress(app, "build_model_done", 85, Some("Модель сконструирована"), false, None);
+                    emit_load_progress(
+                        app,
+                        "build_model_done",
+                        85,
+                        Some("Модель сконструирована"),
+                        false,
+                        None,
+                    );
                 }
                 Err(e) => {
                     emit_load_progress(app, "build_model", 65, None, false, Some(&e));
                     log_local_error!("ModelBuilder failed: {}", e)
-                },
+                }
             }
         }
     }
@@ -140,14 +185,26 @@ pub fn load_local_safetensors_model(
     guard.chat_template = chat_tpl;
     guard.context_length = context_length.max(1);
     guard.model_path = Some(model_path.to_string_lossy().to_string());
-    guard.tokenizer_path = tokenizer_path.exists().then(|| tokenizer_path.to_string_lossy().to_string());
+    guard.tokenizer_path = tokenizer_path
+        .exists()
+        .then(|| tokenizer_path.to_string_lossy().to_string());
     guard.hub_repo_id = None;
     guard.hub_revision = None;
     guard.safetensors_files = Some(filenames);
-    log_load!("local safetensors loaded with ModelBuilder, context_length={}", guard.context_length);
-    emit_load_progress(app, "finalize", 95, Some("Состояние обновлено"), false, None);
+    log_load!(
+        "local safetensors loaded with ModelBuilder, context_length={}",
+        guard.context_length
+    );
+    emit_load_progress(
+        app,
+        "finalize",
+        95,
+        Some("Состояние обновлено"),
+        false,
+        None,
+    );
     emit_load_progress(app, "complete", 100, Some("Готово"), true, None);
-    
+
     Ok(())
 }
 
@@ -160,15 +217,31 @@ pub fn load_hub_safetensors_model(
     context_length: usize,
     device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
-    emit_load_progress(app, "start", 0, Some("Начало загрузки из HF Hub (safetensors)"), false, None);
+    emit_load_progress(
+        app,
+        "start",
+        0,
+        Some("Начало загрузки из HF Hub (safetensors)"),
+        false,
+        None,
+    );
     let dev = select_device(device_pref);
     guard.device = dev.clone();
     log_load!("device selected: {}", device_label(&guard.device));
-    emit_load_progress(app, "device", 5, Some(device_label(&guard.device)), false, None);
+    emit_load_progress(
+        app,
+        "device",
+        5,
+        Some(device_label(&guard.device)),
+        false,
+        None,
+    );
 
     // Настраиваем API и репозиторий
     let api = Api::new().map_err(|e| e.to_string())?;
-    if !repo_id.contains('/') { return Err("repo_id должен быть в формате 'owner/repo'".into()); }
+    if !repo_id.contains('/') {
+        return Err("repo_id должен быть в формате 'owner/repo'".into());
+    }
     let rev = revision.clone().unwrap_or_else(|| "main".to_string());
     let repo = Repo::with_revision(repo_id.clone(), RepoType::Model, rev.clone());
     let api = api.repo(repo);
@@ -209,12 +282,26 @@ pub fn load_hub_safetensors_model(
     // Используем универсальный загрузчик весов для определения списка файлов safetensors
     let filenames = hub_list_safetensors(&api)
         .map_err(|e| format!("Failed to list safetensors files from Hub: {}", e))?;
-    emit_load_progress(app, "hub_list", 35, Some(&format!("{} файлов", filenames.len())), false, None);
-    
+    emit_load_progress(
+        app,
+        "hub_list",
+        35,
+        Some(&format!("{} файлов", filenames.len())),
+        false,
+        None,
+    );
+
     // Предзагрузим все файлы в кэш (скачать/проверить наличие)
     let cached_filenames = hub_cache_safetensors(&api, &filenames)
         .map_err(|e| format!("Failed to cache safetensors files: {}", e))?;
-    emit_load_progress(app, "hub_cache", 50, Some("Файлы загружены/в кэше"), false, None);
+    emit_load_progress(
+        app,
+        "hub_cache",
+        50,
+        Some("Файлы загружены/в кэше"),
+        false,
+        None,
+    );
 
     // Validate the downloaded safetensors files
     validate_safetensors_files(&cached_filenames)?;
@@ -244,24 +331,43 @@ pub fn load_hub_safetensors_model(
             // Модальная индикация удалена.
             // Convert PrecisionPolicy to Precision for the dtype conversion
             let precision = match guard.precision_policy {
-                crate::core::precision::PrecisionPolicy::Default => crate::core::precision::Precision::F32,
-                crate::core::precision::PrecisionPolicy::MemoryEfficient => crate::core::precision::Precision::F16,
-                crate::core::precision::PrecisionPolicy::MaximumPrecision => crate::core::precision::Precision::F32,
+                crate::core::precision::PrecisionPolicy::Default => {
+                    crate::core::precision::Precision::F32
+                }
+                crate::core::precision::PrecisionPolicy::MemoryEfficient => {
+                    crate::core::precision::Precision::F16
+                }
+                crate::core::precision::PrecisionPolicy::MaximumPrecision => {
+                    crate::core::precision::Precision::F32
+                }
             };
             // Determine the dtype based on precision and device
             let dtype = crate::core::precision::precision_to_dtype(&precision, &dev);
 
             // Use the model factory to build the model
             emit_load_progress(app, "build_model", 70, None, false, None);
-            match get_model_factory().build_from_safetensors(arch, &cached_filenames, &config, &dev, dtype) {
+            match get_model_factory().build_from_safetensors(
+                arch,
+                &cached_filenames,
+                &config,
+                &dev,
+                dtype,
+            ) {
                 Ok(model_backend) => {
                     built_model_opt = Some(model_backend);
-                    emit_load_progress(app, "build_model_done", 90, Some("Модель сконструирована"), false, None);
+                    emit_load_progress(
+                        app,
+                        "build_model_done",
+                        90,
+                        Some("Модель сконструирована"),
+                        false,
+                        None,
+                    );
                 }
                 Err(e) => {
                     emit_load_progress(app, "build_model", 75, None, false, Some(&e));
                     log_hub_error!("ModelBuilder failed: {}", e)
-                },
+                }
             }
         }
     }
@@ -276,10 +382,20 @@ pub fn load_hub_safetensors_model(
     guard.hub_repo_id = Some(repo_id);
     guard.hub_revision = Some(rev);
     guard.safetensors_files = Some(cached_filenames);
-    log_load!("hub safetensors loaded with ModelBuilder, context_length={}", guard.context_length);
-    emit_load_progress(app, "finalize", 95, Some("Состояние обновлено"), false, None);
+    log_load!(
+        "hub safetensors loaded with ModelBuilder, context_length={}",
+        guard.context_length
+    );
+    emit_load_progress(
+        app,
+        "finalize",
+        95,
+        Some("Состояние обновлено"),
+        false,
+        None,
+    );
     emit_load_progress(app, "complete", 100, Some("Готово"), true, None);
-    
+
     Ok(())
 }
 

@@ -6,7 +6,6 @@
   import Broom from "phosphor-svelte/lib/Broom";
   import Microphone from "phosphor-svelte/lib/Microphone";
   import SlidersHorizontal from "phosphor-svelte/lib/SlidersHorizontal";
-  import ArrowClockwise from "phosphor-svelte/lib/ArrowClockwise";
   import File from "phosphor-svelte/lib/File";
   import X from "phosphor-svelte/lib/X";
 
@@ -26,14 +25,12 @@
     clear: void;
     attach: AttachDetail;
     'toggle-loader-panel': void;
-    regenerate: void;
   }>();
 
   export let prompt: string = "";
   export let busy: boolean = false;
   export let isLoaded: boolean = false;
   export let canStop: boolean = false;
-  export let canRegenerate: boolean = false;
   export let isRecording: boolean = false;
   export let supports_text: boolean = true;
   export let supports_image: boolean = false;
@@ -64,7 +61,6 @@
     dispatch("stop");
   }
 
-
   function triggerClear() {
     if (!prompt && !attachError) return;
     prompt = "";
@@ -87,11 +83,6 @@
 
   function triggerSettings() {
     dispatch("toggle-loader-panel");
-  }
-
-  function triggerRegenerate() {
-    if (!canRegenerate) return;
-    dispatch("regenerate");
   }
 
   function removeAttachment(index: number) {
@@ -288,7 +279,7 @@
           type="button"
           class="composer__button composer__button--icon"
           on:click={triggerAttach}
-          disabled={busy}
+          disabled={busy || !isLoaded}
           aria-label="Прикрепить файл"
         >
           <Paperclip size={16} weight="bold" />
@@ -298,28 +289,17 @@
           class="composer__button composer__button--icon"
           class:composer__button--settings-active={isLoaderPanelVisible}
           on:click={triggerSettings}
-          disabled={busy}
+          disabled={false}
           aria-label="Настройки лоадер панели"
         >
           <SlidersHorizontal size={16} weight="bold" />
         </button>
-        {#if canRegenerate}
-          <button
-            type="button"
-            class="composer__button composer__button--icon"
-            on:click={triggerRegenerate}
-            disabled={busy}
-            aria-label="Регенерировать ответ"
-          >
-            <ArrowClockwise size={16} weight="bold" />
-          </button>
-        {/if}
         {#if prompt || attachError}
           <button
             type="button"
             class="composer__button composer__button--icon"
             on:click={triggerClear}
-            disabled={busy}
+            disabled={busy || !isLoaded}
             aria-label="Очистить"
           >
             <Broom size={16} weight="bold" />
@@ -331,7 +311,7 @@
           type="button"
           class="composer__button composer__button--icon"
           on:click={triggerVoiceInput}
-          disabled={busy}
+          disabled={busy || !isLoaded}
           aria-label={isRecording ? 'Остановить запись' : 'Начать запись голоса'}
         >
           {#if isRecording}

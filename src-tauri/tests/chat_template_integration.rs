@@ -20,7 +20,7 @@ fn test_build_prompt_with_template() {
             content: "That's great to hear!".to_string(),
         },
     ];
-    
+
     let result = build_prompt_with_template(&template, messages);
     assert!(result.is_ok());
     let prompt = result.unwrap();
@@ -43,7 +43,7 @@ fn test_build_prompt_without_template() {
             content: "I'm doing well, thank you!".to_string(),
         },
     ];
-    
+
     let result = build_prompt_with_template(&template, messages);
     assert!(result.is_ok());
     let prompt = result.unwrap();

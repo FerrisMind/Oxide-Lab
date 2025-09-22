@@ -10,7 +10,12 @@ pub struct TokenOutputStream {
 
 impl TokenOutputStream {
     pub fn new(tokenizer: tokenizers::Tokenizer) -> Self {
-        Self { tokenizer, tokens: Vec::new(), prev_index: 0, current_index: 0 }
+        Self {
+            tokenizer,
+            tokens: Vec::new(),
+            prev_index: 0,
+            current_index: 0,
+        }
     }
 
     fn decode(&self, tokens: &[u32]) -> Result<String> {
@@ -49,8 +54,11 @@ impl TokenOutputStream {
                 // подождём следующий токен, чтобы избежать артефактов вроде "�".
                 let mut hold = false;
                 if let Some(last) = delta.chars().last() {
-                    if last == '\u{FFFD}' || last == '\u{200D}' || last == '\u{FE0F}'
-                    || ('\u{1F3FB}'..='\u{1F3FF}').contains(&last) {
+                    if last == '\u{FFFD}'
+                        || last == '\u{200D}'
+                        || last == '\u{FE0F}'
+                        || ('\u{1F3FB}'..='\u{1F3FF}').contains(&last)
+                    {
                         hold = true;
                     }
                 }
@@ -97,10 +105,14 @@ impl TokenOutputStream {
         }
     }
 
-    pub fn tokenizer(&self) -> &tokenizers::Tokenizer { &self.tokenizer }
+    pub fn tokenizer(&self) -> &tokenizers::Tokenizer {
+        &self.tokenizer
+    }
 
     #[allow(dead_code)]
-    pub fn clear(&mut self) { self.tokens.clear(); self.prev_index = 0; self.current_index = 0; }
+    pub fn clear(&mut self) {
+        self.tokens.clear();
+        self.prev_index = 0;
+        self.current_index = 0;
+    }
 }
-
-

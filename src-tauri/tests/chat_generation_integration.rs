@@ -1,6 +1,6 @@
 //! Integration test for chat template functionality in the generation pipeline
 
-use llm_chat_lib::core::types::{GenerateRequest, ChatMessage};
+use llm_chat_lib::core::types::{ChatMessage, GenerateRequest};
 
 #[test]
 fn test_generate_request_with_chat_messages() {
@@ -15,7 +15,7 @@ fn test_generate_request_with_chat_messages() {
             content: "I'm doing well, thank you!".to_string(),
         },
     ];
-    
+
     let req = GenerateRequest {
         prompt: "Direct prompt".to_string(),
         messages: Some(messages),
@@ -29,7 +29,7 @@ fn test_generate_request_with_chat_messages() {
         use_custom_params: false,
         seed: None,
     };
-    
+
     assert_eq!(req.prompt, "Direct prompt");
     assert!(req.messages.is_some());
     assert_eq!(req.messages.as_ref().unwrap().len(), 2);
@@ -51,7 +51,7 @@ fn test_generate_request_without_chat_messages() {
         use_custom_params: false,
         seed: None,
     };
-    
+
     assert_eq!(req.prompt, "Direct prompt");
     assert!(req.messages.is_none());
 }

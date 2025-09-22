@@ -1,20 +1,20 @@
 use serde::{Deserialize, Serialize};
 
 /// Unified sampling options for text generation
-/// 
+///
 /// This struct consolidates all sampling parameters used in text generation
 /// with sensible defaults and consistent behavior across different model types.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SamplingOptions {
     /// Temperature for sampling (higher values = more random, lower values = more deterministic)
-    /// 
+    ///
     /// - Values <= 0.0: Use argmax sampling (always pick the most probable token)
     /// - Values > 0.0: Apply temperature scaling to logits before sampling
     /// - Default: 0.7
     pub temperature: f64,
 
     /// Top-p (nucleus) sampling parameter
-    /// 
+    ///
     /// Limits sampling to the smallest set of tokens whose cumulative probability exceeds this value
     /// - None: Disable top-p sampling
     /// - Some(p) where 0.0 < p < 1.0: Enable top-p sampling with threshold p
@@ -22,7 +22,7 @@ pub struct SamplingOptions {
     pub top_p: Option<f64>,
 
     /// Top-k sampling parameter
-    /// 
+    ///
     /// Limits sampling to the top k most probable tokens
     /// - None: Disable top-k sampling
     /// - Some(k) where k > 0: Enable top-k sampling with k tokens
@@ -30,7 +30,7 @@ pub struct SamplingOptions {
     pub top_k: Option<usize>,
 
     /// Min-p sampling parameter
-    /// 
+    ///
     /// Filters out tokens that are less than p times as probable as the most probable token
     /// - None: Disable min-p filtering
     /// - Some(p) where 0.0 <= p <= 1.0: Enable min-p filtering with threshold p
@@ -38,14 +38,14 @@ pub struct SamplingOptions {
     pub min_p: Option<f64>,
 
     /// Random seed for sampling reproducibility
-    /// 
+    ///
     /// - None: Use default seed (42)
     /// - Some(seed): Use specified seed
     /// - Default: None
     pub seed: Option<u64>,
 
     /// Repeat penalty factor for controlling token repetition
-    /// 
+    ///
     /// Penalizes repeated tokens to reduce degenerate outputs
     /// - None: Disable repeat penalty
     /// - Some(penalty) where penalty >= 1.0: Enable repeat penalty with multiplier
@@ -53,7 +53,7 @@ pub struct SamplingOptions {
     pub repeat_penalty: Option<f32>,
 
     /// Number of previous tokens to consider for repeat penalty
-    /// 
+    ///
     /// - 0: Consider all tokens in context
     /// - n > 0: Consider only the last n tokens for penalty calculation
     /// - Default: 64
@@ -146,7 +146,8 @@ impl SamplingOptions {
 
     /// Check if repeat penalty should be applied
     pub fn should_apply_repeat_penalty(&self) -> bool {
-        self.repeat_penalty.is_some_and(|rp| (rp - 1.0).abs() > f32::EPSILON)
+        self.repeat_penalty
+            .is_some_and(|rp| (rp - 1.0).abs() > f32::EPSILON)
     }
 }
 

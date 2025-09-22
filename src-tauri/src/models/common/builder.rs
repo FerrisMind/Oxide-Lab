@@ -6,13 +6,13 @@
 //!
 //! The builder pattern allows for consistent model creation regardless of the source format.
 
+use candle::{DType, Device};
+use candle_nn::VarBuilder;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
-use candle::{Device, DType};
-use candle_nn::VarBuilder;
 
-use crate::models::registry::ArchKind;
 use crate::models::common::model::ModelBackend;
+use crate::models::registry::ArchKind;
 
 /// Result type for model building operations
 pub type BuildResult<T> = Result<T, String>;
@@ -36,11 +36,15 @@ impl ModelBuilder {
         flag: bool,
     ) -> BuildResult<Box<dyn ModelBackend>> {
         match self {
-            ModelBuilder::Qwen3(builder) => builder.from_gguf(content, reader, device, context_length, flag),
-            ModelBuilder::Gemma3(builder) => builder.from_gguf(content, reader, device, context_length, flag),
+            ModelBuilder::Qwen3(builder) => {
+                builder.from_gguf(content, reader, device, context_length, flag)
+            }
+            ModelBuilder::Gemma3(builder) => {
+                builder.from_gguf(content, reader, device, context_length, flag)
+            }
         }
     }
-    
+
     /// Build a model from VarBuilder and config
     pub fn from_varbuilder(
         &self,
@@ -54,15 +58,18 @@ impl ModelBuilder {
             ModelBuilder::Gemma3(builder) => builder.from_varbuilder(vb, config, device, dtype),
         }
     }
-    
+
     /// Detect architecture from GGUF metadata
-    pub fn detect_gguf_arch(&self, metadata: &HashMap<String, candle::quantized::gguf_file::Value>) -> Option<ArchKind> {
+    pub fn detect_gguf_arch(
+        &self,
+        metadata: &HashMap<String, candle::quantized::gguf_file::Value>,
+    ) -> Option<ArchKind> {
         match self {
             ModelBuilder::Qwen3(builder) => builder.detect_gguf_arch(metadata),
             ModelBuilder::Gemma3(builder) => builder.detect_gguf_arch(metadata),
         }
     }
-    
+
     /// Detect architecture from config JSON
     pub fn detect_config_arch(&self, config: &serde_json::Value) -> Option<ArchKind> {
         match self {
@@ -70,7 +77,7 @@ impl ModelBuilder {
             ModelBuilder::Gemma3(builder) => builder.detect_config_arch(config),
         }
     }
-    
+
     /// Get the architecture kind this builder supports
     pub fn arch_kind(&self) -> ArchKind {
         match self {
@@ -92,7 +99,7 @@ impl ModelFactory {
             builders: HashMap::new(),
         }
     }
-    
+
     /// Register a builder for an architecture
     pub fn register_builder(&mut self, builder: ModelBuilder) {
         let arch_kind = builder.arch_kind();
@@ -105,7 +112,7 @@ impl ModelFactory {
     pub fn register_builder_for_arch(&mut self, arch: ArchKind, builder: ModelBuilder) {
         self.builders.insert(arch, builder);
     }
-    
+
     /// Build a model from GGUF content
     pub fn build_from_gguf<R: Read + Seek>(
         &self,
@@ -121,7 +128,7 @@ impl ModelFactory {
             .ok_or_else(|| format!("No builder registered for architecture {:?}", arch))?
             .from_gguf(content, reader, device, context_length, flag)
     }
-    
+
     /// Build a model from safetensors files and config
     pub fn build_from_safetensors(
         &self,
@@ -133,17 +140,17 @@ impl ModelFactory {
     ) -> BuildResult<Box<dyn ModelBackend>> {
         let vb = crate::core::weights::build_varbuilder(filenames, device)
             .map_err(|e| format!("Failed to build VarBuilder: {}", e))?;
-        
+
         self.builders
             .get(&arch)
             .ok_or_else(|| format!("No builder registered for architecture {:?}", arch))?
             .from_varbuilder(vb, config, device, dtype)
     }
-    
+
     /// Detect architecture from GGUF metadata
     pub fn detect_gguf_arch(
         &self,
-        metadata: &HashMap<String, candle::quantized::gguf_file::Value>
+        metadata: &HashMap<String, candle::quantized::gguf_file::Value>,
     ) -> Option<ArchKind> {
         // Try each builder's detection method
         for builder in self.builders.values() {
@@ -153,7 +160,7 @@ impl ModelFactory {
         }
         None
     }
-    
+
     /// Detect architecture from config JSON
     pub fn detect_config_arch(&self, config: &serde_json::Value) -> Option<ArchKind> {
         // Try each builder's detection method
@@ -175,7 +182,7 @@ impl Default for ModelFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_factory_creation() {
         let factory = ModelFactory::new();

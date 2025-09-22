@@ -1,7 +1,7 @@
-use candle::Device;
-use candle::utils::{cuda_is_available, metal_is_available};
 use crate::core::types::DevicePreference;
 use crate::{log_device, log_device_error};
+use candle::utils::{cuda_is_available, metal_is_available};
+use candle::Device;
 
 pub fn select_device(pref: Option<DevicePreference>) -> Device {
     match pref.unwrap_or(DevicePreference::Auto) {
@@ -19,7 +19,7 @@ pub fn select_device(pref: Option<DevicePreference>) -> Device {
                     }
                 }
             }
-            
+
             // Проверяем Metal только если фича включена при компиляции
             if metal_is_available() {
                 match Device::new_metal(0) {
@@ -32,27 +32,23 @@ pub fn select_device(pref: Option<DevicePreference>) -> Device {
                     }
                 }
             }
-            
+
             log_device!("auto-selected CPU");
             Device::Cpu
-        },
+        }
         DevicePreference::Cpu => Device::Cpu,
-        DevicePreference::Cuda { index } => {
-            match Device::new_cuda(index) {
-                Ok(device) => device,
-                Err(e) => {
-                    log_device_error!("CUDA init failed: {}, falling back to CPU", e);
-                    Device::Cpu
-                }
+        DevicePreference::Cuda { index } => match Device::new_cuda(index) {
+            Ok(device) => device,
+            Err(e) => {
+                log_device_error!("CUDA init failed: {}, falling back to CPU", e);
+                Device::Cpu
             }
         },
-        DevicePreference::Metal => {
-            match Device::new_metal(0) {
-                Ok(device) => device,
-                Err(e) => {
-                    log_device_error!("Metal init failed: {}, falling back to CPU", e);
-                    Device::Cpu
-                }
+        DevicePreference::Metal => match Device::new_metal(0) {
+            Ok(device) => device,
+            Err(e) => {
+                log_device_error!("Metal init failed: {}, falling back to CPU", e);
+                Device::Cpu
             }
         },
     }

@@ -1,14 +1,14 @@
+use crate::core::precision::{Precision, PrecisionPolicy};
 use crate::core::state::{ModelState, SharedState};
 use crate::core::types::{DevicePreference, GenerateRequest, LoadRequest};
-use crate::core::precision::{PrecisionPolicy, Precision};
 use crate::generate;
+use crate::generate::cancel::{cancel_model_loading_cmd, CANCEL_LOADING};
 use crate::models::common::model::ModelBackend;
-use serde::{Deserialize, Serialize};
 use crate::{log_load, log_template};
-use crate::generate::cancel::{CANCEL_LOADING, cancel_model_loading_cmd};
-use candle::Device;
-use std::path::Path;
 use candle::quantized::gguf_file;
+use candle::Device;
+use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 // Import our new modules
 mod model_loading;
@@ -19,24 +19,61 @@ mod template;
 // Модальная индикация удалена: проект реализует единую обработку вложений независимо от модели.
 
 #[tauri::command]
-pub fn load_model(app: tauri::AppHandle, state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>, req: LoadRequest) -> Result<(), String> {
+pub fn load_model(
+    app: tauri::AppHandle,
+    state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>,
+    req: LoadRequest,
+) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     // Сбрасываем флаг отмены перед новой загрузкой
     CANCEL_LOADING.store(false, std::sync::atomic::Ordering::SeqCst);
 
     let res = match req {
-        LoadRequest::Gguf { model_path, tokenizer_path: _tokenizer_path, context_length, device } => {
-            gguf::load_gguf_model(&app, &mut guard, model_path, context_length, device)
-        }
-        LoadRequest::HubGguf { repo_id, revision, filename, context_length, device } => {
-            hub_gguf::load_hub_gguf_model(&app, &mut guard, repo_id, revision, filename, context_length, device)
-        }
-        LoadRequest::HubSafetensors { repo_id, revision, context_length, device } => {
-            safetensors::load_hub_safetensors_model(&app, &mut guard, repo_id, revision, context_length, device)
-        }
-        LoadRequest::LocalSafetensors { model_path, context_length, device } => {
-            safetensors::load_local_safetensors_model(&app, &mut guard, model_path, context_length, device)
-        }
+        LoadRequest::Gguf {
+            model_path,
+            tokenizer_path: _tokenizer_path,
+            context_length,
+            device,
+        } => gguf::load_gguf_model(&app, &mut guard, model_path, context_length, device),
+        LoadRequest::HubGguf {
+            repo_id,
+            revision,
+            filename,
+            context_length,
+            device,
+        } => hub_gguf::load_hub_gguf_model(
+            &app,
+            &mut guard,
+            repo_id,
+            revision,
+            filename,
+            context_length,
+            device,
+        ),
+        LoadRequest::HubSafetensors {
+            repo_id,
+            revision,
+            context_length,
+            device,
+        } => safetensors::load_hub_safetensors_model(
+            &app,
+            &mut guard,
+            repo_id,
+            revision,
+            context_length,
+            device,
+        ),
+        LoadRequest::LocalSafetensors {
+            model_path,
+            context_length,
+            device,
+        } => safetensors::load_local_safetensors_model(
+            &app,
+            &mut guard,
+            model_path,
+            context_length,
+            device,
+        ),
     };
     if let Err(ref e) = res {
         // финальный сигнал об ошибке
@@ -51,7 +88,10 @@ pub fn cancel_model_loading() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn unload_model(app: tauri::AppHandle, state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>) -> Result<(), String> {
+pub fn unload_model(
+    app: tauri::AppHandle,
+    state: tauri::State<SharedState<Box<dyn ModelBackend + Send>>>,
+) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     let device = guard.device.clone();
     // Эмиссия упрощённого прогресса выгрузки
@@ -62,7 +102,14 @@ pub fn unload_model(app: tauri::AppHandle, state: tauri::State<SharedState<Box<d
     guard.tokenizer = None;
     crate::api::model_loading::emit_load_progress(&app, "unload_tokenizer", 70, None, false, None);
     *guard = ModelState::new(device);
-    crate::api::model_loading::emit_load_progress(&app, "unload_complete", 100, Some("Выгружено"), true, None);
+    crate::api::model_loading::emit_load_progress(
+        &app,
+        "unload_complete",
+        100,
+        Some("Выгружено"),
+        true,
+        None,
+    );
     log_load!("hard reset: freed model/tokenizer and reset state (preserved device)");
     Ok(())
 }
@@ -74,7 +121,10 @@ pub async fn generate_stream(
     req: GenerateRequest,
 ) -> Result<(), String> {
     if let Ok(guard) = state.lock() {
-        log_template!("present_at_generate={}", guard.chat_template.as_ref().map(|_| true).unwrap_or(false));
+        log_template!(
+            "present_at_generate={}",
+            guard.chat_template.as_ref().map(|_| true).unwrap_or(false)
+        );
     }
     generate::generate_stream_cmd(app, state, req).await
 }
@@ -85,28 +135,41 @@ pub fn cancel_generation() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_chat_template(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<Option<String>, String> {
+pub fn get_chat_template(
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+) -> Result<Option<String>, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     Ok(guard.chat_template.clone())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChatMsgDto { pub role: String, pub content: String }
+pub struct ChatMsgDto {
+    pub role: String,
+    pub content: String,
+}
 
 #[tauri::command]
-pub fn render_prompt(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>, messages: Vec<ChatMsgDto>) -> Result<String, String> {
+pub fn render_prompt(
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    messages: Vec<ChatMsgDto>,
+) -> Result<String, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     template::render_prompt(&guard.chat_template, messages)
 }
 
 #[tauri::command]
-pub fn is_model_loaded(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<bool, String> {
+pub fn is_model_loaded(
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+) -> Result<bool, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     Ok(guard.gguf_model.is_some() && guard.tokenizer.is_some())
 }
 
 #[tauri::command]
-pub fn set_device(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>, pref: DevicePreference) -> Result<(), String> {
+pub fn set_device(
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    pref: DevicePreference,
+) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     device::set_device(&mut guard, pref)
 }
@@ -124,7 +187,9 @@ pub struct DeviceInfoDto {
 }
 
 #[tauri::command]
-pub fn get_device_info(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<DeviceInfoDto, String> {
+pub fn get_device_info(
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+) -> Result<DeviceInfoDto, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     let current = crate::core::device::device_label(&guard.device).to_string();
     let cuda_build = cfg!(feature = "cuda");
@@ -132,12 +197,19 @@ pub fn get_device_info(state: tauri::State<'_, SharedState<Box<dyn ModelBackend 
     let cuda_available = candle::Device::cuda_if_available(0).is_ok();
     #[cfg(not(feature = "cuda"))]
     let cuda_available = false;
-    Ok(DeviceInfoDto { cuda_build, cuda_available, current })
+    Ok(DeviceInfoDto {
+        cuda_build,
+        cuda_available,
+        current,
+    })
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProbeCudaDto { pub cuda_build: bool, pub ok: bool, pub error: Option<String> }
+pub struct ProbeCudaDto {
+    pub cuda_build: bool,
+    pub ok: bool,
+    pub error: Option<String>,
+}
 
 #[tauri::command]
 pub fn probe_cuda() -> Result<ProbeCudaDto, String> {
@@ -145,37 +217,62 @@ pub fn probe_cuda() -> Result<ProbeCudaDto, String> {
     #[cfg(feature = "cuda")]
     {
         match candle::Device::cuda_if_available(0) {
-            Ok(_) => Ok(ProbeCudaDto { cuda_build, ok: true, error: None }),
-            Err(e) => Ok(ProbeCudaDto { cuda_build, ok: false, error: Some(e.to_string()) }),
+            Ok(_) => Ok(ProbeCudaDto {
+                cuda_build,
+                ok: true,
+                error: None,
+            }),
+            Err(e) => Ok(ProbeCudaDto {
+                cuda_build,
+                ok: false,
+                error: Some(e.to_string()),
+            }),
         }
     }
     #[cfg(not(feature = "cuda"))]
     {
-        Ok(ProbeCudaDto { cuda_build, ok: false, error: Some("built without cuda feature".to_string()) })
+        Ok(ProbeCudaDto {
+            cuda_build,
+            ok: false,
+            error: Some("built without cuda feature".to_string()),
+        })
     }
 }
 
 #[tauri::command]
-pub fn get_precision_policy(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<PrecisionPolicy, String> {
+pub fn get_precision_policy(
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+) -> Result<PrecisionPolicy, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     Ok(guard.precision_policy.clone())
 }
 
 #[tauri::command]
-pub fn set_precision_policy(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>, policy: PrecisionPolicy) -> Result<(), String> {
+pub fn set_precision_policy(
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    policy: PrecisionPolicy,
+) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     guard.precision_policy = policy;
     Ok(())
 }
 
 #[tauri::command]
-pub fn get_precision(app: tauri::AppHandle, _state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<Precision, String> {
-    let precision = ModelState::<Box<dyn ModelBackend + Send>>::load_precision(&app).map_err(|e| e.to_string())?;
+pub fn get_precision(
+    app: tauri::AppHandle,
+    _state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+) -> Result<Precision, String> {
+    let precision = ModelState::<Box<dyn ModelBackend + Send>>::load_precision(&app)
+        .map_err(|e| e.to_string())?;
     Ok(precision)
 }
 
 #[tauri::command]
-pub fn set_precision(app: tauri::AppHandle, state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>, precision_str: String) -> Result<(), String> {
+pub fn set_precision(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    precision_str: String,
+) -> Result<(), String> {
     let precision = match precision_str.as_str() {
         "f16" => Precision::F16,
         "f32" => Precision::F32,
@@ -207,7 +304,12 @@ pub fn gguf_list_metadata_keys_from_path(path: String) -> Result<Vec<String>, St
     if !p.is_file() {
         return Err(format!("Not a file: {}", path));
     }
-    if !p.extension().and_then(|e| e.to_str()).map(|s| s.eq_ignore_ascii_case("gguf")).unwrap_or(false) {
+    if !p
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.eq_ignore_ascii_case("gguf"))
+        .unwrap_or(false)
+    {
         return Err("Path is not a .gguf file".to_string());
     }
     let mut f = std::fs::File::open(p).map_err(|e| e.to_string())?;
@@ -218,14 +320,24 @@ pub fn gguf_list_metadata_keys_from_path(path: String) -> Result<Vec<String>, St
 }
 
 #[tauri::command]
-pub fn gguf_list_metadata_keys(state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>) -> Result<Vec<String>, String> {
+pub fn gguf_list_metadata_keys(
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+) -> Result<Vec<String>, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
-    let path_str = guard.model_path.as_ref().ok_or_else(|| "No model loaded".to_string())?;
+    let path_str = guard
+        .model_path
+        .as_ref()
+        .ok_or_else(|| "No model loaded".to_string())?;
     let p = Path::new(path_str);
     if !p.is_file() {
         return Err(format!("Not a file: {}", path_str));
     }
-    if !p.extension().and_then(|e| e.to_str()).map(|s| s.eq_ignore_ascii_case("gguf")).unwrap_or(false) {
+    if !p
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.eq_ignore_ascii_case("gguf"))
+        .unwrap_or(false)
+    {
         return Err("Loaded model is not a .gguf file".to_string());
     }
     let mut f = std::fs::File::open(p).map_err(|e| e.to_string())?;

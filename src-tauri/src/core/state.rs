@@ -1,12 +1,12 @@
+use crate::core::precision::{Precision, PrecisionPolicy};
+use candle::Device;
+use serde_json;
+use std::fs::create_dir_all;
 use std::fs::File;
 use std::sync::{Arc, Mutex};
-use candle::Device;
-use tokenizers::Tokenizer;
-use crate::core::precision::{PrecisionPolicy, Precision};
 use tauri::AppHandle;
 use tauri::Manager;
-use std::fs::{create_dir_all};
-use serde_json;
+use tokenizers::Tokenizer;
 
 /// Универсальное состояние для любой модели
 pub struct ModelState<M> {
@@ -50,26 +50,32 @@ impl<M> ModelState<M> {
     }
 
     pub fn save_precision(&self, app: &AppHandle) -> Result<(), String> {
-        let dir = app.path().app_local_data_dir()
+        let dir = app
+            .path()
+            .app_local_data_dir()
             .map_err(|e| format!("Failed to get app data directory: {}", e))?;
         let profile_dir = dir.join("oxide-lab");
         if let Err(e) = create_dir_all(&profile_dir) {
             return Err(format!("Failed to create profile directory: {}", e));
         }
         let path = profile_dir.join("precision.json");
-        let file = File::create(&path).map_err(|e| format!("Failed to create precision file: {}", e))?;
+        let file =
+            File::create(&path).map_err(|e| format!("Failed to create precision file: {}", e))?;
         serde_json::to_writer(file, &self.precision_policy)
             .map_err(|e| format!("Failed to serialize precision: {}", e))?;
         Ok(())
     }
 
     pub fn load_precision(app: &AppHandle) -> Result<Precision, String> {
-        let dir = app.path().app_local_data_dir()
+        let dir = app
+            .path()
+            .app_local_data_dir()
             .map_err(|e| format!("Failed to get app data directory: {}", e))?;
         let profile_dir = dir.join("oxide-lab");
         let path = profile_dir.join("precision.json");
         if path.exists() {
-            let file = File::open(&path).map_err(|e| format!("Failed to open precision file: {}", e))?;
+            let file =
+                File::open(&path).map_err(|e| format!("Failed to open precision file: {}", e))?;
             let _policy: PrecisionPolicy = serde_json::from_reader(file)
                 .map_err(|e| format!("Failed to deserialize precision: {}", e))?;
             // For now, let's just return the default precision since we don't have a direct conversion

@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use candle::quantized::gguf_file;
-use tokenizers::{AddedToken, Tokenizer};
 use serde::Deserialize;
+use std::collections::HashMap;
+use tokenizers::{AddedToken, Tokenizer};
 
 pub fn find_tokenizer_json_in_metadata(md: &HashMap<String, gguf_file::Value>) -> Option<String> {
     // 1) Прямые известные ключи
@@ -16,14 +16,17 @@ pub fn find_tokenizer_json_in_metadata(md: &HashMap<String, gguf_file::Value>) -
         "tokenizer",
     ] {
         if let Some(v) = md.get(key) {
-            if let Ok(s) = v.to_string() { return Some(s.clone()); }
+            if let Ok(s) = v.to_string() {
+                return Some(s.clone());
+            }
         }
     }
     // 2) Эвристика: найти любой строковый JSON, который успешно парсится как tokenizers JSON
     for (_k, v) in md.iter() {
         if let Ok(s) = v.to_string() {
             let st = s.trim();
-            if st.starts_with('{') && st.ends_with('}')
+            if st.starts_with('{')
+                && st.ends_with('}')
                 && tokenizers::Tokenizer::from_bytes(st.as_bytes()).is_ok()
             {
                 return Some(s.clone());
@@ -37,18 +40,25 @@ fn get_string_array(md: &HashMap<String, gguf_file::Value>, key: &str) -> Option
     match md.get(key) {
         Some(gguf_file::Value::Array(vs)) => {
             let mut out: Vec<String> = Vec::with_capacity(vs.len());
-            for v in vs { if let Ok(s) = v.to_string() { out.push(s.clone()); } }
+            for v in vs {
+                if let Ok(s) = v.to_string() {
+                    out.push(s.clone());
+                }
+            }
             Some(out)
         }
         _ => None,
     }
 }
 
-pub fn try_reconstruct_tokenizer_from_bpe(md: &HashMap<String, gguf_file::Value>) -> Option<String> {
+pub fn try_reconstruct_tokenizer_from_bpe(
+    md: &HashMap<String, gguf_file::Value>,
+) -> Option<String> {
     // Reconstruct only if we have both tokens AND merges. Without merges it's very likely
     // not a GPT-2 style BPE (e.g. SentencePiece/Unigram), and producing a ByteLevel/BPE
     // tokenizer will yield completely wrong ids and gibberish output.
-    let vocab_list = get_string_array(md, "tokenizer.ggml.tokens").or_else(|| get_string_array(md, "tokenizer.vocab"))?;
+    let vocab_list = get_string_array(md, "tokenizer.ggml.tokens")
+        .or_else(|| get_string_array(md, "tokenizer.vocab"))?;
     let merges_list_opt = get_string_array(md, "tokenizer.ggml.merges")
         .or_else(|| get_string_array(md, "tokenizer.ggml.bpe_merges"))
         .or_else(|| get_string_array(md, "tokenizer.merges"));
@@ -58,7 +68,9 @@ pub fn try_reconstruct_tokenizer_from_bpe(md: &HashMap<String, gguf_file::Value>
     };
 
     let mut vocab_obj: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
-    for (i, tok) in vocab_list.iter().enumerate() { vocab_obj.insert(tok.clone(), serde_json::json!(i as u32)); }
+    for (i, tok) in vocab_list.iter().enumerate() {
+        vocab_obj.insert(tok.clone(), serde_json::json!(i as u32));
+    }
     let json = serde_json::json!({
         "version": "1.0",
         // ByteLevel with add_prefix_space=true better matches GPT-2 style BPE vocabs
@@ -72,10 +84,19 @@ pub fn try_reconstruct_tokenizer_from_bpe(md: &HashMap<String, gguf_file::Value>
 pub fn mark_special_chat_tokens(tokenizer: &mut Tokenizer) {
     let vocab = tokenizer.get_vocab(true);
     let specials = [
-        "<|im_start|>", "<|im_end|>", "<|user|>", "<|assistant|>", "<|system|>",
-        "<|eot_id|>", "<|endoftext|>", "</s>", "<s>",
+        "<|im_start|>",
+        "<|im_end|>",
+        "<|user|>",
+        "<|assistant|>",
+        "<|system|>",
+        "<|eot_id|>",
+        "<|endoftext|>",
+        "</s>",
+        "<s>",
         // Gemma/Gemma2/Gemma3 style
-        "<start_of_turn>", "<end_of_turn>", "<eos>",
+        "<start_of_turn>",
+        "<end_of_turn>",
+        "<eos>",
         // Убрали мультимодальные сентинелы
     ];
     let mut to_add: Vec<AddedToken> = Vec::new();
@@ -86,10 +107,14 @@ pub fn mark_special_chat_tokens(tokenizer: &mut Tokenizer) {
             to_add.push(at);
         }
     }
-    if !to_add.is_empty() { tokenizer.add_special_tokens(&to_add); }
+    if !to_add.is_empty() {
+        tokenizer.add_special_tokens(&to_add);
+    }
 }
 
-pub fn tokenizer_from_gguf_metadata(md: &HashMap<String, gguf_file::Value>) -> Result<Tokenizer, String> {
+pub fn tokenizer_from_gguf_metadata(
+    md: &HashMap<String, gguf_file::Value>,
+) -> Result<Tokenizer, String> {
     if let Some(json) = find_tokenizer_json_in_metadata(md) {
         return Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string());
     }
@@ -106,7 +131,9 @@ pub fn tokenizer_from_gguf_metadata(md: &HashMap<String, gguf_file::Value>) -> R
 
 /// Построить минимальный JSON для `tokenizers` на основе массива токенов в метаданных.
 /// Возвращает строку JSON или None если токены не найдены.
-pub fn try_build_wordlevel_tokenizer_from_tokens(md: &HashMap<String, gguf_file::Value>) -> Option<String> {
+pub fn try_build_wordlevel_tokenizer_from_tokens(
+    md: &HashMap<String, gguf_file::Value>,
+) -> Option<String> {
     // Попробуем найти список токенов в известных ключах
     let tokens = get_string_array(md, "tokenizer.ggml.tokens")
         .or_else(|| get_string_array(md, "tokenizer.vocab"))
@@ -119,22 +146,38 @@ pub fn try_build_wordlevel_tokenizer_from_tokens(md: &HashMap<String, gguf_file:
     }
 
     // Опционально определяем unk token
-    let unk = md.get("tokenizer.ggml.unknown_token")
+    let unk = md
+        .get("tokenizer.ggml.unknown_token")
         .and_then(|v| v.to_string().ok().map(|s| s.clone()))
         .unwrap_or_else(|| "<unk>".to_string());
 
     // Собираем Value вручную, чтобы избежать проблем с временной областью жизни строк
     let mut root_map: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
-    root_map.insert("version".to_string(), serde_json::Value::String("1.0".to_string()));
+    root_map.insert(
+        "version".to_string(),
+        serde_json::Value::String("1.0".to_string()),
+    );
 
     let mut model_map: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
-    model_map.insert("type".to_string(), serde_json::Value::String("WordLevel".to_string()));
+    model_map.insert(
+        "type".to_string(),
+        serde_json::Value::String("WordLevel".to_string()),
+    );
     model_map.insert("vocab".to_string(), serde_json::Value::Object(vocab_obj));
-    model_map.insert("unk_token".to_string(), serde_json::Value::String(unk.clone()));
+    model_map.insert(
+        "unk_token".to_string(),
+        serde_json::Value::String(unk.clone()),
+    );
     root_map.insert("model".to_string(), serde_json::Value::Object(model_map));
 
-    root_map.insert("pre_tokenizer".to_string(), serde_json::json!({ "type": "Whitespace" }));
-    root_map.insert("decoder".to_string(), serde_json::json!({ "type": "WordLevel" }));
+    root_map.insert(
+        "pre_tokenizer".to_string(),
+        serde_json::json!({ "type": "Whitespace" }),
+    );
+    root_map.insert(
+        "decoder".to_string(),
+        serde_json::json!({ "type": "WordLevel" }),
+    );
 
     Some(serde_json::Value::Object(root_map).to_string())
 }
@@ -155,10 +198,17 @@ pub fn extract_eos_ids(tokenizer: &Tokenizer) -> Vec<u32> {
     if let Ok(json) = tokenizer.to_string(true) {
         if let Ok(cfg) = serde_json::from_str::<TokenizerConfig>(&json) {
             let vocab = tokenizer.get_vocab(true);
-            for entry in cfg.special_tokens.into_iter().chain(cfg.added_tokens.into_iter()) {
+            for entry in cfg
+                .special_tokens
+                .into_iter()
+                .chain(cfg.added_tokens.into_iter())
+            {
                 if let Some(obj) = entry.as_object() {
                     let content = obj.get("content").and_then(|v| v.as_str());
-                    let special = obj.get("special").and_then(|v| v.as_bool()).unwrap_or(false);
+                    let special = obj
+                        .get("special")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
                     let role = obj.get("role").and_then(|v| v.as_str());
                     if special {
                         if let Some(tok) = content {
@@ -184,10 +234,18 @@ pub fn extract_eos_ids(tokenizer: &Tokenizer) -> Vec<u32> {
     // 2) Резервные эвристики по известным строкам
     let vocab = tokenizer.get_vocab(true);
     for key in [
-        "<|im_end|>", "<|eot_id|>", "<|endoftext|>", "</s>",
-        "<end_of_turn>", "<eos>",
+        "<|im_end|>",
+        "<|eot_id|>",
+        "<|endoftext|>",
+        "</s>",
+        "<end_of_turn>",
+        "<eos>",
     ] {
-        if let Some(&id) = vocab.get(key) { if !ids.contains(&id) { ids.push(id); } }
+        if let Some(&id) = vocab.get(key) {
+            if !ids.contains(&id) {
+                ids.push(id);
+            }
+        }
     }
     ids
 }
@@ -201,7 +259,10 @@ pub fn extract_bos_token_str(tokenizer: &Tokenizer) -> Option<String> {
             for entry in cfg.special_tokens.iter().chain(cfg.added_tokens.iter()) {
                 if let Some(obj) = entry.as_object() {
                     let content = obj.get("content").and_then(|v| v.as_str());
-                    let special = obj.get("special").and_then(|v| v.as_bool()).unwrap_or(false);
+                    let special = obj
+                        .get("special")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
                     let role = obj.get("role").and_then(|v| v.as_str());
                     if special && role == Some("bos") {
                         if let Some(tok) = content {
@@ -214,7 +275,9 @@ pub fn extract_bos_token_str(tokenizer: &Tokenizer) -> Option<String> {
             }
             // Heuristics: common BOS strings
             for key in ["<s>", "<bos>", "<BOS>", "<|begin_of_text|>"] {
-                if tokenizer.get_vocab(true).contains_key(key) { return Some(key.to_string()); }
+                if tokenizer.get_vocab(true).contains_key(key) {
+                    return Some(key.to_string());
+                }
             }
         }
     }
@@ -236,7 +299,9 @@ pub fn find_chat_template_in_metadata(md: &HashMap<String, gguf_file::Value>) ->
         "chat_template",
     ] {
         if let Some(v) = md.get(key) {
-            if let Ok(s) = v.to_string() { return Some(s.clone()); }
+            if let Ok(s) = v.to_string() {
+                return Some(s.clone());
+            }
         }
     }
     // 2) Эвристика: ищем большие строковые значения, содержащие конструкции Jinja
@@ -252,5 +317,3 @@ pub fn find_chat_template_in_metadata(md: &HashMap<String, gguf_file::Value>) ->
     }
     best
 }
-
-

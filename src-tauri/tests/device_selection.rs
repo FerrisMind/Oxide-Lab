@@ -1,12 +1,12 @@
+use candle::Device;
 use llm_chat_lib::core::device::select_device;
 use llm_chat_lib::core::types::DevicePreference;
-use candle::Device;
 
 #[test]
 fn test_auto_device_selection() {
     // Test that Auto preference selects the appropriate device
     let device = select_device(Some(DevicePreference::Auto));
-    
+
     // The actual device selected will depend on what's available in the test environment
     // but we can at least verify that it returns a valid device
     match device {

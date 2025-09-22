@@ -240,7 +240,7 @@
   }
 
   // Load persisted chat/model state when component mounts
-  onMount(() => {
+  onMount(async () => {
     chatUiMounted.set(true);
     try {
       const s = getStore(chatState) ?? getDefaultChatState();
@@ -280,15 +280,18 @@
     } catch (_e) {
       // ignore, fall back to defaults
     }
-    // UI остаётся смонтирован, восстановления и доп. переподключений не требуется
+    
+    // Initialize stream listener to handle incoming tokens
+    try {
+      await controller.ensureStreamListener();
+    } catch (err) {
+      console.warn('Failed to initialize stream listener:', err);
+    }
   });
 
   let canRegenerate = false;
   let canStopGeneration = false;
 
-  $: canRegenerate = messages.some(
-    (m) => m.role === 'assistant' && (m.content ?? '').trim().length > 0,
-  );
   $: canStopGeneration = busy && isLoaded;
 
   // Keep shared chatState in sync so header and other views get instant truth (no polling flicker)
@@ -328,11 +331,9 @@
       {supports_audio}
       {supports_video}
       {isLoaderPanelVisible}
-      canRegenerate={canRegenerate}
       canStop={canStopGeneration}
       on:send={() => void sendMessage()}
       on:stop={() => void stopGenerate()}
-      on:regenerate={() => void regenerateFromHistory()}
       on:attach={(e: CustomEvent<ComposerAttachment>) => void attachFileToPrompt(e.detail)}
       on:toggle-loader-panel={() => isLoaderPanelVisible = !isLoaderPanelVisible}
     />

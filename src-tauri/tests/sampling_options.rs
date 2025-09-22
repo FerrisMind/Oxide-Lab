@@ -52,7 +52,7 @@ fn test_sampling_options_argmax() {
 fn test_sampling_options_effective_seed() {
     let mut options = SamplingOptions::new();
     assert_eq!(options.effective_seed(), 42);
-    
+
     options.seed = Some(12345);
     assert_eq!(options.effective_seed(), 12345);
 }
@@ -60,18 +60,18 @@ fn test_sampling_options_effective_seed() {
 #[test]
 fn test_sampling_options_should_apply_repeat_penalty() {
     let mut options = SamplingOptions::new();
-    
+
     // Default should apply repeat penalty
     assert!(options.should_apply_repeat_penalty());
-    
+
     // No repeat penalty
     options.repeat_penalty = None;
     assert!(!options.should_apply_repeat_penalty());
-    
+
     // Repeat penalty of 1.0 (no penalty)
     options.repeat_penalty = Some(1.0);
     assert!(!options.should_apply_repeat_penalty());
-    
+
     // Repeat penalty > 1.0
     options.repeat_penalty = Some(1.2);
     assert!(options.should_apply_repeat_penalty());

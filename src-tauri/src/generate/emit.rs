@@ -7,6 +7,7 @@ pub struct ChunkEmitter {
     last_emit_at: Instant,
     emit_interval: Duration,
     max_chunk_len: usize,
+    done_emitted: bool,
     // Резерв: буфер для эмиссии токенов
 }
 
@@ -18,11 +19,14 @@ impl ChunkEmitter {
             last_emit_at: Instant::now(),
             emit_interval: Duration::from_millis(16),
             max_chunk_len: 2048,
+            done_emitted: false,
         }
     }
 
     pub fn push_maybe_emit(&mut self, text: &str) {
-        if text.is_empty() { return; }
+        if text.is_empty() {
+            return;
+        }
         self.buffer.push_str(text);
         let elapsed = self.last_emit_at.elapsed();
         if elapsed >= self.emit_interval || self.buffer.len() >= self.max_chunk_len {
@@ -46,4 +50,17 @@ impl ChunkEmitter {
         }
     }
 
+    pub fn finalize(&mut self) {
+        self.flush();
+        if !self.done_emitted {
+            let _ = self.app.emit("token", "[DONE]");
+            self.done_emitted = true;
+        }
+    }
+}
+
+impl Drop for ChunkEmitter {
+    fn drop(&mut self) {
+        self.finalize();
+    }
 }

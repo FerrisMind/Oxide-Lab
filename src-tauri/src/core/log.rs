@@ -1,5 +1,5 @@
 //! Единообразная система логирования для Oxide Lab
-//! 
+//!
 //! Этот модуль предоставляет унифицированные макросы и функции для логирования
 //! с префиксами для различных компонентов системы.
 
@@ -9,7 +9,7 @@ use std::sync::Once;
 static INIT: Once = Once::new();
 
 /// Инициализация системы логирования
-/// 
+///
 /// Настраивает env_logger с кастомным форматированием для Oxide Lab.
 /// Вызывается автоматически при первом использовании макросов логирования.
 pub fn init() {
@@ -17,7 +17,7 @@ pub fn init() {
         env_logger::Builder::from_default_env()
             .format(|buf, record| {
                 use std::io::Write;
-                
+
                 let level = match record.level() {
                     Level::Error => "ERROR",
                     Level::Warn => "WARN ",
@@ -25,7 +25,7 @@ pub fn init() {
                     Level::Debug => "DEBUG",
                     Level::Trace => "TRACE",
                 };
-                
+
                 let timestamp = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
@@ -269,7 +269,12 @@ macro_rules! log_local_warn {
 
 /// Функция для логирования производительности
 pub fn log_performance(component: Component, operation: &str, duration: std::time::Duration) {
-    log_info!(component, "{} completed in {:.3}s", operation, duration.as_secs_f64());
+    log_info!(
+        component,
+        "{} completed in {:.3}s",
+        operation,
+        duration.as_secs_f64()
+    );
 }
 
 /// Функция для логирования размера данных
@@ -286,7 +291,14 @@ pub fn log_data_size(component: Component, data_type: &str, size_bytes: usize) {
 /// Функция для логирования прогресса
 pub fn log_progress(component: Component, current: usize, total: usize, operation: &str) {
     let percentage = (current as f64 / total as f64) * 100.0;
-    log_info!(component, "{}: {}/{} ({:.1}%)", operation, current, total, percentage);
+    log_info!(
+        component,
+        "{}: {}/{} ({:.1}%)",
+        operation,
+        current,
+        total,
+        percentage
+    );
 }
 
 #[cfg(test)]

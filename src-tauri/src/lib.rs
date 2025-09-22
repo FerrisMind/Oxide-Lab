@@ -5,16 +5,16 @@
 use crate::core::device::select_device;
 use crate::core::types::DevicePreference;
 
+pub mod api;
 pub mod core;
 pub mod generate;
 pub mod models;
-pub mod api;
 // модуль `model` удалён, всё перенесено в `models/`
 // moved heavy operations to api/
 use std::sync::{Arc, Mutex};
 // use candle::quantized::gguf_file;
-use core::state::{ModelState, SharedState};
 use crate::models::common::model::ModelBackend;
+use core::state::{ModelState, SharedState};
 // use crate::models::qwen3::ModelWeights as Qwen3Gguf;
 // не импортируем типы напрямую здесь, чтобы избежать предупреждений об их неиспользовании
 
@@ -28,7 +28,8 @@ pub fn run() {
     // что позволяет загружать разные архитектуры GGUF под единым интерфейсом.
     // Use auto-selection for initial device instead of hardcoding CPU
     let initial_device = select_device(Some(DevicePreference::Auto));
-    let shared: SharedState<Box<dyn ModelBackend + Send>> = Arc::new(Mutex::new(ModelState::new(initial_device)));
+    let shared: SharedState<Box<dyn ModelBackend + Send>> =
+        Arc::new(Mutex::new(ModelState::new(initial_device)));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

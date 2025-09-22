@@ -6,9 +6,12 @@
   let currentPolicy: PrecisionPolicy = { Default: null };
   let isLoading = $state(true);
   let error: string | null = $state(null);
+  let enableExperimentalFeatures = $state(false);
+  let isExperimentalFeaturesLoading = $state(false);
 
   onMount(async () => {
     await loadPrecisionPolicy();
+    await loadExperimentalFeatures();
   });
 
   async function loadPrecisionPolicy() {
@@ -38,6 +41,39 @@
       isLoading = false;
     }
   }
+
+  async function loadExperimentalFeatures() {
+    try {
+      isExperimentalFeaturesLoading = true;
+      enableExperimentalFeatures = await invoke('get_experimental_features_enabled');
+      console.log('Loaded experimental features state:', enableExperimentalFeatures);
+    } catch (err) {
+      console.warn('Failed to load experimental features state:', err);
+      // Keep default value (false)
+    } finally {
+      isExperimentalFeaturesLoading = false;
+    }
+  }
+
+  async function saveExperimentalFeatures(enabled: boolean) {
+    try {
+      isExperimentalFeaturesLoading = true;
+      await invoke('set_experimental_features_enabled', { enabled });
+      enableExperimentalFeatures = enabled;
+      console.log('Saved experimental features state:', enabled);
+    } catch (err) {
+      console.error('Failed to save experimental features state:', err);
+    } finally {
+      isExperimentalFeaturesLoading = false;
+    }
+  }
+
+  // Effect to save experimental features when changed
+  $effect(() => {
+    if (enableExperimentalFeatures !== undefined) {
+      saveExperimentalFeatures(enableExperimentalFeatures);
+    }
+  });
 
   function selectPolicy(policyType: 'Default' | 'MemoryEfficient' | 'MaximumPrecision') {
     // Send the policy type as a string to match Rust enum serialization
@@ -156,6 +192,37 @@
     {#if error}
       <div class="error-message">
         {error}
+      </div>
+    {/if}
+  </div>
+
+  <div class="settings-section">
+    <h2>Экспериментальные функции</h2>
+    <p class="settings-description">
+      Включите экспериментальные функции для тестирования новых возможностей.
+      Эти функции могут быть нестабильными и содержать ошибки.
+    </p>
+
+    {#if isExperimentalFeaturesLoading}
+      <div class="loading">Загрузка настроек экспериментальных функций...</div>
+    {:else}
+      <div class="experimental-features-toggle">
+        <label class="toggle-label">
+          <input
+            type="checkbox"
+            bind:checked={enableExperimentalFeatures}
+            disabled={isExperimentalFeaturesLoading}
+          />
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Включить экспериментальные функции</span>
+        </label>
+        <p class="toggle-description">
+          {#if enableExperimentalFeatures}
+            <span class="status-enabled">✓ Экспериментальные функции включены</span>
+          {:else}
+            <span class="status-disabled">✗ Экспериментальные функции отключены</span>
+          {/if}
+        </p>
       </div>
     {/if}
   </div>
@@ -279,14 +346,104 @@
     word-wrap: break-word;
   }
 
+  .experimental-features-toggle {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .toggle-label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+    background: var(--border-color);
+    border-radius: 14px;
+    transition: background-color 0.3s ease;
+    border: 2px solid transparent;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: #ffffff;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .toggle-label input:checked + .toggle-slider {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .toggle-label input:checked + .toggle-slider::before {
+    transform: translateX(24px);
+  }
+
+  .toggle-label input:disabled + .toggle-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .toggle-text {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text);
+    user-select: none;
+  }
+
+  .toggle-description {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .status-enabled {
+    color: var(--success, #22c55e);
+    font-weight: 500;
+  }
+
+  .status-disabled {
+    color: var(--muted);
+    font-weight: 500;
+  }
+
   /* Responsive styles */
   @media (max-width: 768px) {
     .settings-page {
       padding: 16px;
     }
-    
+
     .settings-section {
       padding: 16px;
+    }
+
+    .toggle-label {
+      gap: 8px;
+    }
+
+    .toggle-text {
+      font-size: 0.9rem;
     }
     
     .settings-header h1 {

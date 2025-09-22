@@ -369,5 +369,6 @@ export function createActions(ctx: ChatControllerCtx) {
     destroy,
     refreshDeviceInfo,
     setDeviceByToggle,
+    ensureStreamListener: stream.ensureListener,
   };
 }

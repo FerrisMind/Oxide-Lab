@@ -9,18 +9,24 @@ fn is_txt_md(att: &Attachment) -> bool {
     let mut ok = false;
     if let Some(name) = &att.name {
         let n = name.to_lowercase();
-        if n.ends_with(".txt") || n.ends_with(".md") { ok = true; }
+        if n.ends_with(".txt") || n.ends_with(".md") {
+            ok = true;
+        }
     }
     if !ok {
         if let Some(path) = &att.path {
             let p = path.to_lowercase();
-            if p.ends_with(".txt") || p.ends_with(".md") { ok = true; }
+            if p.ends_with(".txt") || p.ends_with(".md") {
+                ok = true;
+            }
         }
     }
     if !ok {
         if let Some(mime) = &att.mime {
             let mm = mime.to_lowercase();
-            if mm == "text/plain" || mm == "text/markdown" || mm == "text/x-markdown" { ok = true; }
+            if mm == "text/plain" || mm == "text/markdown" || mm == "text/x-markdown" {
+                ok = true;
+            }
         }
     }
     ok
@@ -61,7 +67,8 @@ fn read_bytes(att: &Attachment) -> Result<Option<Vec<u8>>, String> {
                 ));
             }
         }
-        let bytes = std::fs::read(p).map_err(|e| format!("Failed to read attachment from path {}: {}", p, e))?;
+        let bytes = std::fs::read(p)
+            .map_err(|e| format!("Failed to read attachment from path {}: {}", p, e))?;
         if bytes.len() as u64 > MAX_SIZE_BYTES {
             return Err(format!(
                 "Файл '{}' превышает лимит {} МБ после чтения ({} байт)",
@@ -78,15 +85,20 @@ fn read_bytes(att: &Attachment) -> Result<Option<Vec<u8>>, String> {
 /// Собрать текст из .txt/.md вложений. Все остальные модальности игнорируются.
 /// Возвращает единый блок текста с заголовками для каждого файла, либо пустую строку.
 pub fn gather_text_from_attachments(attachments: &[Attachment]) -> Result<String, String> {
-    if attachments.is_empty() { return Ok(String::new()); }
+    if attachments.is_empty() {
+        return Ok(String::new());
+    }
 
     // Фильтруем только .txt/.md
     let txt_md: Vec<&Attachment> = attachments.iter().filter(|a| is_txt_md(a)).collect();
-    if txt_md.is_empty() { return Ok(String::new()); }
+    if txt_md.is_empty() {
+        return Ok(String::new());
+    }
     if txt_md.len() > MAX_FILES {
         return Err(format!(
             "Слишком много файлов .txt/.md: {} (максимум {})",
-            txt_md.len(), MAX_FILES
+            txt_md.len(),
+            MAX_FILES
         ));
     }
 
@@ -95,8 +107,12 @@ pub fn gather_text_from_attachments(attachments: &[Attachment]) -> Result<String
         let bytes_opt = read_bytes(att)?;
         if let Some(bytes) = bytes_opt {
             let text = String::from_utf8_lossy(&bytes);
-            if !out.is_empty() { out.push_str("\n\n"); }
-            let title = att.name.clone()
+            if !out.is_empty() {
+                out.push_str("\n\n");
+            }
+            let title = att
+                .name
+                .clone()
                 .or_else(|| att.path.clone())
                 .unwrap_or_else(|| "attachment".to_string());
             out.push_str(&format!("[attached: {}]\n{}", title, text));
