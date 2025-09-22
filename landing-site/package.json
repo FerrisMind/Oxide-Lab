@@ -1,25 +1,31 @@
 {
-  "name": "oxide-landing",
-  "version": "0.1.0",
+  "name": "svelte-app",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "svelte-kit sync && vite dev",
-    "build": "svelte-kit sync && vite build",
-    "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig tsconfig.json"
-  },
-  "dependencies": {
-    "@sveltejs/kit": "^2.9.0",
-    "animejs": "^3.2.2"
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "start": "sirv public --no-clear"
   },
   "devDependencies": {
-    "@sveltejs/adapter-static": "^3.0.0",
-    "@types/animejs": "^3.1.12",
-    "svelte": "^5.0.0",
-    "svelte-check": "^4.0.0",
-    "tslib": "^2.7.0",
-    "typescript": "^5.6.2",
-    "vite": "^6.0.0"
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@tsconfig/svelte": "^5.0.5",
+    "rollup": "^4.52.0",
+    "rollup-plugin-css-only": "^4.5.5",
+    "rollup-plugin-livereload": "^2.0.5",
+    "rollup-plugin-svelte": "^7.2.3",
+    "svelte": "^5.39.4",
+    "svelte-preprocess": "^6.0.3",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "animejs": "^4.1.4",
+    "phosphor-svelte": "^3.0.1",
+    "sirv-cli": "^3.0.1"
   }
 }

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oxide Lab - Ваш личный ИИ. Полностью приватный.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Variables */
+        :root {
+            --primary-color: #1a1b3a;
+            --accent-gradient: linear-gradient(135deg, #ff6b35, #f7931e);
+            --bg-color: #ffffff;
+            --text-color: #2c2c2c;
+            --gray-gradient: linear-gradient(180deg, #f8f8f8, #ffffff);
+            --font-family: 'Inter', sans-serif;
+        }
+
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            color: var(--text-color);
+            background: var(--bg-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 600;
+        }
+
+        h2 {
+            font-size: 32px;
+            font-weight: 500;
+        }
+
+        p {
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        .caption {
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+
+        nav ul li {
+            margin-left: 2rem;
+            font-size: 16px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        nav ul li:hover {
+            color: #ff6b35;
+        }
+
+        /* Hero Section */
+        #hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: var(--gray-gradient);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #hero h1 {
+            max-width: 800px;
+            margin-bottom: 1rem;
+        }
+
+        #hero p {
+            max-width: 600px;
+            margin-bottom: 2rem;
+        }
+
+        .cta-button {
+            background: var(--accent-gradient);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 500;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+        }
+
+        /* Particles Animation */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 107, 53, 0.5);
+            border-radius: 50%;
+            animation: float 5s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-100vh); opacity: 0; }
+        }
+
+        /* Features Section */
+        #features {
+            padding: 4rem 2rem;
+            text-align: center;
+            background: var(--bg-color);
+        }
+
+        #features h2 {
+            margin-bottom: 3rem;
+        }
+
+        .feature-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 1rem;
+        }
+
+        /* Thinking Animation */
+        .thinking-demo {
+            margin: 2rem auto;
+            width: 200px;
+            height: 200px;
+            position: relative;
+        }
+
+        .brain {
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="%23ff6b35"/></svg>') center/contain no-repeat;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Tech Specs Section */
+        #tech {
+            padding: 4rem 2rem;
+            background: var(--gray-gradient);
+            text-align: center;
+        }
+
+        #tech h2 {
+            margin-bottom: 3rem;
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .spec-item {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Footer */
+        footer {
+            padding: 2rem;
+            text-align: center;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            background: var(--bg-color);
+        }
+
+        footer a {
+            margin: 0 1rem;
+            transition: color 0.3s;
+        }
+
+        footer a:hover {
+            color: #ff6b35;
+        }
+
+        /* Parallax Effect */
+        .parallax {
+            perspective: 1px;
+            height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .parallax-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            transform: translateZ(-1px) scale(2);
+        }
+
+        /* Media Queries for Responsiveness */
+        @media (max-width: 1199px) {
+            h1 { font-size: 40px; }
+            h2 { font-size: 28px; }
+        }
+
+        @media (max-width: 767px) {
+            header { flex-direction: column; }
+            nav ul { flex-direction: column; margin-top: 1rem; }
+            nav ul li { margin: 0.5rem 0; }
+            h1 { font-size: 32px; }
+            h2 { font-size: 24px; }
+            .feature-cards { grid-template-columns: 1fr; }
+            .specs-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Accessibility */
+        [role="button"] {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Oxide Lab</div>
+        <nav>
+            <ul>
+                <li>Возможности</li>
+                <li>Приватность</li>
+                <li>Скачать</li>
+            </ul>
+        </nav>
+    </header>
+
+    <section id="hero">
+        <div class="particles" id="particles-container"></div>
+        <h1>Ваш личный ИИ. Полностью приватный.</h1>
+        <p>Oxide Lab обеспечивает локальную обработку данных для максимальной конфиденциальности и простоты использования.</p>
+        <div class="cta-button" role="button">Скачать сейчас</div>
+    </section>
+
+    <section id="features">
+        <h2>Думает как вы</h2>
+        <div class="thinking-demo">
+            <div class="brain"></div>
+        </div>
+        <div class="feature-cards">
+            <div class="card">
+                <svg class="card-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.22.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="#1a1b3a"/>
+                </svg>
+                <h3>Приватный чат</h3>
+                <p class="caption">Ваши разговоры остаются на устройстве.</p>
+            </div>
+            <div class="card">
+                <svg class="card-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#ff6b35"/>
+                </svg>
+                <h3>Режим мышления</h3>
+                <p class="caption">ИИ адаптируется к вашему стилю мышления.</p>
+            </div>
+            <div class="card">
+                <svg class="card-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill="#1a1b3a"/>
+                </svg>
+                <h3>Гибкие настройки</h3>
+                <p class="caption">Настройте ИИ под свои нужды.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="tech">
+        <h2>Технические характеристики</h2>
+        <div class="specs-grid">
+            <div class="spec-item">
+                <h3>Поддержка моделей</h3>
+                <p>Qwen3 в формате GGUF</p>
+            </div>
+            <div class="spec-item">
+                <h3>Системные требования</h3>
+                <p>Процессор: Intel i5 или эквивалент<br>ОЗУ: 8GB+<br>ОС: Windows, macOS, Linux</p>
+            </div>
+            <div class="spec-item">
+                <h3>Платформы</h3>
+                <p>Поддержка Windows, macOS, Linux с иконками ОС.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <a href="https://github.com/FerrisMind/Oxide-Lab">GitHub</a>
+        <a href="#">Документация</a>
+        <a href="#">Community</a>
+        <p class="caption">&copy; 2025 Oxide Lab. Все права защищены.</p>
+    </footer>
+
+    <script>
+        // Particles Animation
+        const particlesContainer = document.getElementById('particles-container');
+        function createParticle() {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            particle.style.width = `${Math.random() * 10 + 5}px`;
+            particle.style.height = particle.style.width;
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.animationDuration = `${Math.random() * 3 + 2}s`;
+            particle.style.animationDelay = `${Math.random() * 2}s`;
+            particlesContainer.appendChild(particle);
+            setTimeout(() => particle.remove(), 5000);
+        }
+        setInterval(createParticle, 300);
+
+        // Simple Parallax (on scroll)
+        window.addEventListener('scroll', () => {
+            const layers = document.querySelectorAll('.parallax-layer');
+            layers.forEach(layer => {
+                const speed = layer.getAttribute('data-speed') || 0.5;
+                layer.style.transform = `translateY(${window.scrollY * speed}px)`;
+            });
+        });
+    </script>
+</body>
+</html>

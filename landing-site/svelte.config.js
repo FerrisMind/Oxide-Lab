@@ -1,16 +1,6 @@
-import adapter from '@sveltejs/adapter-static';
-import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import preprocess from 'svelte-preprocess';
 
-const config = {
-  compilerOptions: {
-    runes: true
-  },
-  preprocess: vitePreprocess(),
-  kit: {
-    adapter: adapter({
-      fallback: 'index.html'
-    })
-  }
+export default {
+  // Consult https://svelte.dev/docs/svelte-compiler for more information
+  preprocess: preprocess(),
 };
-
-export default config;
