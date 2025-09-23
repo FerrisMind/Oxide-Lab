@@ -148,7 +148,7 @@ pub fn try_build_wordlevel_tokenizer_from_tokens(
     // Опционально определяем unk token
     let unk = md
         .get("tokenizer.ggml.unknown_token")
-        .and_then(|v| v.to_string().ok().map(|s| s.clone()))
+        .and_then(|v| v.to_string().ok().cloned())
         .unwrap_or_else(|| "<unk>".to_string());
 
     // Собираем Value вручную, чтобы избежать проблем с временной областью жизни строк

@@ -140,12 +140,33 @@ pub fn unload_model(
         };
         let device = guard.device.clone();
         // Эмиссия упрощённого прогресса выгрузки
-        crate::api::model_loading::emit_load_progress(&app_clone, "unload_start", 0, None, false, None);
+        crate::api::model_loading::emit_load_progress(
+            &app_clone,
+            "unload_start",
+            0,
+            None,
+            false,
+            None,
+        );
         guard.gguf_model = None;
-        crate::api::model_loading::emit_load_progress(&app_clone, "unload_model", 40, None, false, None);
+        crate::api::model_loading::emit_load_progress(
+            &app_clone,
+            "unload_model",
+            40,
+            None,
+            false,
+            None,
+        );
         guard.gguf_file = None;
         guard.tokenizer = None;
-        crate::api::model_loading::emit_load_progress(&app_clone, "unload_tokenizer", 70, None, false, None);
+        crate::api::model_loading::emit_load_progress(
+            &app_clone,
+            "unload_tokenizer",
+            70,
+            None,
+            false,
+            None,
+        );
         *guard = ModelState::new(device);
         crate::api::model_loading::emit_load_progress(
             &app_clone,

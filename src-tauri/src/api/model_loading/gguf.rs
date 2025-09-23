@@ -147,7 +147,7 @@ pub fn load_gguf_model(
                 .and_then(|v| v.to_string().ok())
         });
     let config_value: Option<serde_json::Value> = match config_json_opt {
-        Some(s) => match serde_json::from_str(&s) {
+        Some(s) => match serde_json::from_str(s) {
             Ok(v) => Some(v),
             Err(e) => {
                 emit_load_progress(
