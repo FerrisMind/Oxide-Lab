@@ -39,9 +39,11 @@
   <div class="file-row">
     <div class="input-with-button">
       <input class="gguf-input" placeholder="Выбрать GGUF файл" value={$chatState.modelPath} readonly />
-      <button class="inside-btn" type="button" on:click={pickModel} aria-label="Выбрать файл модели"><Binoculars size={16} weight="bold" /></button>
+      <button class="inside-btn" type="button" on:click={pickModel} aria-label="Выбрать файл модели" draggable="false">
+        <Binoculars size={16} weight="bold" />
+      </button>
     </div>
-    <button class="primary" on:click={mainAction} disabled={$chatState.busy} title="Загрузить/Выгрузить">
+    <button class="primary" on:click={mainAction} disabled={$chatState.busy} title="Загрузить/Выгрузить" draggable="false">
       {#if $chatState.isLoadingModel}
         <CircleNotch size={16} class="spinning" /> <span>Загрузка... {Math.round($chatState.loadingProgress)}%</span>
       {:else if $chatState.isUnloadingModel}

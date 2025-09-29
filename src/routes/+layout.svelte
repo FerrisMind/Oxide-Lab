@@ -13,11 +13,14 @@
   import ArrowsOut from "phosphor-svelte/lib/ArrowsOut";
   import X from "phosphor-svelte/lib/X";
   import Sidebar from '$lib/components/Sidebar.svelte';
+  import ChatHistory from '$lib/components/ChatHistory.svelte';
   import GGUFUploadArea from '$lib/components/GGUFUploadArea.svelte';
   import HeaderSearch from '$lib/components/HeaderSearch.svelte';
   import { triggerHeaderSearch } from '$lib/stores/search';
   import { ensureGlobalChatStream } from '$lib/chat/global-stream';
   import Chat from '$lib/chat/Chat.svelte';
+  import { showChatHistory } from '$lib/stores/sidebar';
+  import List from "phosphor-svelte/lib/List";
   
   // Определяем, должен ли отображаться GGUFUploadArea
   $: shouldShowGGUFUploadArea = $page.url.pathname === '/' || $page.url.pathname === '/api';
@@ -51,9 +54,12 @@
   async function startDragging(event: MouseEvent) {
     // Only start dragging if we're not clicking on an interactive element
     const target = event.target as HTMLElement;
-    if (!target.closest('button, input, [data-tauri-drag-region="false"]')) {
-      await appWindow.startDragging();
+    // Проверяем, не кликнули ли мы на кнопку, input, или элемент внутри них
+    if (target.closest('button, input, textarea, select, a, [data-no-drag]')) {
+      event.stopPropagation();
+      return;
     }
+    await appWindow.startDragging();
   }
   
   onMount(() => {
@@ -123,6 +129,19 @@
         <span class="brand-title">{appName}</span>
       </button>
       <div class="header-center">
+        <!-- Кнопка переключения истории чатов (только на главной странице) -->
+        {#if $page.url.pathname === '/'}
+          <button 
+            class="history-toggle" 
+            onclick={() => showChatHistory.update(v => !v)}
+            title={$showChatHistory ? "Скрыть историю" : "Показать историю"}
+            draggable="false"
+            aria-label={$showChatHistory ? "Скрыть историю чатов" : "Показать историю чатов"}
+          >
+            <List size={20} weight="regular" />
+          </button>
+        {/if}
+        
         <!-- GGUF upload: всегда смонтирован, скрывается классом -->
         <div class="gguf-host" class:hidden={!shouldShowGGUFUploadArea}>
           <GGUFUploadArea />
@@ -152,6 +171,11 @@
   </div>
   <div class="app-body">
     <Sidebar />
+    {#if $showChatHistory && $page.url.pathname === '/'}
+      <div class="chat-history-panel">
+        <ChatHistory />
+      </div>
+    {/if}
     <main class="app-main">
       <div class="view-switch">
         <div class="chat-host" class:hidden={$page.url.pathname !== '/'} aria-hidden={$page.url.pathname !== '/'}>
@@ -177,6 +201,20 @@
   .app-header-wrapper {
     position: relative;
     -webkit-app-region: drag; /* Enable window dragging */
+  }
+  
+  /* Disable dragging on interactive elements */
+  .app-header-wrapper button,
+  .app-header-wrapper input,
+  .app-header-wrapper textarea,
+  .app-header-wrapper select,
+  .app-header-wrapper a,
+  .app-header-wrapper [data-no-drag],
+  .app-header-wrapper .gguf-host,
+  .app-header-wrapper .gguf-host *,
+  .app-header-wrapper .history-toggle,
+  .app-header-wrapper .history-toggle * {
+    -webkit-app-region: no-drag;
   }
   
   .app-header {
@@ -265,6 +303,49 @@
   }
   .win-btn:hover { background: #f0f0f0; color: #212121; }
   .win-btn.close:hover { background: #e81123; color: #212121; }
+
+  /* История чатов */
+  .chat-history-panel {
+    width: 280px;
+    min-width: 280px;
+    max-width: 400px;
+    height: 100%;
+    background: var(--card);
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .history-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text);
+    opacity: 0.8;
+    transition: all 0.2s;
+    margin-right: 8px;
+  }
+
+  .history-toggle:hover {
+    background: var(--border-color, #e8e6e3);
+    opacity: 1;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .chat-history-panel {
+      background: #1a1a1a;
+    }
+
+    .history-toggle:hover {
+      background: #333;
+    }
+  }
 </style>
 
 

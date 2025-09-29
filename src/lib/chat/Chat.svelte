@@ -10,6 +10,7 @@
   import { createChatController } from "$lib/chat/controller";
   import InferenceParams from "$lib/chat/components/InferenceParams.svelte";
   import { chatState, chatUiMounted, getDefaultChatState } from "$lib/stores/chat";
+  import { chatHistory, currentSession } from "$lib/stores/chat-history";
   import { get as getStore } from "svelte/store";
   import { invoke } from '@tauri-apps/api/core';
   import { performanceService } from '$lib/services/performance-service';
@@ -254,7 +255,9 @@
       format = s.format;
 
       prompt = s.prompt;
-      messages = Array.isArray(s.messages) ? s.messages : [];
+      // Загружаем сообщения из истории чатов, если есть текущая сессия
+      const session = getStore(currentSession);
+      messages = session?.messages ?? (Array.isArray(s.messages) ? s.messages : []);
       busy = s.busy;
       isLoaded = s.isLoaded;
       errorText = s.errorText;
@@ -305,6 +308,33 @@
       }
     );
   });
+
+  // Флаг для предотвращения циклических обновлений
+  let isLoadingFromHistory = false;
+  let lastSessionId: string | null = null;
+
+  // Загрузка сообщений при переключении сессии
+  $: {
+    if ($currentSession && $currentSession.id !== lastSessionId) {
+      console.log('Загружаем сессию:', $currentSession.id, 'Сообщений:', $currentSession.messages.length);
+      isLoadingFromHistory = true;
+      messages = [...$currentSession.messages]; // Создаем новый массив для триггера реактивности
+      lastSessionId = $currentSession.id;
+      
+      // Сбрасываем флаг после небольшой задержки
+      setTimeout(() => {
+        isLoadingFromHistory = false;
+      }, 100);
+    }
+  }
+
+  // Синхронизация сообщений с историей чатов (только если не загружаем из истории)
+  $: {
+    if (messages && !isLoadingFromHistory && $currentSession) {
+      console.log('Синхронизируем сообщения в историю:', messages.length);
+      chatHistory.updateMessages(messages);
+    }
+  }
 
   let canRegenerate = false;
   let canStopGeneration = false;

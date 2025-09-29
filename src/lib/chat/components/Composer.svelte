@@ -281,6 +281,7 @@
           on:click={triggerAttach}
           disabled={busy || !isLoaded}
           aria-label="Прикрепить файл"
+          draggable="false"
         >
           <Paperclip size={16} weight="bold" />
         </button>
@@ -291,6 +292,7 @@
           on:click={triggerSettings}
           disabled={false}
           aria-label="Настройки лоадер панели"
+          draggable="false"
         >
           <SlidersHorizontal size={16} weight="bold" />
         </button>
@@ -301,6 +303,7 @@
             on:click={triggerClear}
             disabled={busy || !isLoaded}
             aria-label="Очистить"
+            draggable="false"
           >
             <Broom size={16} weight="bold" />
           </button>
@@ -313,6 +316,7 @@
           on:click={triggerVoiceInput}
           disabled={busy || !isLoaded}
           aria-label={isRecording ? 'Остановить запись' : 'Начать запись голоса'}
+          draggable="false"
         >
           {#if isRecording}
             <Stop size={16} weight="bold" />
@@ -326,6 +330,7 @@
           on:click={busy ? triggerStop : triggerSend}
           disabled={!isLoaded || (!busy && !prompt.trim())}
           aria-label={busy ? 'Стоп' : 'Отправить'}
+          draggable="false"
         >
           {#if busy}
             <Stop size={16} weight="bold" />

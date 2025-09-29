@@ -3,7 +3,10 @@
   import { headerSearchQuery, searchTrigger } from '$lib/stores/search';
   import { huggingFaceService } from '$lib/services/huggingface';
   import type { HFModel, SearchResult } from '$lib/services/huggingface';
-  import { rightSidebarOpen } from '$lib/stores/sidebar';
+  import { writable } from 'svelte/store';
+  
+  // Temporary local store until rightSidebarOpen is properly implemented
+  const rightSidebarOpen = writable(false);
 
   export let searchQuery = '';
   export let selectedFormats: string[] = [];
