@@ -11,6 +11,7 @@ import {
   appendMarkdownText,
   finalizeMarkdownStreaming,
 } from './markdown_block.js';
+import { createExternalViewButton } from '../external-controls.js';
 
 export const getAssistantBubbleEl = _getAssistantBubbleEl;
 export const registerAssistantBubble = _registerAssistantBubble;
@@ -36,13 +37,10 @@ export function appendSegments(
     mdEl: null,
     mdContentEl: null,
     mdRawEl: null,
-    mdControlsEl: null,
-    mdToggleBtn: null,
-    mdEyeHost: null,
-    mdEyeIcon: null,
     mdText: '',
     lastKind: null,
     codeMirrorWatching: false,
+    externalButton: null,
   }) as any;
 
   for (const seg of segments) {
@@ -53,6 +51,14 @@ export function appendSegments(
       ctx = ensureMarkdownContainer(ctx, bubble);
       ctx = appendMarkdownText(ctx, seg.data, isStreaming);
       ctx.lastKind = 'text';
+
+      // Внешняя кнопка теперь создается в InferenceMetricsDisplay компоненте
+      // if (ctx.mdEl && !ctx.externalButton) {
+      //   const messageEl = bubble.parentElement;
+      //   if (messageEl) {
+      //     ctx.externalButton = createExternalViewButton(messageEl, ctx.mdEl);
+      //   }
+      // }
     }
   }
   bubbleCtxs.set(index, ctx);

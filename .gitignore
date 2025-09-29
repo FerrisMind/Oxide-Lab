@@ -28,6 +28,7 @@ build/
 .output/
 .out/
 .turbo/
+.cursor/
 
 # Logs
 logs/

@@ -15,6 +15,8 @@ mod model_loading;
 use model_loading::{gguf, hub_gguf, safetensors};
 mod device;
 mod template;
+pub mod performance_api;
+pub use performance_api::{get_performance_metrics, get_average_duration, get_memory_usage, clear_performance_metrics};
 
 // Модальная индикация удалена: проект реализует единую обработку вложений независимо от модели.
 

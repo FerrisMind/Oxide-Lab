@@ -54,6 +54,10 @@ pub fn run() {
             api::set_precision,
             api::gguf_list_metadata_keys_from_path,
             api::gguf_list_metadata_keys,
+            api::performance_api::get_performance_metrics,
+            api::performance_api::get_average_duration,
+            api::performance_api::get_memory_usage,
+            api::performance_api::clear_performance_metrics,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -8,6 +8,7 @@ use super::{
 };
 use crate::core::attachments_text::gather_text_from_attachments;
 use crate::core::config::SamplingOptions;
+use crate::core::performance::InferenceTracker;
 use crate::core::prompt::PromptBuilder;
 use crate::core::state::SharedState;
 use crate::core::token_output_stream::TokenOutputStream;
@@ -137,6 +138,13 @@ fn generate_stream_impl(
     }
     let ctx_slice = ContextSlice::new(full_context_tokens.clone(), guard.context_length.max(1));
     let effective_context_tokens: Vec<u32> = ctx_slice.effective_context_tokens.clone();
+    
+    // Создаём трекер inference
+    let mut inference_tracker = InferenceTracker::new(
+        effective_context_tokens.len(),
+        guard.performance_monitor.clone()
+    );
+    
     if ctx_slice.base_context_len != ctx_slice.encoded_len {
         log_infer!(
             "context: encoded={}, using={}, truncated_by={}",
@@ -180,6 +188,9 @@ fn generate_stream_impl(
 
     let _vocab = tos.tokenizer().get_vocab(true);
 
+    // Начинаем prefill
+    inference_tracker.start_prefill();
+    
     // Prefill: пошагово прогоняем весь контекст через kv_cache, без кастомной causal mask
     let mut next_token = {
         let mut last_logits_opt: Option<Tensor> = None;
@@ -213,6 +224,9 @@ fn generate_stream_impl(
             .map_err(|e| e.to_string())?
     };
 
+    // Начинаем generation
+    inference_tracker.start_generation();
+    
     let mut emitter = ChunkEmitter::new(app.clone());
 
     if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
@@ -275,6 +289,8 @@ fn generate_stream_impl(
             .sample(&logits)
             .map_err(|e| e.to_string())?;
         all_tokens.push(next_token);
+        inference_tracker.increment_generated_tokens();
+        
         if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
             emitter.push_maybe_emit(&t);
             // textual stop patterns for models that emit plain tags instead of special ids
@@ -305,6 +321,26 @@ fn generate_stream_impl(
         emitter.push_maybe_emit(&rest);
     }
     emitter.finalize();
+    
+    // Финализируем метрики inference
+    let inference_metrics = tokio::runtime::Runtime::new()
+        .map_err(|e| e.to_string())?
+        .block_on(async {
+            inference_tracker.finish().await
+        });
+    
+    log_infer!(
+        "Метрики inference: prompt_tokens={}, generated_tokens={}, total_time={}ms, tokens/sec={:.2}, memory={:.2}MB",
+        inference_metrics.prompt_tokens,
+        inference_metrics.generated_tokens,
+        inference_metrics.total_duration_ms,
+        inference_metrics.tokens_per_second,
+        inference_metrics.memory_usage_mb
+    );
+    
+    // Отправляем метрики на фронтенд
+    let _ = app.emit("inference_metrics", &inference_metrics);
+    
     Ok(())
 }
 

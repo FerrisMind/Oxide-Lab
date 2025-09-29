@@ -12,6 +12,9 @@
   import { chatState, chatUiMounted, getDefaultChatState } from "$lib/stores/chat";
   import { get as getStore } from "svelte/store";
   import { invoke } from '@tauri-apps/api/core';
+  import { performanceService } from '$lib/services/performance-service';
+  import { inferenceMetricsStore } from '$lib/stores/inference-metrics';
+  import type { InferenceMetrics } from '$lib/types/performance';
 
   type ComposerAttachment = {
     filename: string;
@@ -287,12 +290,31 @@
     } catch (err) {
       console.warn('Failed to initialize stream listener:', err);
     }
+    
+    // Подписываемся на события метрик производительности
+    await performanceService.setupEventListeners(
+      undefined,  // Не обрабатываем загрузку модели здесь
+      (inferenceMetrics: InferenceMetrics) => {
+        // Даём небольшую задержку на случай, если сообщение ещё не добавлено
+        setTimeout(() => {
+          const lastAssistantIndex = messages.findLastIndex(m => m.role === 'assistant');
+          if (lastAssistantIndex !== -1) {
+            inferenceMetricsStore.setMetrics(lastAssistantIndex, inferenceMetrics);
+          }
+        }, 150);
+      }
+    );
   });
 
   let canRegenerate = false;
   let canStopGeneration = false;
 
   $: canStopGeneration = busy && isLoaded;
+  
+  // Очищаем слушатели событий при размонтировании
+  onDestroy(() => {
+    performanceService.cleanup();
+  });
 
   // Keep shared chatState in sync so header and other views get instant truth (no polling flicker)
   $: chatState.update((s) => ({

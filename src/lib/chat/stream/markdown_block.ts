@@ -1,13 +1,11 @@
 import { mount, unmount } from 'svelte';
-import Eye from 'phosphor-svelte/lib/Eye';
-import EyeSlash from 'phosphor-svelte/lib/EyeSlash';
 import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
 // CodeMirror renderer removed — using Shiki-based StreamingCodeBlock for highlighting
 import { enableExternalLinks } from '$lib/chat/external-links';
 import { StreamingCodeBlock } from '$lib/components/streaming-code';
 import type { BubbleCtx } from './bubble_ctx';
 
-function hasMarkdownFeatures(text: string): boolean {
+function _hasMarkdownFeatures(text: string): boolean {
   const t = text ?? '';
   if (!t) return false;
   return (
@@ -33,16 +31,7 @@ export function ensureMarkdownContainer(ctx: BubbleCtx, bubble: HTMLDivElement):
     ctx.mdEl = document.createElement('div');
     ctx.mdEl.className = 'md-stream';
 
-    // controls
-    const controls = document.createElement('div');
-    controls.className = 'md-controls';
-    const toggleBtn = document.createElement('button');
-    toggleBtn.type = 'button';
-    toggleBtn.className = 'md-toggle';
-    const eyeHost = document.createElement('span');
-    eyeHost.className = 'md-eye-host';
-    toggleBtn.appendChild(eyeHost);
-    controls.appendChild(toggleBtn);
+    // Удаляем старую логику md-controls - кнопка будет создаваться отдельно
 
     // content containers
     const contentEl = document.createElement('div');
@@ -50,36 +39,10 @@ export function ensureMarkdownContainer(ctx: BubbleCtx, bubble: HTMLDivElement):
     const rawEl = document.createElement('pre');
     rawEl.className = 'md-raw';
 
-    // assemble
-    ctx.mdEl.appendChild(controls);
+    // assemble - только контент
     ctx.mdEl.appendChild(contentEl);
     ctx.mdEl.appendChild(rawEl);
     bubble.appendChild(ctx.mdEl);
-
-    // mount eye icon
-    ctx.mdEyeHost = eyeHost;
-    ctx.mdEyeIcon = mount(Eye, { target: eyeHost, props: { size: 16, weight: 'regular' } });
-
-    // toggle handler
-    toggleBtn.addEventListener('click', () => {
-      const showingRaw = ctx.mdEl?.classList.toggle('show-raw') ?? false;
-      try {
-        if (ctx.mdEyeIcon) unmount(ctx.mdEyeIcon);
-      } catch {}
-      if (ctx.mdEyeHost) {
-        ctx.mdEyeIcon = mount(showingRaw ? EyeSlash : Eye, {
-          target: ctx.mdEyeHost,
-          props: { size: 16, weight: 'regular' },
-        });
-      }
-    });
-
-    ctx.mdControlsEl = controls;
-    ctx.mdToggleBtn = toggleBtn;
-    // По умолчанию скрываем контрол до появления markdown-признаков
-    try {
-      (ctx.mdControlsEl as HTMLElement).style.display = 'none';
-    } catch {}
     ctx.mdContentEl = contentEl;
     ctx.mdRawEl = rawEl;
     ctx.mdText = '';
@@ -184,7 +147,7 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
               showLineNumbers: false,
             });
           }
-        } catch (e) {
+        } catch {
           // If update fails, fall back to re-mount
           try {
             unmount(existing);
@@ -269,14 +232,7 @@ export function appendMarkdownText(
     ctx.mdRawEl.textContent = ctx.mdText;
   }
 
-  // Показываем/скрываем кнопку-глаз только если есть элементы Markdown
-  try {
-    if (ctx.mdControlsEl) {
-      (ctx.mdControlsEl as HTMLElement).style.display = hasMarkdownFeatures(ctx.mdText)
-        ? 'flex'
-        : 'none';
-    }
-  } catch {}
+  // Управление кнопкой теперь происходит отдельно
 
   ctx.lastKind = 'text';
   return ctx;

@@ -20,9 +20,9 @@
   border-radius: 10px;
   padding: 12px;
   flex: 1 1 auto;
+
   /* Only vertical scroll; prevent horizontal scrollbar */
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -31,14 +31,16 @@
 
 .message {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .message.user {
-  justify-content: flex-end;
+  align-items: flex-end;
 }
 
 .message.assistant {
-  justify-content: flex-start;
+  align-items: flex-start;
 }
 
 .messages,
@@ -159,6 +161,7 @@
 }
 
 /* Indicative segmented block: highlight supported icons similarly to active */
+
 .segmented-toggle .indicator.supported {
   background: linear-gradient(135deg, var(--accent-2), #d4b8ff);
   color: #1c1c1c;
@@ -241,6 +244,7 @@
     background: linear-gradient(135deg, #695b99, #5a4b8a);
     color: #fff;
   }
+
   .segmented-toggle .indicator.supported {
     background: linear-gradient(135deg, #695b99, #5a4b8a);
     color: #fff;
@@ -270,8 +274,8 @@
     grid-column: unset;
     grid-row: unset;
     min-height: 0;
+
     /* Only vertical scroll to avoid horizontal scrollbar */
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden auto;
   }
 }

@@ -1,3 +1,4 @@
+use crate::core::performance::PerformanceMonitor;
 use crate::core::precision::{Precision, PrecisionPolicy};
 use candle::Device;
 use serde_json;
@@ -27,6 +28,8 @@ pub struct ModelState<M> {
     pub(crate) safetensors_files: Option<Vec<String>>,
     /// Precision policy for model loading
     pub(crate) precision_policy: PrecisionPolicy,
+    /// Performance monitor для отслеживания метрик
+    pub(crate) performance_monitor: Arc<PerformanceMonitor>,
 }
 
 impl<M> ModelState<M> {
@@ -46,6 +49,7 @@ impl<M> ModelState<M> {
             hub_revision: None,
             safetensors_files: None,
             precision_policy: PrecisionPolicy::Default,
+            performance_monitor: Arc::new(PerformanceMonitor::new(1000)),
         }
     }
 

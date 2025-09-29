@@ -1,6 +1,8 @@
 use super::emit_load_progress;
 use crate::core::device::{device_label, select_device};
+use crate::core::performance::ModelLoadTracker;
 use crate::core::state::ModelState;
+use tauri::Emitter;
 use crate::core::tokenizer::{
     extract_chat_template, find_chat_template_in_metadata, mark_special_chat_tokens,
     tokenizer_from_gguf_metadata,
@@ -21,7 +23,17 @@ pub fn load_gguf_model(
     context_length: usize,
     device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
+    // Создаём трекер загрузки модели
+    let tracker_result = tokio::runtime::Runtime::new()
+        .map_err(|e| e.to_string())?
+        .block_on(async {
+            ModelLoadTracker::new(guard.performance_monitor.clone()).await
+        });
+    let mut tracker = tracker_result;
+
     emit_load_progress(app, "start", 0, Some("Начало загрузки GGUF"), false, None);
+    tracker.start_stage("device_selection");
+    
     let dev = select_device(device_pref);
     guard.device = dev;
     log_load!("device selected: {}", device_label(&guard.device));
@@ -38,11 +50,14 @@ pub fn load_gguf_model(
         emit_load_progress(app, "open_file", 8, None, false, Some(&e.to_string()));
         e.to_string()
     })?;
+    tracker.start_stage("file_opening");
     emit_load_progress(app, "open_file", 10, Some("Файл открыт"), false, None);
     if CANCEL_LOADING.load(Ordering::SeqCst) {
         emit_load_progress(app, "cancel", 12, Some("Отменено"), true, Some("cancelled"));
         return Err("cancelled".into());
     }
+    
+    tracker.start_stage("read_header");
     let content = gguf_file::Content::read(&mut file).map_err(|e| {
         let msg = e.with_path(PathBuf::from(model_path.clone())).to_string();
         emit_load_progress(app, "read_header", 20, None, false, Some(&msg));
@@ -61,6 +76,7 @@ pub fn load_gguf_model(
         return Err("cancelled".into());
     }
 
+    tracker.start_stage("tokenizer_init");
     // Токенизатор обязан быть в метаданных GGUF. Никакого внешнего tokenizer.json не допускается.
     let (mut tokenizer, tokenizer_source): (tokenizers::Tokenizer, &'static str) =
         match tokenizer_from_gguf_metadata(&content.metadata) {
@@ -129,6 +145,7 @@ pub fn load_gguf_model(
         guard.model_config_json = Some(gg);
     }
 
+    tracker.start_stage("model_building");
     // Use the model factory to build the model
     emit_load_progress(app, "build_model", 50, None, false, None);
     if CANCEL_LOADING.load(Ordering::SeqCst) {
@@ -241,6 +258,28 @@ pub fn load_gguf_model(
         false,
         None,
     );
+    
+    // Финализируем метрики загрузки
+    let model_size_mb = std::fs::metadata(guard.model_path.as_ref().unwrap())
+        .map(|m| m.len() as f64 / (1024.0 * 1024.0))
+        .unwrap_or(0.0);
+    
+    let metrics = tokio::runtime::Runtime::new()
+        .map_err(|e| e.to_string())?
+        .block_on(async {
+            tracker.finish(model_size_mb).await
+        });
+    
+    log_load!(
+        "Метрики загрузки: total_time={}ms, memory_delta={:.2}MB, stages={:?}",
+        metrics.total_duration_ms,
+        metrics.memory_delta_mb,
+        metrics.stages.iter().map(|s| format!("{}:{}ms", s.name, s.duration_ms)).collect::<Vec<_>>()
+    );
+    
+    // Отправляем метрики на фронтенд
+    let _ = app.emit("model_load_metrics", &metrics);
+    
     emit_load_progress(app, "complete", 100, Some("Готово"), true, None);
 
     Ok(())

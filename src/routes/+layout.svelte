@@ -94,7 +94,7 @@
 
           // don't force loader height here — let CSS/flex handle sizing and allow loader internal scroll
         }
-      } catch (_e) {
+      } catch {
         // ignore
       }
     };

@@ -73,7 +73,7 @@
   // Whether we've already auto-expanded after a streaming session
   let autoExpandedDone: boolean = false;
   // Streaming spinner state
-  let spinnerHost: HTMLSpanElement | null = null;
+  let _spinnerHost: HTMLSpanElement | null = null;
 
   // Header actions (outside of the editor)
   function copyCurrentCode() {
@@ -147,7 +147,7 @@
         highlighted = auto.value;
         languageUsed = auto.language ?? 'plaintext';
       }
-    } catch (_err) {
+    } catch {
       highlighted = escapeHtml(renderedCode);
       languageUsed = 'plaintext';
     }

@@ -19,6 +19,7 @@ fn test_generate_request_with_chat_messages() {
     let req = GenerateRequest {
         prompt: "Direct prompt".to_string(),
         messages: Some(messages),
+        attachments: None,
         max_new_tokens: None,
         temperature: None,
         top_p: None,
@@ -41,6 +42,7 @@ fn test_generate_request_without_chat_messages() {
     let req = GenerateRequest {
         prompt: "Direct prompt".to_string(),
         messages: None,
+        attachments: None,
         max_new_tokens: None,
         temperature: None,
         top_p: None,

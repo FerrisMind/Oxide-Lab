@@ -11,14 +11,26 @@
   position: static;
 }
 
-.md-stream .md-controls {
+/* Внешняя кнопка просмотра исходного кода */
+
+.external-view-container {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
-  margin: 2px 0 0;
+  margin: 8px 0 0;
+  padding: 0 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  width: 100%;
+  max-width: 80%;
 }
 
-.md-stream .md-toggle {
+/* Показываем кнопку при наведении на сообщение ассистента */
+
+.message.assistant:hover .external-view-container {
+  opacity: 1;
+}
+
+.external-view-button {
   display: inline-flex;
   align-items: center;
   gap: 0;
@@ -28,9 +40,14 @@
   border-radius: 8px;
   padding: 4px 6px;
   cursor: default;
+  transition: background-color 0.2s ease;
 }
 
-.md-stream .md-eye-host {
+.external-view-button:hover {
+  background: var(--panel-alt-bg);
+}
+
+.external-view-icon {
   display: inline-flex;
   width: 16px;
   height: 16px;
@@ -54,9 +71,9 @@
   color: var(--text);
   border: 1px dashed var(--border-color);
   border-radius: 8px;
+
   /* Allow vertical scroll in raw view without causing horizontal scrollbars */
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
