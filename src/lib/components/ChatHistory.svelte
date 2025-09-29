@@ -533,16 +533,22 @@
   .session-actions {
     display: flex;
     gap: 6px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+    transform: translateY(-2px);
   }
 
   .session-item:hover .session-actions {
     opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
   }
 
   .session-item.active .session-actions {
     opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
   }
 
   .btn-icon-small {

@@ -6,6 +6,7 @@ import type {
   ModelLoadMetrics,
   InferenceMetrics,
   PerformanceSummary,
+  StartupMetrics,
 } from '$lib/types/performance';
 
 export class PerformanceService {
@@ -13,6 +14,7 @@ export class PerformanceService {
   private lastModelLoadMetrics: ModelLoadMetrics | null = null;
   private lastInferenceMetrics: InferenceMetrics | null = null;
   private inferenceHistory: InferenceMetrics[] = [];
+  private startupMetrics: StartupMetrics | null = null;
 
   /**
    * Получить все метрики производительности
@@ -51,6 +53,22 @@ export class PerformanceService {
   }
 
   /**
+   * Получить метрики запуска приложения
+   */
+  async getStartupMetrics(): Promise<StartupMetrics | null> {
+    try {
+      const metrics = await invoke<StartupMetrics | null>('get_startup_metrics');
+      if (metrics) {
+        this.startupMetrics = metrics;
+      }
+      return metrics;
+    } catch (error) {
+      console.error('Failed to get startup metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Очистить все метрики производительности
    */
   async clearMetrics(): Promise<void> {
@@ -59,6 +77,7 @@ export class PerformanceService {
       this.lastModelLoadMetrics = null;
       this.lastInferenceMetrics = null;
       this.inferenceHistory = [];
+      // Не очищаем startup metrics, так как они задаются один раз
     } catch (error) {
       console.error('Failed to clear metrics:', error);
       throw error;
@@ -70,6 +89,11 @@ export class PerformanceService {
    */
   async getPerformanceSummary(): Promise<PerformanceSummary> {
     const currentMemory = await this.getMemoryUsage();
+
+    // Загружаем startup metrics если еще не загружены
+    if (!this.startupMetrics) {
+      await this.getStartupMetrics();
+    }
 
     const averageTokensPerSecond =
       this.inferenceHistory.length > 0
@@ -86,6 +110,7 @@ export class PerformanceService {
       current_memory_mb: currentMemory,
       last_model_load: this.lastModelLoadMetrics || undefined,
       last_inference: this.lastInferenceMetrics || undefined,
+      startup: this.startupMetrics || undefined,
       average_tokens_per_second: averageTokensPerSecond,
       total_generated_tokens: totalGeneratedTokens,
     };
@@ -97,6 +122,7 @@ export class PerformanceService {
   async setupEventListeners(
     onModelLoad?: (metrics: ModelLoadMetrics) => void,
     onInference?: (metrics: InferenceMetrics) => void,
+    onStartup?: (metrics: StartupMetrics) => void,
   ): Promise<void> {
     // Слушаем метрики загрузки модели
     const modelLoadListener = await listen<ModelLoadMetrics>('model_load_metrics', (event) => {
@@ -118,7 +144,14 @@ export class PerformanceService {
       onInference?.(event.payload);
     });
 
-    this.listeners = [modelLoadListener, inferenceListener];
+    // Слушаем метрики запуска
+    const startupListener = await listen<StartupMetrics>('startup_metrics', (event) => {
+      console.log('✅ Startup metrics received:', event.payload);
+      this.startupMetrics = event.payload;
+      onStartup?.(event.payload);
+    });
+
+    this.listeners = [modelLoadListener, inferenceListener, startupListener];
   }
 
   /**
@@ -181,6 +214,13 @@ export class PerformanceService {
    */
   getLastInferenceMetrics(): InferenceMetrics | null {
     return this.lastInferenceMetrics;
+  }
+
+  /**
+   * Получить метрики запуска (кэшированные)
+   */
+  getCachedStartupMetrics(): StartupMetrics | null {
+    return this.startupMetrics;
   }
 }
 

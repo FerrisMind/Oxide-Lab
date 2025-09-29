@@ -34,10 +34,24 @@ export interface InferenceMetrics {
   timestamp: string;
 }
 
+export interface StartupMetrics {
+  total_duration_ms: number;
+  stages: StartupStage[];
+  memory_at_start_mb: number;
+  memory_at_ready_mb: number;
+  timestamp: string;
+}
+
+export interface StartupStage {
+  name: string;
+  duration_ms: number;
+}
+
 export interface PerformanceSummary {
   current_memory_mb: number;
   last_model_load?: ModelLoadMetrics;
   last_inference?: InferenceMetrics;
+  startup?: StartupMetrics;
   average_tokens_per_second: number;
   total_generated_tokens: number;
 }

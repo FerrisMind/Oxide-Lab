@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { performanceService } from '$lib/services/performance-service';
-  import type { ModelLoadMetrics, InferenceMetrics, PerformanceSummary } from '$lib/types/performance';
+  import type { ModelLoadMetrics, InferenceMetrics, PerformanceSummary, StartupMetrics } from '$lib/types/performance';
+  import StartupMetricsDisplay from './StartupMetricsDisplay.svelte';
 
   let summary: PerformanceSummary | null = null;
   let loading = false;
@@ -58,6 +59,10 @@
       (inferenceMetrics: InferenceMetrics) => {
         console.log('Received inference metrics:', inferenceMetrics);
         loadSummary();
+      },
+      (startupMetrics: StartupMetrics) => {
+        console.log('✅ Received startup metrics:', startupMetrics);
+        loadSummary();
       }
     );
   });
@@ -98,6 +103,15 @@
 
   {#if summary}
     <div class="metrics-grid">
+      <!-- Startup Metrics -->
+      {#if summary.startup}
+        <div class="metric-card full-width startup-card">
+          <div class="metric-content">
+            <StartupMetricsDisplay />
+          </div>
+        </div>
+      {/if}
+
       <!-- Текущая память -->
       <div class="metric-card">
         <div class="metric-icon">💾</div>
@@ -296,6 +310,10 @@
 
   .metric-card.full-width {
     grid-column: 1 / -1;
+  }
+
+  .startup-card {
+    background: linear-gradient(135deg, var(--bg-tertiary, #252525) 0%, rgba(74, 158, 255, 0.05) 100%);
   }
 
   .metric-icon {

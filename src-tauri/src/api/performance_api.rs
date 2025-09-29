@@ -1,5 +1,5 @@
 // API команды для мониторинга производительности
-use crate::core::performance::{PerformanceMetric};
+use crate::core::performance::{PerformanceMetric, StartupMetrics};
 use crate::core::state::SharedState;
 use crate::models::common::model::ModelBackend;
 
@@ -54,4 +54,17 @@ pub async fn clear_performance_metrics(
     };
     monitor.clear_metrics().await;
     Ok(())
+}
+
+/// Получить метрики запуска приложения
+#[tauri::command]
+pub async fn get_startup_metrics(
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+) -> Result<Option<StartupMetrics>, String> {
+    let monitor = {
+        let guard = state.lock().map_err(|e| e.to_string())?;
+        guard.performance_monitor.clone()
+    };
+    let metrics = monitor.get_startup_metrics().await;
+    Ok(metrics)
 }

@@ -47,11 +47,29 @@ pub struct InferenceMetrics {
     pub timestamp: String,
 }
 
+/// Метрики запуска приложения
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StartupMetrics {
+    pub total_duration_ms: u64,
+    pub stages: Vec<StartupStage>,
+    pub memory_at_start_mb: f64,
+    pub memory_at_ready_mb: f64,
+    pub timestamp: String,
+}
+
+/// Стадия запуска приложения
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StartupStage {
+    pub name: String,
+    pub duration_ms: u64,
+}
+
 /// Монитор производительности
 pub struct PerformanceMonitor {
     metrics: Arc<RwLock<Vec<PerformanceMetric>>>,
     max_entries: usize,
     system: Arc<RwLock<System>>,
+    startup_metrics: Arc<RwLock<Option<StartupMetrics>>>,
 }
 
 impl PerformanceMonitor {
@@ -63,6 +81,7 @@ impl PerformanceMonitor {
             metrics: Arc::new(RwLock::new(Vec::new())),
             max_entries,
             system: Arc::new(RwLock::new(system)),
+            startup_metrics: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -120,6 +139,18 @@ impl PerformanceMonitor {
     pub async fn clear_metrics(&self) {
         let mut metrics = self.metrics.write().await;
         metrics.clear();
+    }
+
+    /// Сохранить метрики запуска
+    pub async fn set_startup_metrics(&self, metrics: StartupMetrics) {
+        let mut startup_metrics = self.startup_metrics.write().await;
+        *startup_metrics = Some(metrics);
+    }
+
+    /// Получить метрики запуска
+    pub async fn get_startup_metrics(&self) -> Option<StartupMetrics> {
+        let startup_metrics = self.startup_metrics.read().await;
+        startup_metrics.clone()
     }
 }
 
@@ -341,6 +372,64 @@ impl InferenceTracker {
             memory_usage_mb,
             timestamp: chrono::Utc::now().to_rfc3339(),
         }
+    }
+}
+
+/// Трекер запуска приложения
+pub struct StartupTracker {
+    start: Instant,
+    stages: Vec<(String, Instant)>,
+    memory_at_start_mb: f64,
+    monitor: Arc<PerformanceMonitor>,
+}
+
+impl StartupTracker {
+    /// Создать новый трекер запуска
+    pub async fn new(monitor: Arc<PerformanceMonitor>) -> Self {
+        let memory_at_start = monitor.get_memory_usage_mb().await;
+
+        Self {
+            start: Instant::now(),
+            stages: Vec::new(),
+            memory_at_start_mb: memory_at_start,
+            monitor,
+        }
+    }
+
+    /// Отметить завершение стадии
+    pub fn stage_completed(&mut self, stage_name: impl Into<String>) {
+        self.stages.push((stage_name.into(), Instant::now()));
+    }
+
+    /// Завершить трекинг и сохранить метрики
+    pub async fn finish(self) -> StartupMetrics {
+        let total_duration_ms = self.start.elapsed().as_millis() as u64;
+        let memory_at_ready_mb = self.monitor.get_memory_usage_mb().await;
+
+        let mut startup_stages = Vec::new();
+        let mut prev_time = self.start;
+
+        for (stage_name, stage_time) in self.stages {
+            let stage_duration = (stage_time - prev_time).as_millis() as u64;
+            startup_stages.push(StartupStage {
+                name: stage_name,
+                duration_ms: stage_duration,
+            });
+            prev_time = stage_time;
+        }
+
+        let metrics = StartupMetrics {
+            total_duration_ms,
+            stages: startup_stages,
+            memory_at_start_mb: self.memory_at_start_mb,
+            memory_at_ready_mb,
+            timestamp: chrono::Utc::now().to_rfc3339(),
+        };
+
+        // Сохраняем метрики в мониторе
+        self.monitor.set_startup_metrics(metrics.clone()).await;
+
+        metrics
     }
 }
 
