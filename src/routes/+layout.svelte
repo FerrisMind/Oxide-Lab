@@ -20,7 +20,6 @@
   import { ensureGlobalChatStream } from '$lib/chat/global-stream';
   import Chat from '$lib/chat/Chat.svelte';
   import { showChatHistory } from '$lib/stores/sidebar';
-  import List from "phosphor-svelte/lib/List";
   
   // Определяем, должен ли отображаться GGUFUploadArea
   $: shouldShowGGUFUploadArea = $page.url.pathname === '/' || $page.url.pathname === '/api';
@@ -129,19 +128,6 @@
         <span class="brand-title">{appName}</span>
       </button>
       <div class="header-center">
-        <!-- Кнопка переключения истории чатов (только на главной странице) -->
-        {#if $page.url.pathname === '/'}
-          <button 
-            class="history-toggle" 
-            onclick={() => showChatHistory.update(v => !v)}
-            title={$showChatHistory ? "Скрыть историю" : "Показать историю"}
-            draggable="false"
-            aria-label={$showChatHistory ? "Скрыть историю чатов" : "Показать историю чатов"}
-          >
-            <List size={20} weight="regular" />
-          </button>
-        {/if}
-        
         <!-- GGUF upload: всегда смонтирован, скрывается классом -->
         <div class="gguf-host" class:hidden={!shouldShowGGUFUploadArea}>
           <GGUFUploadArea />
@@ -205,15 +191,7 @@
   
   /* Disable dragging on interactive elements */
   .app-header-wrapper button,
-  .app-header-wrapper input,
-  .app-header-wrapper textarea,
-  .app-header-wrapper select,
-  .app-header-wrapper a,
-  .app-header-wrapper [data-no-drag],
-  .app-header-wrapper .gguf-host,
-  .app-header-wrapper .gguf-host *,
-  .app-header-wrapper .history-toggle,
-  .app-header-wrapper .history-toggle * {
+  .app-header-wrapper .gguf-host {
     -webkit-app-region: no-drag;
   }
   
@@ -280,7 +258,7 @@
   /* ensure chat area fills available vertical space */
   :global(.chat) { height: 100%; min-height: 0; display: flex; flex-direction: column; }
   /* ensure sidebar keeps fixed width */
-  :global(.sidebar) { width: 60px; min-width: 60px; max-width: 6000px; flex: 0 0 60px; }
+  :global(.sidebar) { width: 60px; min-width: 60px; max-width: 6000px; flex: 0 0 60px;}
   .window-controls { 
     display: inline-flex; 
     gap: 2px; 
@@ -306,44 +284,24 @@
 
   /* История чатов */
   .chat-history-panel {
-    width: 280px;
-    min-width: 280px;
-    max-width: 400px;
-    height: 100%;
+    width: 360px;
+    min-width: 360px;
+    max-width: 500px;
+    height: calc(100vh - 80px);
     background: var(--card);
     overflow-y: auto;
     flex-shrink: 0;
+    margin-left: 16px;
+    margin-top: 16px;
+    margin-bottom: 16px;
+    border-radius: 14px;
+    box-shadow: 0 6px 30px rgb(0 0 0 / 0.05);
   }
 
-  .history-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    border-radius: 6px;
-    cursor: pointer;
-    color: var(--text);
-    opacity: 0.8;
-    transition: all 0.2s;
-    margin-right: 8px;
-  }
-
-  .history-toggle:hover {
-    background: var(--border-color, #e8e6e3);
-    opacity: 1;
-  }
 
   @media (prefers-color-scheme: dark) {
     .chat-history-panel {
       background: #1a1a1a;
-    }
-
-    .history-toggle:hover {
-      background: #333;
     }
   }
 </style>

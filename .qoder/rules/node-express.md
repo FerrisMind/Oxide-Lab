@@ -6,6 +6,7 @@ glob: **/*.js, **/*.ts, src/**/*.ts
 # Node.js and Express.js Best Practices
 
 ## Project Structure
+
 - Use proper directory structure
 - Implement proper module organization
 - Use proper middleware organization
@@ -14,6 +15,7 @@ glob: **/*.js, **/*.ts, src/**/*.ts
 - Use proper configuration management
 
 ## Express Setup
+
 - Use proper middleware setup
 - Implement proper routing
 - Use proper error handling
@@ -22,6 +24,7 @@ glob: **/*.js, **/*.ts, src/**/*.ts
 - Use proper static file serving
 
 ## API Design
+
 - Use proper REST principles
 - Implement proper versioning
 - Use proper request validation
@@ -30,6 +33,7 @@ glob: **/*.js, **/*.ts, src/**/*.ts
 - Document APIs properly
 
 ## Database Integration
+
 - Use proper ORM/ODM
 - Implement proper migrations
 - Use proper connection pooling
@@ -38,6 +42,7 @@ glob: **/*.js, **/*.ts, src/**/*.ts
 - Handle database errors properly
 
 ## Authentication
+
 - Implement proper JWT handling
 - Use proper password hashing
 - Implement proper session management
@@ -46,6 +51,7 @@ glob: **/*.js, **/*.ts, src/**/*.ts
 - Handle auth errors properly
 
 ## Security
+
 - Use proper CORS setup
 - Implement proper rate limiting
 - Use proper security headers
@@ -54,6 +60,7 @@ glob: **/*.js, **/*.ts, src/**/*.ts
 - Handle security vulnerabilities
 
 ## Performance
+
 - Use proper caching
 - Implement proper async operations
 - Use proper connection pooling
@@ -62,6 +69,7 @@ glob: **/*.js, **/*.ts, src/**/*.ts
 - Handle high traffic properly
 
 ## Testing
+
 - Write proper unit tests
 - Implement proper integration tests
 - Use proper test runners
@@ -70,6 +78,7 @@ glob: **/*.js, **/*.ts, src/**/*.ts
 - Use proper test coverage
 
 ## Deployment
+
 - Use proper Docker setup
 - Implement proper CI/CD
 - Use proper environment variables
@@ -78,9 +87,10 @@ glob: **/*.js, **/*.ts, src/**/*.ts
 - Handle deployment errors
 
 ## Best Practices
+
 - Follow Node.js best practices
 - Use proper async/await
 - Implement proper error handling
 - Use proper logging
 - Handle process signals properly
-- Document code properly 
+- Document code properly

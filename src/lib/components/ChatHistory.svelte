@@ -2,6 +2,9 @@
   import { chatHistory, sortedSessions, currentSession } from '$lib/stores/chat-history';
   import { onMount } from 'svelte';
   import type { ChatSession } from '$lib/stores/chat-history';
+  import PencilSimpleLine from 'phosphor-svelte/lib/PencilSimpleLine';
+  import Export from 'phosphor-svelte/lib/Export';
+  import TrashSimple from 'phosphor-svelte/lib/TrashSimple';
 
   let editingSessionId: string | null = null;
   let editingTitle = '';
@@ -117,7 +120,7 @@
   });
 </script>
 
-<div class="chat-history">
+<section class="chat-history">
   <div class="chat-history-header">
     <h3>История чатов</h3>
     <div class="header-actions">
@@ -162,7 +165,7 @@
     {#if $sortedSessions.length === 0}
       <div class="empty-state">
         <p>Нет сохраненных чатов</p>
-        <button class="btn-primary" on:click={handleNewChat}>Начать новый чат</button>
+        <button class="primary" on:click={handleNewChat}>Начать новый чат</button>
       </div>
     {:else}
       {#each $sortedSessions as session (session.id)}
@@ -218,11 +221,7 @@
                 title="Переименовать"
                 aria-label={`Переименовать чат "${session.title}"`}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-                  <path
-                    d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-                  />
-                </svg>
+                <PencilSimpleLine size={16} weight="bold" />
               </button>
               <button
                 class="btn-icon-small"
@@ -230,9 +229,7 @@
                 title="Экспорт"
                 aria-label={`Экспортировать чат "${session.title}"`}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                </svg>
+                <Export size={16} weight="bold" />
               </button>
               <button
                 class="btn-icon-small danger"
@@ -240,11 +237,7 @@
                 title="Удалить"
                 aria-label={`Удалить чат "${session.title}"`}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-                  <path
-                    d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                  />
-                </svg>
+                <TrashSimple size={16} weight="bold" />
               </button>
             </div>
           </div>
@@ -261,10 +254,10 @@
             >
               <p id="delete-confirm-desc">Удалить этот чат?</p>
               <div class="confirm-actions">
-                <button class="btn-secondary" on:click={() => (showDeleteConfirm = null)}>
+                <button class="secondary" on:click={() => (showDeleteConfirm = null)}>
                   Отмена
                 </button>
-                <button class="btn-danger" on:click={() => handleDelete(session.id)}>
+                <button class="primary danger" on:click={() => handleDelete(session.id)}>
                   Удалить
                 </button>
               </div>
@@ -274,7 +267,7 @@
       {/each}
     {/if}
   </div>
-</div>
+</section>
 
 {#if showExportModal}
   <div 
@@ -320,40 +313,53 @@
         ></textarea>
       </div>
       <div class="modal-footer">
-        <button class="btn-secondary" on:click={copyExportData}>Копировать</button>
-        <button class="btn-primary" on:click={downloadExportData}>Скачать</button>
+        <button class="secondary" on:click={copyExportData}>Копировать</button>
+        <button class="primary" on:click={downloadExportData}>Скачать</button>
       </div>
     </div>
   </div>
 {/if}
 
 <style>
+  /* ===== Chat History Panel - LoaderPanel Style ===== */
+  
   .chat-history {
+    --control-radius: 10px;
+    --control-padding-y: 8px;
+    --control-padding-x: 12px;
+    --focus-ring: 0 0 0 3px rgb(179 205 224 / 0.15);
+
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: var(--color-bg-primary, #ffffff);
-    border-right: 1px solid var(--color-border, #e0e0e0);
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
   }
 
   .chat-history-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
-    border-bottom: 1px solid var(--color-border, #e0e0e0);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .chat-history-header h3 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 16px;
     font-weight: 600;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--text);
   }
 
   .header-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 8px;
   }
 
   .btn-icon {
@@ -362,24 +368,23 @@
     justify-content: center;
     width: 32px;
     height: 32px;
-    padding: 0;
     border: none;
+    border-radius: var(--control-radius);
     background: transparent;
-    border-radius: 6px;
+    color: var(--muted);
     cursor: pointer;
-    color: var(--color-text-secondary, #666);
-    transition: all 0.2s;
+    transition: all 0.2s ease;
   }
 
   .btn-icon:hover {
-    background: var(--color-bg-hover, #f5f5f5);
-    color: var(--color-text-primary, #1a1a1a);
+    background: var(--accent);
+    color: white;
   }
 
   .sessions-list {
     flex: 1;
     overflow-y: auto;
-    padding: 0.5rem;
+    overflow-x: hidden;
   }
 
   .empty-state {
@@ -387,39 +392,112 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2rem 1rem;
+    padding: 40px 20px;
     text-align: center;
+    color: var(--muted);
   }
 
   .empty-state p {
-    margin: 0 0 1rem 0;
-    color: var(--color-text-secondary, #666);
+    margin: 0 0 16px 0;
+    font-size: 14px;
   }
 
-  .session-item {
-    margin-bottom: 0.5rem;
-    padding: 0.75rem;
-    border-radius: 8px;
+  /* Primary button style matching LoaderPanel */
+  .primary {
+    background: var(--accent-2);
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
     cursor: pointer;
-    transition: all 0.2s;
-    background: var(--color-bg-secondary, #f9f9f9);
-    border: 1px solid transparent;
+    color: #3a2f4f;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+
+  .primary:hover {
+    background: color-mix(in srgb, var(--accent-2) 85%, black 10%);
+  }
+
+  .primary.danger {
+    background: #ffb3b3;
+    color: #3a1f1f;
+  }
+
+  .primary.danger:hover {
+    background: color-mix(in srgb, #ffb3b3 85%, black 10%);
+  }
+
+  /* Secondary button style */
+  .secondary {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--control-radius);
+    padding: var(--control-padding-y) var(--control-padding-x);
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .secondary:hover {
+    background: var(--accent-light);
+    border-color: var(--accent);
+  }
+
+  /* Session items styled like LoaderPanel fields */
+  .session-item {
+    display: grid;
+    gap: 8px;
+    margin: 6px 0;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--control-radius);
+    background: var(--card);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .session-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+    transition: background 0.2s ease;
   }
 
   .session-item:hover {
-    background: var(--color-bg-hover, #f0f0f0);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--card) 95%, var(--accent) 5%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .session-item:hover::before {
+    background: var(--accent);
   }
 
   .session-item.active {
-    background: var(--color-accent-bg, #e3f2fd);
-    border-color: var(--color-accent, #2196f3);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--card) 90%, var(--accent) 10%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .session-item.active::before {
+    background: var(--accent);
   }
 
   .session-content {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: flex-start;
-    gap: 0.5rem;
+    gap: 12px;
   }
 
   .session-info {
@@ -428,30 +506,42 @@
   }
 
   .session-title {
+    font-size: 14px;
     font-weight: 500;
-    font-size: 0.95rem;
-    color: var(--color-text-primary, #1a1a1a);
+    color: var(--text);
+    margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-bottom: 0.25rem;
   }
 
   .session-meta {
     display: flex;
-    gap: 0.5rem;
-    font-size: 0.75rem;
-    color: var(--color-text-secondary, #666);
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .session-date {
+    white-space: nowrap;
+  }
+
+  .session-count {
+    white-space: nowrap;
   }
 
   .session-actions {
     display: flex;
-    gap: 0.25rem;
-    opacity: 0;
-    transition: opacity 0.2s;
+    gap: 6px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
   }
 
   .session-item:hover .session-actions {
+    opacity: 1;
+  }
+
+  .session-item.active .session-actions {
     opacity: 1;
   }
 
@@ -459,94 +549,90 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--control-radius);
+    background: var(--card);
+    color: var(--text);
     cursor: pointer;
-    color: var(--color-text-secondary, #666);
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+    padding: 0;
+  }
+
+  .btn-icon-small :global(svg) {
+    width: 16px;
+    height: 16px;
+    color: currentColor;
   }
 
   .btn-icon-small:hover {
-    background: var(--color-bg-hover, #e0e0e0);
-    color: var(--color-text-primary, #1a1a1a);
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-icon-small.danger {
+    color: var(--danger);
+    border-color: var(--danger);
   }
 
   .btn-icon-small.danger:hover {
-    background: #fee;
-    color: #c00;
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
   }
 
+  /* Edit input matching LoaderPanel field inputs */
   .edit-input {
-    width: 100%;
-    padding: 0.25rem 0.5rem;
-    border: 1px solid var(--color-accent, #2196f3);
-    border-radius: 4px;
-    font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+    background: #fcfbfa;
+    color: var(--text);
+    border-radius: var(--control-radius);
+    padding: var(--control-padding-y) var(--control-padding-x);
     outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 14px;
   }
 
+  .edit-input:focus {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+  }
+
+  .edit-input::placeholder {
+    color: #5a5a5a;
+    opacity: 0.9;
+  }
+
+  /* Delete confirmation styled like LoaderPanel */
   .delete-confirm {
-    margin-top: 0.5rem;
-    padding: 0.75rem;
-    background: var(--color-bg-primary, #fff);
-    border: 1px solid var(--color-border, #e0e0e0);
-    border-radius: 6px;
+    margin-top: 8px;
+    padding: var(--control-padding-y) var(--control-padding-x);
+    border-radius: var(--control-radius);
+    background: color-mix(in srgb, #ffb3b3 20%, transparent 80%);
+    border: 1px solid #ffb3b3;
   }
 
   .delete-confirm p {
-    margin: 0 0 0.75rem 0;
-    font-size: 0.9rem;
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: #3a1f1f;
+    font-weight: 500;
   }
 
   .confirm-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 8px;
+    justify-content: flex-end;
   }
 
-  .btn-primary,
-  .btn-secondary,
-  .btn-danger {
-    flex: 1;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-primary {
-    background: var(--color-accent, #2196f3);
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background: var(--color-accent-hover, #1976d2);
-  }
-
-  .btn-secondary {
-    background: var(--color-bg-secondary, #f5f5f5);
-    color: var(--color-text-primary, #1a1a1a);
-  }
-
-  .btn-secondary:hover {
-    background: var(--color-bg-hover, #e0e0e0);
-  }
-
-  .btn-danger {
-    background: #f44336;
-    color: white;
-  }
-
-  .btn-danger:hover {
-    background: #d32f2f;
-  }
-
+  /* Modal styling matching LoaderPanel aesthetic */
   .modal-overlay {
     position: fixed;
     top: 0;
@@ -561,61 +647,130 @@
   }
 
   .modal {
-    background: var(--color-bg-primary, #fff);
-    border-radius: 12px;
+    background: var(--card);
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    max-width: 500px;
     width: 90%;
-    max-width: 600px;
     max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   }
 
   .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--color-border, #e0e0e0);
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .modal-header h3 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
   }
 
   .btn-close {
-    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
     border: none;
-    font-size: 2rem;
-    line-height: 1;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
     cursor: pointer;
-    color: var(--color-text-secondary, #666);
-    padding: 0;
-    width: 32px;
-    height: 32px;
+    font-size: 18px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-close:hover {
+    background: var(--accent);
+    color: white;
   }
 
   .modal-body {
-    flex: 1;
-    padding: 1.5rem;
-    overflow-y: auto;
+    padding: 16px;
   }
 
   .modal-body textarea {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--color-border, #e0e0e0);
-    border-radius: 6px;
+    padding: var(--control-padding-y) var(--control-padding-x);
+    border: 1px solid var(--border-color);
+    border-radius: var(--control-radius);
+    background: #fcfbfa;
+    color: var(--text);
     font-family: monospace;
-    font-size: 0.85rem;
+    font-size: 12px;
     resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  .modal-body textarea:focus {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
   }
 
   .modal-footer {
     display: flex;
-    gap: 0.75rem;
-    padding: 1.5rem;
-    border-top: 1px solid var(--color-border, #e0e0e0);
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 16px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  /* Dark theme adjustments */
+  @media (prefers-color-scheme: dark) {
+    .session-item {
+      background: #2d2d2d;
+      border-color: #3a3a3a;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .session-item:hover {
+      background: color-mix(in srgb, #2d2d2d 95%, var(--accent) 5%);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .session-item.active {
+      background: color-mix(in srgb, #2d2d2d 90%, var(--accent) 10%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-icon-small {
+      background: #2d2d2d;
+      border-color: #3a3a3a;
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-icon-small:hover {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-icon-small :global(svg) {
+      width: 16px;
+      height: 16px;
+      color: currentColor;
+    }
+    
+    .edit-input {
+      background: #2d2d2d;
+      border-color: #3a3a3a;
+    }
+    
+    .edit-input::placeholder {
+      color: #bdbdbd;
+      opacity: 1;
+    }
+    
+    .modal-body textarea {
+      background: #2d2d2d;
+      border-color: #3a3a3a;
+    }
   }
 </style>

@@ -8,7 +8,9 @@
   border-radius: 12px;
   background: var(--panel-bg, rgba(148, 163, 184, 0.08));
   padding: 12px;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
 }
 
 .thinking-card.is-loading {

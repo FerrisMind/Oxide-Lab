@@ -6,6 +6,7 @@
   import Broom from "phosphor-svelte/lib/Broom";
   import Microphone from "phosphor-svelte/lib/Microphone";
   import SlidersHorizontal from "phosphor-svelte/lib/SlidersHorizontal";
+  import ClockCounterClockwise from "phosphor-svelte/lib/ClockCounterClockwise";
   import File from "phosphor-svelte/lib/File";
   import X from "phosphor-svelte/lib/X";
 
@@ -25,6 +26,7 @@
     clear: void;
     attach: AttachDetail;
     'toggle-loader-panel': void;
+    'toggle-chat-history': void;
   }>();
 
   export let prompt: string = "";
@@ -37,6 +39,7 @@
   export let supports_audio: boolean = false;
   export let supports_video: boolean = false;
   export let isLoaderPanelVisible: boolean = false;
+  export let isChatHistoryVisible: boolean = false;
 
   let fileInput: HTMLInputElement | null = null;
   let textareaElement: HTMLTextAreaElement | null = null;
@@ -83,6 +86,10 @@
 
   function triggerSettings() {
     dispatch("toggle-loader-panel");
+  }
+
+  function triggerChatHistory() {
+    dispatch("toggle-chat-history");
   }
 
   function removeAttachment(index: number) {
@@ -278,16 +285,6 @@
         <button
           type="button"
           class="composer__button composer__button--icon"
-          on:click={triggerAttach}
-          disabled={busy || !isLoaded}
-          aria-label="Прикрепить файл"
-          draggable="false"
-        >
-          <Paperclip size={16} weight="bold" />
-        </button>
-        <button
-          type="button"
-          class="composer__button composer__button--icon"
           class:composer__button--settings-active={isLoaderPanelVisible}
           on:click={triggerSettings}
           disabled={false}
@@ -295,6 +292,17 @@
           draggable="false"
         >
           <SlidersHorizontal size={16} weight="bold" />
+        </button>
+        <button
+          type="button"
+          class="composer__button composer__button--icon"
+          class:composer__button--settings-active={isChatHistoryVisible}
+          on:click={triggerChatHistory}
+          disabled={false}
+          aria-label={isChatHistoryVisible ? "Скрыть историю чатов" : "Показать историю чатов"}
+          draggable="false"
+        >
+          <ClockCounterClockwise size={16} weight="bold" />
         </button>
         {#if prompt || attachError}
           <button
@@ -310,6 +318,16 @@
         {/if}
       </div>
       <div class="composer__controls composer__controls--right">
+        <button
+          type="button"
+          class="composer__button composer__button--icon"
+          on:click={triggerAttach}
+          disabled={busy || !isLoaded}
+          aria-label="Прикрепить файл"
+          draggable="false"
+        >
+          <Paperclip size={16} weight="bold" />
+        </button>
         <button
           type="button"
           class="composer__button composer__button--icon"

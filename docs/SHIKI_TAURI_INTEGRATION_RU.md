@@ -50,9 +50,3 @@ const { createHighlighter } = mod;
 - Убедитесь, что папка с бандлом и wasm включена в `tauri.conf.json` `allowlist` и `embeddedAssets`/`resources`. Обычно добавляют в `tauri.conf.json` секцию `bundle.resources`.
 
 Примечание: не меняйте файлы в `example/` — для сборки Tauri используйте свои настройки и поместите бандл в проектное `assets`.
-
-
-
-
-
-

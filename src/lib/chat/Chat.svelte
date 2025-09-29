@@ -11,6 +11,7 @@
   import InferenceParams from "$lib/chat/components/InferenceParams.svelte";
   import { chatState, chatUiMounted, getDefaultChatState } from "$lib/stores/chat";
   import { chatHistory, currentSession } from "$lib/stores/chat-history";
+  import { showChatHistory } from "$lib/stores/sidebar";
   import { get as getStore } from "svelte/store";
   import { invoke } from '@tauri-apps/api/core';
   import { performanceService } from '$lib/services/performance-service';
@@ -55,7 +56,7 @@
       supports_image = !!r.image;
       supports_audio = !!r.audio;
       supports_video = !!r.video;
-    } catch (_e) {
+    } catch {
       // default to text-only
       supports_text = true;
       supports_image = false;
@@ -161,7 +162,7 @@
   const unloadGGUF = controller.unloadGGUF;
   const sendMessage = controller.handleSend;
   const stopGenerate = controller.stopGenerate;
-  const regenerateFromHistory = controller.generateFromHistory;
+  const _regenerateFromHistory = controller.generateFromHistory;
   const attachFileToPrompt = controller.handleAttachFile;
 
   // Формирование промпта вынесено в $lib/chat/prompts
@@ -283,7 +284,7 @@
       cuda_available = s.cuda_available;
       cuda_build = s.cuda_build;
       current_device = s.current_device;
-    } catch (_e) {
+    } catch {
       // ignore, fall back to defaults
     }
     
@@ -336,7 +337,7 @@
     }
   }
 
-  let canRegenerate = false;
+  let _canRegenerate = false;
   let canStopGeneration = false;
 
   $: canStopGeneration = busy && isLoaded;
@@ -383,11 +384,13 @@
       {supports_audio}
       {supports_video}
       {isLoaderPanelVisible}
+      isChatHistoryVisible={$showChatHistory}
       canStop={canStopGeneration}
       on:send={() => void sendMessage()}
       on:stop={() => void stopGenerate()}
       on:attach={(e: CustomEvent<ComposerAttachment>) => void attachFileToPrompt(e.detail)}
       on:toggle-loader-panel={() => isLoaderPanelVisible = !isLoaderPanelVisible}
+      on:toggle-chat-history={() => showChatHistory.update(v => !v)}
     />
   </section>
 

@@ -51,7 +51,9 @@ function attachToggleHandler(ctx: BubbleCtx) {
   }
   const handler = (event: Event) => {
     event.preventDefault();
-    const current = ctx.thinkKey ? thinkState.get(ctx.thinkKey) ?? ctx.thinkExpanded ?? false : ctx.thinkExpanded ?? false;
+    const current = ctx.thinkKey
+      ? (thinkState.get(ctx.thinkKey) ?? ctx.thinkExpanded ?? false)
+      : (ctx.thinkExpanded ?? false);
     applyExpansion(ctx, !current);
   };
   ctx.thinkToggleHandler = handler;

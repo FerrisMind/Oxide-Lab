@@ -54,8 +54,8 @@ export default {
         dev: !production,
         // Enable legacy component API for Svelte 5 compatibility
         compatibility: {
-          componentApi: 4
-        }
+          componentApi: 4,
+        },
       },
     }),
     // we'll extract any component CSS out into

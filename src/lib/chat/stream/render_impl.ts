@@ -11,7 +11,7 @@ import {
   appendMarkdownText,
   finalizeMarkdownStreaming,
 } from './markdown_block.js';
-import { createExternalViewButton } from '../external-controls.js';
+import { createExternalViewButton as _createExternalViewButton } from '../external-controls.js';
 
 export const getAssistantBubbleEl = _getAssistantBubbleEl;
 export const registerAssistantBubble = _registerAssistantBubble;

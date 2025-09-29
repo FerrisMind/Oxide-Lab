@@ -6,6 +6,7 @@ glob: **/*.svelte, src/**/*.ts, src/**/*.js
 # Svelte Best Practices
 
 ## Component Structure
+
 - Keep components small and focused
 - Use proper TypeScript integration
 - Implement proper props typing
@@ -14,6 +15,7 @@ glob: **/*.svelte, src/**/*.ts, src/**/*.js
 - Use proper slot implementation
 
 ## Reactivity
+
 - Use proper reactive declarations
 - Implement proper stores
 - Use proper reactive statements
@@ -22,6 +24,7 @@ glob: **/*.svelte, src/**/*.ts, src/**/*.js
 - Implement proper bindings
 
 ## State Management
+
 - Use proper Svelte stores
 - Keep stores modular
 - Use proper derived stores
@@ -30,6 +33,7 @@ glob: **/*.svelte, src/**/*.ts, src/**/*.js
 - Use proper store subscriptions
 
 ## Performance
+
 - Use proper component lazy loading
 - Implement proper transitions
 - Use proper animations
@@ -38,6 +42,7 @@ glob: **/*.svelte, src/**/*.ts, src/**/*.js
 - Implement proper key blocks
 
 ## Routing
+
 - Use SvelteKit for routing
 - Implement proper layouts
 - Use proper route parameters
@@ -46,6 +51,7 @@ glob: **/*.svelte, src/**/*.ts, src/**/*.js
 - Use proper navigation methods
 
 ## Forms
+
 - Use proper form bindings
 - Implement proper validation
 - Handle form submission properly
@@ -54,6 +60,7 @@ glob: **/*.svelte, src/**/*.ts, src/**/*.js
 - Implement proper form reset
 
 ## TypeScript Integration
+
 - Use proper component types
 - Implement proper prop types
 - Use proper event types
@@ -62,6 +69,7 @@ glob: **/*.svelte, src/**/*.ts, src/**/*.js
 - Implement proper action types
 
 ## Testing
+
 - Write proper unit tests
 - Implement proper component tests
 - Use proper testing libraries
@@ -70,6 +78,7 @@ glob: **/*.svelte, src/**/*.ts, src/**/*.js
 - Test async operations
 
 ## Best Practices
+
 - Follow Svelte style guide
 - Use proper naming conventions
 - Keep components organized
@@ -78,9 +87,10 @@ glob: **/*.svelte, src/**/*.ts, src/**/*.js
 - Document complex logic
 
 ## Build and Tooling
+
 - Use Vite for development
 - Configure proper build setup
 - Use proper environment variables
 - Implement proper code splitting
 - Use proper asset handling
-- Configure proper optimization 
+- Configure proper optimization

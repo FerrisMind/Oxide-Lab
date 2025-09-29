@@ -6,6 +6,7 @@ globs: **/*.ts, **/*.tsx, **/*.d.ts
 # TypeScript Best Practices
 
 ## Type System
+
 - Prefer interfaces over types for object definitions
 - Use type for unions, intersections, and mapped types
 - Avoid using `any`, prefer `unknown` for unknown types
@@ -14,6 +15,7 @@ globs: **/*.ts, **/*.tsx, **/*.d.ts
 - Use generics for reusable type patterns
 
 ## Naming Conventions
+
 - Use PascalCase for type names and interfaces
 - Use camelCase for variables and functions
 - Use UPPER_CASE for constants
@@ -21,6 +23,7 @@ globs: **/*.ts, **/*.tsx, **/*.d.ts
 - Prefix interfaces for React props with 'Props' (e.g., ButtonProps)
 
 ## Code Organization
+
 - Keep type definitions close to where they're used
 - Export types and interfaces from dedicated type files when shared
 - Use barrel exports (index.ts) for organizing exports
@@ -28,6 +31,7 @@ globs: **/*.ts, **/*.tsx, **/*.d.ts
 - Co-locate component props with their components
 
 ## Functions
+
 - Use explicit return types for public functions
 - Use arrow functions for callbacks and methods
 - Implement proper error handling with custom error types
@@ -35,6 +39,7 @@ globs: **/*.ts, **/*.tsx, **/*.d.ts
 - Prefer async/await over Promises
 
 ## Best Practices
+
 - Enable strict mode in tsconfig.json
 - Use readonly for immutable properties
 - Leverage discriminated unions for type safety
@@ -43,6 +48,7 @@ globs: **/*.ts, **/*.tsx, **/*.d.ts
 - Avoid type assertions unless necessary
 
 ## Error Handling
+
 - Create custom error types for domain-specific errors
 - Use Result types for operations that can fail
 - Implement proper error boundaries
@@ -50,8 +56,9 @@ globs: **/*.ts, **/*.tsx, **/*.d.ts
 - Handle Promise rejections properly
 
 ## Patterns
+
 - Use the Builder pattern for complex object creation
 - Implement the Repository pattern for data access
 - Use the Factory pattern for object creation
 - Leverage dependency injection
-- Use the Module pattern for encapsulation 
+- Use the Module pattern for encapsulation
