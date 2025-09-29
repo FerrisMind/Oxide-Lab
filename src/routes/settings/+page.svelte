@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import type { PrecisionPolicy } from '$lib/types';
+  import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
 
   let currentPolicy: PrecisionPolicy = { Default: null };
   let isLoading = $state(true);
@@ -225,6 +226,15 @@
         </p>
       </div>
     {/if}
+  </div>
+
+  <div class="settings-section">
+    <h2>Мониторинг производительности</h2>
+    <p class="settings-description">
+      Отслеживание производительности приложения, включая время запуска, использование памяти и скорость работы моделей.
+    </p>
+    
+    <PerformanceMonitor />
   </div>
 </div>
 

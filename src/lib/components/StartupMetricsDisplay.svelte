@@ -5,6 +5,9 @@
   import ChartBar from 'phosphor-svelte/lib/ChartBar';
   import Clock from 'phosphor-svelte/lib/Clock';
   import Memory from 'phosphor-svelte/lib/Memory';
+  import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
+  import WarningCircle from 'phosphor-svelte/lib/WarningCircle';
+  import XCircle from 'phosphor-svelte/lib/XCircle';
 
   let metrics: StartupMetrics | null = null;
   let loading = true;
@@ -76,9 +79,15 @@
       </div>
 
       {#if metrics.total_duration_ms < 10000}
-        <p class="text-xs text-surface-300">✅ Отлично! Приложение запускается быстро</p>
+        <p class="text-xs text-surface-300 flex items-center gap-1">
+          <CheckCircle size={12} class="text-green-400" />
+          Отлично! Приложение запускается быстро
+        </p>
       {:else}
-        <p class="text-xs text-yellow-400">⚠️ Время запуска превышает 10 секунд</p>
+        <p class="text-xs text-yellow-400 flex items-center gap-1">
+          <WarningCircle size={12} class="text-yellow-400" />
+          Время запуска превышает 10 секунд
+        </p>
       {/if}
     </div>
 

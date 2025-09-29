@@ -3,6 +3,17 @@
   import { performanceService } from '$lib/services/performance-service';
   import type { ModelLoadMetrics, InferenceMetrics, PerformanceSummary, StartupMetrics } from '$lib/types/performance';
   import StartupMetricsDisplay from './StartupMetricsDisplay.svelte';
+  import ChartBar from 'phosphor-svelte/lib/ChartBar';
+  import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
+  import Play from 'phosphor-svelte/lib/Play';
+  import Pause from 'phosphor-svelte/lib/Pause';
+  import Trash from 'phosphor-svelte/lib/Trash';
+  import Memory from 'phosphor-svelte/lib/Memory';
+  import Package from 'phosphor-svelte/lib/Package';
+  import Lightning from 'phosphor-svelte/lib/Lightning';
+  import Clock from 'phosphor-svelte/lib/Clock';
+  import TrendUp from 'phosphor-svelte/lib/TrendUp';
+  import Warning from 'phosphor-svelte/lib/Warning';
 
   let summary: PerformanceSummary | null = null;
   let loading = false;
@@ -77,27 +88,38 @@
 
 <div class="performance-monitor">
   <div class="header">
-    <h3>📊 Мониторинг производительности</h3>
+    <h3>
+      <ChartBar size={20} class="inline mr-2" />
+      Мониторинг производительности
+    </h3>
     <div class="actions">
       <button on:click={loadSummary} disabled={loading} class="btn-refresh">
-        {loading ? '⟳' : '🔄'} Обновить
+        <ArrowClockwise size={16} class={loading ? 'animate-spin' : ''} />
+        Обновить
       </button>
       <button 
         on:click={toggleAutoRefresh} 
         class:active={autoRefresh}
         class="btn-auto-refresh"
       >
-        {autoRefresh ? '⏸' : '▶'} Авто
+        {#if autoRefresh}
+          <Pause size={16} />
+        {:else}
+          <Play size={16} />
+        {/if}
+        Авто
       </button>
       <button on:click={clearMetrics} class="btn-clear">
-        🗑️ Очистить
+        <Trash size={16} />
+        Очистить
       </button>
     </div>
   </div>
 
   {#if error}
     <div class="error">
-      ⚠️ {error}
+      <Warning size={16} class="inline mr-2" />
+      {error}
     </div>
   {/if}
 
@@ -114,7 +136,9 @@
 
       <!-- Текущая память -->
       <div class="metric-card">
-        <div class="metric-icon">💾</div>
+        <div class="metric-icon">
+          <Memory size={32} />
+        </div>
         <div class="metric-content">
           <div class="metric-label">Использование памяти</div>
           <div class="metric-value">
@@ -126,7 +150,9 @@
       <!-- Последняя загрузка модели -->
       {#if summary.last_model_load}
         <div class="metric-card">
-          <div class="metric-icon">📦</div>
+          <div class="metric-icon">
+            <Package size={32} />
+          </div>
           <div class="metric-content">
             <div class="metric-label">Время загрузки модели</div>
             <div class="metric-value">
@@ -142,7 +168,9 @@
 
         <!-- Стадии загрузки -->
         <div class="metric-card full-width">
-          <div class="metric-icon">⏱️</div>
+          <div class="metric-icon">
+            <Clock size={32} />
+          </div>
           <div class="metric-content">
             <div class="metric-label">Стадии загрузки</div>
             <div class="stages">
@@ -162,7 +190,9 @@
       <!-- Последний inference -->
       {#if summary.last_inference}
         <div class="metric-card">
-          <div class="metric-icon">⚡</div>
+          <div class="metric-icon">
+            <Lightning size={32} />
+          </div>
           <div class="metric-content">
             <div class="metric-label">Скорость генерации</div>
             <div class="metric-value">
@@ -175,7 +205,9 @@
         </div>
 
         <div class="metric-card">
-          <div class="metric-icon">🕐</div>
+          <div class="metric-icon">
+            <Clock size={32} />
+          </div>
           <div class="metric-content">
             <div class="metric-label">Время inference</div>
             <div class="metric-value">
@@ -193,7 +225,9 @@
       <!-- Общая статистика -->
       {#if summary.total_generated_tokens > 0}
         <div class="metric-card">
-          <div class="metric-icon">📈</div>
+          <div class="metric-icon">
+            <TrendUp size={32} />
+          </div>
           <div class="metric-content">
             <div class="metric-label">Средняя скорость</div>
             <div class="metric-value">
@@ -208,7 +242,8 @@
     </div>
   {:else if !loading}
     <div class="no-data">
-      📭 Нет данных о производительности
+      <ChartBar size={24} class="inline mr-2 opacity-50" />
+      Нет данных о производительности
     </div>
   {/if}
 </div>
@@ -250,6 +285,9 @@
     cursor: pointer;
     font-size: 0.85rem;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   button:hover:not(:disabled) {
