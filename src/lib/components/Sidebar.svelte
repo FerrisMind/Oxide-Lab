@@ -7,6 +7,7 @@
   import Code from 'phosphor-svelte/lib/Code';
   import Database from 'phosphor-svelte/lib/Database';
   import MagnifyingGlass from 'phosphor-svelte/lib/MagnifyingGlass';
+  import ChartLine from 'phosphor-svelte/lib/ChartLine';
   import Gear from 'phosphor-svelte/lib/Gear';
 
   const navigationItems = [
@@ -37,6 +38,13 @@
       icon: MagnifyingGlass,
       path: '/search',
       description: 'Поиск в Hugging Face Hub'
+    },
+    {
+      id: 'performance',
+      title: 'Производительность',
+      icon: ChartLine,
+      path: '/performance',
+      description: 'Мониторинг производительности и метрик'
     },
     {
       id: 'settings',

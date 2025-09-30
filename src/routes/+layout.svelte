@@ -21,6 +21,13 @@
   import Chat from '$lib/chat/Chat.svelte';
   import { showChatHistory } from '$lib/stores/sidebar';
   
+  // Импортируем все страницы для постоянного монтирования
+  import ApiPage from './api/+page.svelte';
+  import ModelsPage from './models/+page.svelte';
+  import SearchPage from './search/+page.svelte';
+  import PerformancePage from './performance/+page.svelte';
+  import SettingsPage from './settings/+page.svelte';
+  
   // Определяем, должен ли отображаться GGUFUploadArea
   $: shouldShowGGUFUploadArea = $page.url.pathname === '/' || $page.url.pathname === '/api';
   
@@ -164,11 +171,24 @@
     {/if}
     <main class="app-main">
       <div class="view-switch">
-        <div class="chat-host" class:hidden={$page.url.pathname !== '/'} aria-hidden={$page.url.pathname !== '/'}>
+        <!-- Все страницы постоянно смонтированы, переключение через CSS -->
+        <div class="page-container" class:active={$page.url.pathname === '/'}>
           <Chat />
         </div>
-        <div class="route-host" class:hidden={$page.url.pathname === '/'} aria-hidden={$page.url.pathname === '/'}>
-          <slot />
+        <div class="page-container" class:active={$page.url.pathname === '/api'}>
+          <ApiPage />
+        </div>
+        <div class="page-container" class:active={$page.url.pathname === '/models'}>
+          <ModelsPage />
+        </div>
+        <div class="page-container" class:active={$page.url.pathname === '/search'}>
+          <SearchPage />
+        </div>
+        <div class="page-container" class:active={$page.url.pathname === '/performance'}>
+          <PerformancePage />
+        </div>
+        <div class="page-container" class:active={$page.url.pathname === '/settings'}>
+          <SettingsPage />
         </div>
       </div>
     </main>
@@ -249,9 +269,65 @@
   .gguf-host.hidden { display: none; }
   .app-body { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; }
   .app-main { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; padding: var(--content-gap); padding-top: var(--content-gap-top); }
-  .view-switch { position: relative; display: flex; flex: 1 1 auto; min-height: 0; }
-  .chat-host, .route-host { flex: 1 1 auto; min-height: 0; display: none; }
-  .chat-host:not(.hidden), .route-host:not(.hidden) { display: flex; }
+  
+  /* Переключение страниц через CSS - все смонтированы одновременно */
+  .view-switch { 
+    position: relative; 
+    display: flex; 
+    flex: 1 1 auto; 
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+  }
+  
+  /* Все страницы смонтированы, но скрыты */
+  .page-container { 
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+    overflow: auto;
+  }
+  
+  /* Активная страница видима */
+  .page-container.active { 
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    z-index: 1;
+  }
+  
+  /* Адаптивность контента страниц */
+  .page-container :global(> *) {
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+  }
+  /* Гарантируем, что корневой main внутри страницы тянется и является flex-контейнером */
+  .page-container :global(main) {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  /* Секция внутри main занимает доступное пространство и всю ширину */
+  .page-container :global(main > section) {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
   /* shift chat content slightly left and give it full height under header */
   /* ensure main wrap fits under header */
   :global(main.wrap) { padding: var(--content-gap); height: 100%; min-height: 0; box-sizing: border-box; max-height: calc(100vh - 56px); overflow: auto; }
@@ -298,6 +374,61 @@
     box-shadow: 0 6px 30px rgb(0 0 0 / 0.05);
   }
 
+  /* Адаптивность для мобильных и планшетов */
+  @media (max-width: 1024px) {
+    .chat-history-panel {
+      width: 300px;
+      min-width: 300px;
+      margin-left: 8px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .app-main {
+      padding: 0.5rem;
+      padding-top: 0.5rem;
+    }
+    
+    .chat-history-panel {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 280px;
+      min-width: 280px;
+      height: 100%;
+      margin: 0;
+      z-index: 100;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .page-container {
+      padding: 0.5rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .app-main {
+      padding: 0.25rem;
+      padding-top: 0.25rem;
+    }
+    
+    .page-container {
+      padding: 0.25rem;
+    }
+    
+    .chat-history-panel {
+      width: 100%;
+      min-width: 100%;
+    }
+  }
+
+  /* Адаптивность контента для всех размеров */
+  @media (min-width: 1440px) {
+    .page-container :global(> *) {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+  }
 
   @media (prefers-color-scheme: dark) {
     .chat-history-panel {

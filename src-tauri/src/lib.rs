@@ -62,6 +62,8 @@ pub fn run() {
             api::set_precision,
             api::gguf_list_metadata_keys_from_path,
             api::gguf_list_metadata_keys,
+            api::get_experimental_features_enabled,
+            api::set_experimental_features_enabled,
             api::performance_api::get_performance_metrics,
             api::performance_api::get_average_duration,
             api::performance_api::get_memory_usage,

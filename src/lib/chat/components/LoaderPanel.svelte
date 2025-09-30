@@ -4,6 +4,8 @@
   import ContextLengthSelector from "./loader/ContextLengthSelector.svelte";
   import HubModelForm from "./loader/HubModelForm.svelte";
   import LoadingStatus from "./loader/LoadingStatus.svelte";
+  import ParamPresets from "$lib/components/params/ParamPresets.svelte";
+  import type { GenerationParams } from "$lib/components/params/ParamPresets.svelte";
   
   
   const dispatch = createEventDispatcher();
@@ -39,8 +41,24 @@
   export const supports_audio: boolean = false;
   export const supports_video: boolean = false;
 
+  // Параметры генерации для пресетов
+  export let generationParams: GenerationParams = {
+    temperature: 0.7,
+    temperature_enabled: true,
+    top_k_enabled: true,
+    top_k_value: 20,
+    top_p_enabled: true,
+    top_p_value: 0.9,
+    min_p_enabled: true,
+    min_p_value: 0.0,
+    repeat_penalty_enabled: true,
+    repeat_penalty_value: 1.1,
+    ctx_limit_value: 4096,
+  };
+
   // Коллбеки, реализуются родителем
   export let onMainAction: (() => void) | undefined = undefined;
+  export let onApplyPreset: ((params: GenerationParams) => void) | undefined = undefined;
 
   // reference-only export (used by parent) — prevent Svelte warning by using const alias
   const _modelPath_ref = modelPath;
@@ -67,6 +85,15 @@
     
     <ContextLengthSelector bind:ctx_limit_value />
     
+    <!-- Пресеты параметров генерации -->
+    <ParamPresets 
+      bind:currentParams={generationParams}
+      onApplyPreset={(params) => {
+        onApplyPreset?.(params);
+        dispatch('apply-preset', params);
+      }}
+    />
+    
     <LoadingStatus 
       bind:isLoadingModel
       bind:isCancelling
@@ -90,6 +117,15 @@
     
     <ContextLengthSelector bind:ctx_limit_value />
     
+    <!-- Пресеты параметров генерации -->
+    <ParamPresets 
+      bind:currentParams={generationParams}
+      onApplyPreset={(params) => {
+        onApplyPreset?.(params);
+        dispatch('apply-preset', params);
+      }}
+    />
+    
     <LoadingStatus 
       bind:isLoadingModel
       bind:isCancelling
@@ -112,6 +148,15 @@
     />
     
     <ContextLengthSelector bind:ctx_limit_value />
+    
+    <!-- Пресеты параметров генерации -->
+    <ParamPresets 
+      bind:currentParams={generationParams}
+      onApplyPreset={(params) => {
+        onApplyPreset?.(params);
+        dispatch('apply-preset', params);
+      }}
+    />
     
     <LoadingStatus 
       bind:isLoadingModel

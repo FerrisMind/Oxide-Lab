@@ -285,17 +285,6 @@
         <button
           type="button"
           class="composer__button composer__button--icon"
-          class:composer__button--settings-active={isLoaderPanelVisible}
-          on:click={triggerSettings}
-          disabled={false}
-          aria-label="Настройки лоадер панели"
-          draggable="false"
-        >
-          <SlidersHorizontal size={16} weight="bold" />
-        </button>
-        <button
-          type="button"
-          class="composer__button composer__button--icon"
           class:composer__button--settings-active={isChatHistoryVisible}
           on:click={triggerChatHistory}
           disabled={false}
@@ -303,6 +292,17 @@
           draggable="false"
         >
           <ClockCounterClockwise size={16} weight="bold" />
+        </button>
+        <button
+          type="button"
+          class="composer__button composer__button--icon"
+          class:composer__button--settings-active={isLoaderPanelVisible}
+          on:click={triggerSettings}
+          disabled={false}
+          aria-label="Настройки лоадер панели"
+          draggable="false"
+        >
+          <SlidersHorizontal size={16} weight="bold" />
         </button>
         {#if prompt || attachError}
           <button

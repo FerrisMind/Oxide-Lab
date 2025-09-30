@@ -7,7 +7,6 @@
   import Memory from 'phosphor-svelte/lib/Memory';
   import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
   import WarningCircle from 'phosphor-svelte/lib/WarningCircle';
-  import XCircle from 'phosphor-svelte/lib/XCircle';
 
   let metrics: StartupMetrics | null = null;
   let loading = true;

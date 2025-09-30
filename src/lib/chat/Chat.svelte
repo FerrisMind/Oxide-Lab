@@ -17,6 +17,7 @@
   import { performanceService } from '$lib/services/performance-service';
   import { inferenceMetricsStore } from '$lib/stores/inference-metrics';
   import type { InferenceMetrics } from '$lib/types/performance';
+  import type { GenerationParams } from "$lib/components/params/ParamPresets.svelte";
 
   type ComposerAttachment = {
     filename: string;
@@ -24,30 +25,30 @@
   };
 
   // Добавляем состояние видимости лоадер панели
-  let isLoaderPanelVisible = false;
+  let isLoaderPanelVisible = $state(false);
 
-  let modelPath = "";
-  let repoId: string = "";
-  let revision: string = "";
-  let hubGgufFilename: string = "";
-  let prompt = "";
-  let messages: ChatMessage[] = [];
-  let messagesEl: HTMLDivElement | null = null;
-  let busy = false;
-  let format: "gguf" | "hub_gguf" | "hub_safetensors" = "gguf";
-  let isLoaded = false;
-  let errorText = "";
+  let modelPath = $state("");
+  let repoId = $state<string>("");
+  let revision = $state<string>("");
+  let hubGgufFilename = $state<string>("");
+  let prompt = $state("");
+  let messages = $state<ChatMessage[]>([]);
+  let messagesEl = $state<HTMLDivElement | null>(null);
+  let busy = $state(false);
+  let format = $state<"gguf" | "hub_gguf" | "hub_safetensors">("gguf");
+  let isLoaded = $state(false);
+  let errorText = $state("");
   // Устройство
-  let use_gpu: boolean = false; // CPU по умолчанию
-  let cuda_available: boolean = false;
-  let cuda_build: boolean = false;
-  let current_device: string = "CPU";
+  let use_gpu = $state<boolean>(false); // CPU по умолчанию
+  let cuda_available = $state<boolean>(false);
+  let cuda_build = $state<boolean>(false);
+  let current_device = $state<string>("CPU");
   
   // Поддержка модальностей (эвристика по имени модели)
-  let supports_text: boolean = true;
-  let supports_image: boolean = false;
-  let supports_audio: boolean = false;
-  let supports_video: boolean = false;
+  let supports_text = $state<boolean>(true);
+  let supports_image = $state<boolean>(false);
+  let supports_audio = $state<boolean>(false);
+  let supports_video = $state<boolean>(false);
 
   async function refreshModalities() {
     try {
@@ -64,9 +65,17 @@
       supports_video = false;
     }
   }
-  $: if (isLoaded) { void refreshModalities(); } else {
-    supports_text = true; supports_image = false; supports_audio = false; supports_video = false;
-  }
+  
+  $effect(() => {
+    if (isLoaded) {
+      void refreshModalities();
+    } else {
+      supports_text = true;
+      supports_image = false;
+      supports_audio = false;
+      supports_video = false;
+    }
+  });
 
   function detectModalities() {
     try {
@@ -83,32 +92,71 @@
       supports_audio = has(audioHints) || has(any2anyHints);
     } catch {}
   }
-  $: detectModalities();
+  
+  $effect(() => {
+    detectModalities();
+  });
   
   // Состояние загрузки модели
-  let isLoadingModel = false;
-  let loadingProgress = 0;
-  let loadingStage = ""; // "model" | "tokenizer" | "complete"
-  let isCancelling = false; // Флаг для отмены загрузки
+  let isLoadingModel = $state(false);
+  let loadingProgress = $state(0);
+  let loadingStage = $state(""); // "model" | "tokenizer" | "complete"
+  let isCancelling = $state(false); // Флаг для отмены загрузки
   
   // Состояние выгрузки модели
-  let isUnloadingModel = false;
-  let unloadingProgress = 0;
+  let isUnloadingModel = $state(false);
+  let unloadingProgress = $state(0);
 
   // Параметры инференса
-  let temperature: number = 0.8;
-  let temperature_enabled = false;
-  let top_k_enabled = false; let top_k_value: number = 40;
-  let top_p_enabled = false; let top_p_value: number = 0.9;
-  let min_p_enabled = false; let min_p_value: number = 0.05;
-  let repeat_penalty_enabled = false; let repeat_penalty_value: number = 1.1;
+  let temperature = $state<number>(0.8);
+  let temperature_enabled = $state(false);
+  let top_k_enabled = $state(false);
+  let top_k_value = $state<number>(40);
+  let top_p_enabled = $state(false);
+  let top_p_value = $state<number>(0.9);
+  let min_p_enabled = $state(false);
+  let min_p_value = $state<number>(0.05);
+  let repeat_penalty_enabled = $state(false);
+  let repeat_penalty_value = $state<number>(1.1);
   // Длина контекста (всегда активна и передаётся при загрузке)
-  let ctx_limit_value: number = 4096;
+  let ctx_limit_value = $state<number>(4096);
   // Управление размышлениями (enable_thinking)
   // removed: enable_thinking (no_think detection removed)
   // Режим использования пользовательских параметров
-  let use_custom_params: boolean = false;
+  let use_custom_params = $state<boolean>(false);
   // Убран offloading: слои на GPU больше не настраиваются
+
+  // Объект для пресетов параметров генерации
+  let generationParams: GenerationParams = $derived({
+    temperature,
+    temperature_enabled,
+    top_k_enabled,
+    top_k_value,
+    top_p_enabled,
+    top_p_value,
+    min_p_enabled,
+    min_p_value,
+    repeat_penalty_enabled,
+    repeat_penalty_value,
+    ctx_limit_value,
+  });
+
+  // Обработчик применения пресета
+  function handleApplyPreset(params: GenerationParams) {
+    temperature = params.temperature;
+    temperature_enabled = params.temperature_enabled;
+    top_k_enabled = params.top_k_enabled;
+    top_k_value = params.top_k_value;
+    top_p_enabled = params.top_p_enabled;
+    top_p_value = params.top_p_value;
+    min_p_enabled = params.min_p_enabled;
+    min_p_value = params.min_p_value;
+    repeat_penalty_enabled = params.repeat_penalty_enabled;
+    repeat_penalty_value = params.repeat_penalty_value;
+    ctx_limit_value = params.ctx_limit_value;
+    
+    console.log('Пресет применён:', params);
+  }
 
   const controller = createChatController({
     get modelPath() { return modelPath; }, set modelPath(v) { modelPath = v; },
@@ -315,7 +363,7 @@
   let lastSessionId: string | null = null;
 
   // Загрузка сообщений при переключении сессии
-  $: {
+  $effect(() => {
     if ($currentSession && $currentSession.id !== lastSessionId) {
       console.log('Загружаем сессию:', $currentSession.id, 'Сообщений:', $currentSession.messages.length);
       isLoadingFromHistory = true;
@@ -327,20 +375,19 @@
         isLoadingFromHistory = false;
       }, 100);
     }
-  }
+  });
 
   // Синхронизация сообщений с историей чатов (только если не загружаем из истории)
-  $: {
+  $effect(() => {
     if (messages && !isLoadingFromHistory && $currentSession) {
       console.log('Синхронизируем сообщения в историю:', messages.length);
       chatHistory.updateMessages(messages);
     }
-  }
+  });
 
   let _canRegenerate = false;
-  let canStopGeneration = false;
 
-  $: canStopGeneration = busy && isLoaded;
+  let canStopGeneration = $derived(busy && isLoaded);
   
   // Очищаем слушатели событий при размонтировании
   onDestroy(() => {
@@ -348,22 +395,24 @@
   });
 
   // Keep shared chatState in sync so header and other views get instant truth (no polling flicker)
-  $: chatState.update((s) => ({
-    ...s,
-    modelPath,
-    repoId,
-    revision,
-    hubGgufFilename,
-    format,
-    busy,
-    isLoaded,
-    isLoadingModel,
-    isUnloadingModel,
-    isCancelling,
-    loadingStage,
-    loadingProgress,
-    unloadingProgress,
-  }));
+  $effect(() => {
+    chatState.update((s) => ({
+      ...s,
+      modelPath,
+      repoId,
+      revision,
+      hubGgufFilename,
+      format,
+      busy,
+      isLoaded,
+      isLoadingModel,
+      isUnloadingModel,
+      isCancelling,
+      loadingStage,
+      loadingProgress,
+      unloadingProgress,
+    }));
+  });
 </script>
 
 <main class="wrap">
@@ -419,7 +468,9 @@
       {supports_image}
       {supports_audio}
       {supports_video}
+      {generationParams}
       onMainAction={mainAction}
+      onApplyPreset={handleApplyPreset}
       on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
     >
       <!-- Параметры инференса -->
