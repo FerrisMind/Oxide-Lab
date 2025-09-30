@@ -6,15 +6,15 @@ docs = { changelog_title = "Documentation", omit_from_changelog = true }
 
 [bump_profiles.tauri]
 pre_bump_hooks = [
-    "cargo check",
+    "cd src-tauri && cargo check",
     "npm run build",
     "echo 'Updating version to {{version}}'",
-    # Обновляем Cargo.toml
-    "sed -i 's/^version = .*/version = \"{{version}}\"/' src-tauri/Cargo.toml",
-    # Обновляем package.json если используется
-    "npm version {{version}} --no-git-tag-version || true",
-    # Проверяем что tauri.conf.json указывает на корректный источник версии
-    "cargo check"
+    # Обновляем Cargo.toml (PowerShell команда для Windows)
+    "powershell -Command \"(Get-Content src-tauri/Cargo.toml) -replace '^version = .*', 'version = \\\"{{version}}\\\"' | Set-Content src-tauri/Cargo.toml\"",
+    # Синхронизируем версии между файлами
+    "npm run sync-version",
+    # Проверяем что все файлы обновлены корректно
+    "cd src-tauri && cargo check"
 ]
 post_bump_hooks = [
     "git push",
