@@ -9,8 +9,8 @@ pre_bump_hooks = [
     "cd src-tauri && cargo check",
     "npm run build",
     "echo 'Updating version to {{version}}'",
-    # Обновляем Cargo.toml (PowerShell команда для Windows)
-    "powershell -Command \"(Get-Content src-tauri/Cargo.toml) -replace '^version = .*', 'version = \\\"{{version}}\\\"' | Set-Content src-tauri/Cargo.toml\"",
+    # Обновляем версию через Node.js скрипт
+    "node -e \"const fs=require('fs'); const content=fs.readFileSync('src-tauri/Cargo.toml','utf8'); const updated=content.replace(/^version = .*/m, 'version = \\\"{{version}}\\\"'); fs.writeFileSync('src-tauri/Cargo.toml', updated);\"",
     # Синхронизируем версии между файлами
     "npm run sync-version",
     # Проверяем что все файлы обновлены корректно
