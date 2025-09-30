@@ -5,6 +5,8 @@
   import PencilSimpleLine from 'phosphor-svelte/lib/PencilSimpleLine';
   import Export from 'phosphor-svelte/lib/Export';
   import TrashSimple from 'phosphor-svelte/lib/TrashSimple';
+  import Plus from 'phosphor-svelte/lib/Plus';
+  import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
 
   let editingSessionId: string | null = null;
   let editingTitle = '';
@@ -125,30 +127,10 @@
     <h3>История чатов</h3>
     <div class="header-actions">
       <button class="btn-icon" on:click={handleNewChat} title="Новый чат" aria-label="Создать новый чат">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path d="M12 5v14M5 12h14" />
-        </svg>
+        <Plus size={20} weight="regular" />
       </button>
       <button class="btn-icon" on:click={handleImport} title="Импорт" aria-label="Импортировать чат из файла">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-        </svg>
+        <UploadSimple size={20} weight="regular" />
       </button>
     </div>
   </div>

@@ -416,6 +416,7 @@
 </script>
 
 <main class="wrap">
+  <div class="chat-container">
   <!-- удалено дублирование заголовка -->
   <section class="chat">
     <MessageList
@@ -444,6 +445,7 @@
   </section>
 
   {#if isLoaderPanelVisible}
+    <div class="loader-host">
     <LoaderPanel
       bind:format
       bind:modelPath
@@ -490,5 +492,44 @@
         />
       {/if}
     </LoaderPanel>
+    </div>
   {/if}
+  </div>
 </main>
+
+<style>
+  /* Контейнер для чата и лоадера — управляет расположением справа */
+  .chat-container {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 16px;
+    height: 100%;
+    min-height: 0;
+  }
+
+  /* Левая колонка (сообщения+композер) занимает всё доступное */
+  .chat {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Правая колонка под лоадер-панель фиксированной ширины */
+  .loader-host {
+    flex: 0 0 360px;
+    min-width: 320px;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* Заставляем внутренний LoaderPanel (root: section.loader) тянуться по высоте */
+  .loader-host :global(.loader) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+</style>
