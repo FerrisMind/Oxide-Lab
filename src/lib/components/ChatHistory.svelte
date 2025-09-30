@@ -95,7 +95,7 @@
         exportData = formatJson(data);
         showExportModal = true;
         console.log('Данные экспорта подготовлены:', exportData.length, 'символов');
-        
+
         // Подсвечиваем код после открытия модального окна
         setTimeout(() => {
           if (exportCodeElement) {
@@ -112,7 +112,7 @@
 
   function copyExportData() {
     if (isCopying) return;
-    
+
     try {
       if (!exportData || exportData.trim() === '') {
         console.error('Нет данных для копирования');
@@ -120,16 +120,19 @@
       }
 
       isCopying = true;
-      navigator.clipboard.writeText(exportData).then(() => {
-        console.log('Данные успешно скопированы в буфер обмена');
-        // Сбрасываем состояние через короткое время
-        setTimeout(() => {
+      navigator.clipboard
+        .writeText(exportData)
+        .then(() => {
+          console.log('Данные успешно скопированы в буфер обмена');
+          // Сбрасываем состояние через короткое время
+          setTimeout(() => {
+            isCopying = false;
+          }, 1000);
+        })
+        .catch((error) => {
+          console.error('Ошибка при копировании:', error);
           isCopying = false;
-        }, 1000);
-      }).catch((error) => {
-        console.error('Ошибка при копировании:', error);
-        isCopying = false;
-      });
+        });
     } catch (error) {
       console.error('Ошибка при копировании данных:', error);
       isCopying = false;
@@ -138,58 +141,64 @@
 
   async function downloadExportData() {
     console.log('downloadExportData вызвана, isDownloading:', isDownloading);
-    
+
     if (isDownloading) return;
-    
+
     try {
       if (!exportData || exportData.trim() === '') {
         console.error('Нет данных для скачивания');
         return;
       }
 
-      console.log('Начинаем скачивание через диалоговое окно, размер данных:', exportData.length, 'символов');
-      
+      console.log(
+        'Начинаем скачивание через диалоговое окно, размер данных:',
+        exportData.length,
+        'символов',
+      );
+
       // Генерируем имя файла с датой и временем
       const fileName = `chat-export-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
-      
+
       console.log('Открываем диалоговое окно сохранения для файла:', fileName);
-      
+
       // Показываем диалоговое окно для выбора места сохранения
       const filePath = await save({
         defaultPath: fileName,
-        filters: [{
-          name: 'JSON Files',
-          extensions: ['json']
-        }, {
-          name: 'All Files',
-          extensions: ['*']
-        }]
+        filters: [
+          {
+            name: 'JSON Files',
+            extensions: ['json'],
+          },
+          {
+            name: 'All Files',
+            extensions: ['*'],
+          },
+        ],
       });
-      
+
       // Если пользователь отменил выбор, выходим
       if (!filePath) {
         console.log('Пользователь отменил сохранение файла');
         return;
       }
-      
+
       console.log('Пользователь выбрал путь для сохранения:', filePath);
-      
+
       // Устанавливаем флаг загрузки
       isDownloading = true;
-      
+
       // Сохраняем файл по выбранному пути
       await writeTextFile(filePath, exportData);
-      
+
       console.log('Файл успешно сохранен:', filePath);
       isDownloading = false;
-      
+
       // Показываем уведомление пользователю
       alert(`Файл успешно сохранен:\n${filePath}`);
-      
     } catch (error) {
       console.error('Ошибка при сохранении файла:', error);
       isDownloading = false;
-      
+
       // Показываем ошибку пользователю
       const errorMessage = error instanceof Error ? error.message : String(error);
       alert(`Ошибка при сохранении файла: ${errorMessage}`);
@@ -247,15 +256,30 @@
   <div class="chat-history-header">
     <h3>История чатов</h3>
     <div class="header-actions">
-      <button class="btn-icon" on:click={handleNewChat} title="Новый чат" aria-label="Создать новый чат">
+      <button
+        class="btn-icon"
+        on:click={handleNewChat}
+        title="Новый чат"
+        aria-label="Создать новый чат"
+      >
         <svelte:component this={Plus} size={16} weight="bold" />
       </button>
-      <button class="btn-icon" on:click={handleImport} title="Импорт" aria-label="Импортировать чат из файла">
+      <button
+        class="btn-icon"
+        on:click={handleImport}
+        title="Импорт"
+        aria-label="Импортировать чат из файла"
+      >
         <svelte:component this={DownloadSimple} size={16} weight="bold" />
       </button>
-        <button class="btn-icon danger" on:click={handleClearAll} title="Удалить все чаты" aria-label="Удалить все чаты">
-          <svelte:component this={StackMinus} size={16} weight="bold" />
-        </button>
+      <button
+        class="btn-icon danger"
+        on:click={handleClearAll}
+        title="Удалить все чаты"
+        aria-label="Удалить все чаты"
+      >
+        <svelte:component this={StackMinus} size={16} weight="bold" />
+      </button>
     </div>
   </div>
 
@@ -313,11 +337,11 @@
               </div>
             {/if}
 
-            <div 
-              class="session-actions" 
+            <div
+              class="session-actions"
               on:click|stopPropagation
               on:keydown={(e) => e.stopPropagation()}
-              role="toolbar" 
+              role="toolbar"
               aria-label="Действия с чатом"
               tabindex="-1"
             >
@@ -349,8 +373,8 @@
           </div>
 
           {#if showDeleteConfirm === session.id}
-            <div 
-              class="delete-confirm" 
+            <div
+              class="delete-confirm"
               on:click|stopPropagation
               on:keydown={(e) => e.stopPropagation()}
               role="alertdialog"
@@ -376,8 +400,8 @@
 </section>
 
 {#if showExportModal}
-  <div 
-    class="modal-overlay" 
+  <div
+    class="modal-overlay"
     on:click={() => (showExportModal = false)}
     on:keydown={(e) => {
       if (e.key === 'Escape') {
@@ -386,8 +410,8 @@
     }}
     role="presentation"
   >
-    <div 
-      class="modal" 
+    <div
+      class="modal"
       on:click|stopPropagation
       on:keydown={(e) => {
         e.stopPropagation();
@@ -402,8 +426,8 @@
     >
       <div class="modal-header">
         <h3 id="export-modal-title">Экспорт чата</h3>
-        <button 
-          class="btn-close" 
+        <button
+          class="btn-close"
           on:click={() => (showExportModal = false)}
           aria-label="Закрыть окно экспорта"
         >
@@ -412,19 +436,19 @@
       </div>
       <div class="modal-body">
         <div class="code-container">
-          <pre><code 
-            bind:this={exportCodeElement}
-            class="language-json"
-            aria-label="Данные экспортированного чата"
-          >{exportData}</code></pre>
+          <pre><code
+              bind:this={exportCodeElement}
+              class="language-json"
+              aria-label="Данные экспортированного чата">{exportData}</code
+            ></pre>
         </div>
       </div>
       <div class="modal-footer">
         <button class="secondary" on:click={copyExportData} disabled={isCopying}>
           {isCopying ? 'Копирование...' : 'Копировать'}
         </button>
-        <button 
-          class="primary" 
+        <button
+          class="primary"
           on:click={(e) => {
             console.log('Кнопка скачать нажата', e);
             downloadExportData();
@@ -441,8 +465,8 @@
 {/if}
 
 {#if showClearAllConfirm}
-  <div 
-    class="modal-overlay" 
+  <div
+    class="modal-overlay"
     on:click={cancelClearAll}
     on:keydown={(e) => {
       if (e.key === 'Escape') {
@@ -451,8 +475,8 @@
     }}
     role="presentation"
   >
-    <div 
-      class="modal" 
+    <div
+      class="modal"
       on:click|stopPropagation
       on:keydown={(e) => {
         e.stopPropagation();
@@ -467,11 +491,7 @@
     >
       <div class="modal-header">
         <h3 id="clear-all-modal-title">Удалить все чаты</h3>
-        <button 
-          class="btn-close" 
-          on:click={cancelClearAll}
-          aria-label="Закрыть окно подтверждения"
-        >
+        <button class="btn-close" on:click={cancelClearAll} aria-label="Закрыть окно подтверждения">
           ×
         </button>
       </div>
@@ -488,7 +508,7 @@
 
 <style>
   /* ===== Chat History Panel - LoaderPanel Style ===== */
-  
+
   .chat-history {
     --control-radius: 10px;
     --control-padding-y: 8px;
@@ -544,9 +564,9 @@
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: 
-      transform 0.2s ease, 
-      box-shadow 0.2s ease, 
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
       background 0.2s ease,
       border-color 0.2s ease,
       color 0.2s ease,
@@ -575,7 +595,7 @@
     transform: none;
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(0, 0, 0, 0.15),
       0 4px 12px rgba(0, 0, 0, 0.1);
     scale: 1.1;
@@ -588,7 +608,7 @@
   .btn-icon:not(:disabled):active {
     transform: none;
     scale: 1.05;
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(0, 0, 0, 0.2),
       0 2px 8px rgba(0, 0, 0, 0.15);
   }
@@ -602,7 +622,7 @@
   .btn-icon.danger:not(:disabled):hover {
     background: rgba(231, 76, 60, 0.2);
     border-color: rgba(231, 76, 60, 0.5);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(231, 76, 60, 0.3),
       0 4px 12px rgba(0, 0, 0, 0.1);
     scale: 1.1;
@@ -654,7 +674,7 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: 
+    transition:
       transform 0.2s ease,
       box-shadow 0.2s ease,
       background 0.2s ease,
@@ -668,7 +688,7 @@
     min-width: 0;
     position: relative;
     overflow: hidden;
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(102, 126, 234, 0.3),
       0 2px 8px rgba(0, 0, 0, 0.1);
   }
@@ -680,14 +700,19 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%, rgba(255, 255, 255, 0.1) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.1) 100%
+    );
     opacity: 0;
     transition: opacity 0.3s ease;
   }
 
   .btn-new-chat:not(:disabled):hover {
     background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(102, 126, 234, 0.4),
       0 4px 12px rgba(0, 0, 0, 0.15);
     transform: none;
@@ -701,7 +726,7 @@
   .btn-new-chat:not(:disabled):active {
     transform: none;
     scale: 1.02;
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(102, 126, 234, 0.5),
       0 2px 8px rgba(0, 0, 0, 0.2);
   }
@@ -715,7 +740,6 @@
     cursor: not-allowed;
   }
 
-
   /* Secondary button style */
   .secondary {
     border: 2px solid rgba(255, 255, 255, 0.1);
@@ -727,7 +751,7 @@
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: 
+    transition:
       transform 0.2s ease,
       box-shadow 0.2s ease,
       background 0.2s ease,
@@ -758,7 +782,7 @@
     transform: none;
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(0, 0, 0, 0.15),
       0 4px 12px rgba(0, 0, 0, 0.1);
     scale: 1.05;
@@ -771,7 +795,7 @@
   .secondary:not(:disabled):active {
     transform: none;
     scale: 1.02;
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(0, 0, 0, 0.2),
       0 2px 8px rgba(0, 0, 0, 0.15);
   }
@@ -797,7 +821,7 @@
     font-weight: 600;
     cursor: pointer;
     pointer-events: auto;
-    transition: 
+    transition:
       transform 0.2s ease,
       box-shadow 0.2s ease,
       background 0.2s ease,
@@ -811,7 +835,7 @@
     min-width: 0;
     position: relative;
     overflow: hidden;
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(102, 126, 234, 0.3),
       0 2px 8px rgba(0, 0, 0, 0.1);
   }
@@ -823,14 +847,19 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%, rgba(255, 255, 255, 0.1) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.1) 100%
+    );
     opacity: 0;
     transition: opacity 0.3s ease;
   }
 
   .primary:not(:disabled):hover {
     background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(102, 126, 234, 0.4),
       0 4px 12px rgba(0, 0, 0, 0.15);
     transform: none;
@@ -844,7 +873,7 @@
   .primary:not(:disabled):active {
     transform: none;
     scale: 1.02;
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(102, 126, 234, 0.5),
       0 2px 8px rgba(0, 0, 0, 0.2);
   }
@@ -950,7 +979,10 @@
     gap: 6px;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+    transition:
+      opacity 0.15s ease,
+      visibility 0.15s ease,
+      transform 0.15s ease;
     transform: translateY(-2px);
   }
 
@@ -977,9 +1009,9 @@
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: 
-      transform 0.2s ease, 
-      box-shadow 0.2s ease, 
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
       background 0.2s ease,
       border-color 0.2s ease,
       color 0.2s ease,
@@ -1008,7 +1040,7 @@
     transform: none;
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(0, 0, 0, 0.15),
       0 4px 12px rgba(0, 0, 0, 0.1);
     scale: 1.1;
@@ -1021,7 +1053,7 @@
   .btn-icon-small:not(:disabled):active {
     transform: none;
     scale: 1.05;
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(0, 0, 0, 0.2),
       0 2px 8px rgba(0, 0, 0, 0.15);
   }
@@ -1035,7 +1067,7 @@
   .btn-icon-small.danger:not(:disabled):hover {
     background: rgba(231, 76, 60, 0.2);
     border-color: rgba(231, 76, 60, 0.5);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(231, 76, 60, 0.3),
       0 4px 12px rgba(0, 0, 0, 0.1);
     scale: 1.1;
@@ -1124,7 +1156,7 @@
     width: 90%;
     max-height: 80vh;
     overflow: hidden;
-    box-shadow: 
+    box-shadow:
       0 20px 40px rgba(0, 0, 0, 0.3),
       0 8px 25px rgba(0, 0, 0, 0.2),
       0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1133,16 +1165,20 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   @keyframes slideIn {
-    from { 
+    from {
       opacity: 0;
       transform: translateY(-20px) scale(0.95);
     }
-    to { 
+    to {
       opacity: 1;
       transform: translateY(0) scale(1);
     }
@@ -1178,7 +1214,7 @@
     cursor: pointer;
     font-size: 18px;
     font-weight: 600;
-    transition: 
+    transition:
       transform 0.2s ease,
       box-shadow 0.2s ease,
       background 0.2s ease,
@@ -1203,7 +1239,7 @@
   .btn-close:hover {
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(0, 0, 0, 0.15),
       0 4px 12px rgba(0, 0, 0, 0.1);
     scale: 1.1;
@@ -1215,7 +1251,7 @@
 
   .btn-close:active {
     scale: 1.05;
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(0, 0, 0, 0.2),
       0 2px 8px rgba(0, 0, 0, 0.15);
   }
@@ -1230,7 +1266,7 @@
     border-radius: 12px;
     background: rgba(20, 20, 20, 0.8);
     overflow: hidden;
-    box-shadow: 
+    box-shadow:
       0 4px 12px rgba(0, 0, 0, 0.2),
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
@@ -1253,7 +1289,6 @@
     display: block;
     white-space: pre;
   }
-
 
   .modal-footer {
     display: flex;
@@ -1294,7 +1329,6 @@
     .code-container code {
       color: #1a1a1a;
     }
-
 
     .modal-footer {
       background: rgba(255, 255, 255, 0.95);
@@ -1372,36 +1406,35 @@
       display: block;
       flex-shrink: 0;
     }
-    
+
     .edit-input {
       background: #2d2d2d;
       border-color: #3a3a3a;
     }
-    
+
     .edit-input::placeholder {
       color: #bdbdbd;
       opacity: 1;
     }
-    
 
     .btn-new-chat {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       border-color: rgba(255, 255, 255, 0.1);
       color: #ffffff;
-      box-shadow: 
+      box-shadow:
         0 4px 15px rgba(102, 126, 234, 0.3),
         0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .btn-new-chat:not(:disabled):hover {
       background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-      box-shadow: 
+      box-shadow:
         0 8px 25px rgba(102, 126, 234, 0.4),
         0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .btn-new-chat:not(:disabled):active {
-      box-shadow: 
+      box-shadow:
         0 4px 15px rgba(102, 126, 234, 0.5),
         0 2px 8px rgba(0, 0, 0, 0.2);
     }
