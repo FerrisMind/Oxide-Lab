@@ -1,26 +1,22 @@
-from_latest_tag = false
-ignore_merge_commits = false
-ignore_fixup_commits = true
-disable_changelog = false
-disable_bump_commit = false
-generate_mono_repository_global_tag = true
-generate_mono_repository_package_tags = true
-branch_whitelist = []
-skip_ci = "[skip ci]"
-skip_untracked = false
-pre_bump_hooks = []
-post_bump_hooks = []
-pre_package_bump_hooks = []
-post_package_bump_hooks = []
-
-[git_hooks]
-
 [commit_types]
+feat = { changelog_title = "Features", bump = "minor" }
+fix = { changelog_title = "Bug Fixes", bump = "patch" }
+chore = { changelog_title = "Miscellaneous", omit_from_changelog = true }
+docs = { changelog_title = "Documentation", omit_from_changelog = true }
 
-[changelog]
-path = "CHANGELOG.md"
-authors = []
-
-[bump_profiles]
-
-[packages]
+[bump_profiles.tauri]
+pre_bump_hooks = [
+    "cargo check",
+    "npm run build",
+    "echo 'Updating version to {{version}}'",
+    # Обновляем Cargo.toml
+    "sed -i 's/^version = .*/version = \"{{version}}\"/' src-tauri/Cargo.toml",
+    # Обновляем package.json если используется
+    "npm version {{version}} --no-git-tag-version || true",
+    # Проверяем что tauri.conf.json указывает на корректный источник версии
+    "cargo check"
+]
+post_bump_hooks = [
+    "git push",
+    "git push --tags"
+]

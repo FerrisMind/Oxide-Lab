@@ -195,6 +195,9 @@
   </div>
 </div>
 
+<!-- SvelteKit layout must expose a slot; hide it to avoid duplicate rendering -->
+<div hidden><slot /></div>
+
 <style>
   /* App shell & header */
   .app-shell {
