@@ -8,7 +8,7 @@
   import Plus from 'phosphor-svelte/lib/Plus';
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
   import StackMinus from 'phosphor-svelte/lib/StackMinus';
-  import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+  import { writeTextFile } from '@tauri-apps/plugin-fs';
   import { save } from '@tauri-apps/plugin-dialog';
   import hljs from 'highlight.js/lib/core';
   import json from 'highlight.js/lib/languages/json';

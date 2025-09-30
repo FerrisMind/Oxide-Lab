@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.11.2 - 2025-09-30
+#### Bug Fixes
+- обновление конфигурации проекта и исправление стилей компонентов - (da6d541) - FerrisMind
+
+- - -
+
 ## 0.11.1 - 2025-09-30
 #### Bug Fixes
 - упрощена конфигурация cog для работы с Tauri проектом - (722df81) - FerrisMind
