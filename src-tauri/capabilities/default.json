@@ -31,15 +31,7 @@
     "fs:allow-document-write"
   ],
   "scope": {
-    "allow": [
-      "$DOWNLOAD/**",
-      "$APPDATA/**",
-      "$DOCUMENT/**"
-    ],
-    "deny": [
-      "$HOME/.ssh/**",
-      "/etc/**",
-      "C:\\Windows\\System32\\**"
-    ]
+    "allow": ["$DOWNLOAD/**", "$APPDATA/**", "$DOCUMENT/**"],
+    "deny": ["$HOME/.ssh/**", "/etc/**", "C:\\Windows\\System32\\**"]
   }
 }
