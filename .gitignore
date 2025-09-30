@@ -66,3 +66,8 @@ src-tauri/target/
 src-tauri/gen/
 **/example/
 # Ignore example folder (examples from upstream, not checked by linters)
+
+# License compliance reports
+license-compliance-report.json
+licenses.csv
+licenses.json
