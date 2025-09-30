@@ -5,7 +5,7 @@
   "identifier": "com.pc.oxide-lab",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1476",
+    "devUrl": "http://localhost:1491",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../build"
   },
@@ -17,11 +17,17 @@
         "width": 1280,
         "height": 720,
         "minWidth": 640,
-        "minHeight": 360
+        "minHeight": 360,
+        "label": "main"
       }
     ],
     "security": {
       "csp": null
+    }
+  },
+  "plugins": {
+    "fs": {
+      "requireLiteralLeadingDot": false
     }
   },
   "bundle": {

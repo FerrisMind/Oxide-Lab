@@ -19,6 +19,7 @@
   --border-color: #e8e6e3;
   --accent: #3b82f6;
   --accent-2: #1d4ed8;
+  --danger: #e74c3c;
   --panel-alt-bg: #f8f9fa;
   --shadow: 0 4px 20px rgb(0 0 0 / 0.06);
   --shadow-hover: 0 8px 30px rgb(0 0 0 / 0.12);
@@ -46,6 +47,7 @@
     --text: #fff;
     --muted: #a0a0a0;
     --border-color: #404040;
+    --danger: #ff6b6b;
     --panel-alt-bg: #252525;
 
     /* ↓ Темные значения для подсветки синтаксиса */

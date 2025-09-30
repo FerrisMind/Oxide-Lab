@@ -6,14 +6,27 @@
   import Export from 'phosphor-svelte/lib/Export';
   import TrashSimple from 'phosphor-svelte/lib/TrashSimple';
   import Plus from 'phosphor-svelte/lib/Plus';
-  import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
+  import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
+  import StackMinus from 'phosphor-svelte/lib/StackMinus';
+  import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+  import { save } from '@tauri-apps/plugin-dialog';
+  import hljs from 'highlight.js/lib/core';
+  import json from 'highlight.js/lib/languages/json';
+  import 'highlight.js/styles/github-dark.css';
+
+  // Инициализация highlight.js
+  hljs.registerLanguage('json', json);
 
   let editingSessionId: string | null = null;
   let editingTitle = '';
   let showDeleteConfirm: string | null = null;
+  let showClearAllConfirm = false;
   let showExportModal = false;
   let exportData = '';
   let importInput: HTMLInputElement;
+  let exportCodeElement: HTMLElement;
+  let isDownloading = false;
+  let isCopying = false;
 
   function handleNewChat() {
     const sessionId = chatHistory.createSession();
@@ -53,26 +66,134 @@
     showDeleteConfirm = null;
   }
 
+  function handleClearAll() {
+    showClearAllConfirm = true;
+  }
+
+  function confirmClearAll() {
+    chatHistory.clearAll();
+    showClearAllConfirm = false;
+  }
+
+  function cancelClearAll() {
+    showClearAllConfirm = false;
+  }
+
+  function formatJson(jsonString: string): string {
+    try {
+      const parsed = JSON.parse(jsonString);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return jsonString;
+    }
+  }
+
   function handleExport(sessionId: string) {
-    const data = chatHistory.exportSession(sessionId);
-    if (data) {
-      exportData = data;
-      showExportModal = true;
+    try {
+      const data = chatHistory.exportSession(sessionId);
+      if (data) {
+        exportData = formatJson(data);
+        showExportModal = true;
+        console.log('Данные экспорта подготовлены:', exportData.length, 'символов');
+        
+        // Подсвечиваем код после открытия модального окна
+        setTimeout(() => {
+          if (exportCodeElement) {
+            hljs.highlightElement(exportCodeElement);
+          }
+        }, 100);
+      } else {
+        console.error('Не удалось получить данные для экспорта сессии:', sessionId);
+      }
+    } catch (error) {
+      console.error('Ошибка при экспорте сессии:', error);
     }
   }
 
   function copyExportData() {
-    navigator.clipboard.writeText(exportData);
+    if (isCopying) return;
+    
+    try {
+      if (!exportData || exportData.trim() === '') {
+        console.error('Нет данных для копирования');
+        return;
+      }
+
+      isCopying = true;
+      navigator.clipboard.writeText(exportData).then(() => {
+        console.log('Данные успешно скопированы в буфер обмена');
+        // Сбрасываем состояние через короткое время
+        setTimeout(() => {
+          isCopying = false;
+        }, 1000);
+      }).catch((error) => {
+        console.error('Ошибка при копировании:', error);
+        isCopying = false;
+      });
+    } catch (error) {
+      console.error('Ошибка при копировании данных:', error);
+      isCopying = false;
+    }
   }
 
-  function downloadExportData() {
-    const blob = new Blob([exportData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `chat-export-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  async function downloadExportData() {
+    console.log('downloadExportData вызвана, isDownloading:', isDownloading);
+    
+    if (isDownloading) return;
+    
+    try {
+      if (!exportData || exportData.trim() === '') {
+        console.error('Нет данных для скачивания');
+        return;
+      }
+
+      console.log('Начинаем скачивание через диалоговое окно, размер данных:', exportData.length, 'символов');
+      
+      // Генерируем имя файла с датой и временем
+      const fileName = `chat-export-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+      
+      console.log('Открываем диалоговое окно сохранения для файла:', fileName);
+      
+      // Показываем диалоговое окно для выбора места сохранения
+      const filePath = await save({
+        defaultPath: fileName,
+        filters: [{
+          name: 'JSON Files',
+          extensions: ['json']
+        }, {
+          name: 'All Files',
+          extensions: ['*']
+        }]
+      });
+      
+      // Если пользователь отменил выбор, выходим
+      if (!filePath) {
+        console.log('Пользователь отменил сохранение файла');
+        return;
+      }
+      
+      console.log('Пользователь выбрал путь для сохранения:', filePath);
+      
+      // Устанавливаем флаг загрузки
+      isDownloading = true;
+      
+      // Сохраняем файл по выбранному пути
+      await writeTextFile(filePath, exportData);
+      
+      console.log('Файл успешно сохранен:', filePath);
+      isDownloading = false;
+      
+      // Показываем уведомление пользователю
+      alert(`Файл успешно сохранен:\n${filePath}`);
+      
+    } catch (error) {
+      console.error('Ошибка при сохранении файла:', error);
+      isDownloading = false;
+      
+      // Показываем ошибку пользователю
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert(`Ошибка при сохранении файла: ${errorMessage}`);
+    }
   }
 
   function handleImport() {
@@ -127,11 +248,14 @@
     <h3>История чатов</h3>
     <div class="header-actions">
       <button class="btn-icon" on:click={handleNewChat} title="Новый чат" aria-label="Создать новый чат">
-        <Plus size={20} weight="regular" />
+        <svelte:component this={Plus} size={16} weight="bold" />
       </button>
       <button class="btn-icon" on:click={handleImport} title="Импорт" aria-label="Импортировать чат из файла">
-        <UploadSimple size={20} weight="regular" />
+        <svelte:component this={DownloadSimple} size={16} weight="bold" />
       </button>
+        <button class="btn-icon danger" on:click={handleClearAll} title="Удалить все чаты" aria-label="Удалить все чаты">
+          <svelte:component this={StackMinus} size={16} weight="bold" />
+        </button>
     </div>
   </div>
 
@@ -147,7 +271,7 @@
     {#if $sortedSessions.length === 0}
       <div class="empty-state">
         <p>Нет сохраненных чатов</p>
-        <button class="primary" on:click={handleNewChat}>Начать новый чат</button>
+        <button class="btn-new-chat" on:click={handleNewChat}>Начать новый чат</button>
       </div>
     {:else}
       {#each $sortedSessions as session (session.id)}
@@ -287,16 +411,76 @@
         </button>
       </div>
       <div class="modal-body">
-        <textarea 
-          readonly 
-          value={exportData} 
-          rows="10"
-          aria-label="Данные экспортированного чата"
-        ></textarea>
+        <div class="code-container">
+          <pre><code 
+            bind:this={exportCodeElement}
+            class="language-json"
+            aria-label="Данные экспортированного чата"
+          >{exportData}</code></pre>
+        </div>
       </div>
       <div class="modal-footer">
-        <button class="secondary" on:click={copyExportData}>Копировать</button>
-        <button class="primary" on:click={downloadExportData}>Скачать</button>
+        <button class="secondary" on:click={copyExportData} disabled={isCopying}>
+          {isCopying ? 'Копирование...' : 'Копировать'}
+        </button>
+        <button 
+          class="primary" 
+          on:click={(e) => {
+            console.log('Кнопка скачать нажата', e);
+            downloadExportData();
+          }}
+          disabled={isDownloading}
+          type="button"
+          aria-label="Скачать экспортированные данные чата в JSON файл"
+        >
+          {isDownloading ? 'Скачивание...' : 'Скачать'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if showClearAllConfirm}
+  <div 
+    class="modal-overlay" 
+    on:click={cancelClearAll}
+    on:keydown={(e) => {
+      if (e.key === 'Escape') {
+        cancelClearAll();
+      }
+    }}
+    role="presentation"
+  >
+    <div 
+      class="modal" 
+      on:click|stopPropagation
+      on:keydown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Escape') {
+          cancelClearAll();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="clear-all-modal-title"
+      tabindex="-1"
+    >
+      <div class="modal-header">
+        <h3 id="clear-all-modal-title">Удалить все чаты</h3>
+        <button 
+          class="btn-close" 
+          on:click={cancelClearAll}
+          aria-label="Закрыть окно подтверждения"
+        >
+          ×
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Вы уверены, что хотите удалить все чаты? Это действие нельзя отменить.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" on:click={cancelClearAll}>Отмена</button>
+        <button class="primary danger" on:click={confirmClearAll}>Удалить все</button>
       </div>
     </div>
   </div>
@@ -310,10 +494,13 @@
     --control-padding-y: 8px;
     --control-padding-x: 12px;
     --focus-ring: 0 0 0 3px rgb(179 205 224 / 0.15);
+    --composer-row-height: 34px;
+    --composer-control-radius: 12px;
 
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+    overflow-y: visible;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -330,6 +517,7 @@
     margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--border-color);
+    overflow: visible;
   }
 
   .chat-history-header h3 {
@@ -342,25 +530,96 @@
   .header-actions {
     display: flex;
     gap: 8px;
+    align-items: center;
   }
 
   .btn-icon {
-    display: flex;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border-radius: var(--composer-control-radius);
+    padding: 0;
+    width: var(--composer-row-height);
+    height: var(--composer-row-height);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 
+      transform 0.2s ease, 
+      box-shadow 0.2s ease, 
+      background 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      scale 0.2s ease;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: var(--control-radius);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s ease;
+    box-sizing: border-box;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
   }
 
-  .btn-icon:hover {
-    background: var(--accent);
-    color: white;
+  .btn-icon::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .btn-icon:not(:disabled):hover {
+    transform: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 8px 25px rgba(0, 0, 0, 0.15),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+    scale: 1.1;
+  }
+
+  .btn-icon:not(:disabled):hover::before {
+    left: 100%;
+  }
+
+  .btn-icon:not(:disabled):active {
+    transform: none;
+    scale: 1.05;
+    box-shadow: 
+      0 4px 15px rgba(0, 0, 0, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-icon.danger {
+    color: var(--danger);
+    border-color: rgba(231, 76, 60, 0.3);
+    background: rgba(231, 76, 60, 0.1);
+  }
+
+  .btn-icon.danger:not(:disabled):hover {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: rgba(231, 76, 60, 0.5);
+    box-shadow: 
+      0 8px 25px rgba(231, 76, 60, 0.3),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+    scale: 1.1;
+  }
+
+  .btn-icon.danger:not(:disabled):active {
+    background: rgba(231, 76, 60, 0.3);
+    border-color: rgba(231, 76, 60, 0.6);
+    scale: 1.05;
+  }
+
+  .btn-icon :global(svg) {
+    width: 16px;
+    height: 16px;
+    color: currentColor;
+    display: block;
+    flex-shrink: 0;
   }
 
   .sessions-list {
@@ -385,46 +644,220 @@
   }
 
   /* Primary button style matching LoaderPanel */
-  .primary {
-    background: var(--accent-2);
-    border: none;
-    border-radius: 12px;
-    padding: 10px 14px;
-    cursor: pointer;
-    color: #3a2f4f;
-    font-weight: 600;
+  .btn-new-chat {
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    border-radius: var(--composer-control-radius);
+    padding: 10px 16px;
+    height: var(--composer-row-height);
     font-size: 14px;
-    transition: all 0.2s ease;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      scale 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 
+      0 4px 15px rgba(102, 126, 234, 0.3),
+      0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
-  .primary:hover {
-    background: color-mix(in srgb, var(--accent-2) 85%, black 10%);
+  .btn-new-chat::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%, rgba(255, 255, 255, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
 
-  .primary.danger {
-    background: #ffb3b3;
-    color: #3a1f1f;
+  .btn-new-chat:not(:disabled):hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    box-shadow: 
+      0 8px 25px rgba(102, 126, 234, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: none;
+    scale: 1.05;
   }
 
-  .primary.danger:hover {
-    background: color-mix(in srgb, #ffb3b3 85%, black 10%);
+  .btn-new-chat:not(:disabled):hover::before {
+    opacity: 1;
   }
+
+  .btn-new-chat:not(:disabled):active {
+    transform: none;
+    scale: 1.02;
+    box-shadow: 
+      0 4px 15px rgba(102, 126, 234, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-new-chat:disabled {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    border-color: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    box-shadow: none;
+    transform: none;
+    cursor: not-allowed;
+  }
+
 
   /* Secondary button style */
   .secondary {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: var(--control-radius);
-    padding: var(--control-padding-y) var(--control-padding-x);
-    color: var(--text);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 10px 16px;
+    height: var(--composer-row-height);
     font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: 
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      scale 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
   }
 
-  .secondary:hover {
-    background: var(--accent-light);
-    border-color: var(--accent);
+  .secondary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .secondary:not(:disabled):hover {
+    transform: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 8px 25px rgba(0, 0, 0, 0.15),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+    scale: 1.05;
+  }
+
+  .secondary:not(:disabled):hover::before {
+    left: 100%;
+  }
+
+  .secondary:not(:disabled):active {
+    transform: none;
+    scale: 1.02;
+    box-shadow: 
+      0 4px 15px rgba(0, 0, 0, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .secondary:disabled {
+    opacity: 0.6;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
+    transform: none;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+
+  /* Primary button style for modal */
+  .primary {
+    border: 2px solid transparent;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 10px 16px;
+    height: var(--composer-row-height);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: 
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      scale 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 
+      0 4px 15px rgba(102, 126, 234, 0.3),
+      0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%, rgba(255, 255, 255, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .primary:not(:disabled):hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    box-shadow: 
+      0 8px 25px rgba(102, 126, 234, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: none;
+    scale: 1.05;
+  }
+
+  .primary:not(:disabled):hover::before {
+    opacity: 1;
+  }
+
+  .primary:not(:disabled):active {
+    transform: none;
+    scale: 1.02;
+    box-shadow: 
+      0 4px 15px rgba(102, 126, 234, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .primary:disabled {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    border-color: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    box-shadow: none;
+    transform: none;
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 0.7;
   }
 
   /* Session items styled like LoaderPanel fields */
@@ -534,45 +967,92 @@
   }
 
   .btn-icon-small {
-    display: flex;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border-radius: var(--composer-control-radius);
+    padding: 0;
+    width: var(--composer-row-height);
+    height: var(--composer-row-height);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 
+      transform 0.2s ease, 
+      box-shadow 0.2s ease, 
+      background 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      scale 0.2s ease;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--control-radius);
-    background: var(--card);
-    color: var(--text);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    min-width: 0;
     position: relative;
-    padding: 0;
+    overflow: hidden;
+  }
+
+  .btn-icon-small::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .btn-icon-small:not(:disabled):hover {
+    transform: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 8px 25px rgba(0, 0, 0, 0.15),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+    scale: 1.1;
+  }
+
+  .btn-icon-small:not(:disabled):hover::before {
+    left: 100%;
+  }
+
+  .btn-icon-small:not(:disabled):active {
+    transform: none;
+    scale: 1.05;
+    box-shadow: 
+      0 4px 15px rgba(0, 0, 0, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-icon-small.danger {
+    color: var(--danger);
+    border-color: rgba(231, 76, 60, 0.3);
+    background: rgba(231, 76, 60, 0.1);
+  }
+
+  .btn-icon-small.danger:not(:disabled):hover {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: rgba(231, 76, 60, 0.5);
+    box-shadow: 
+      0 8px 25px rgba(231, 76, 60, 0.3),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+    scale: 1.1;
+  }
+
+  .btn-icon-small.danger:not(:disabled):active {
+    background: rgba(231, 76, 60, 0.3);
+    border-color: rgba(231, 76, 60, 0.6);
+    scale: 1.05;
   }
 
   .btn-icon-small :global(svg) {
     width: 16px;
     height: 16px;
     color: currentColor;
-  }
-
-  .btn-icon-small:hover {
-    background: var(--accent);
-    color: white;
-    border-color: var(--accent);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  }
-
-  .btn-icon-small.danger {
-    color: var(--danger);
-    border-color: var(--danger);
-  }
-
-  .btn-icon-small.danger:hover {
-    background: var(--danger);
-    color: white;
-    border-color: var(--danger);
+    display: block;
+    flex-shrink: 0;
   }
 
   /* Edit input matching LoaderPanel field inputs */
@@ -627,88 +1107,244 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
   }
 
   .modal {
-    background: var(--card);
-    border-radius: 14px;
-    border: 1px solid var(--border-color);
-    max-width: 500px;
+    background: rgba(30, 30, 30, 0.95);
+    border-radius: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    max-width: 700px;
     width: 90%;
     max-height: 80vh;
     overflow: hidden;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    box-shadow: 
+      0 20px 40px rgba(0, 0, 0, 0.3),
+      0 8px 25px rgba(0, 0, 0, 0.2),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideIn 0.3s ease-out;
+    backdrop-filter: blur(10px);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideIn {
+    from { 
+      opacity: 0;
+      transform: translateY(-20px) scale(0.95);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 
   .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 16px 20px;
+    background: rgba(30, 30, 30, 0.95);
+    border-radius: 16px 16px 0 0;
   }
 
   .modal-header h3 {
     margin: 0;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
-    color: var(--text);
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
 
   .btn-close {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--muted);
+    width: 32px;
+    height: 32px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
     cursor: pointer;
     font-size: 18px;
-    transition: all 0.2s ease;
+    font-weight: 600;
+    transition: 
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      scale 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-close::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
   }
 
   .btn-close:hover {
-    background: var(--accent);
-    color: white;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 8px 25px rgba(0, 0, 0, 0.15),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+    scale: 1.1;
+  }
+
+  .btn-close:hover::before {
+    left: 100%;
+  }
+
+  .btn-close:active {
+    scale: 1.05;
+    box-shadow: 
+      0 4px 15px rgba(0, 0, 0, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
   .modal-body {
+    padding: 16px 20px;
+    background: rgba(30, 30, 30, 0.95);
+  }
+
+  .code-container {
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(20, 20, 20, 0.8);
+    overflow: hidden;
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .code-container pre {
+    margin: 0;
     padding: 16px;
+    background: transparent;
+    overflow-x: auto;
+    max-height: 400px;
+    overflow-y: auto;
   }
 
-  .modal-body textarea {
-    width: 100%;
-    padding: var(--control-padding-y) var(--control-padding-x);
-    border: 1px solid var(--border-color);
-    border-radius: var(--control-radius);
-    background: #fcfbfa;
-    color: var(--text);
-    font-family: monospace;
-    font-size: 12px;
-    resize: vertical;
-    outline: none;
-    box-sizing: border-box;
+  .code-container code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #ffffff;
+    background: transparent;
+    display: block;
+    white-space: pre;
   }
 
-  .modal-body textarea:focus {
-    border-color: var(--accent);
-    box-shadow: var(--focus-ring);
-  }
 
   .modal-footer {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     justify-content: flex-end;
-    padding: 16px;
-    border-top: 1px solid var(--border-color);
+    padding: 16px 20px;
+    background: rgba(30, 30, 30, 0.95);
+    border-radius: 0 0 16px 16px;
+  }
+
+  /* Light theme adjustments */
+  @media (prefers-color-scheme: light) {
+    .modal {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px 16px 0 0;
+      padding: 16px 20px;
+    }
+
+    .modal-header h3 {
+      color: #1a1a1a;
+    }
+
+    .modal-body {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 16px 20px;
+    }
+
+    .code-container {
+      background: rgba(248, 248, 248, 0.8);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .code-container code {
+      color: #1a1a1a;
+    }
+
+
+    .modal-footer {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 0 0 16px 16px;
+      padding: 16px 20px;
+    }
+
+    .btn-close {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1a1a1a;
+      border-radius: 8px;
+    }
+
+    .btn-close:hover {
+      background: rgba(0, 0, 0, 0.1);
+      border-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .secondary {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1a1a1a;
+      border-radius: 8px;
+    }
+
+    .secondary:disabled {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: rgba(0, 0, 0, 0.05);
+      color: rgba(26, 26, 26, 0.5);
+      opacity: 0.6;
+    }
+
+    .primary:disabled {
+      background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+      border-color: transparent;
+      color: rgba(255, 255, 255, 0.5);
+      opacity: 0.7;
+    }
+
+    .primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: transparent;
+      color: #ffffff;
+      border-radius: 8px;
+    }
+
+    .primary:hover {
+      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    }
   }
 
   /* Dark theme adjustments */
@@ -729,21 +1365,12 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
 
-    .btn-icon-small {
-      background: #2d2d2d;
-      border-color: #3a3a3a;
-      color: var(--text);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    }
-
-    .btn-icon-small:hover {
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    }
-
     .btn-icon-small :global(svg) {
       width: 16px;
       height: 16px;
       color: currentColor;
+      display: block;
+      flex-shrink: 0;
     }
     
     .edit-input {
@@ -756,9 +1383,110 @@
       opacity: 1;
     }
     
-    .modal-body textarea {
-      background: #2d2d2d;
-      border-color: #3a3a3a;
+
+    .btn-new-chat {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      box-shadow: 
+        0 4px 15px rgba(102, 126, 234, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-new-chat:not(:disabled):hover {
+      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      box-shadow: 
+        0 8px 25px rgba(102, 126, 234, 0.4),
+        0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-new-chat:not(:disabled):active {
+      box-shadow: 
+        0 4px 15px rgba(102, 126, 234, 0.5),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-new-chat:disabled {
+      background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+      border-color: transparent;
+      color: rgba(255, 255, 255, 0.4);
+      box-shadow: none;
+    }
+
+    /* Modal dark theme styles - уже применены в основном стиле */
+    .modal {
+      background: rgba(30, 30, 30, 0.95);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-header {
+      background: rgba(30, 30, 30, 0.95);
+      border-radius: 16px 16px 0 0;
+      padding: 16px 20px;
+    }
+
+    .modal-header h3 {
+      color: #ffffff;
+    }
+
+    .modal-body {
+      background: rgba(30, 30, 30, 0.95);
+      padding: 16px 20px;
+    }
+
+    .code-container {
+      background: rgba(20, 20, 20, 0.8);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-footer {
+      background: rgba(30, 30, 30, 0.95);
+      border-radius: 0 0 16px 16px;
+      padding: 16px 20px;
+    }
+
+    .btn-close {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      border-radius: 8px;
+    }
+
+    .btn-close:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      border-radius: 8px;
+    }
+
+    .secondary:disabled {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.05);
+      color: rgba(255, 255, 255, 0.5);
+      opacity: 0.6;
+    }
+
+    .primary:disabled {
+      background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+      border-color: transparent;
+      color: rgba(255, 255, 255, 0.5);
+      opacity: 0.7;
+    }
+
+    .primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: transparent;
+      color: #ffffff;
+      border-radius: 8px;
+    }
+
+    .primary:hover {
+      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
     }
   }
 </style>

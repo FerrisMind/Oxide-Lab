@@ -11,6 +11,35 @@
     "core:window:allow-unmaximize",
     "core:window:allow-start-dragging",
     "opener:default",
-    "dialog:default"
-  ]
+    "dialog:default",
+    "fs:default",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-read-dir",
+    "fs:allow-copy-file",
+    "fs:allow-exists",
+    "fs:allow-remove",
+    "fs:allow-rename",
+    "fs:allow-mkdir",
+    "fs:allow-download-read",
+    "fs:allow-download-write",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-write",
+    "fs:allow-document-read",
+    "fs:allow-document-write"
+  ],
+  "scope": {
+    "allow": [
+      "$DOWNLOAD/**",
+      "$APPDATA/**",
+      "$DOCUMENT/**"
+    ],
+    "deny": [
+      "$HOME/.ssh/**",
+      "/etc/**",
+      "C:\\Windows\\System32\\**"
+    ]
+  }
 }

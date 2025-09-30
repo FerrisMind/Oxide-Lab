@@ -87,8 +87,16 @@
     </button>
   </div>
   {#if showAbout}
-    <div class="about-modal" role="dialog" aria-modal="true" aria-labelledby="about-title" tabindex="-1" on:click={toggleAbout} on:keydown={(e) => { if (e.key === 'Escape') toggleAbout(); }}>
-      <div class="about-content" role="document" on:mousedown|stopPropagation>
+    <div 
+      class="about-modal" 
+      role="dialog" 
+      aria-modal="true" 
+      aria-labelledby="about-title" 
+      tabindex="-1"
+      on:click={toggleAbout}
+      on:keydown={(e) => { if (e.key === 'Escape') toggleAbout(); }}
+    >
+      <div class="about-content" role="document">
         <h2 id="about-title">О программе</h2>
         <p>Oxide Lab — настольное приложение для локального инференса LLM на Tauri + Svelte.</p>
         <div class="about-actions">
@@ -190,6 +198,7 @@
     padding: 16px;
     width: min(520px, calc(100vw - 32px));
     box-shadow: var(--shadow, 0 4px 20px rgb(0 0 0 / 0.06));
+    pointer-events: auto;
   }
   .about-actions { margin-top: 12px; display: flex; justify-content: flex-end; }
   .close-btn { background: var(--accent); color: #fff; }
@@ -199,7 +208,6 @@
     .sidebar { background: #1a1a1a; border-right-color: #333; }
     .nav-item:hover { background: #333; }
     .nav-item.active { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.24); }
-    .sidebar-footer { border-top-color: #333; }
     .about-content { background: #1a1a1a; border-color: #333; }
   }
 </style>
