@@ -5,7 +5,7 @@
   "identifier": "com.pc.oxide-lab",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1491",
+    "devUrl": "http://localhost:1411",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../build"
   },

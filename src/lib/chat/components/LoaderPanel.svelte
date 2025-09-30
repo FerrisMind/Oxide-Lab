@@ -1,20 +1,17 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
-  import DeviceSelector from "./loader/DeviceSelector.svelte";
-  import ContextLengthSelector from "./loader/ContextLengthSelector.svelte";
-  import HubModelForm from "./loader/HubModelForm.svelte";
-  import LoadingStatus from "./loader/LoadingStatus.svelte";
-  import ParamPresets from "$lib/components/params/ParamPresets.svelte";
-  import type { GenerationParams } from "$lib/components/params/ParamPresets.svelte";
-  
-  
+  import { createEventDispatcher } from 'svelte';
+  import DeviceSelector from './loader/DeviceSelector.svelte';
+  import ContextLengthSelector from './loader/ContextLengthSelector.svelte';
+  import HubModelForm from './loader/HubModelForm.svelte';
+  import LoadingStatus from './loader/LoadingStatus.svelte';
+
   const dispatch = createEventDispatcher();
-  
-  export let format: "gguf" | "hub_gguf" | "hub_safetensors" = "gguf";
-  export let modelPath = "";
-  export let repoId = "";
-  export let revision = "";
-  export let hubGgufFilename = "";
+
+  export let format: 'gguf' | 'hub_gguf' | 'hub_safetensors' = 'gguf';
+  export let modelPath = '';
+  export let repoId = '';
+  export let revision = '';
+  export let hubGgufFilename = '';
   // deprecated: токенизатор берётся из GGUF
   // export let tokenizerPath = "";
   // removed: enable_thinking toggle (no_think detection removed)
@@ -23,10 +20,10 @@
   export let isLoadingModel = false;
   export let isUnloadingModel = false;
   export let isCancelling = false;
-  export let loadingStage = "";
+  export let loadingStage = '';
   export let loadingProgress = 0;
   export let unloadingProgress = 0;
-  export let errorText = "";
+  export let errorText = '';
   export let busy = false;
   export let isLoaded = false;
   // Устройство инференса
@@ -41,24 +38,8 @@
   export const supports_audio: boolean = false;
   export const supports_video: boolean = false;
 
-  // Параметры генерации для пресетов
-  export let generationParams: GenerationParams = {
-    temperature: 0.7,
-    temperature_enabled: true,
-    top_k_enabled: true,
-    top_k_value: 20,
-    top_p_enabled: true,
-    top_p_value: 0.9,
-    min_p_enabled: true,
-    min_p_value: 0.0,
-    repeat_penalty_enabled: true,
-    repeat_penalty_value: 1.1,
-    ctx_limit_value: 4096,
-  };
-
   // Коллбеки, реализуются родителем
   export let onMainAction: (() => void) | undefined = undefined;
-  export let onApplyPreset: ((params: GenerationParams) => void) | undefined = undefined;
 
   // reference-only export (used by parent) — prevent Svelte warning by using const alias
   const _modelPath_ref = modelPath;
@@ -74,27 +55,18 @@
   <!-- Панель индикаторов модальностей удалена по требованию -->
 
   {#if format === 'gguf'}
-    <DeviceSelector 
-      bind:use_gpu 
-      bind:cuda_available 
-      bind:cuda_build 
-      on:device-toggle={(e) => dispatch('device-toggle', e.detail)} 
+    <DeviceSelector
+      bind:use_gpu
+      bind:cuda_available
+      bind:cuda_build
+      on:device-toggle={(e) => dispatch('device-toggle', e.detail)}
     />
-    
+
     <!-- thinking toggle removed -->
-    
+
     <ContextLengthSelector bind:ctx_limit_value />
-    
-    <!-- Пресеты параметров генерации -->
-    <ParamPresets 
-      bind:currentParams={generationParams}
-      onApplyPreset={(params) => {
-        onApplyPreset?.(params);
-        dispatch('apply-preset', params);
-      }}
-    />
-    
-    <LoadingStatus 
+
+    <LoadingStatus
       bind:isLoadingModel
       bind:isCancelling
       bind:loadingStage
@@ -102,31 +74,18 @@
       bind:errorText
     />
   {:else if format === 'hub_gguf'}
-    <DeviceSelector 
-      bind:use_gpu 
-      bind:cuda_available 
-      bind:cuda_build 
-      on:device-toggle={(e) => dispatch('device-toggle', e.detail)} 
+    <DeviceSelector
+      bind:use_gpu
+      bind:cuda_available
+      bind:cuda_build
+      on:device-toggle={(e) => dispatch('device-toggle', e.detail)}
     />
-    
-    <HubModelForm 
-      bind:repoId 
-      bind:revision 
-      bind:hubGgufFilename 
-    />
-    
+
+    <HubModelForm bind:repoId bind:revision bind:hubGgufFilename />
+
     <ContextLengthSelector bind:ctx_limit_value />
-    
-    <!-- Пресеты параметров генерации -->
-    <ParamPresets 
-      bind:currentParams={generationParams}
-      onApplyPreset={(params) => {
-        onApplyPreset?.(params);
-        dispatch('apply-preset', params);
-      }}
-    />
-    
-    <LoadingStatus 
+
+    <LoadingStatus
       bind:isLoadingModel
       bind:isCancelling
       bind:loadingStage
@@ -134,31 +93,18 @@
       bind:errorText
     />
   {:else}
-    <DeviceSelector 
-      bind:use_gpu 
-      bind:cuda_available 
-      bind:cuda_build 
-      on:device-toggle={(e) => dispatch('device-toggle', e.detail)} 
+    <DeviceSelector
+      bind:use_gpu
+      bind:cuda_available
+      bind:cuda_build
+      on:device-toggle={(e) => dispatch('device-toggle', e.detail)}
     />
-    
-    <HubModelForm 
-      bind:repoId 
-      bind:revision 
-      isSafetensors={true}
-    />
-    
+
+    <HubModelForm bind:repoId bind:revision isSafetensors={true} />
+
     <ContextLengthSelector bind:ctx_limit_value />
-    
-    <!-- Пресеты параметров генерации -->
-    <ParamPresets 
-      bind:currentParams={generationParams}
-      onApplyPreset={(params) => {
-        onApplyPreset?.(params);
-        dispatch('apply-preset', params);
-      }}
-    />
-    
-    <LoadingStatus 
+
+    <LoadingStatus
       bind:isLoadingModel
       bind:isCancelling
       bind:loadingStage

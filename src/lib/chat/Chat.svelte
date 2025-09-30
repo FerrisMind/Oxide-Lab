@@ -1,23 +1,22 @@
 <script lang="ts">
   // no direct event subscriptions in Chat; streaming handled via controller
-  import { onDestroy, onMount } from "svelte";
-  import LoaderPanel from "$lib/chat/components/LoaderPanel.svelte";
-  import MessageList from "$lib/chat/components/MessageList.svelte";
-  import Composer from "$lib/chat/components/Composer.svelte";
+  import { onDestroy, onMount } from 'svelte';
+  import LoaderPanel from '$lib/chat/components/LoaderPanel.svelte';
+  import MessageList from '$lib/chat/components/MessageList.svelte';
+  import Composer from '$lib/chat/components/Composer.svelte';
   // Chat styles are loaded globally from layout to avoid UI changes when navigating between pages
   // Убрали переключатель «сырого» Markdown
-  import type { ChatMessage } from "$lib/chat/types";
-  import { createChatController } from "$lib/chat/controller";
-  import InferenceParams from "$lib/chat/components/InferenceParams.svelte";
-  import { chatState, chatUiMounted, getDefaultChatState } from "$lib/stores/chat";
-  import { chatHistory, currentSession } from "$lib/stores/chat-history";
-  import { showChatHistory } from "$lib/stores/sidebar";
-  import { get as getStore } from "svelte/store";
+  import type { ChatMessage } from '$lib/chat/types';
+  import { createChatController } from '$lib/chat/controller';
+  import InferenceParams from '$lib/chat/components/InferenceParams.svelte';
+  import { chatState, chatUiMounted, getDefaultChatState } from '$lib/stores/chat';
+  import { chatHistory, currentSession } from '$lib/stores/chat-history';
+  import { showChatHistory } from '$lib/stores/sidebar';
+  import { get as getStore } from 'svelte/store';
   import { invoke } from '@tauri-apps/api/core';
   import { performanceService } from '$lib/services/performance-service';
   import { inferenceMetricsStore } from '$lib/stores/inference-metrics';
   import type { InferenceMetrics } from '$lib/types/performance';
-  import type { GenerationParams } from "$lib/components/params/ParamPresets.svelte";
 
   type ComposerAttachment = {
     filename: string;
@@ -27,23 +26,23 @@
   // Добавляем состояние видимости лоадер панели
   let isLoaderPanelVisible = $state(false);
 
-  let modelPath = $state("");
-  let repoId = $state<string>("");
-  let revision = $state<string>("");
-  let hubGgufFilename = $state<string>("");
-  let prompt = $state("");
+  let modelPath = $state('');
+  let repoId = $state<string>('');
+  let revision = $state<string>('');
+  let hubGgufFilename = $state<string>('');
+  let prompt = $state('');
   let messages = $state<ChatMessage[]>([]);
   let messagesEl = $state<HTMLDivElement | null>(null);
   let busy = $state(false);
-  let format = $state<"gguf" | "hub_gguf" | "hub_safetensors">("gguf");
+  let format = $state<'gguf' | 'hub_gguf' | 'hub_safetensors'>('gguf');
   let isLoaded = $state(false);
-  let errorText = $state("");
+  let errorText = $state('');
   // Устройство
   let use_gpu = $state<boolean>(false); // CPU по умолчанию
   let cuda_available = $state<boolean>(false);
   let cuda_build = $state<boolean>(false);
-  let current_device = $state<string>("CPU");
-  
+  let current_device = $state<string>('CPU');
+
   // Поддержка модальностей (эвристика по имени модели)
   let supports_text = $state<boolean>(true);
   let supports_image = $state<boolean>(false);
@@ -52,7 +51,8 @@
 
   async function refreshModalities() {
     try {
-      const r: { text: boolean; image: boolean; audio: boolean; video: boolean } = await invoke('get_modality_support');
+      const r: { text: boolean; image: boolean; audio: boolean; video: boolean } =
+        await invoke('get_modality_support');
       supports_text = !!r.text;
       supports_image = !!r.image;
       supports_audio = !!r.audio;
@@ -65,7 +65,7 @@
       supports_video = false;
     }
   }
-  
+
   $effect(() => {
     if (isLoaded) {
       void refreshModalities();
@@ -92,17 +92,17 @@
       supports_audio = has(audioHints) || has(any2anyHints);
     } catch {}
   }
-  
+
   $effect(() => {
     detectModalities();
   });
-  
+
   // Состояние загрузки модели
   let isLoadingModel = $state(false);
   let loadingProgress = $state(0);
-  let loadingStage = $state(""); // "model" | "tokenizer" | "complete"
+  let loadingStage = $state(''); // "model" | "tokenizer" | "complete"
   let isCancelling = $state(false); // Флаг для отмены загрузки
-  
+
   // Состояние выгрузки модели
   let isUnloadingModel = $state(false);
   let unloadingProgress = $state(0);
@@ -126,79 +126,229 @@
   let use_custom_params = $state<boolean>(false);
   // Убран offloading: слои на GPU больше не настраиваются
 
-  // Объект для пресетов параметров генерации
-  let generationParams: GenerationParams = $derived({
-    temperature,
-    temperature_enabled,
-    top_k_enabled,
-    top_k_value,
-    top_p_enabled,
-    top_p_value,
-    min_p_enabled,
-    min_p_value,
-    repeat_penalty_enabled,
-    repeat_penalty_value,
-    ctx_limit_value,
-  });
-
-  // Обработчик применения пресета
-  function handleApplyPreset(params: GenerationParams) {
-    temperature = params.temperature;
-    temperature_enabled = params.temperature_enabled;
-    top_k_enabled = params.top_k_enabled;
-    top_k_value = params.top_k_value;
-    top_p_enabled = params.top_p_enabled;
-    top_p_value = params.top_p_value;
-    min_p_enabled = params.min_p_enabled;
-    min_p_value = params.min_p_value;
-    repeat_penalty_enabled = params.repeat_penalty_enabled;
-    repeat_penalty_value = params.repeat_penalty_value;
-    ctx_limit_value = params.ctx_limit_value;
-    
-    console.log('Пресет применён:', params);
-  }
-
   const controller = createChatController({
-    get modelPath() { return modelPath; }, set modelPath(v) { modelPath = v; },
-    get format() { return format; }, set format(v) { format = v; },
-    get repoId() { return repoId; }, set repoId(v) { repoId = v; },
-    get revision() { return revision; }, set revision(v) { revision = v; },
-    get hubGgufFilename() { return hubGgufFilename; }, set hubGgufFilename(v) { hubGgufFilename = v; },
-    
-    get prompt() { return prompt; }, set prompt(v) { prompt = v; },
-    get messages() { return messages; }, set messages(v) { messages = v; },
-    get messagesEl() { return messagesEl; },
-    get busy() { return busy; }, set busy(v) { busy = v; },
-    get isLoaded() { return isLoaded; }, set isLoaded(v) { isLoaded = v; },
-    get errorText() { return errorText; }, set errorText(v) { errorText = v; },
-    get isLoadingModel() { return isLoadingModel; }, set isLoadingModel(v) { isLoadingModel = v; },
-    get loadingProgress() { return loadingProgress; }, set loadingProgress(v) { loadingProgress = v; },
-    get loadingStage() { return loadingStage; }, set loadingStage(v) { loadingStage = v; },
-    get isCancelling() { return isCancelling; }, set isCancelling(v) { isCancelling = v; },
-    get isUnloadingModel() { return isUnloadingModel; }, set isUnloadingModel(v) { isUnloadingModel = v; },
-    get unloadingProgress() { return unloadingProgress; }, set unloadingProgress(v) { unloadingProgress = v; },
-    get temperature() { return temperature; }, set temperature(v) { temperature = v; },
-    get temperature_enabled() { return temperature_enabled; }, set temperature_enabled(v) { temperature_enabled = v; },
-    get top_k_enabled() { return top_k_enabled; }, set top_k_enabled(v) { top_k_enabled = v; },
-    get top_k_value() { return top_k_value; }, set top_k_value(v) { top_k_value = v; },
-    get top_p_enabled() { return top_p_enabled; }, set top_p_enabled(v) { top_p_enabled = v; },
-    get top_p_value() { return top_p_value; }, set top_p_value(v) { top_p_value = v; },
-    get min_p_enabled() { return min_p_enabled; }, set min_p_enabled(v) { min_p_enabled = v; },
-    get min_p_value() { return min_p_value; }, set min_p_value(v) { min_p_value = v; },
-    get repeat_penalty_enabled() { return repeat_penalty_enabled; }, set repeat_penalty_enabled(v) { repeat_penalty_enabled = v; },
-    get repeat_penalty_value() { return repeat_penalty_value; }, set repeat_penalty_value(v) { repeat_penalty_value = v; },
-    get ctx_limit_value() { return ctx_limit_value; }, set ctx_limit_value(v) { ctx_limit_value = v; },
+    get modelPath() {
+      return modelPath;
+    },
+    set modelPath(v) {
+      modelPath = v;
+    },
+    get format() {
+      return format;
+    },
+    set format(v) {
+      format = v;
+    },
+    get repoId() {
+      return repoId;
+    },
+    set repoId(v) {
+      repoId = v;
+    },
+    get revision() {
+      return revision;
+    },
+    set revision(v) {
+      revision = v;
+    },
+    get hubGgufFilename() {
+      return hubGgufFilename;
+    },
+    set hubGgufFilename(v) {
+      hubGgufFilename = v;
+    },
+
+    get prompt() {
+      return prompt;
+    },
+    set prompt(v) {
+      prompt = v;
+    },
+    get messages() {
+      return messages;
+    },
+    set messages(v) {
+      messages = v;
+    },
+    get messagesEl() {
+      return messagesEl;
+    },
+    get busy() {
+      return busy;
+    },
+    set busy(v) {
+      busy = v;
+    },
+    get isLoaded() {
+      return isLoaded;
+    },
+    set isLoaded(v) {
+      isLoaded = v;
+    },
+    get errorText() {
+      return errorText;
+    },
+    set errorText(v) {
+      errorText = v;
+    },
+    get isLoadingModel() {
+      return isLoadingModel;
+    },
+    set isLoadingModel(v) {
+      isLoadingModel = v;
+    },
+    get loadingProgress() {
+      return loadingProgress;
+    },
+    set loadingProgress(v) {
+      loadingProgress = v;
+    },
+    get loadingStage() {
+      return loadingStage;
+    },
+    set loadingStage(v) {
+      loadingStage = v;
+    },
+    get isCancelling() {
+      return isCancelling;
+    },
+    set isCancelling(v) {
+      isCancelling = v;
+    },
+    get isUnloadingModel() {
+      return isUnloadingModel;
+    },
+    set isUnloadingModel(v) {
+      isUnloadingModel = v;
+    },
+    get unloadingProgress() {
+      return unloadingProgress;
+    },
+    set unloadingProgress(v) {
+      unloadingProgress = v;
+    },
+    get temperature() {
+      return temperature;
+    },
+    set temperature(v) {
+      temperature = v;
+    },
+    get temperature_enabled() {
+      return temperature_enabled;
+    },
+    set temperature_enabled(v) {
+      temperature_enabled = v;
+    },
+    get top_k_enabled() {
+      return top_k_enabled;
+    },
+    set top_k_enabled(v) {
+      top_k_enabled = v;
+    },
+    get top_k_value() {
+      return top_k_value;
+    },
+    set top_k_value(v) {
+      top_k_value = v;
+    },
+    get top_p_enabled() {
+      return top_p_enabled;
+    },
+    set top_p_enabled(v) {
+      top_p_enabled = v;
+    },
+    get top_p_value() {
+      return top_p_value;
+    },
+    set top_p_value(v) {
+      top_p_value = v;
+    },
+    get min_p_enabled() {
+      return min_p_enabled;
+    },
+    set min_p_enabled(v) {
+      min_p_enabled = v;
+    },
+    get min_p_value() {
+      return min_p_value;
+    },
+    set min_p_value(v) {
+      min_p_value = v;
+    },
+    get repeat_penalty_enabled() {
+      return repeat_penalty_enabled;
+    },
+    set repeat_penalty_enabled(v) {
+      repeat_penalty_enabled = v;
+    },
+    get repeat_penalty_value() {
+      return repeat_penalty_value;
+    },
+    set repeat_penalty_value(v) {
+      repeat_penalty_value = v;
+    },
+    get ctx_limit_value() {
+      return ctx_limit_value;
+    },
+    set ctx_limit_value(v) {
+      ctx_limit_value = v;
+    },
     // enable_thinking removed from controller API
-    get use_custom_params() { return use_custom_params; }, set use_custom_params(v) { use_custom_params = v; },
-    get use_gpu() { return use_gpu; }, set use_gpu(v) { use_gpu = v; },
-    get cuda_available() { return cuda_available; }, set cuda_available(v) { cuda_available = v; },
-    get cuda_build() { return cuda_build; }, set cuda_build(v) { cuda_build = v; },
-    get current_device() { return current_device; }, set current_device(v) { current_device = v; },
+    get use_custom_params() {
+      return use_custom_params;
+    },
+    set use_custom_params(v) {
+      use_custom_params = v;
+    },
+    get use_gpu() {
+      return use_gpu;
+    },
+    set use_gpu(v) {
+      use_gpu = v;
+    },
+    get cuda_available() {
+      return cuda_available;
+    },
+    set cuda_available(v) {
+      cuda_available = v;
+    },
+    get cuda_build() {
+      return cuda_build;
+    },
+    set cuda_build(v) {
+      cuda_build = v;
+    },
+    get current_device() {
+      return current_device;
+    },
+    set current_device(v) {
+      current_device = v;
+    },
     // Модальности
-    get supports_text() { return supports_text; }, set supports_text(v) { supports_text = v; },
-    get supports_image() { return supports_image; }, set supports_image(v) { supports_image = v; },
-    get supports_audio() { return supports_audio; }, set supports_audio(v) { supports_audio = v; },
-    get supports_video() { return supports_video; }, set supports_video(v) { supports_video = v; },
+    get supports_text() {
+      return supports_text;
+    },
+    set supports_text(v) {
+      supports_text = v;
+    },
+    get supports_image() {
+      return supports_image;
+    },
+    set supports_image(v) {
+      supports_image = v;
+    },
+    get supports_audio() {
+      return supports_audio;
+    },
+    set supports_audio(v) {
+      supports_audio = v;
+    },
+    get supports_video() {
+      return supports_video;
+    },
+    set supports_video(v) {
+      supports_video = v;
+    },
   });
 
   const cancelLoading = controller.cancelLoading;
@@ -279,7 +429,6 @@
   const _pickModel = controller.pickModel;
   // expose minimal controller API to window for header GGUF control
   if (typeof window !== 'undefined') {
-     
     // @ts-ignore
     window.__oxide = {
       pickModel: controller.pickModel,
@@ -287,8 +436,16 @@
       unloadGGUF: controller.unloadGGUF,
       cancelLoading: controller.cancelLoading,
       getState: () => ({
-        modelPath, isLoaded, isLoadingModel, isUnloadingModel, isCancelling, loadingStage, loadingProgress, unloadingProgress, busy
-      })
+        modelPath,
+        isLoaded,
+        isLoadingModel,
+        isUnloadingModel,
+        isCancelling,
+        loadingStage,
+        loadingProgress,
+        unloadingProgress,
+        busy,
+      }),
     };
   }
 
@@ -320,10 +477,14 @@
 
       temperature = s.temperature;
       temperature_enabled = s.temperature_enabled;
-      top_k_enabled = s.top_k_enabled; top_k_value = s.top_k_value;
-      top_p_enabled = s.top_p_enabled; top_p_value = s.top_p_value;
-      min_p_enabled = s.min_p_enabled; min_p_value = s.min_p_value;
-      repeat_penalty_enabled = s.repeat_penalty_enabled; repeat_penalty_value = s.repeat_penalty_value;
+      top_k_enabled = s.top_k_enabled;
+      top_k_value = s.top_k_value;
+      top_p_enabled = s.top_p_enabled;
+      top_p_value = s.top_p_value;
+      min_p_enabled = s.min_p_enabled;
+      min_p_value = s.min_p_value;
+      repeat_penalty_enabled = s.repeat_penalty_enabled;
+      repeat_penalty_value = s.repeat_penalty_value;
       ctx_limit_value = s.ctx_limit_value;
       // enable_thinking removed from persisted state
       use_custom_params = s.use_custom_params;
@@ -335,26 +496,26 @@
     } catch {
       // ignore, fall back to defaults
     }
-    
+
     // Initialize stream listener to handle incoming tokens
     try {
       await controller.ensureStreamListener();
     } catch (err) {
       console.warn('Failed to initialize stream listener:', err);
     }
-    
+
     // Подписываемся на события метрик производительности
     await performanceService.setupEventListeners(
-      undefined,  // Не обрабатываем загрузку модели здесь
+      undefined, // Не обрабатываем загрузку модели здесь
       (inferenceMetrics: InferenceMetrics) => {
         // Даём небольшую задержку на случай, если сообщение ещё не добавлено
         setTimeout(() => {
-          const lastAssistantIndex = messages.findLastIndex(m => m.role === 'assistant');
+          const lastAssistantIndex = messages.findLastIndex((m) => m.role === 'assistant');
           if (lastAssistantIndex !== -1) {
             inferenceMetricsStore.setMetrics(lastAssistantIndex, inferenceMetrics);
           }
         }, 150);
-      }
+      },
     );
   });
 
@@ -365,11 +526,16 @@
   // Загрузка сообщений при переключении сессии
   $effect(() => {
     if ($currentSession && $currentSession.id !== lastSessionId) {
-      console.log('Загружаем сессию:', $currentSession.id, 'Сообщений:', $currentSession.messages.length);
+      console.log(
+        'Загружаем сессию:',
+        $currentSession.id,
+        'Сообщений:',
+        $currentSession.messages.length,
+      );
       isLoadingFromHistory = true;
       messages = [...$currentSession.messages]; // Создаем новый массив для триггера реактивности
       lastSessionId = $currentSession.id;
-      
+
       // Сбрасываем флаг после небольшой задержки
       setTimeout(() => {
         isLoadingFromHistory = false;
@@ -388,7 +554,7 @@
   let _canRegenerate = false;
 
   let canStopGeneration = $derived(busy && isLoaded);
-  
+
   // Очищаем слушатели событий при размонтировании
   onDestroy(() => {
     performanceService.cleanup();
@@ -417,83 +583,76 @@
 
 <main class="wrap">
   <div class="chat-container">
-  <!-- удалено дублирование заголовка -->
-  <section class="chat">
-    <MessageList
-      bind:messages
-      bind:messagesEl
-      showModelNotice={!isLoaded}
-    />
+    <!-- удалено дублирование заголовка -->
+    <section class="chat">
+      <MessageList bind:messages bind:messagesEl showModelNotice={!isLoaded} />
 
-    <Composer
-      bind:prompt
-      {busy}
-      {isLoaded}
-      {supports_text}
-      {supports_image}
-      {supports_audio}
-      {supports_video}
-      {isLoaderPanelVisible}
-      isChatHistoryVisible={$showChatHistory}
-      canStop={canStopGeneration}
-      on:send={() => void sendMessage()}
-      on:stop={() => void stopGenerate()}
-      on:attach={(e: CustomEvent<ComposerAttachment>) => void attachFileToPrompt(e.detail)}
-      on:toggle-loader-panel={() => isLoaderPanelVisible = !isLoaderPanelVisible}
-      on:toggle-chat-history={() => showChatHistory.update(v => !v)}
-    />
-  </section>
+      <Composer
+        bind:prompt
+        {busy}
+        {isLoaded}
+        {supports_text}
+        {supports_image}
+        {supports_audio}
+        {supports_video}
+        {isLoaderPanelVisible}
+        isChatHistoryVisible={$showChatHistory}
+        canStop={canStopGeneration}
+        on:send={() => void sendMessage()}
+        on:stop={() => void stopGenerate()}
+        on:attach={(e: CustomEvent<ComposerAttachment>) => void attachFileToPrompt(e.detail)}
+        on:toggle-loader-panel={() => (isLoaderPanelVisible = !isLoaderPanelVisible)}
+        on:toggle-chat-history={() => showChatHistory.update((v) => !v)}
+      />
+    </section>
 
-  {#if isLoaderPanelVisible}
-    <div class="loader-host">
-    <LoaderPanel
-      bind:format
-      bind:modelPath
-      bind:repoId
-      bind:revision
-      bind:hubGgufFilename
-      
-      bind:ctx_limit_value
-      bind:isLoadingModel
-      bind:isUnloadingModel
-      bind:isCancelling
-      bind:loadingStage
-      bind:loadingProgress
-      bind:unloadingProgress
-      bind:errorText
-      bind:busy
-      bind:isLoaded
-      bind:use_gpu
-      bind:cuda_available
-      bind:cuda_build
-      {supports_text}
-      {supports_image}
-      {supports_audio}
-      {supports_video}
-      {generationParams}
-      onMainAction={mainAction}
-      onApplyPreset={handleApplyPreset}
-      on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
-    >
-      <!-- Параметры инференса -->
-      {#if isLoaded}
-        <InferenceParams
-          bind:use_custom_params
-          bind:temperature_enabled
-          bind:temperature
-          bind:top_k_enabled
-          bind:top_k_value
-          bind:top_p_enabled
-          bind:top_p_value
-          bind:min_p_enabled
-          bind:min_p_value
-          bind:repeat_penalty_enabled
-          bind:repeat_penalty_value
-        />
-      {/if}
-    </LoaderPanel>
-    </div>
-  {/if}
+    {#if isLoaderPanelVisible}
+      <div class="loader-host">
+        <LoaderPanel
+          bind:format
+          bind:modelPath
+          bind:repoId
+          bind:revision
+          bind:hubGgufFilename
+          bind:ctx_limit_value
+          bind:isLoadingModel
+          bind:isUnloadingModel
+          bind:isCancelling
+          bind:loadingStage
+          bind:loadingProgress
+          bind:unloadingProgress
+          bind:errorText
+          bind:busy
+          bind:isLoaded
+          bind:use_gpu
+          bind:cuda_available
+          bind:cuda_build
+          {supports_text}
+          {supports_image}
+          {supports_audio}
+          {supports_video}
+          onMainAction={mainAction}
+          on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
+        >
+          <!-- Параметры инференса -->
+          {#if isLoaded}
+            <InferenceParams
+              bind:use_custom_params
+              bind:temperature_enabled
+              bind:temperature
+              bind:top_k_enabled
+              bind:top_k_value
+              bind:top_p_enabled
+              bind:top_p_value
+              bind:min_p_enabled
+              bind:min_p_value
+              bind:repeat_penalty_enabled
+              bind:repeat_penalty_value
+            />
+          {/if}
+        </LoaderPanel>
+      </div>
+    {/if}
   </div>
 </main>
 
@@ -531,5 +690,4 @@
     flex-direction: column;
     min-height: 0;
   }
-
 </style>
