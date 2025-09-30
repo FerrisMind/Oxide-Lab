@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.11.1 - 2025-09-30
+#### Bug Fixes
+- упрощена конфигурация cog для работы с Tauri проектом - (722df81) - FerrisMind
+- исправлена конфигурация cog для работы с Tauri проектом - (619fd60) - FerrisMind
+- упрощение структуры разрешений в default.json - (23b1e8b) - FerrisMind
+
+- - -
+
 ## 0.11.0 - 2025-09-30
 #### Bug Fixes
 - **(settings)** improve precision policy UI and styling - (33a8f75) - FerrisMind
