@@ -17,6 +17,6 @@ pre_bump_hooks = [
     "cd src-tauri && cargo check"
 ]
 post_bump_hooks = [
-    "git push",
-    "git push --tags"
+    "git push origin main",
+    "git push origin --tags"
 ]
