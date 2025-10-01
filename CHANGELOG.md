@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.12.0 - 2025-10-01
+#### Bug Fixes
+- улучшение читаемости кода и исправление стилей в компоненте ChatHistory.svelte - (156e82c) - FerrisMind
+#### Features
+- **(models)** добавление вкладок для управления моделями - (3ef0d12) - FerrisMind
+
+- - -
+
 ## 0.11.3 - 2025-09-30
 #### Bug Fixes
 - улучшение читаемости кода и исправление стилей в компоненте ChatHistory.svelte - (156e82c) - FerrisMind
