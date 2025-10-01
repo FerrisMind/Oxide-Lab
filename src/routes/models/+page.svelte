@@ -1,241 +1,99 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import SearchManager from '$lib/components/search/SearchManager.svelte';
-  import SearchLayout from '$lib/components/SearchLayout.svelte';
-  import ModelStatus from '$lib/components/model-manager/ModelStatus.svelte';
-  import ModelActions from '$lib/components/model-manager/ModelActions.svelte';
-  import MemoryMonitor from '$lib/components/model-manager/MemoryMonitor.svelte';
-  import type { HFModel } from '$lib/services/huggingface';
-  
-  // Состояние модели - получаем из ModelStatus
-  let modelStatusComponent: any;
-  let modelStatus = $state({
-    isLoaded: false,
-    isLoading: false,
-    loadingProgress: 0,
-    error: null as string | null
-  });
-  
-  // Выбранная модель из поиска
-  let selectedModel = $state<HFModel | null>(null);
-  
-  // Обработчики событий
-  function handleModelLoad() {
-    console.log('Model load initiated');
-  }
-  
-  function handleModelUnload() {
-    console.log('Model unload initiated');
-    selectedModel = null;
-  }
-  
-  // Обновляем статус модели
-  function updateModelStatus() {
-    if (modelStatusComponent) {
-      const status = modelStatusComponent.getStatus();
-      modelStatus = {
-        isLoaded: status.isLoaded,
-        isLoading: status.isLoading,
-        loadingProgress: status.loadingProgress,
-        error: status.error
-      };
-    }
-  }
-  
-  // Периодически обновляем статус
-  onMount(() => {
-    const interval = setInterval(updateModelStatus, 100);
-    return () => clearInterval(interval);
-  });
+  import Tabs from '$lib/components/ui/Tabs.svelte';
+  import LocalModelsTab from '$lib/components/model-manager/LocalModelsTab.svelte';
+  import HuggingFaceTab from '$lib/components/model-manager/HuggingFaceTab.svelte';
+
+  // Active tab state
+  let activeTab = $state('local');
+
+  // Tab definitions
+  const tabs = [
+    { id: 'local', label: 'Локальные модели' },
+    { id: 'huggingface', label: 'Hugging Face' },
+  ];
 </script>
 
 <div class="models-page">
   <div class="page-header">
     <h1>Управление моделями</h1>
     <p class="page-description">
-      Выберите модель из HuggingFace или загрузите локальную модель для работы
+      Управляйте локальными моделями или выберите модель из Hugging Face Hub
     </p>
   </div>
-  
-  <div class="models-layout">
-    <!-- Левая панель - статус и действия -->
-    <aside class="control-panel">
-      <ModelStatus bind:this={modelStatusComponent} />
-      <MemoryMonitor />
-      <ModelActions
-        bind:selectedModel
-        isLoaded={modelStatus.isLoaded}
-        isLoading={modelStatus.isLoading}
-        onModelLoad={handleModelLoad}
-        onModelUnload={handleModelUnload}
-      />
-    </aside>
-    
-    <!-- Правая панель - поиск и выбор моделей -->
-    <main class="search-panel">
-      <SearchManager let:models let:isLoading let:searchModels let:hasMore let:totalCount>
-        <div class="search-section">
-          <div class="search-header">
-            <h2>Поиск моделей HuggingFace</h2>
-            <button
-              class="btn btn-search"
-              onclick={() => searchModels()}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Поиск...' : 'Обновить'}
-            </button>
-          </div>
-          
-          <SearchLayout
-            {models}
-            {selectedModel}
-            {isLoading}
-            {hasMore}
-            {totalCount}
-          />
+
+  <div class="tabs-wrapper">
+    <Tabs {tabs} bind:activeTab>
+      {#if activeTab === 'local'}
+        <div class="tab-panel" role="tabpanel" id="tabpanel-local" aria-labelledby="tab-local">
+          <LocalModelsTab />
         </div>
-      </SearchManager>
-    </main>
+      {:else if activeTab === 'huggingface'}
+        <div
+          class="tab-panel"
+          role="tabpanel"
+          id="tabpanel-huggingface"
+          aria-labelledby="tab-huggingface"
+        >
+          <HuggingFaceTab />
+        </div>
+      {/if}
+    </Tabs>
   </div>
 </div>
 
 <style>
   .models-page {
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
+    height: 100vh;
     background: var(--bg);
-    padding: 2rem;
+    overflow: hidden;
   }
-  
+
   .page-header {
-    max-width: 1400px;
-    margin: 0 auto 2rem;
+    flex-shrink: 0;
+    padding: 2rem 2rem 1rem;
+    border-bottom: 1px solid var(--border-color);
   }
-  
+
   .page-header h1 {
     margin: 0 0 0.5rem 0;
     font-size: 2rem;
     font-weight: 700;
     color: var(--text);
   }
-  
+
   .page-description {
     margin: 0;
     font-size: 1rem;
     color: var(--muted);
   }
-  
-  .models-layout {
-    display: grid;
-    grid-template-columns: 380px 1fr;
-    gap: 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-  
-  .control-panel {
+
+  .tabs-wrapper {
+    flex: 1;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    position: sticky;
-    top: 2rem;
-    align-self: start;
-    max-height: calc(100vh - 4rem);
-    overflow-y: auto;
   }
-  
-  .search-panel {
-    min-height: 600px;
+
+  .tab-panel {
+    flex: 1;
+    overflow: hidden;
   }
-  
-  .search-section {
-    background: var(--card);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1.5rem;
-  }
-  
-  .search-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
-  
-  .search-header h2 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-  
-  .btn {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  
-  .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  
-  .btn-search {
-    background: var(--accent, #3498db);
-    color: white;
-  }
-  
-  .btn-search:hover:not(:disabled) {
-    background: var(--accent-hover, #2980b9);
-  }
-  
+
   /* Адаптивность для мобильных */
-  @media (max-width: 1024px) {
-    .models-layout {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-    }
-    
-    .control-panel {
-      position: static;
-      max-height: none;
-    }
-  }
-  
   @media (max-width: 768px) {
-    .models-page {
-      padding: 1rem;
+    .page-header {
+      padding: 1.5rem 1rem 0.75rem;
     }
-    
+
     .page-header h1 {
       font-size: 1.5rem;
     }
-    
-    .search-section {
-      padding: 1rem;
+
+    .page-description {
+      font-size: 0.875rem;
     }
-  }
-  
-  /* Скроллбар для control panel */
-  .control-panel::-webkit-scrollbar {
-    width: 8px;
-  }
-  
-  .control-panel::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 4px;
-  }
-  
-  .control-panel::-webkit-scrollbar-thumb {
-    background: rgba(179, 205, 224, 0.6);
-    border-radius: 4px;
-    transition: background 0.3s ease;
-  }
-  
-  .control-panel::-webkit-scrollbar-thumb:hover {
-    background: rgba(179, 205, 224, 0.8);
   }
 </style>

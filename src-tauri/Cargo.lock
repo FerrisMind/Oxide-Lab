@@ -3706,6 +3706,7 @@ dependencies = [
  "log",
  "minijinja",
  "rand 0.8.5",
+ "regex",
  "serde",
  "serde_json",
  "sysinfo",

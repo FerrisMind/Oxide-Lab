@@ -55,6 +55,9 @@ sysinfo = "0.33"
 chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["sync", "time"] }
 
+# Для парсинга и валидации
+regex = "1"
+
 
 [features]
 # По умолчанию — включаем поддержку CUDA в сборке.

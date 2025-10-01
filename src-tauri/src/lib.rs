@@ -70,6 +70,8 @@ pub fn run() {
             api::performance_api::get_memory_usage,
             api::performance_api::clear_performance_metrics,
             api::performance_api::get_startup_metrics,
+            api::local_models::scan_local_models_folder,
+            api::local_models::delete_local_model,
         ])
         .setup(move |app| {
             let _app_handle = app.handle().clone();
