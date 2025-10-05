@@ -407,4 +407,85 @@
   .btn-success:hover:not(:disabled) {
     background: #27ae60;
   }
+
+  /* Адаптивность */
+  @media (max-width: 768px) {
+    .local-model-actions {
+      padding: 0.875rem;
+    }
+
+    .actions-header h3 {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .actions-content {
+      gap: 1.25rem;
+    }
+
+    .load-section {
+      padding: 0.875rem;
+    }
+
+    .load-section h4 {
+      font-size: 0.9375rem;
+    }
+
+    .btn {
+      padding: 0.625rem 0.875rem;
+      font-size: 0.875rem;
+    }
+
+    .option-group label {
+      font-size: 0.8125rem;
+    }
+
+    .option-value {
+      font-size: 0.8125rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .local-model-actions {
+      padding: 0.75rem;
+    }
+
+    .actions-header h3 {
+      font-size: 0.9375rem;
+    }
+
+    .folder-path {
+      font-size: 0.875rem;
+    }
+
+    .folder-label {
+      font-size: 0.75rem;
+    }
+
+    .load-section h4 {
+      font-size: 0.875rem;
+    }
+
+    .model-name {
+      font-size: 0.875rem;
+    }
+
+    .model-info {
+      font-size: 0.75rem;
+    }
+
+    .btn {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+      gap: 0.375rem;
+    }
+
+    .option-group {
+      gap: 0.375rem;
+    }
+
+    .checkbox-label {
+      gap: 0.375rem;
+    }
+  }
 </style>

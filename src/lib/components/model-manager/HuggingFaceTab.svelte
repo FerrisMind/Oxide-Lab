@@ -12,7 +12,6 @@
   import SearchManager from '$lib/components/search/SearchManager.svelte';
   import SearchResults from '$lib/components/search/SearchResults.svelte';
   import WelcomeCard from '$lib/components/search/WelcomeCard.svelte';
-  import type { HFModel } from '$lib/services/huggingface';
 
   // Model status state
   let modelStatusComponent: any;
@@ -205,14 +204,30 @@
   }
 
   /* Адаптивность */
+  @media (max-width: 1200px) {
+    .huggingface-tab {
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
+    }
+  }
+
   @media (max-width: 1024px) {
     .huggingface-tab {
       grid-template-columns: 1fr;
       gap: 1.5rem;
+      padding: 1.5rem;
     }
 
     .control-panel {
-      max-height: 400px;
+      max-height: none;
+      overflow-y: visible;
+      grid-row: 2;
+      order: 2;
+    }
+
+    .search-panel {
+      grid-row: 1;
+      order: 1;
     }
   }
 
@@ -220,6 +235,18 @@
     .huggingface-tab {
       padding: 1rem;
       gap: 1rem;
+    }
+
+    .filters-container,
+    .results-container {
+      border-radius: 6px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .huggingface-tab {
+      padding: 0.75rem;
+      gap: 0.75rem;
     }
   }
 </style>

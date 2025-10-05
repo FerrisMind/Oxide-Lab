@@ -22,7 +22,7 @@ function createFolderPathStore() {
   const savedPath =
     typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) || '' : '';
 
-  const { subscribe, set, update } = writable<string>(savedPath);
+  const { subscribe, set } = writable<string>(savedPath);
 
   return {
     subscribe,

@@ -344,14 +344,23 @@
 
   /* Адаптивность */
   @media (max-width: 1200px) {
+    /* Скрываем колонку "Параметры" на средних экранах */
     .models-table th:nth-child(3),
     .models-table td:nth-child(3) {
       display: none;
     }
   }
 
+  @media (max-width: 1024px) {
+    /* Скрываем колонку "Автор" */
+    .models-table th:nth-child(5),
+    .models-table td:nth-child(5) {
+      display: none;
+    }
+  }
+
   @media (max-width: 768px) {
-    /* Скрываем дополнительные колонки на мобильных */
+    /* На мобильных оставляем только название, размер и действия */
     .models-table th:nth-child(2),
     .models-table td:nth-child(2),
     .models-table th:nth-child(4),
@@ -365,6 +374,36 @@
     .models-table td {
       padding: 0.625rem 0.75rem;
       font-size: 0.875rem;
+    }
+
+    .models-table th:first-child,
+    .models-table td:first-child {
+      padding-left: 1rem;
+    }
+
+    .empty-state p {
+      font-size: 0.875rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .models-table {
+      font-size: 0.8125rem;
+    }
+
+    .models-table th,
+    .models-table td {
+      padding: 0.5rem;
+    }
+
+    .sort-btn,
+    .delete-btn {
+      padding: 0.25rem;
+    }
+
+    .format-badge {
+      padding: 0.1875rem 0.375rem;
+      font-size: 0.75rem;
     }
   }
 </style>

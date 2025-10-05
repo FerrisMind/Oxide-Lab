@@ -202,14 +202,30 @@
   }
 
   /* Адаптивность */
+  @media (max-width: 1200px) {
+    .local-models-tab {
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
+    }
+  }
+
   @media (max-width: 1024px) {
     .local-models-tab {
       grid-template-columns: 1fr;
       gap: 1.5rem;
+      padding: 1.5rem;
     }
 
     .control-panel {
-      max-height: 400px;
+      max-height: none;
+      overflow-y: visible;
+      grid-row: 2;
+      order: 2;
+    }
+
+    .models-panel {
+      grid-row: 1;
+      order: 1;
     }
   }
 
@@ -219,8 +235,36 @@
       gap: 1rem;
     }
 
+    .panel-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
     .panel-header h2 {
       font-size: 1.25rem;
+    }
+
+    .models-count {
+      font-size: 0.8125rem;
+      padding: 0.25rem 0.5rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .local-models-tab {
+      padding: 0.75rem;
+      gap: 0.75rem;
+    }
+
+    .panel-header h2 {
+      font-size: 1.125rem;
+    }
+
+    .error-state,
+    .loading-state {
+      padding: 1rem;
+      margin: 1rem;
     }
   }
 </style>

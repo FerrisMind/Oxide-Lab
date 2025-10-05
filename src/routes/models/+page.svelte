@@ -83,7 +83,17 @@
   }
 
   /* Адаптивность для мобильных */
+  @media (max-width: 1024px) {
+    .page-header {
+      padding: 1.75rem 1.5rem 0.875rem;
+    }
+  }
+
   @media (max-width: 768px) {
+    .models-page {
+      min-height: 100vh;
+    }
+
     .page-header {
       padding: 1.5rem 1rem 0.75rem;
     }
@@ -94,6 +104,41 @@
 
     .page-description {
       font-size: 0.875rem;
+    }
+
+    .tabs-wrapper {
+      overflow-y: auto;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .page-header {
+      padding: 1.25rem 0.875rem 0.625rem;
+    }
+
+    .page-header h1 {
+      font-size: 1.375rem;
+    }
+
+    .page-description {
+      font-size: 0.8125rem;
+      line-height: 1.4;
+    }
+  }
+
+  /* Адаптация для маленьких экранов по высоте */
+  @media (max-height: 600px) {
+    .page-header {
+      padding: 1rem 1rem 0.5rem;
+    }
+
+    .page-header h1 {
+      font-size: 1.25rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .page-description {
+      font-size: 0.8125rem;
     }
   }
 </style>

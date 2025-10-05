@@ -172,6 +172,13 @@
   }
 
   /* Адаптивность для мобильных */
+  @media (max-width: 1024px) {
+    .tab {
+      padding: 0.6875rem 1.25rem;
+      font-size: 0.9rem;
+    }
+  }
+
   @media (max-width: 768px) {
     .tab {
       padding: 0.625rem 1rem;
@@ -180,6 +187,39 @@
 
     .tabs-list {
       padding: 0.375rem 0.375rem 0;
+      gap: 0.125rem;
+    }
+
+    .tabs-content {
+      border-radius: 0;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .tab {
+      padding: 0.5rem 0.875rem;
+      font-size: 0.8125rem;
+      border-radius: 6px 6px 0 0;
+    }
+
+    .tabs-list {
+      padding: 0.25rem 0.25rem 0;
+      gap: 0.0625rem;
+    }
+
+    .tab:focus {
+      outline-offset: 1px;
+    }
+  }
+
+  /* Адаптация для широких экранов */
+  @media (min-width: 1440px) {
+    .tabs-list {
+      padding: 0.625rem 1rem 0;
+    }
+
+    .tab {
+      padding: 0.875rem 1.75rem;
     }
   }
 </style>
