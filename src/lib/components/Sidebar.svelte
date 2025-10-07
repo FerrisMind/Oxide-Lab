@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   // remove version display; add About modal instead
   import ChatCircle from 'phosphor-svelte/lib/ChatCircle';
   import Code from 'phosphor-svelte/lib/Code';
@@ -10,97 +11,115 @@
   import Gear from 'phosphor-svelte/lib/Gear';
   import Info from 'phosphor-svelte/lib/Info';
 
-  const navigationItems = [
+  const baseNavigationItems = [
     {
       id: 'chat',
       title: 'Чат с моделью',
       icon: ChatCircle,
       path: '/',
-      description: 'Интерактивный чат с LLM'
-    },
-    {
-      id: 'api',
-      title: 'API работа',
-      icon: Code,
-      path: '/api',
-      description: 'Работа с моделью через API'
-    },
-    {
-      id: 'models',
-      title: 'Менеджер моделей',
-      icon: Database,
-      path: '/models',
-      description: 'Управление загруженными моделями'
-    },
-    {
-      id: 'search',
-      title: 'Поиск моделей',
-      icon: MagnifyingGlass,
-      path: '/search',
-      description: 'Поиск в Hugging Face Hub'
-    },
-    {
-      id: 'performance',
-      title: 'Производительность',
-      icon: ChartLine,
-      path: '/performance',
-      description: 'Мониторинг производительности и метрик'
+      description: 'Интерактивный чат с LLM',
     },
     {
       id: 'settings',
       title: 'Настройки',
       icon: Gear,
       path: '/settings',
-      description: 'Настройки приложения'
-    }
+      description: 'Настройки приложения',
+    },
   ];
 
-  let showAbout = false;
-  function toggleAbout() { showAbout = !showAbout; }
+  const experimentalNavigationItems = [
+    {
+      id: 'api',
+      title: 'API работа',
+      icon: Code,
+      path: '/api',
+      description: 'Работа с моделью через API',
+    },
+    {
+      id: 'models',
+      title: 'Менеджер моделей',
+      icon: Database,
+      path: '/models',
+      description: 'Управление загруженными моделями',
+    },
+    {
+      id: 'search',
+      title: 'Поиск моделей',
+      icon: MagnifyingGlass,
+      path: '/search',
+      description: 'Поиск в Hugging Face Hub',
+    },
+    {
+      id: 'performance',
+      title: 'Производительность',
+      icon: ChartLine,
+      path: '/performance',
+      description: 'Мониторинг производительности и метрик',
+    },
+  ];
+
+  // Computed navigation items based on experimental features
+  let navigationItems = $derived(
+    experimentalFeatures.enabled
+      ? [
+          baseNavigationItems[0], // Чат с моделью
+          ...experimentalNavigationItems, // Все экспериментальные функции
+          baseNavigationItems[1], // Настройки
+        ]
+      : baseNavigationItems,
+  );
+
+  let showAbout = $state(false);
+  function toggleAbout() {
+    showAbout = !showAbout;
+  }
 
   function navigateTo(path: string) {
     goto(path);
   }
 
-  $: currentPath = $page.url.pathname;
+  let currentPath = $derived($page.url.pathname);
 </script>
 
 <aside class="sidebar">
   <nav class="sidebar-nav">
     {#each navigationItems as item}
+      {@const Icon = item.icon}
       <button
         class="nav-item"
         class:active={currentPath === item.path}
-        on:click={() => navigateTo(item.path)}
+        onclick={() => navigateTo(item.path)}
         title={item.title}
       >
         <div class="nav-icon">
-          <svelte:component this={item.icon} size={20} weight="regular" />
+          <Icon size={20} weight="regular" />
         </div>
       </button>
     {/each}
-
   </nav>
   <div class="sidebar-bottom">
-    <button class="nav-item" title="О программе" aria-label="О программе" on:click={toggleAbout}>
+    <button class="nav-item" title="О программе" aria-label="О программе" onclick={toggleAbout}>
       <div class="nav-icon"><Info size={20} weight="regular" /></div>
     </button>
   </div>
   {#if showAbout}
-    <div 
-      class="about-modal" 
-      role="dialog" 
-      aria-modal="true" 
-      aria-labelledby="about-title" 
+    <div
+      class="about-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="about-title"
       tabindex="-1"
-      on:click={toggleAbout}
-      on:keydown={(e) => { if (e.key === 'Escape') toggleAbout(); }}
+      onclick={toggleAbout}
+      onkeydown={(e) => {
+        if (e.key === 'Escape') toggleAbout();
+      }}
     >
       <div class="about-content" role="document">
         <h2 id="about-title">О программе</h2>
         <p>Oxide Lab — настольное приложение для локального инференса LLM на Tauri + Svelte.</p>
         <div class="about-actions">
-          <button class="close-btn" on:click={toggleAbout}>Закрыть</button>
+          <button class="close-btn" onclick={toggleAbout}>Закрыть</button>
         </div>
       </div>
     </div>
@@ -119,11 +138,11 @@
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
     z-index: 50;
   }
-  
+
   /* remove collapsed variant */
-  
+
   /* remove sidebar-header and toggle styles */
-  
+
   .sidebar-nav {
     flex: 1;
     padding: 8px 6px;
@@ -131,7 +150,7 @@
     flex-direction: column;
     gap: 4px;
   }
-  
+
   .nav-item {
     display: flex;
     align-items: center;
@@ -141,22 +160,24 @@
     border: none;
     background: transparent;
     border-radius: 10px;
-     cursor: default;
+    cursor: default;
     transition: all 0.2s ease;
     color: var(--text);
     min-height: 48px;
     position: relative;
     overflow: hidden;
   }
-  
-  .nav-item:hover { background: var(--border-color, #e8e6e3); }
-  
+
+  .nav-item:hover {
+    background: var(--border-color, #e8e6e3);
+  }
+
   .nav-item.active {
     background: rgba(59, 130, 246, 0.06);
     border: 1px solid rgba(59, 130, 246, 0.12);
     color: #3b82f6;
   }
-  
+
   .nav-item.active::after {
     content: '';
     position: absolute;
@@ -166,11 +187,19 @@
     width: 3px;
     background: #3b82f6;
   }
-  
-  .nav-icon { display: flex; align-items: center; justify-content: center; color: inherit; }
+
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+  }
   /* Выравниваем фактический размер SVG-иконок для一致ности */
-  .nav-icon :global(svg) { width: 20px; height: 20px; }
-  
+  .nav-icon :global(svg) {
+    width: 20px;
+    height: 20px;
+  }
+
   .sidebar-bottom {
     margin-top: auto;
     padding: 8px 6px;
@@ -179,12 +208,12 @@
     flex-direction: column;
     gap: 4px;
   }
-  
+
   /* Modal */
   .about-modal {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.4);
+    background: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -200,14 +229,32 @@
     box-shadow: var(--shadow, 0 4px 20px rgb(0 0 0 / 0.06));
     pointer-events: auto;
   }
-  .about-actions { margin-top: 12px; display: flex; justify-content: flex-end; }
-  .close-btn { background: var(--accent); color: #fff; }
-  
+  .about-actions {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .close-btn {
+    background: var(--accent);
+    color: #fff;
+  }
+
   /* Dark mode */
   @media (prefers-color-scheme: dark) {
-    .sidebar { background: #1a1a1a; border-right-color: #333; }
-    .nav-item:hover { background: #333; }
-    .nav-item.active { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.24); }
-    .about-content { background: #1a1a1a; border-color: #333; }
+    .sidebar {
+      background: #1a1a1a;
+      border-right-color: #333;
+    }
+    .nav-item:hover {
+      background: #333;
+    }
+    .nav-item.active {
+      background: rgba(59, 130, 246, 0.12);
+      border-color: rgba(59, 130, 246, 0.24);
+    }
+    .about-content {
+      background: #1a1a1a;
+      border-color: #333;
+    }
   }
 </style>

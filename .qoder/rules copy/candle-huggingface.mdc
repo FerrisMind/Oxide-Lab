@@ -1,0 +1,637 @@
+---
+description: Candle integration with Hugging Face ecosystem and model management
+globs: *.rs,Cargo.toml
+alwaysApply: false
+---
+
+# Candle + Hugging Face Integration
+
+## Настройка зависимостей
+
+### Базовые зависимости для HF интеграции
+
+```toml
+[dependencies]
+candle-core = "0.9"
+candle-nn = "0.9"
+candle-transformers = "0.9"
+hf-hub = "0.4"
+candle-datasets = "0.9"
+tokenizers = "0.22"
+
+# Для работы с safetensors
+candle-core = { version = "0.9", features = [] }
+
+# Для работы с различными форматами
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+```
+
+## Загрузка моделей из Hugging Face Hub
+
+### Базовая загрузка моделей
+
+```rust
+use candle_core::{Device, Result};
+use hf_hub::{api, api::Repo};
+use candle_transformers::models::llama::{Llama, LlamaConfig};
+
+/// Загрузка модели LLaMA из HF Hub
+pub async fn load_llama_model(
+    model_id: &str,
+    device: &Device,
+) -> Result<Llama> {
+    // Создаем API клиент
+    let api = api::HfApi::new()?;
+    let repo = Repo::with_revision(model_id.to_string(), "main".to_string());
+
+    // Загружаем конфигурацию
+    let config_filename = api.get(&repo, "config.json").await?;
+    let config: LlamaConfig = serde_json::from_slice(&config_filename)?;
+
+    // Загружаем веса модели
+    let weights_filename = api.get(&repo, "model.safetensors").await?;
+    let weights = candle_core::safetensors::load_buffer(&weights_filename, device)?;
+
+    // Создаем модель
+    let model = Llama::load(&weights, &config, device)?;
+
+    Ok(model)
+}
+
+/// Загрузка с кэшированием
+pub async fn load_model_with_cache(
+    model_id: &str,
+    device: &Device,
+) -> Result<Llama> {
+    let cache_dir = std::env::var("HF_HOME")
+        .unwrap_or_else(|_| ".cache/huggingface".to_string());
+
+    let model_path = format!("{}/hub/models--{}", cache_dir, model_id.replace('/', "--"));
+
+    if std::path::Path::new(&model_path).exists() {
+        // Загружаем из кэша
+        load_model_from_path(&model_path, device)
+    } else {
+        // Загружаем из Hub и сохраняем в кэш
+        let model = load_llama_model(model_id, device).await?;
+        save_model_to_cache(&model, &model_path)?;
+        Ok(model)
+    }
+}
+```
+
+### Загрузка различных типов моделей
+
+```rust
+use candle_transformers::models::{
+    bert::{BertModel, BertConfig},
+    gpt2::{Gpt2Model, Gpt2Config},
+    t5::{T5Model, T5Config},
+};
+
+/// Универсальная загрузка моделей
+pub enum ModelType {
+    Llama(LlamaConfig),
+    Bert(BertConfig),
+    Gpt2(Gpt2Config),
+    T5(T5Config),
+}
+
+pub async fn load_any_model(
+    model_id: &str,
+    model_type: ModelType,
+    device: &Device,
+) -> Result<Box<dyn Model>> {
+    let api = api::HfApi::new()?;
+    let repo = Repo::with_revision(model_id.to_string(), "main".to_string());
+
+    let weights_filename = api.get(&repo, "model.safetensors").await?;
+    let weights = candle_core::safetensors::load_buffer(&weights_filename, device)?;
+
+    match model_type {
+        ModelType::Llama(config) => {
+            let model = Llama::load(&weights, &config, device)?;
+            Ok(Box::new(model))
+        }
+        ModelType::Bert(config) => {
+            let model = BertModel::load(&weights, &config, device)?;
+            Ok(Box::new(model))
+        }
+        ModelType::Gpt2(config) => {
+            let model = Gpt2Model::load(&weights, &config, device)?;
+            Ok(Box::new(model))
+        }
+        ModelType::T5(config) => {
+            let model = T5Model::load(&weights, &config, device)?;
+            Ok(Box::new(model))
+        }
+    }
+}
+```
+
+## Работа с токенизаторами
+
+### Интеграция с HF токенизаторами
+
+```rust
+use candle_core::{Tensor, Device, Result};
+use tokenizers::tokenizer::{Tokenizer, EncodeInput};
+
+/// Обертка для HF токенизатора
+pub struct HFTokenizer {
+    tokenizer: Tokenizer,
+    device: Device,
+}
+
+impl HFTokenizer {
+    /// Создание токенизатора из файла
+    pub fn from_file(tokenizer_path: &str, device: Device) -> Result<Self> {
+        let tokenizer = Tokenizer::from_file(tokenizer_path)?;
+        Ok(Self { tokenizer, device })
+    }
+
+    /// Создание токенизатора из HF Hub
+    pub async fn from_hub(model_id: &str, device: Device) -> Result<Self> {
+        let api = api::HfApi::new()?;
+        let repo = Repo::with_revision(model_id.to_string(), "main".to_string());
+
+        // Загружаем tokenizer.json
+        let tokenizer_data = api.get(&repo, "tokenizer.json").await?;
+        let tokenizer = Tokenizer::from_bytes(&tokenizer_data)?;
+
+        Ok(Self { tokenizer, device })
+    }
+
+    /// Токенизация текста
+    pub fn encode(&self, text: &str) -> Result<Tensor> {
+        let encoding = self.tokenizer.encode(text, true)?;
+        let tokens = encoding.get_ids();
+
+        // Конвертируем в тензор
+        let token_tensor = Tensor::new(tokens, &self.device)?;
+        Ok(token_tensor)
+    }
+
+    /// Декодирование токенов
+    pub fn decode(&self, tokens: &Tensor) -> Result<String> {
+        let token_ids: Vec<u32> = tokens.to_vec1()?;
+        let text = self.tokenizer.decode(&token_ids, true)?;
+        Ok(text)
+    }
+
+    /// Батчевая токенизация
+    pub fn encode_batch(&self, texts: &[String]) -> Result<Tensor> {
+        let mut all_tokens = Vec::new();
+        let mut attention_masks = Vec::new();
+
+        for text in texts {
+            let encoding = self.tokenizer.encode(text, true)?;
+            let tokens = encoding.get_ids();
+            let attention_mask = encoding.get_attention_mask();
+
+            all_tokens.extend(tokens);
+            attention_masks.extend(attention_mask);
+        }
+
+        let batch_size = texts.len();
+        let max_len = all_tokens.len() / batch_size;
+
+        // Создаем тензоры с padding
+        let token_tensor = Tensor::new(&all_tokens, &self.device)?
+            .reshape((batch_size, max_len))?;
+        let mask_tensor = Tensor::new(&attention_masks, &self.device)?
+            .reshape((batch_size, max_len))?;
+
+        Ok(token_tensor)
+    }
+}
+```
+
+### Специализированные токенизаторы
+
+```rust
+/// Токенизатор для LLaMA
+pub struct LlamaTokenizer {
+    tokenizer: HFTokenizer,
+    bos_token_id: u32,
+    eos_token_id: u32,
+    pad_token_id: u32,
+}
+
+impl LlamaTokenizer {
+    pub async fn new(model_id: &str, device: Device) -> Result<Self> {
+        let tokenizer = HFTokenizer::from_hub(model_id, device).await?;
+
+        // Получаем специальные токены
+        let bos_token_id = tokenizer.tokenizer.get_vocab_size() - 1; // Пример
+        let eos_token_id = tokenizer.tokenizer.get_vocab_size() - 2;
+        let pad_token_id = tokenizer.tokenizer.get_vocab_size() - 3;
+
+        Ok(Self {
+            tokenizer,
+            bos_token_id,
+            eos_token_id,
+            pad_token_id,
+        })
+    }
+
+    /// Токенизация с добавлением специальных токенов
+    pub fn encode_with_special_tokens(&self, text: &str) -> Result<Tensor> {
+        let mut tokens = vec![self.bos_token_id];
+        let encoding = self.tokenizer.encode(text, true)?;
+        tokens.extend(encoding.get_ids());
+        tokens.push(self.eos_token_id);
+
+        Tensor::new(&tokens, &self.tokenizer.device)
+    }
+
+    /// Создание attention mask
+    pub fn create_attention_mask(&self, input_ids: &Tensor) -> Result<Tensor> {
+        let shape = input_ids.shape();
+        let mask = Tensor::ones(shape, DType::U8, &self.tokenizer.device)?;
+        Ok(mask)
+    }
+}
+```
+
+## Работа с датасетами
+
+### Загрузка датасетов из HF Hub
+
+```rust
+use candle_datasets::Dataset;
+
+/// Загрузка датасета для обучения
+pub async fn load_training_dataset(
+    dataset_name: &str,
+    split: &str,
+) -> Result<Box<dyn Dataset>> {
+    let api = api::HfApi::new()?;
+    let dataset_info = api.dataset_info(dataset_name.to_string()).await?;
+
+    match dataset_name {
+        "wikitext" => {
+            let dataset = WikitextDataset::load(split).await?;
+            Ok(Box::new(dataset))
+        }
+        "squad" => {
+            let dataset = SquadDataset::load(split).await?;
+            Ok(Box::new(dataset))
+        }
+        _ => Err(candle_core::Error::Msg(format!("Неизвестный датасет: {}", dataset_name)))
+    }
+}
+
+/// Датасет для языкового моделирования
+pub struct WikitextDataset {
+    texts: Vec<String>,
+    tokenizer: HFTokenizer,
+}
+
+impl WikitextDataset {
+    pub async fn load(split: &str) -> Result<Self> {
+        // Загрузка данных из HF Hub
+        let api = api::HfApi::new()?;
+        let dataset_info = api.dataset_info("wikitext-2".to_string()).await?;
+
+        // Здесь должна быть логика загрузки данных
+        let texts = vec!["Sample text 1".to_string(), "Sample text 2".to_string()];
+        let tokenizer = HFTokenizer::from_hub("gpt2", Device::Cpu).await?;
+
+        Ok(Self { texts, tokenizer })
+    }
+}
+
+impl Dataset for WikitextDataset {
+    fn len(&self) -> usize {
+        self.texts.len()
+    }
+
+    fn get(&self, index: usize) -> Result<Tensor> {
+        if index >= self.texts.len() {
+            return Err(candle_core::Error::Msg("Index out of bounds".to_string()));
+        }
+
+        self.tokenizer.encode(&self.texts[index])
+    }
+}
+```
+
+## Сохранение и загрузка моделей
+
+### Сохранение в safetensors формате
+
+```rust
+use candle_core::safetensors;
+
+/// Сохранение модели в safetensors
+pub fn save_model_safetensors(
+    model: &dyn Model,
+    path: &str,
+) -> Result<()> {
+    let mut tensors = HashMap::new();
+
+    // Получаем все параметры модели
+    for (name, param) in model.parameters() {
+        tensors.insert(name.to_string(), param.clone());
+    }
+
+    // Сохраняем в safetensors формате
+    safetensors::save(&tensors, path)?;
+
+    // Сохраняем конфигурацию отдельно
+    let config_path = format!("{}.json", path);
+    let config_json = serde_json::to_string_pretty(&model.config())?;
+    std::fs::write(config_path, config_json)?;
+
+    Ok(())
+}
+
+/// Загрузка модели из safetensors
+pub fn load_model_safetensors<T: Model>(
+    path: &str,
+    device: &Device,
+) -> Result<T> {
+    // Загружаем конфигурацию
+    let config_path = format!("{}.json", path);
+    let config_data = std::fs::read_to_string(config_path)?;
+    let config: T::Config = serde_json::from_str(&config_data)?;
+
+    // Загружаем веса
+    let tensors = safetensors::load(path, device)?;
+
+    // Создаем модель
+    let model = T::new(config, device)?;
+
+    // Загружаем веса в модель
+    model.load_weights(&tensors)?;
+
+    Ok(model)
+}
+```
+
+### Загрузка с прогресс-баром
+
+```rust
+use indicatif::{ProgressBar, ProgressStyle};
+
+/// Загрузка модели с прогресс-баром
+pub async fn load_model_with_progress(
+    model_id: &str,
+    device: &Device,
+) -> Result<Llama> {
+    let api = api::HfApi::new()?;
+    let repo = Repo::with_revision(model_id.to_string(), "main".to_string());
+
+    // Создаем прогресс-бар
+    let pb = ProgressBar::new(100);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
+            .unwrap()
+            .progress_chars("#>-"),
+    );
+
+    pb.set_message("Загружаем конфигурацию...");
+    let config_filename = api.get(&repo, "config.json").await?;
+    pb.inc(20);
+
+    pb.set_message("Загружаем веса модели...");
+    let weights_filename = api.get(&repo, "model.safetensors").await?;
+    pb.inc(60);
+
+    pb.set_message("Инициализируем модель...");
+    let config: LlamaConfig = serde_json::from_slice(&config_filename)?;
+    let weights = candle_core::safetensors::load_buffer(&weights_filename, device)?;
+    let model = Llama::load(&weights, &config, device)?;
+    pb.inc(20);
+
+    pb.finish_with_message("Модель загружена!");
+
+    Ok(model)
+}
+```
+
+## Интеграция с Hugging Face Spaces
+
+### Создание Space для демонстрации модели
+
+```rust
+use axum::{extract::Query, response::Html, routing::get, Router};
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct InferenceRequest {
+    text: String,
+    max_length: Option<usize>,
+}
+
+/// HTTP сервер для демонстрации модели
+pub struct ModelServer {
+    model: Llama,
+    tokenizer: LlamaTokenizer,
+}
+
+impl ModelServer {
+    pub fn new(model: Llama, tokenizer: LlamaTokenizer) -> Self {
+        Self { model, tokenizer }
+    }
+
+    pub async fn run(self) -> Result<()> {
+        let app = Router::new()
+            .route("/", get(serve_html))
+            .route("/inference", get(self.inference_handler));
+
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:7860").await?;
+        axum::serve(listener, app).await?;
+
+        Ok(())
+    }
+
+    async fn inference_handler(
+        Query(params): Query<InferenceRequest>,
+    ) -> Result<Html<String>> {
+        // Здесь должна быть логика инференса
+        let response = format!("Обработанный текст: {}", params.text);
+        Ok(Html(response))
+    }
+}
+
+async fn serve_html() -> Html<&'static str> {
+    Html(include_str!("../static/index.html"))
+}
+```
+
+## Мониторинг и логирование
+
+### Интеграция с Weights & Biases
+
+```rust
+use serde_json::json;
+
+/// Логгер для экспериментов
+pub struct ExperimentLogger {
+    run_name: String,
+    config: serde_json::Value,
+}
+
+impl ExperimentLogger {
+    pub fn new(run_name: String, config: serde_json::Value) -> Self {
+        Self { run_name, config }
+    }
+
+    /// Логирование метрик обучения
+    pub fn log_metrics(&self, epoch: usize, metrics: &HashMap<String, f32>) {
+        let log_data = json!({
+            "run_name": self.run_name,
+            "epoch": epoch,
+            "metrics": metrics,
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+        });
+
+        println!("WANDB_LOG: {}", serde_json::to_string(&log_data).unwrap());
+    }
+
+    /// Логирование артефактов
+    pub fn log_artifact(&self, artifact_path: &str, artifact_type: &str) {
+        let log_data = json!({
+            "run_name": self.run_name,
+            "artifact_path": artifact_path,
+            "artifact_type": artifact_type,
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+        });
+
+        println!("WANDB_ARTIFACT: {}", serde_json::to_string(&log_data).unwrap());
+    }
+}
+```
+
+## Лучшие практики интеграции
+
+### 1. Кэширование моделей
+
+```rust
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+/// Кэш для моделей
+pub struct ModelCache {
+    cache: Arc<RwLock<HashMap<String, Box<dyn Model>>>>,
+    max_size: usize,
+}
+
+impl ModelCache {
+    pub fn new(max_size: usize) -> Self {
+        Self {
+            cache: Arc::new(RwLock::new(HashMap::new())),
+            max_size,
+        }
+    }
+
+    pub async fn get_or_load<F, Fut>(
+        &self,
+        model_id: String,
+        loader: F,
+    ) -> Result<Box<dyn Model>>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<Box<dyn Model>>>,
+    {
+        // Проверяем кэш
+        {
+            let cache = self.cache.read().await;
+            if let Some(model) = cache.get(&model_id) {
+                return Ok(model.clone());
+            }
+        }
+
+        // Загружаем модель
+        let model = loader().await?;
+
+        // Сохраняем в кэш
+        {
+            let mut cache = self.cache.write().await;
+            if cache.len() >= self.max_size {
+                // Удаляем самую старую модель (простая реализация)
+                if let Some(key) = cache.keys().next().cloned() {
+                    cache.remove(&key);
+                }
+            }
+            cache.insert(model_id, model.clone());
+        }
+
+        Ok(model)
+    }
+}
+```
+
+### 2. Обработка ошибок сети
+
+```rust
+use std::time::Duration;
+use tokio::time::sleep;
+
+/// Retry механизм для загрузки
+pub async fn load_with_retry<F, Fut, T>(
+    operation: F,
+    max_retries: usize,
+    delay: Duration,
+) -> Result<T>
+where
+    F: Fn() -> Fut,
+    Fut: std::future::Future<Output = Result<T>>,
+{
+    let mut last_error = None;
+
+    for attempt in 0..max_retries {
+        match operation().await {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                last_error = Some(e);
+                if attempt < max_retries - 1 {
+                    sleep(delay).await;
+                }
+            }
+        }
+    }
+
+    Err(last_error.unwrap())
+}
+
+// Использование
+let model = load_with_retry(
+    || load_llama_model("microsoft/DialoGPT-medium", &device),
+    3,
+    Duration::from_secs(5),
+).await?;
+```
+
+### 3. Валидация моделей
+
+```rust
+/// Валидация загруженной модели
+pub fn validate_model(model: &dyn Model) -> Result<()> {
+    // Проверяем базовые свойства
+    if model.num_parameters() == 0 {
+        return Err(candle_core::Error::Msg("Модель не имеет параметров".to_string()));
+    }
+
+    // Проверяем устройство
+    let device = model.device();
+    if matches!(device, Device::Cuda(_)) {
+        // Дополнительные проверки для CUDA
+        device.synchronize()?;
+    }
+
+    // Проверяем forward pass с dummy данными
+    let dummy_input = Tensor::randn(0f32, 1f32, (1, 10), device)?;
+    let _output = model.forward(&dummy_input)?;
+
+    Ok(())
+}
+```
+
+Следуйте этим практикам для эффективной интеграции Candle с экосистемой Hugging Face.

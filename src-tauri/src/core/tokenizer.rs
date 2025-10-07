@@ -14,6 +14,8 @@ pub fn find_tokenizer_json_in_metadata(md: &HashMap<String, gguf_file::Value>) -
         "tokenizer.ggml.json",
         "tokenizer_json",
         "tokenizer",
+        "tokenizer.ggml.tokenizer_json",
+        "tokenizer.model",
     ] {
         if let Some(v) = md.get(key) {
             if let Ok(s) = v.to_string() {
@@ -58,10 +60,15 @@ pub fn try_reconstruct_tokenizer_from_bpe(
     // not a GPT-2 style BPE (e.g. SentencePiece/Unigram), and producing a ByteLevel/BPE
     // tokenizer will yield completely wrong ids and gibberish output.
     let vocab_list = get_string_array(md, "tokenizer.ggml.tokens")
-        .or_else(|| get_string_array(md, "tokenizer.vocab"))?;
+        .or_else(|| get_string_array(md, "tokenizer.vocab"))
+        .or_else(|| get_string_array(md, "tokenizer.tokens"))
+        .or_else(|| get_string_array(md, "vocab"))
+        .or_else(|| get_string_array(md, "tokens"))?;
     let merges_list_opt = get_string_array(md, "tokenizer.ggml.merges")
         .or_else(|| get_string_array(md, "tokenizer.ggml.bpe_merges"))
-        .or_else(|| get_string_array(md, "tokenizer.merges"));
+        .or_else(|| get_string_array(md, "tokenizer.merges"))
+        .or_else(|| get_string_array(md, "merges"))
+        .or_else(|| get_string_array(md, "bpe_merges"));
     let merges_list = match merges_list_opt {
         Some(m) if !m.is_empty() => m,
         _ => return None, // do not attempt incorrect BPE reconstruction
@@ -137,7 +144,10 @@ pub fn try_build_wordlevel_tokenizer_from_tokens(
     // Попробуем найти список токенов в известных ключах
     let tokens = get_string_array(md, "tokenizer.ggml.tokens")
         .or_else(|| get_string_array(md, "tokenizer.vocab"))
-        .or_else(|| get_string_array(md, "tokenizer.tokens"))?;
+        .or_else(|| get_string_array(md, "tokenizer.tokens"))
+        .or_else(|| get_string_array(md, "tokenizer.ggml.vocab"))
+        .or_else(|| get_string_array(md, "vocab"))
+        .or_else(|| get_string_array(md, "tokens"))?;
 
     let mut vocab_obj: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
     for (i, tok) in tokens.iter().enumerate() {

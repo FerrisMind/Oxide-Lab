@@ -1,18 +1,26 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import type { PrecisionPolicy } from '$lib/types';
   import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
+  import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
 
   let currentPolicy: PrecisionPolicy = { Default: null };
   let isLoading = $state(true);
   let error: string | null = $state(null);
-  let enableExperimentalFeatures = $state(false);
-  let isExperimentalFeaturesLoading = $state(false);
+
+  // Local reactive variable for experimental features checkbox
+  let experimentalFeaturesEnabled = $state(false);
 
   onMount(async () => {
     await loadPrecisionPolicy();
-    await loadExperimentalFeatures();
+  });
+
+  // Sync local variable with store when experimental features are initialized
+  $effect(() => {
+    if (experimentalFeatures.initialized) {
+      experimentalFeaturesEnabled = experimentalFeatures.enabled;
+    }
   });
 
   async function loadPrecisionPolicy() {
@@ -43,43 +51,23 @@
     }
   }
 
-  async function loadExperimentalFeatures() {
+  async function handleExperimentalFeaturesToggle(enabled: boolean) {
     try {
-      isExperimentalFeaturesLoading = true;
-      enableExperimentalFeatures = await invoke('get_experimental_features_enabled');
-      console.log('Loaded experimental features state:', enableExperimentalFeatures);
-    } catch (err) {
-      console.warn('Failed to load experimental features state:', err);
-      // Keep default value (false)
-    } finally {
-      isExperimentalFeaturesLoading = false;
-    }
-  }
-
-  async function saveExperimentalFeatures(enabled: boolean) {
-    try {
-      isExperimentalFeaturesLoading = true;
-      await invoke('set_experimental_features_enabled', { enabled });
-      enableExperimentalFeatures = enabled;
-      console.log('Saved experimental features state:', enabled);
+      // Сохраняем состояние без показа загрузки
+      await experimentalFeatures.setEnabled(enabled);
+      experimentalFeaturesEnabled = enabled; // Update local variable
+      await tick();
     } catch (err) {
       console.error('Failed to save experimental features state:', err);
-    } finally {
-      isExperimentalFeaturesLoading = false;
+      // Revert local variable on error
+      experimentalFeaturesEnabled = experimentalFeatures.enabled;
     }
   }
-
-  // Effect to save experimental features when changed
-  $effect(() => {
-    if (enableExperimentalFeatures !== undefined) {
-      saveExperimentalFeatures(enableExperimentalFeatures);
-    }
-  });
 
   function selectPolicy(policyType: 'Default' | 'MemoryEfficient' | 'MaximumPrecision') {
     // Send the policy type as a string to match Rust enum serialization
     let policy: PrecisionPolicy;
-    
+
     // Create the policy object in the correct format
     switch (policyType) {
       case 'Default':
@@ -94,41 +82,54 @@
       default:
         policy = { Default: null };
     }
-    
+
     console.log('Sending policy:', policy, 'policyType:', policyType);
     savePrecisionPolicy(policy);
   }
 
-  function isPolicySelected(policyType: 'Default' | 'MemoryEfficient' | 'MaximumPrecision'): boolean {
+  function isPolicySelected(
+    policyType: 'Default' | 'MemoryEfficient' | 'MaximumPrecision',
+  ): boolean {
     try {
-      console.log('Checking policy selection:', policyType, 'currentPolicy:', currentPolicy, 'type:', typeof currentPolicy);
-      
+      console.log(
+        'Checking policy selection:',
+        policyType,
+        'currentPolicy:',
+        currentPolicy,
+        'type:',
+        typeof currentPolicy,
+      );
+
       // Handle case where currentPolicy is a string (serialized enum variant)
       if (typeof currentPolicy === 'string') {
         return currentPolicy === policyType;
       }
-      
+
       // Handle case where currentPolicy is an object with the policy type as a key
       if (typeof currentPolicy === 'object' && currentPolicy !== null) {
         // Check if it's a tagged enum object like { Default: null }
         if (policyType in currentPolicy) {
           return true;
         }
-        
+
         // Check if it has a variant property (with proper type checking)
-        if (typeof currentPolicy === 'object' && currentPolicy !== null && 'variant' in currentPolicy) {
+        if (
+          typeof currentPolicy === 'object' &&
+          currentPolicy !== null &&
+          'variant' in currentPolicy
+        ) {
           const policyObj = currentPolicy as { variant?: string };
           if (policyObj.variant === policyType) {
             return true;
           }
         }
-        
+
         // For direct object comparison with { [policyType]: null }
         if (JSON.stringify(currentPolicy) === JSON.stringify({ [policyType]: null })) {
           return true;
         }
       }
-      
+
       // Fallback: check if string representation contains the policy type
       return String(currentPolicy) === policyType;
     } catch (e) {
@@ -147,10 +148,12 @@
   <div class="settings-section">
     <h2>Политика точности (Precision Policy)</h2>
     <p class="settings-description">
-      Выберите политику точности для загрузки и выполнения моделей. 
-      Это влияет на использование памяти и производительность.<br>
+      Выберите политику точности для загрузки и выполнения моделей. Это влияет на использование
+      памяти и производительность.<br />
       <span class="warning-text">
-        <b>Внимание:</b> параметр precision влияет только на <b>не квантизованные</b> модели (float32/float16). Для квантизованных моделей (4-bit/8-bit) точность весов фиксирована, настройка влияет только на промежуточные вычисления.
+        <b>Внимание:</b> параметр precision влияет только на <b>не квантизованные</b> модели (float32/float16).
+        Для квантизованных моделей (4-bit/8-bit) точность весов фиксирована, настройка влияет только
+        на промежуточные вычисления.
       </span>
     </p>
 
@@ -158,31 +161,52 @@
       <div class="loading">Загрузка настроек...</div>
     {:else}
       <div class="precision-options">
-        <div class="option-card {isPolicySelected('Default') ? 'selected' : ''}" 
-             role="button"
-             tabindex="0"
-             onclick={() => selectPolicy('Default')}
-             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPolicy('Default'); }}}>
+        <div
+          class="option-card {isPolicySelected('Default') ? 'selected' : ''}"
+          role="button"
+          tabindex="0"
+          onclick={() => selectPolicy('Default')}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              selectPolicy('Default');
+            }
+          }}
+        >
           <h3>Стандартная</h3>
           <p>CPU: F32, GPU: BF16</p>
           <p class="option-description">Оптимальный баланс между производительностью и точностью</p>
         </div>
 
-        <div class="option-card {isPolicySelected('MemoryEfficient') ? 'selected' : ''}" 
-             role="button"
-             tabindex="0"
-             onclick={() => selectPolicy('MemoryEfficient')}
-             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPolicy('MemoryEfficient'); }}}>
+        <div
+          class="option-card {isPolicySelected('MemoryEfficient') ? 'selected' : ''}"
+          role="button"
+          tabindex="0"
+          onclick={() => selectPolicy('MemoryEfficient')}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              selectPolicy('MemoryEfficient');
+            }
+          }}
+        >
           <h3>Экономия памяти</h3>
           <p>CPU: F32, GPU: F16</p>
           <p class="option-description">Меньше использование памяти, немного ниже точность</p>
         </div>
 
-        <div class="option-card {isPolicySelected('MaximumPrecision') ? 'selected' : ''}" 
-             role="button"
-             tabindex="0"
-             onclick={() => selectPolicy('MaximumPrecision')}
-             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPolicy('MaximumPrecision'); }}}>
+        <div
+          class="option-card {isPolicySelected('MaximumPrecision') ? 'selected' : ''}"
+          role="button"
+          tabindex="0"
+          onclick={() => selectPolicy('MaximumPrecision')}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              selectPolicy('MaximumPrecision');
+            }
+          }}
+        >
           <h3>Максимальная точность</h3>
           <p>CPU: F32, GPU: F32</p>
           <p class="option-description">Наивысшая точность, больше использование памяти</p>
@@ -197,43 +221,42 @@
     {/if}
   </div>
 
-  <div class="settings-section">
+  <div class="settings-section experimental-section" class:enabled={experimentalFeatures.enabled}>
     <h2>Экспериментальные функции</h2>
     <p class="settings-description">
-      Включите экспериментальные функции для тестирования новых возможностей.
-      Эти функции могут быть нестабильными и содержать ошибки.
+      Включите экспериментальные функции для тестирования новых возможностей. Эти функции могут быть
+      нестабильными и содержать ошибки.
     </p>
 
-    {#if isExperimentalFeaturesLoading}
-      <div class="loading">Загрузка настроек экспериментальных функций...</div>
-    {:else}
-      <div class="experimental-features-toggle">
-        <label class="toggle-label">
-          <input
-            type="checkbox"
-            bind:checked={enableExperimentalFeatures}
-            disabled={isExperimentalFeaturesLoading}
-          />
-          <span class="toggle-slider"></span>
-          <span class="toggle-text">Включить экспериментальные функции</span>
-        </label>
-        <p class="toggle-description">
-          {#if enableExperimentalFeatures}
-            <span class="status-enabled">✓ Экспериментальные функции включены</span>
-          {:else}
-            <span class="status-disabled">✗ Экспериментальные функции отключены</span>
-          {/if}
-        </p>
-      </div>
-    {/if}
+    <div class="experimental-features-toggle">
+      <label class="toggle-label">
+        <input
+          type="checkbox"
+          bind:checked={experimentalFeaturesEnabled}
+          onchange={(event) =>
+            handleExperimentalFeaturesToggle(
+              (event.currentTarget as HTMLInputElement | null)?.checked ?? false,
+            )}
+        />
+        <span class="toggle-slider"></span>
+        <span class="toggle-text">Включить экспериментальные функции</span>
+      </label>
+      <p class="toggle-description">
+        <span class="status-text" class:enabled={experimentalFeatures.enabled}>
+          <span class="status-enabled">✓ Экспериментальные функции включены</span>
+          <span class="status-disabled">✗ Экспериментальные функции отключены</span>
+        </span>
+      </p>
+    </div>
   </div>
 
   <div class="settings-section">
     <h2>Мониторинг производительности</h2>
     <p class="settings-description">
-      Отслеживание производительности приложения, включая время запуска, использование памяти и скорость работы моделей.
+      Отслеживание производительности приложения, включая время запуска, использование памяти и
+      скорость работы моделей.
     </p>
-    
+
     <PerformanceMonitor />
   </div>
 </div>
@@ -370,7 +393,7 @@
     position: relative;
   }
 
-  .toggle-label input[type="checkbox"] {
+  .toggle-label input[type='checkbox'] {
     position: absolute;
     opacity: 0;
     width: 0;
@@ -455,24 +478,24 @@
     .toggle-text {
       font-size: 0.9rem;
     }
-    
+
     .settings-header h1 {
       font-size: 1.5rem;
     }
-    
+
     .settings-section h2 {
       font-size: 1.25rem;
     }
-    
+
     .precision-options {
       grid-template-columns: 1fr;
       gap: 12px;
     }
-    
+
     .option-card {
       padding: 16px;
     }
-    
+
     .option-card h3 {
       font-size: 1.1rem;
     }
@@ -482,44 +505,119 @@
     .settings-page {
       padding: 12px;
     }
-    
+
     .settings-section {
       padding: 16px;
     }
-    
+
     .settings-header h1 {
       font-size: 1.3rem;
     }
-    
+
     .settings-section h2 {
       font-size: 1.1rem;
     }
-    
+
     .precision-options {
       grid-template-columns: 1fr;
       gap: 10px;
     }
-    
+
     .option-card {
       padding: 12px;
     }
-    
+
     .option-card h3 {
       font-size: 1rem;
     }
-    
+
     .option-card p {
       font-size: 0.85rem;
     }
   }
-  
+
   @media (min-width: 1200px) {
     .settings-page {
       max-width: 1000px;
     }
-    
+
     .precision-options {
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     }
+  }
+
+  /* Анимация для секции экспериментальных функций */
+  .experimental-section {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: top;
+  }
+
+  .experimental-section:not(.enabled) {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+
+  .experimental-section.enabled {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .experimental-section h2 {
+    transition: color 0.3s ease;
+  }
+
+  .experimental-section.enabled h2 {
+    color: #3b82f6;
+  }
+
+  .experimental-section .settings-description {
+    transition: opacity 0.3s ease;
+  }
+
+  .experimental-section:not(.enabled) .settings-description {
+    opacity: 0.8;
+  }
+
+  .experimental-features-toggle {
+    transition: all 0.3s ease;
+  }
+
+  .toggle-description {
+    transition: all 0.3s ease;
+  }
+
+  .status-text {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #6b7280;
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+    height: 1.5em;
+  }
+
+  .status-text.enabled {
+    color: #10b981;
+    font-weight: 500;
+  }
+
+  .status-enabled,
+  .status-disabled {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    opacity: 0 !important;
+    transform: translateY(20px) !important;
+  }
+
+  .status-text:not(.enabled) .status-disabled {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+  }
+
+  .status-text.enabled .status-enabled {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
   }
 </style>

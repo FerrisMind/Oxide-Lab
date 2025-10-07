@@ -1,0 +1,393 @@
+---
+globs: *.ts,*.tsx,*.js,*.jsx,tsconfig.json
+description: TypeScript best practices and coding standards
+---
+
+# TypeScript Best Practices
+
+## Основы TypeScript
+
+### Строгая типизация
+
+```typescript
+// Включите строгую типизацию в tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true
+  }
+}
+```
+
+### Типы и интерфейсы
+
+```typescript
+// Предпочитайте интерфейсы для объектов
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+}
+
+// Используйте типы для union types и примитивов
+type Status = 'loading' | 'success' | 'error';
+type UserId = string;
+
+// Используйте generic типы для переиспользования
+interface ApiResponse<T> {
+  data: T;
+  success: boolean;
+  message?: string;
+}
+```
+
+### Строгие типы для функций
+
+```typescript
+// Всегда указывайте типы параметров и возвращаемого значения
+function calculateTotal(items: Item[]): number {
+  return items.reduce((sum, item) => sum + item.price, 0);
+}
+
+// Используйте function overloads для разных сигнатур
+function processData(data: string): string;
+function processData(data: number): number;
+function processData(data: string | number): string | number {
+  return typeof data === 'string' ? data.toUpperCase() : data * 2;
+}
+
+// Используйте generic функции
+function createArray<T>(length: number, value: T): T[] {
+  return Array(length).fill(value);
+}
+```
+
+## Продвинутые паттерны
+
+### Utility Types
+
+```typescript
+// Используйте встроенные utility types
+type PartialUser = Partial<User>;
+type RequiredUser = Required<User>;
+type UserEmail = Pick<User, 'email'>;
+type UserWithoutId = Omit<User, 'id'>;
+
+// Создавайте собственные utility types
+type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+type NonNullable<T> = T extends null | undefined ? never : T;
+```
+
+### Conditional Types
+
+```typescript
+// Используйте conditional types для сложной логики
+type ApiEndpoint<T> = T extends 'user'
+  ? '/api/users'
+  : T extends 'product'
+    ? '/api/products'
+    : '/api/unknown';
+
+type IsArray<T> = T extends any[] ? true : false;
+
+// Infer для извлечения типов
+type ReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+type Parameters<T> = T extends (...args: infer P) => any ? P : never;
+```
+
+### Template Literal Types
+
+```typescript
+// Используйте template literal types для строковых паттернов
+type EventName<T extends string> = `on${Capitalize<T>}`;
+type CSSProperty = `--${string}`;
+
+// Создание строго типизированных API
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+type ApiRoute<T extends HttpMethod> = T extends 'GET' ? `/api/${string}` : `/api/${string}`;
+
+type ApiCall<T extends HttpMethod, R extends ApiRoute<T>> = {
+  method: T;
+  route: R;
+  response: T extends 'GET' ? any : { success: boolean };
+};
+```
+
+## Обработка ошибок
+
+### Строго типизированные ошибки
+
+```typescript
+// Создавайте специфичные типы ошибок
+class ValidationError extends Error {
+  constructor(
+    public field: string,
+    public value: unknown,
+    message: string,
+  ) {
+    super(`Validation failed for ${field}: ${message}`);
+    this.name = 'ValidationError';
+  }
+}
+
+class NetworkError extends Error {
+  constructor(
+    public status: number,
+    public url: string,
+    message: string,
+  ) {
+    super(`Network error ${status} for ${url}: ${message}`);
+    this.name = 'NetworkError';
+  }
+}
+
+// Используйте Result pattern
+type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
+
+function safeApiCall<T>(fn: () => Promise<T>): Promise<Result<T>> {
+  return fn()
+    .then((data) => ({ success: true, data }))
+    .catch((error) => ({ success: false, error }));
+}
+```
+
+### Error Boundaries
+
+```typescript
+// Строго типизированные error boundaries
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: (error: Error) => React.ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+}
+```
+
+## Асинхронное программирование
+
+### Строго типизированные Promise
+
+```typescript
+// Всегда указывайте типы для Promise
+async function fetchUser(id: string): Promise<User> {
+  const response = await fetch(`/api/users/${id}`);
+  if (!response.ok) {
+    throw new NetworkError(response.status, response.url, 'Failed to fetch user');
+  }
+  return response.json();
+}
+
+// Используйте Promise.all с типизацией
+async function fetchMultipleUsers(ids: string[]): Promise<User[]> {
+  const promises = ids.map((id) => fetchUser(id));
+  return Promise.all(promises);
+}
+
+// Обработка ошибок в async/await
+async function safeFetchUser(id: string): Promise<Result<User>> {
+  try {
+    const user = await fetchUser(id);
+    return { success: true, data: user };
+  } catch (error) {
+    return { success: false, error: error as Error };
+  }
+}
+```
+
+### Async Iterators
+
+```typescript
+// Строго типизированные async iterators
+async function* fetchUsersBatch(ids: string[]): AsyncGenerator<User, void, unknown> {
+  for (const id of ids) {
+    const user = await fetchUser(id);
+    yield user;
+  }
+}
+
+// Использование async iterators
+async function processUsers(ids: string[]): Promise<void> {
+  for await (const user of fetchUsersBatch(ids)) {
+    console.log(`Processing user: ${user.name}`);
+  }
+}
+```
+
+## Работа с DOM
+
+### Строго типизированные DOM операции
+
+```typescript
+// Используйте type assertions осторожно
+function getElementById<T extends HTMLElement>(id: string): T | null {
+  return document.getElementById(id) as T | null;
+}
+
+// Строго типизированные event handlers
+type EventHandler<T extends Event> = (event: T) => void;
+
+function addEventListener<K extends keyof HTMLElementEventMap>(
+  element: HTMLElement,
+  type: K,
+  listener: EventHandler<HTMLElementEventMap[K]>,
+): void {
+  element.addEventListener(type, listener);
+}
+
+// Custom events с типизацией
+interface CustomEventMap {
+  'user-login': CustomEvent<{ user: User }>;
+  'data-loaded': CustomEvent<{ data: any[] }>;
+}
+
+function emitCustomEvent<K extends keyof CustomEventMap>(
+  eventName: K,
+  detail: CustomEventMap[K]['detail'],
+): void {
+  const event = new CustomEvent(eventName, { detail });
+  window.dispatchEvent(event);
+}
+```
+
+## Модули и импорты
+
+### Строгие импорты
+
+```typescript
+// Используйте именованные импорты
+import { User, UserService } from './user';
+import type { ApiResponse } from './api';
+
+// Re-export с типизацией
+export type { User, UserService } from './user';
+export { default as UserComponent } from './UserComponent';
+
+// Dynamic imports с типизацией
+async function loadUserModule(): Promise<typeof import('./user')> {
+  return import('./user');
+}
+```
+
+### Barrel exports
+
+```typescript
+// index.ts - barrel export
+export type { User, CreateUserRequest } from './types';
+export { UserService } from './services';
+export { UserComponent } from './components';
+
+// Использование
+import { User, UserService, UserComponent } from './user';
+```
+
+## Тестирование
+
+### Строго типизированные тесты
+
+```typescript
+// Типизированные моки
+interface MockUserService {
+  getUser: jest.MockedFunction<(id: string) => Promise<User>>;
+  createUser: jest.MockedFunction<(user: CreateUserRequest) => Promise<User>>;
+}
+
+const mockUserService: MockUserService = {
+  getUser: jest.fn(),
+  createUser: jest.fn(),
+};
+
+// Типизированные тестовые данные
+const testUser: User = {
+  id: '1',
+  name: 'Test User',
+  email: 'test@example.com',
+  role: 'user',
+} as const;
+
+// Строго типизированные assertions
+function assertUser(user: unknown): asserts user is User {
+  if (!user || typeof user !== 'object') {
+    throw new Error('User must be an object');
+  }
+
+  const u = user as Record<string, unknown>;
+  if (typeof u.id !== 'string' || typeof u.name !== 'string') {
+    throw new Error('Invalid user structure');
+  }
+}
+```
+
+## Производительность
+
+### Оптимизация типов
+
+```typescript
+// Используйте const assertions для неизменяемых данных
+const config = {
+  apiUrl: 'https://api.example.com',
+  timeout: 5000,
+} as const;
+
+// Используйте mapped types для оптимизации
+type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
+
+// Избегайте any, используйте unknown
+function processData(data: unknown): string {
+  if (typeof data === 'string') {
+    return data.toUpperCase();
+  }
+  throw new Error('Expected string data');
+}
+```
+
+### Lazy типы
+
+```typescript
+// Используйте lazy evaluation для сложных типов
+type Lazy<T> = () => T;
+
+function createLazyValue<T>(fn: () => T): Lazy<T> {
+  return fn;
+}
+
+// Conditional types с lazy evaluation
+type DeepReadonly<T> = T extends (infer U)[]
+  ? ReadonlyArray<DeepReadonly<U>>
+  : T extends object
+    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+    : T;
+```
+
+## Чек-лист TypeScript
+
+### Перед коммитом
+
+- [ ] Строгая типизация включена (`strict: true`)
+- [ ] Нет использования `any` (кроме исключительных случаев)
+- [ ] Все функции имеют типы параметров и возвращаемых значений
+- [ ] Используются строгие типы для DOM операций
+- [ ] Обработка ошибок типизирована
+- [ ] Тесты используют строгую типизацию
+- [ ] Нет неиспользуемых импортов типов
+
+### Code Review
+
+- [ ] Типы отражают реальную структуру данных
+- [ ] Используются utility types где возможно
+- [ ] Generic типы используются корректно
+- [ ] Conditional types применяются правильно
+- [ ] Error handling типизирован
+- [ ] Нет type assertions без необходимости
+- [ ] Документация типов актуальна

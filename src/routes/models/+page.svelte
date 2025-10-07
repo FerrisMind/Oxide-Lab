@@ -1,144 +1,77 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Tabs from '$lib/components/ui/Tabs.svelte';
-  import LocalModelsTab from '$lib/components/model-manager/LocalModelsTab.svelte';
-  import HuggingFaceTab from '$lib/components/model-manager/HuggingFaceTab.svelte';
+  import LocalModelsPanel from '$lib/components/model-manager/LocalModelsPanel.svelte';
+  import RemoteModelsPanel from '$lib/components/model-manager/RemoteModelsPanel.svelte';
+  import { folderPath, scanFolder } from '$lib/stores/local-models';
 
-  // Active tab state
-  let activeTab = $state('local');
+  type TabId = 'local' | 'remote';
 
-  // Tab definitions
+  let activeTab: TabId = 'local';
   const tabs = [
-    { id: 'local', label: 'Локальные модели' },
-    { id: 'huggingface', label: 'Hugging Face' },
+    { id: 'local', label: 'Мои модели' },
+    { id: 'remote', label: 'Поиск моделей' },
   ];
+
+  onMount(() => {
+    if ($folderPath) {
+      scanFolder($folderPath).catch((error) => console.error(error));
+    }
+  });
 </script>
 
-<div class="models-page">
-  <div class="page-header">
-    <h1>Управление моделями</h1>
-    <p class="page-description">
-      Управляйте локальными моделями или выберите модель из Hugging Face Hub
-    </p>
-  </div>
-
-  <div class="tabs-wrapper">
-    <Tabs {tabs} bind:activeTab>
+<section class="models-page">
+  <Tabs bind:activeTab={activeTab} {tabs}>
+    <div class="models-panel">
       {#if activeTab === 'local'}
-        <div class="tab-panel" role="tabpanel" id="tabpanel-local" aria-labelledby="tab-local">
-          <LocalModelsTab />
-        </div>
-      {:else if activeTab === 'huggingface'}
-        <div
-          class="tab-panel"
-          role="tabpanel"
-          id="tabpanel-huggingface"
-          aria-labelledby="tab-huggingface"
-        >
-          <HuggingFaceTab />
-        </div>
+        <LocalModelsPanel />
+      {:else if activeTab === 'remote'}
+        <RemoteModelsPanel />
       {/if}
-    </Tabs>
-  </div>
-</div>
+    </div>
+  </Tabs>
+</section>
 
 <style>
   .models-page {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    height: 100vh;
-    background: var(--bg);
-    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    box-sizing: border-box;
+    background: transparent;
   }
 
-  .page-header {
-    flex-shrink: 0;
-    padding: 2rem 2rem 1rem;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .page-header h1 {
-    margin: 0 0 0.5rem 0;
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text);
-  }
-
-  .page-description {
-    margin: 0;
-    font-size: 1rem;
-    color: var(--muted);
-  }
-
-  .tabs-wrapper {
-    flex: 1;
-    overflow: hidden;
+  .models-panel {
     display: flex;
     flex-direction: column;
-  }
-
-  .tab-panel {
+    gap: 1rem;
     flex: 1;
-    overflow: hidden;
+    min-height: 0;
+    width: 100%;
+    padding: 1rem;
+    box-sizing: border-box;
   }
 
-  /* Адаптивность для мобильных */
-  @media (max-width: 1024px) {
-    .page-header {
-      padding: 1.75rem 1.5rem 0.875rem;
-    }
+  :global(.tabs-content) {
+    padding: 0;
+    display: flex;
+    width: 100%;
+    background: transparent !important;
   }
 
-  @media (max-width: 768px) {
-    .models-page {
-      min-height: 100vh;
-    }
-
-    .page-header {
-      padding: 1.5rem 1rem 0.75rem;
-    }
-
-    .page-header h1 {
-      font-size: 1.5rem;
-    }
-
-    .page-description {
-      font-size: 0.875rem;
-    }
-
-    .tabs-wrapper {
-      overflow-y: auto;
-    }
+  :global(.tabs-container) {
+    background: transparent !important;
   }
 
-  @media (max-width: 480px) {
-    .page-header {
-      padding: 1.25rem 0.875rem 0.625rem;
-    }
-
-    .page-header h1 {
-      font-size: 1.375rem;
-    }
-
-    .page-description {
-      font-size: 0.8125rem;
-      line-height: 1.4;
-    }
+  :global(.tabs-list) {
+    background: transparent !important;
   }
 
-  /* Адаптация для маленьких экранов по высоте */
-  @media (max-height: 600px) {
-    .page-header {
-      padding: 1rem 1rem 0.5rem;
-    }
-
-    .page-header h1 {
-      font-size: 1.25rem;
-      margin-bottom: 0.25rem;
-    }
-
-    .page-description {
-      font-size: 0.8125rem;
-    }
+  :global(.page-container.active > .models-page) {
+    max-width: none;
+    margin: 0;
+    width: 100%;
   }
 </style>

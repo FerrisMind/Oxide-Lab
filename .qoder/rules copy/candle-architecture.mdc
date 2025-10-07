@@ -1,0 +1,744 @@
+---
+description: Candle architectural patterns and code organization best practices
+globs: *.rs,Cargo.toml
+alwaysApply: false
+---
+
+# Candle Architecture Patterns
+
+## Модульная архитектура
+
+### Организация проекта
+
+```
+src/
+├── main.rs                 # Точка входа приложения
+├── lib.rs                  # Публичные модули
+├── model/                  # Определения моделей
+│   ├── mod.rs
+│   ├── transformer.rs      # Трансформеры
+│   ├── cnn.rs             # Сверточные сети
+│   └── rnn.rs             # Рекуррентные сети
+├── layers/                 # Переиспользуемые слои
+│   ├── mod.rs
+│   ├── attention.rs       # Attention механизмы
+│   ├── normalization.rs   # LayerNorm, BatchNorm
+│   └── activation.rs      # Activation функции
+├── utils/                  # Вспомогательные функции
+│   ├── mod.rs
+│   ├── tensor_ops.rs      # Операции с тензорами
+│   ├── math.rs            # Математические функции
+│   └── device.rs          # Управление устройствами
+├── data/                   # Работа с данными
+│   ├── mod.rs
+│   ├── dataset.rs         # Датасеты
+│   ├── preprocessing.rs   # Предобработка
+│   └── augmentation.rs    # Аугментация
+└── training/               # Обучение моделей
+    ├── mod.rs
+    ├── optimizer.rs       # Оптимизаторы
+    ├── loss.rs            # Функции потерь
+    └── trainer.rs         # Тренер
+```
+
+### Определение модулей
+
+```rust
+// src/lib.rs
+pub mod model;
+pub mod layers;
+pub mod utils;
+pub mod data;
+pub mod training;
+
+// Re-export основных типов
+pub use model::*;
+pub use layers::*;
+```
+
+## Trait-based архитектура
+
+### Базовые трейты для моделей
+
+```rust
+use candle_core::{Tensor, Result, Device};
+
+/// Базовый трейт для всех моделей
+pub trait Model {
+    type Config;
+
+    /// Создание модели из конфигурации
+    fn new(config: Self::Config, device: &Device) -> Result<Self>
+    where
+        Self: Sized;
+
+    /// Forward pass
+    fn forward(&self, input: &Tensor) -> Result<Tensor>;
+
+    /// Получение количества параметров
+    fn num_parameters(&self) -> usize;
+
+    /// Получение устройства
+    fn device(&self) -> &Device;
+}
+
+/// Трейт для обучаемых моделей
+pub trait TrainableModel: Model {
+    /// Получение всех параметров для оптимизации
+    fn parameters(&self) -> Vec<&Tensor>;
+
+    /// Обновление параметров
+    fn update_parameters(&mut self, gradients: &[Tensor]) -> Result<()>;
+}
+```
+
+### Трейты для слоев
+
+```rust
+/// Базовый трейт для всех слоев
+pub trait Layer {
+    /// Forward pass слоя
+    fn forward(&self, input: &Tensor) -> Result<Tensor>;
+
+    /// Получение параметров слоя
+    fn parameters(&self) -> Vec<&Tensor>;
+
+    /// Инициализация параметров
+    fn init_parameters(&mut self, device: &Device) -> Result<()>;
+}
+
+/// Трейт для слоев с состоянием
+pub trait StatefulLayer: Layer {
+    type State;
+
+    /// Получение состояния
+    fn get_state(&self) -> &Self::State;
+
+    /// Обновление состояния
+    fn update_state(&mut self, state: Self::State);
+}
+```
+
+## Паттерн Builder для моделей
+
+### Конфигурация моделей
+
+```rust
+use candle_core::{Device, Result};
+
+/// Конфигурация трансформера
+#[derive(Debug, Clone)]
+pub struct TransformerConfig {
+    pub vocab_size: usize,
+    pub hidden_size: usize,
+    pub num_attention_heads: usize,
+    pub num_hidden_layers: usize,
+    pub intermediate_size: usize,
+    pub max_position_embeddings: usize,
+    pub dropout_prob: f32,
+}
+
+impl Default for TransformerConfig {
+    fn default() -> Self {
+        Self {
+            vocab_size: 30522,
+            hidden_size: 768,
+            num_attention_heads: 12,
+            num_hidden_layers: 12,
+            intermediate_size: 3072,
+            max_position_embeddings: 512,
+            dropout_prob: 0.1,
+        }
+    }
+}
+
+/// Builder для трансформера
+pub struct TransformerBuilder {
+    config: TransformerConfig,
+}
+
+impl TransformerBuilder {
+    pub fn new() -> Self {
+        Self {
+            config: TransformerConfig::default(),
+        }
+    }
+
+    pub fn vocab_size(mut self, size: usize) -> Self {
+        self.config.vocab_size = size;
+        self
+    }
+
+    pub fn hidden_size(mut self, size: usize) -> Self {
+        self.config.hidden_size = size;
+        self
+    }
+
+    pub fn num_layers(mut self, layers: usize) -> Self {
+        self.config.num_hidden_layers = layers;
+        self
+    }
+
+    pub fn num_heads(mut self, heads: usize) -> Self {
+        self.config.num_attention_heads = heads;
+        self
+    }
+
+    pub fn build(self, device: &Device) -> Result<Transformer> {
+        Transformer::new(self.config, device)
+    }
+}
+```
+
+## Паттерн Factory для создания моделей
+
+### Фабрика моделей
+
+```rust
+use candle_core::{Device, Result};
+
+/// Типы поддерживаемых моделей
+#[derive(Debug, Clone)]
+pub enum ModelType {
+    Transformer,
+    CNN,
+    RNN,
+    MLP,
+}
+
+/// Фабрика для создания моделей
+pub struct ModelFactory;
+
+impl ModelFactory {
+    /// Создание модели по типу
+    pub fn create_model(
+        model_type: ModelType,
+        config: ModelConfig,
+        device: &Device,
+    ) -> Result<Box<dyn Model>> {
+        match model_type {
+            ModelType::Transformer => {
+                let transformer = Transformer::new(config.transformer, device)?;
+                Ok(Box::new(transformer))
+            }
+            ModelType::CNN => {
+                let cnn = CNN::new(config.cnn, device)?;
+                Ok(Box::new(cnn))
+            }
+            ModelType::RNN => {
+                let rnn = RNN::new(config.rnn, device)?;
+                Ok(Box::new(rnn))
+            }
+            ModelType::MLP => {
+                let mlp = MLP::new(config.mlp, device)?;
+                Ok(Box::new(mlp))
+            }
+        }
+    }
+
+    /// Создание модели из конфигурационного файла
+    pub fn from_config_file(
+        config_path: &str,
+        device: &Device,
+    ) -> Result<Box<dyn Model>> {
+        let config = std::fs::read_to_string(config_path)?;
+        let model_config: ModelConfig = serde_json::from_str(&config)?;
+
+        Self::create_model(model_config.model_type, model_config, device)
+    }
+}
+```
+
+## Паттерн Strategy для оптимизаторов
+
+### Стратегии оптимизации
+
+```rust
+use candle_core::{Tensor, Result, Device};
+
+/// Трейт для оптимизаторов
+pub trait Optimizer {
+    /// Обновление параметров
+    fn step(&mut self, parameters: &mut [Tensor], gradients: &[Tensor]) -> Result<()>;
+
+    /// Сброс состояния оптимизатора
+    fn reset(&mut self);
+
+    /// Получение learning rate
+    fn learning_rate(&self) -> f32;
+
+    /// Установка learning rate
+    fn set_learning_rate(&mut self, lr: f32);
+}
+
+/// SGD оптимизатор
+pub struct SGD {
+    learning_rate: f32,
+    momentum: f32,
+    velocity: Vec<Tensor>,
+}
+
+impl SGD {
+    pub fn new(learning_rate: f32, momentum: f32) -> Self {
+        Self {
+            learning_rate,
+            momentum,
+            velocity: Vec::new(),
+        }
+    }
+}
+
+impl Optimizer for SGD {
+    fn step(&mut self, parameters: &mut [Tensor], gradients: &[Tensor]) -> Result<()> {
+        for (i, (param, grad)) in parameters.iter_mut().zip(gradients.iter()).enumerate() {
+            if i >= self.velocity.len() {
+                self.velocity.push(Tensor::zeros_like(param)?);
+            }
+
+            // Обновляем velocity с momentum
+            let velocity = &mut self.velocity[i];
+            *velocity = (&*velocity * self.momentum + grad * (1.0 - self.momentum))?;
+
+            // Обновляем параметры
+            *param = (param - &*velocity * self.learning_rate)?;
+        }
+        Ok(())
+    }
+
+    fn reset(&mut self) {
+        self.velocity.clear();
+    }
+
+    fn learning_rate(&self) -> f32 {
+        self.learning_rate
+    }
+
+    fn set_learning_rate(&mut self, lr: f32) {
+        self.learning_rate = lr;
+    }
+}
+
+/// Adam оптимизатор
+pub struct Adam {
+    learning_rate: f32,
+    beta1: f32,
+    beta2: f32,
+    epsilon: f32,
+    step: usize,
+    m: Vec<Tensor>,  // Первый момент
+    v: Vec<Tensor>,  // Второй момент
+}
+
+impl Adam {
+    pub fn new(learning_rate: f32) -> Self {
+        Self {
+            learning_rate,
+            beta1: 0.9,
+            beta2: 0.999,
+            epsilon: 1e-8,
+            step: 0,
+            m: Vec::new(),
+            v: Vec::new(),
+        }
+    }
+}
+
+impl Optimizer for Adam {
+    fn step(&mut self, parameters: &mut [Tensor], gradients: &[Tensor]) -> Result<()> {
+        self.step += 1;
+
+        for (i, (param, grad)) in parameters.iter_mut().zip(gradients.iter()).enumerate() {
+            // Инициализируем моменты если нужно
+            if i >= self.m.len() {
+                self.m.push(Tensor::zeros_like(param)?);
+                self.v.push(Tensor::zeros_like(param)?);
+            }
+
+            let m = &mut self.m[i];
+            let v = &mut self.v[i];
+
+            // Обновляем моменты
+            *m = (&*m * self.beta1 + grad * (1.0 - self.beta1))?;
+            *v = (&*v * self.beta2 + grad.powf(2.0)? * (1.0 - self.beta2))?;
+
+            // Bias correction
+            let m_hat = &*m / (1.0 - self.beta1.powi(self.step as i32));
+            let v_hat = &*v / (1.0 - self.beta2.powi(self.step as i32));
+
+            // Обновляем параметры
+            let update = &m_hat / (&v_hat.sqrt()? + self.epsilon)?;
+            *param = (param - &update * self.learning_rate)?;
+        }
+        Ok(())
+    }
+
+    fn reset(&mut self) {
+        self.step = 0;
+        self.m.clear();
+        self.v.clear();
+    }
+
+    fn learning_rate(&self) -> f32 {
+        self.learning_rate
+    }
+
+    fn set_learning_rate(&mut self, lr: f32) {
+        self.learning_rate = lr;
+    }
+}
+```
+
+## Паттерн Observer для мониторинга обучения
+
+### Система мониторинга
+
+```rust
+use std::collections::HashMap;
+
+/// Трейт для наблюдателей обучения
+pub trait TrainingObserver {
+    /// Вызывается в начале эпохи
+    fn on_epoch_start(&mut self, epoch: usize);
+
+    /// Вызывается в конце эпохи
+    fn on_epoch_end(&mut self, epoch: usize, metrics: &HashMap<String, f32>);
+
+    /// Вызывается в начале батча
+    fn on_batch_start(&mut self, batch: usize);
+
+    /// Вызывается в конце батча
+    fn on_batch_end(&mut self, batch: usize, loss: f32);
+}
+
+/// Логгер для обучения
+pub struct TrainingLogger {
+    log_file: std::fs::File,
+}
+
+impl TrainingLogger {
+    pub fn new(log_path: &str) -> Result<Self> {
+        let log_file = std::fs::File::create(log_path)?;
+        Ok(Self { log_file })
+    }
+}
+
+impl TrainingObserver for TrainingLogger {
+    fn on_epoch_start(&mut self, epoch: usize) {
+        println!("Начинаем эпоху {}", epoch);
+    }
+
+    fn on_epoch_end(&mut self, epoch: usize, metrics: &HashMap<String, f32>) {
+        println!("Эпоха {} завершена. Метрики: {:?}", epoch, metrics);
+    }
+
+    fn on_batch_start(&mut self, batch: usize) {
+        // Логируем начало батча если нужно
+    }
+
+    fn on_batch_end(&mut self, batch: usize, loss: f32) {
+        if batch % 100 == 0 {
+            println!("Батч {}, Loss: {:.4}", batch, loss);
+        }
+    }
+}
+
+/// Монитор производительности
+pub struct PerformanceMonitor {
+    batch_times: Vec<std::time::Duration>,
+    epoch_times: Vec<std::time::Duration>,
+}
+
+impl PerformanceMonitor {
+    pub fn new() -> Self {
+        Self {
+            batch_times: Vec::new(),
+            epoch_times: Vec::new(),
+        }
+    }
+
+    pub fn average_batch_time(&self) -> std::time::Duration {
+        if self.batch_times.is_empty() {
+            std::time::Duration::from_secs(0)
+        } else {
+            let total: std::time::Duration = self.batch_times.iter().sum();
+            total / self.batch_times.len() as u32
+        }
+    }
+}
+
+impl TrainingObserver for PerformanceMonitor {
+    fn on_epoch_start(&mut self, epoch: usize) {
+        // Начинаем измерение времени эпохи
+    }
+
+    fn on_epoch_end(&mut self, epoch: usize, metrics: &HashMap<String, f32>) {
+        // Записываем время эпохи
+        println!("Среднее время батча: {:?}", self.average_batch_time());
+    }
+
+    fn on_batch_start(&mut self, batch: usize) {
+        // Начинаем измерение времени батча
+    }
+
+    fn on_batch_end(&mut self, batch: usize, loss: f32) {
+        // Записываем время батча
+    }
+}
+```
+
+## Паттерн Command для операций с моделями
+
+### Команды для управления моделями
+
+```rust
+use candle_core::{Tensor, Result, Device};
+
+/// Трейт для команд
+pub trait Command {
+    fn execute(&self) -> Result<()>;
+    fn undo(&self) -> Result<()>;
+}
+
+/// Команда сохранения модели
+pub struct SaveModelCommand {
+    model: Box<dyn Model>,
+    path: String,
+}
+
+impl SaveModelCommand {
+    pub fn new(model: Box<dyn Model>, path: String) -> Self {
+        Self { model, path }
+    }
+}
+
+impl Command for SaveModelCommand {
+    fn execute(&self) -> Result<()> {
+        // Сохраняем модель
+        println!("Сохраняем модель в {}", self.path);
+        Ok(())
+    }
+
+    fn undo(&self) -> Result<()> {
+        // Удаляем файл модели
+        std::fs::remove_file(&self.path)?;
+        Ok(())
+    }
+}
+
+/// Команда загрузки модели
+pub struct LoadModelCommand {
+    path: String,
+    device: Device,
+}
+
+impl LoadModelCommand {
+    pub fn new(path: String, device: Device) -> Self {
+        Self { path, device }
+    }
+}
+
+impl Command for LoadModelCommand {
+    fn execute(&self) -> Result<()> {
+        // Загружаем модель
+        println!("Загружаем модель из {}", self.path);
+        Ok(())
+    }
+
+    fn undo(&self) -> Result<()> {
+        // Очищаем загруженную модель
+        Ok(())
+    }
+}
+
+/// Invoker для команд
+pub struct CommandInvoker {
+    history: Vec<Box<dyn Command>>,
+}
+
+impl CommandInvoker {
+    pub fn new() -> Self {
+        Self {
+            history: Vec::new(),
+        }
+    }
+
+    pub fn execute(&mut self, command: Box<dyn Command>) -> Result<()> {
+        command.execute()?;
+        self.history.push(command);
+        Ok(())
+    }
+
+    pub fn undo_last(&mut self) -> Result<()> {
+        if let Some(command) = self.history.pop() {
+            command.undo()?;
+        }
+        Ok(())
+    }
+}
+```
+
+## Error Handling архитектура
+
+### Иерархия ошибок
+
+```rust
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum ModelError {
+    #[error("Ошибка устройства: {0}")]
+    DeviceError(String),
+
+    #[error("Ошибка размерности тензора: ожидалось {expected}, получено {actual}")]
+    DimensionMismatch { expected: String, actual: String },
+
+    #[error("Ошибка инициализации модели: {0}")]
+    InitializationError(String),
+
+    #[error("Ошибка загрузки весов: {0}")]
+    WeightLoadingError(String),
+
+    #[error("Ошибка сохранения модели: {0}")]
+    ModelSavingError(String),
+
+    #[error("Ошибка конфигурации: {0}")]
+    ConfigError(String),
+}
+
+impl From<candle_core::Error> for ModelError {
+    fn from(err: candle_core::Error) -> Self {
+        ModelError::DeviceError(err.to_string())
+    }
+}
+
+/// Результат операций с моделями
+pub type ModelResult<T> = Result<T, ModelError>;
+```
+
+## Dependency Injection
+
+### Контейнер зависимостей
+
+```rust
+use std::any::{Any, TypeId};
+use std::collections::HashMap;
+
+/// Простой контейнер зависимостей
+pub struct DIContainer {
+    services: HashMap<TypeId, Box<dyn Any>>,
+}
+
+impl DIContainer {
+    pub fn new() -> Self {
+        Self {
+            services: HashMap::new(),
+        }
+    }
+
+    /// Регистрация сервиса
+    pub fn register<T: 'static>(&mut self, service: T) {
+        let type_id = TypeId::of::<T>();
+        self.services.insert(type_id, Box::new(service));
+    }
+
+    /// Получение сервиса
+    pub fn get<T: 'static>(&self) -> Option<&T> {
+        let type_id = TypeId::of::<T>();
+        self.services.get(&type_id)?.downcast_ref::<T>()
+    }
+
+    /// Получение мутабельного сервиса
+    pub fn get_mut<T: 'static>(&mut self) -> Option<&mut T> {
+        let type_id = TypeId::of::<T>();
+        self.services.get_mut(&type_id)?.downcast_mut::<T>()
+    }
+}
+
+/// Пример использования
+pub struct ModelService {
+    device: Device,
+}
+
+impl ModelService {
+    pub fn new(device: Device) -> Self {
+        Self { device }
+    }
+
+    pub fn create_model(&self) -> ModelResult<Box<dyn Model>> {
+        // Создание модели
+        Ok(Box::new(Transformer::new(TransformerConfig::default(), &self.device)?))
+    }
+}
+
+// Настройка контейнера
+fn setup_container() -> DIContainer {
+    let mut container = DIContainer::new();
+    let device = Device::Cpu;
+    let model_service = ModelService::new(device);
+    container.register(model_service);
+    container
+}
+```
+
+## Лучшие практики архитектуры
+
+### 1. Разделение ответственности
+
+```rust
+// Плохо - все в одном модуле
+pub struct Model {
+    // Модель + оптимизатор + данные + обучение
+}
+
+// Хорошо - разделение ответственности
+pub struct Model { /* только модель */ }
+pub struct Optimizer { /* только оптимизация */ }
+pub struct Dataset { /* только данные */ }
+pub struct Trainer { /* только обучение */ }
+```
+
+### 2. Использование generic constraints
+
+```rust
+/// Generic функция для работы с любым типом модели
+pub fn train_model<T>(model: &mut T, optimizer: &mut dyn Optimizer) -> ModelResult<()>
+where
+    T: Model + TrainableModel,
+{
+    // Обучение модели
+    Ok(())
+}
+```
+
+### 3. Immutable по умолчанию
+
+```rust
+/// Предпочитайте immutable структуры
+#[derive(Debug, Clone)]
+pub struct ModelConfig {
+    pub hidden_size: usize,
+    pub num_layers: usize,
+}
+
+/// Мутабельные операции только когда необходимо
+impl ModelConfig {
+    pub fn with_hidden_size(mut self, size: usize) -> Self {
+        self.hidden_size = size;
+        self
+    }
+}
+```
+
+### 4. Использование builder pattern для сложных объектов
+
+```rust
+/// Используйте builder для сложных конфигураций
+let model = TransformerBuilder::new()
+    .vocab_size(50000)
+    .hidden_size(1024)
+    .num_layers(24)
+    .num_heads(16)
+    .build(&device)?;
+```
+
+Следуйте этим архитектурным паттернам для создания масштабируемых и поддерживаемых Candle приложений.

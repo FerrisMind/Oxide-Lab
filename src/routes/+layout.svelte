@@ -21,6 +21,8 @@
   import Chat from '$lib/chat/Chat.svelte';
   import { showChatHistory } from '$lib/stores/sidebar';
 
+  import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+
   // Импортируем все страницы для постоянного монтирования
   import ApiPage from './api/+page.svelte';
   import ModelsPage from './models/+page.svelte';
@@ -28,20 +30,34 @@
   import PerformancePage from './performance/+page.svelte';
   import SettingsPage from './settings/+page.svelte';
 
+  const { children } = $props();
+
   // Определяем, должен ли отображаться GGUFUploadArea
-  $: shouldShowGGUFUploadArea = $page.url.pathname === '/' || $page.url.pathname === '/api';
+  let shouldShowGGUFUploadArea = $derived(
+    $page.url.pathname === '/' || ($page.url.pathname === '/api' && experimentalFeatures.enabled),
+  );
 
   // Определяем, должен ли отображаться HeaderSearch
-  $: shouldShowHeaderSearch = $page.url.pathname === '/search';
+  let shouldShowHeaderSearch = $derived($page.url.pathname === '/search');
 
   // Обработчик поиска из хедера
   function handleHeaderSearch(event: CustomEvent<{ query: string }>) {
     triggerHeaderSearch(event.detail.query);
   }
 
+  // Redirect to home if trying to access experimental pages when experimental features are disabled
+  $effect(() => {
+    if (experimentalFeatures.initialized && !experimentalFeatures.enabled) {
+      const experimentalPaths = ['/api', '/models', '/search', '/performance'];
+      if (experimentalPaths.includes($page.url.pathname)) {
+        goto('/');
+      }
+    }
+  });
+
   const appName = 'Oxide Lab';
   const appIcon = '/icon.svg';
-  let isMaximized = false;
+  let isMaximized = $state(false);
   const appWindow = getCurrentWindow();
 
   function goHome() {
@@ -71,6 +87,9 @@
   }
 
   onMount(() => {
+    // Initialize experimental features store
+    void experimentalFeatures.loadState();
+
     // Ensure background chat stream listener is active across pages
     void ensureGlobalChatStream();
     // Проверяем начальное состояние окна и слушаем resize через Tauri
@@ -189,18 +208,20 @@
         <div class="page-container" class:active={$page.url.pathname === '/'}>
           <Chat />
         </div>
-        <div class="page-container" class:active={$page.url.pathname === '/api'}>
-          <ApiPage />
-        </div>
-        <div class="page-container" class:active={$page.url.pathname === '/models'}>
-          <ModelsPage />
-        </div>
-        <div class="page-container" class:active={$page.url.pathname === '/search'}>
-          <SearchPage />
-        </div>
-        <div class="page-container" class:active={$page.url.pathname === '/performance'}>
-          <PerformancePage />
-        </div>
+        {#if experimentalFeatures.enabled}
+          <div class="page-container" class:active={$page.url.pathname === '/api'}>
+            <ApiPage />
+          </div>
+          <div class="page-container" class:active={$page.url.pathname === '/models'}>
+            <ModelsPage />
+          </div>
+          <div class="page-container" class:active={$page.url.pathname === '/search'}>
+            <SearchPage />
+          </div>
+          <div class="page-container" class:active={$page.url.pathname === '/performance'}>
+            <PerformancePage />
+          </div>
+        {/if}
         <div class="page-container" class:active={$page.url.pathname === '/settings'}>
           <SettingsPage />
         </div>
@@ -210,7 +231,7 @@
 </div>
 
 <!-- SvelteKit layout must expose a slot; hide it to avoid duplicate rendering -->
-<div hidden><slot /></div>
+<div hidden>{@render children()}</div>
 
 <style>
   /* App shell & header */

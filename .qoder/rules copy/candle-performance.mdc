@@ -1,0 +1,405 @@
+---
+description: Candle performance optimization and GPU acceleration best practices
+globs: *.rs,Cargo.toml
+alwaysApply: false
+---
+
+# Candle Performance Optimization
+
+## GPU Оптимизация
+
+### Эффективное управление CUDA устройствами
+
+```rust
+use candle_core::{Device, Tensor};
+
+// Создавайте устройство один раз и переиспользуйте
+let device = Device::new_cuda(0)?;  // Используйте GPU 0
+
+// Проверяйте доступность CUDA
+if Device::cuda_if_available(0).is_ok() {
+    let device = Device::new_cuda(0)?;
+} else {
+    let device = Device::Cpu;
+    eprintln!("CUDA недоступна, используем CPU");
+}
+```
+
+### Оптимизация памяти GPU
+
+```rust
+// Минимизируйте переносы между CPU и GPU
+let cpu_data = vec![1.0, 2.0, 3.0, 4.0];
+let gpu_device = Device::new_cuda(0)?;
+
+// Создавайте тензоры напрямую на GPU когда возможно
+let gpu_tensor = Tensor::from_slice(&cpu_data, (2, 2), &gpu_device)?;
+
+// Группируйте операции на GPU
+let a = Tensor::randn(0f32, 1f32, (1000, 1000), &gpu_device)?;
+let b = Tensor::randn(0f32, 1f32, (1000, 1000), &gpu_device)?;
+let c = a.matmul(&b)?;  // Все операции на GPU
+let d = c.relu()?;      // Продолжаем на GPU
+```
+
+### Батчинг для оптимальной производительности
+
+```rust
+// Плохо - последовательные операции
+let mut results = Vec::new();
+for input in inputs {
+    let result = input.matmul(&weights)?;
+    results.push(result);
+}
+
+// Хорошо - батчинг операций
+let batch_inputs = Tensor::stack(&inputs, 0)?;  // Объединяем в батч
+let batch_results = batch_inputs.matmul(&weights)?;  // Одна операция для всего батча
+
+// Размер батча должен быть кратным warp size (32) для NVIDIA GPU
+const OPTIMAL_BATCH_SIZE: usize = 32;
+let padded_batch_size = (batch_size + OPTIMAL_BATCH_SIZE - 1) / OPTIMAL_BATCH_SIZE * OPTIMAL_BATCH_SIZE;
+```
+
+### Memory Coalescing
+
+```rust
+// Оптимизируйте доступ к памяти для лучшего coalescing
+fn optimized_matrix_multiply(a: &Tensor, b: &Tensor) -> Result<Tensor> {
+    // Убедитесь, что тензоры contiguous
+    let a_cont = a.contiguous()?;
+    let b_cont = b.contiguous()?;
+
+    // Используйте оптимальные размеры блоков
+    let block_size = 16;  // Для CUDA cores
+
+    a_cont.matmul(&b_cont)
+}
+```
+
+## CPU Оптимизация
+
+### Векторизация и SIMD
+
+```rust
+use candle_core::{Tensor, Device};
+
+// Используйте подходящие размеры для SIMD инструкций
+fn optimized_cpu_operation(tensor: &Tensor) -> Result<Tensor> {
+    let device = Device::Cpu;
+
+    // Размеры, кратные 4 или 8, лучше векторизуются
+    let optimized_shape = (tensor.dim(0), (tensor.dim(1) + 3) & !3);
+    let padded_tensor = tensor.pad_with_zeros(2, 0, optimized_shape.1 - tensor.dim(1))?;
+
+    padded_tensor.relu()
+}
+```
+
+### Кэш-дружественные алгоритмы
+
+```rust
+// Оптимизируйте порядок операций для лучшего использования кэша
+fn cache_friendly_operation(tensors: &[Tensor]) -> Result<Tensor> {
+    // Группируйте операции с одинаковыми данными
+    let mut results = Vec::new();
+
+    for tensor in tensors {
+        // Выполняем все операции с одним тензором подряд
+        let result1 = tensor.relu()?;
+        let result2 = result1.matmul(&weights)?;
+        let result3 = result2.softmax(1)?;
+        results.push(result3);
+    }
+
+    Tensor::stack(&results, 0)
+}
+```
+
+## Профилирование и бенчмаркинг
+
+### Измерение производительности
+
+```rust
+use std::time::Instant;
+
+fn benchmark_operation() -> Result<()> {
+    let device = Device::new_cuda(0)?;
+    let tensor = Tensor::randn(0f32, 1f32, (1000, 1000), &device)?;
+
+    // Разогрев GPU
+    for _ in 0..10 {
+        let _ = tensor.matmul(&tensor)?;
+    }
+
+    // Синхронизация для точного измерения
+    let start = Instant::now();
+    let result = tensor.matmul(&tensor)?;
+
+    // Принудительная синхронизация GPU
+    device.synchronize()?;
+    let duration = start.elapsed();
+
+    println!("Операция заняла: {:?}", duration);
+    println!("Результат: {:?}", result.shape());
+
+    Ok(())
+}
+```
+
+### Использование Criterion для статистических бенчмарков
+
+```toml
+# В Cargo.toml
+[dev-dependencies]
+criterion = { version = "0.7", features = ["html_reports"] }
+
+[[bench]]
+name = "tensor_operations"
+harness = false
+```
+
+```rust
+// benches/tensor_operations.rs
+use criterion::{criterion_group, criterion_main, Criterion};
+use candle_core::{Tensor, Device};
+
+fn benchmark_matmul(c: &mut Criterion) {
+    let device = Device::new_cuda(0).unwrap();
+    let a = Tensor::randn(0f32, 1f32, (1000, 1000), &device).unwrap();
+    let b = Tensor::randn(0f32, 1f32, (1000, 1000), &device).unwrap();
+
+    c.bench_function("matmul_1000x1000", |bencher| {
+        bencher.iter(|| {
+            a.matmul(&b).unwrap()
+        });
+    });
+}
+
+criterion_group!(benches, benchmark_matmul);
+criterion_main!(benches);
+```
+
+## Оптимизация компиляции
+
+### Release настройки
+
+```toml
+# В Cargo.toml
+[profile.release]
+opt-level = 3          # Максимальная оптимизация
+lto = true             # Link-time optimization
+codegen-units = 1      # Лучшая оптимизация
+panic = "abort"        # Меньший размер бинарника
+strip = true           # Удаление debug символов
+
+# Для максимальной производительности
+[profile.release]
+opt-level = "z"        # Оптимизация по размеру
+lto = "fat"            # Агрессивная LTO оптимизация
+```
+
+### Target-specific оптимизации
+
+```bash
+# Для конкретной архитектуры CPU
+RUSTFLAGS="-C target-cpu=native" cargo build --release
+
+# Для конкретной архитектуры GPU
+RUSTFLAGS="-C target-feature=+cuda" cargo build --release --features cuda
+```
+
+## Оптимизация памяти
+
+### Управление памятью тензоров
+
+```rust
+// Используйте scoped блоки для автоматического освобождения
+fn memory_efficient_operation() -> Result<()> {
+    let device = Device::new_cuda(0)?;
+
+    {
+        // Большие тензоры в ограниченной области видимости
+        let large_tensor = Tensor::randn(0f32, 1f32, (5000, 5000), &device)?;
+        let result = large_tensor.matmul(&large_tensor)?;
+
+        // Обрабатываем результат
+        process_result(&result)?;
+
+        // Память автоматически освобождается здесь
+    }
+
+    // Продолжаем с меньшим потреблением памяти
+    Ok(())
+}
+```
+
+### Избегание копирования данных
+
+```rust
+// Используйте view операции вместо копирования
+fn efficient_slicing(tensor: &Tensor) -> Result<Tensor> {
+    // Плохо - создает копию
+    // let slice = tensor.i((.., ..10))?.clone()?;
+
+    // Хорошо - создает view
+    let slice = tensor.i((.., ..10))?;
+
+    // Если нужна копия, делайте это явно
+    let contiguous_slice = slice.contiguous()?;
+
+    Ok(contiguous_slice)
+}
+```
+
+## Оптимизация алгоритмов
+
+### Эффективные операции с матрицами
+
+```rust
+// Используйте специализированные операции когда доступны
+fn optimized_attention(query: &Tensor, key: &Tensor, value: &Tensor) -> Result<Tensor> {
+    let device = query.device();
+
+    // Оптимизированное внимание с использованием flash attention
+    let scale = (query.dim(query.dims().len() - 1) as f32).sqrt();
+    let scaled_query = query / scale;
+
+    let scores = scaled_query.matmul(&key.transpose(-2, -1)?)?;
+    let attn_weights = scores.softmax(-1)?;
+    let output = attn_weights.matmul(value)?;
+
+    Ok(output)
+}
+```
+
+### Оптимизация конволюций
+
+```rust
+// Используйте оптимальные размеры для конволюций
+fn optimized_conv2d(input: &Tensor, weight: &Tensor) -> Result<Tensor> {
+    // Оптимальные размеры ядра для GPU
+    let kernel_size = weight.shape();
+    if kernel_size[2] == 3 && kernel_size[3] == 3 {
+        // Используем оптимизированную реализацию для 3x3 ядер
+        optimized_3x3_conv2d(input, weight)
+    } else {
+        // Общая реализация
+        input.conv2d(weight, 0, 1, 1)
+    }
+}
+```
+
+## Мониторинг производительности
+
+### Отслеживание использования GPU
+
+```rust
+use candle_core::Device;
+
+fn monitor_gpu_usage() -> Result<()> {
+    let device = Device::new_cuda(0)?;
+
+    // Получаем информацию об устройстве
+    if let Device::Cuda(cuda_device) = device {
+        println!("CUDA Device: {}", cuda_device);
+        // Дополнительная информация о GPU может быть доступна
+    }
+
+    Ok(())
+}
+```
+
+### Логирование производительности
+
+```rust
+use std::time::Instant;
+
+fn timed_operation<F, R>(name: &str, operation: F) -> Result<R>
+where
+    F: FnOnce() -> Result<R>,
+{
+    let start = Instant::now();
+    let result = operation()?;
+    let duration = start.elapsed();
+
+    println!("{} заняло: {:?}", name, duration);
+    Ok(result)
+}
+
+// Использование
+let result = timed_operation("Matrix multiplication", || {
+    tensor_a.matmul(&tensor_b)
+})?;
+```
+
+## Лучшие практики производительности
+
+### 1. Профилируйте перед оптимизацией
+
+```rust
+// Всегда измеряйте производительность перед оптимизацией
+fn profile_before_optimize() {
+    let start = Instant::now();
+    // Ваш код
+    let duration = start.elapsed();
+
+    if duration > Duration::from_millis(100) {
+        // Оптимизируйте только если операция медленная
+        optimize_operation();
+    }
+}
+```
+
+### 2. Используйте подходящие типы данных
+
+```rust
+// Используйте F16 для экономии памяти на GPU
+let f16_tensor = Tensor::randn(0f32, 1f32, (1000, 1000), &device)?
+    .to_dtype(DType::F16)?;
+
+// Используйте F32 для точности на CPU
+let f32_tensor = Tensor::randn(0f32, 1f32, (1000, 1000), &Device::Cpu)?;
+```
+
+### 3. Оптимизируйте размеры батчей
+
+```rust
+fn find_optimal_batch_size() -> Result<usize> {
+    let device = Device::new_cuda(0)?;
+    let mut best_batch_size = 1;
+    let mut best_throughput = 0.0;
+
+    for batch_size in [1, 8, 16, 32, 64, 128, 256] {
+        let tensor = Tensor::randn(0f32, 1f32, (batch_size, 1000), &device)?;
+
+        let start = Instant::now();
+        let _ = tensor.matmul(&tensor)?;
+        device.synchronize()?;
+        let duration = start.elapsed();
+
+        let throughput = batch_size as f64 / duration.as_secs_f64();
+        if throughput > best_throughput {
+            best_throughput = throughput;
+            best_batch_size = batch_size;
+        }
+    }
+
+    Ok(best_batch_size)
+}
+```
+
+### 4. Избегайте ненужных операций
+
+```rust
+// Плохо - ненужные операции
+let result = tensor
+    .transpose(0, 1)?
+    .transpose(0, 1)?  // Отменяет предыдущую операцию
+    .matmul(&other)?;
+
+// Хорошо - убираем ненужные операции
+let result = tensor.matmul(&other)?;
+```
+
+Следуйте этим принципам для достижения максимальной производительности в ваших Candle приложениях.

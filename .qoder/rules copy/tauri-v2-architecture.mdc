@@ -1,0 +1,723 @@
+---
+globs: src-tauri/**/*,tauri.conf.json,Cargo.toml
+description: Tauri v2 best practices and security guidelines
+---
+
+# Tauri v2 Best Practices
+
+## Основы Tauri v2 и архитектура
+
+### Мультипроцессная архитектура
+
+Tauri v2 использует мультипроцессную архитектуру с существенными улучшениями в безопасности и производительности.
+
+#### Ключевые компоненты:
+
+**Core Process (Rust)** — основной процесс:
+
+- Управляет всей бизнес-логикой приложения
+- Обеспечивает доступ к системным API
+- Выполняет вычислительно сложные операции
+- Гарантирует безопасность и производительность
+
+**WebView Process** — процесс отображения UI:
+
+- Использует системный WebView (не Chromium!)
+- Рендерит интерфейс с помощью HTML/CSS/JavaScript
+- Изолирован от основного процесса для безопасности
+- Поддерживает любые веб-фреймворки
+
+#### Базовая инициализация:
+
+```rust
+// src-tauri/src/main.rs - Основной процесс
+use tauri::Manager;
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init()) // Файловая система
+        .plugin(tauri_plugin_shell::init()) // Системная оболочка
+        .plugin(tauri_plugin_dialog::init()) // Диалоги
+        .setup(|app| {
+            // Инициализация приложения
+            #[cfg(debug_assertions)] // Только в debug режиме
+            {
+                let window = app.get_webview_window("main").unwrap();
+                window.open_devtools();
+            }
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+
+## Система безопасности и Capabilities
+
+### Capabilities — основа безопасности
+
+Tauri v2 вводит революционную систему Capabilities — детальный контроль доступа к API.
+
+#### Структура capabilities:
+
+```json
+// src-tauri/capabilities/default.json
+{
+  "identifier": "default",
+  "description": "Default permissions for main window",
+  "windows": ["main"],
+  "permissions": [
+    // Базовые разрешения
+    "core:default",
+    "core:window:allow-set-title",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+
+    // Файловая система - только чтение в определённых папках
+    "fs:allow-read-text-file",
+    "fs:scope-read-recursive",
+
+    // Диалоги - только открытие файлов
+    "dialog:allow-open",
+
+    // HTTP - только к определённым доменам
+    "http:default",
+    "http:allow-fetch"
+  ],
+  "scope": {
+    // Ограничиваем доступ к файловой системе
+    "allow": ["$APPDATA/**", "$DOCUMENT/**", "$DOWNLOAD/**"],
+    "deny": ["$HOME/.ssh/**", "/etc/**", "C:\\Windows\\System32\\**"]
+  }
+}
+```
+
+#### Capabilities для разных типов окон:
+
+```json
+// src-tauri/capabilities/admin.json - для админского окна
+{
+  "identifier": "admin",
+  "description": "Admin permissions for privileged operations",
+  "windows": ["admin-*"],
+  "permissions": [
+    "core:default",
+    "fs:allow-write-text-file",
+    "fs:allow-remove-file",
+    "shell:allow-execute",
+    "process:allow-restart"
+  ]
+}
+
+// src-tauri/capabilities/viewer.json - для окон просмотра
+{
+  "identifier": "viewer",
+  "description": "Read-only permissions for viewer windows",
+  "windows": ["viewer-*"],
+  "permissions": [
+    "core:default",
+    "fs:allow-read-text-file",
+    "dialog:allow-open"
+  ]
+}
+```
+
+### Isolation Pattern — дополнительная защита
+
+```javascript
+// src-tauri/isolation/index.html
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        // Безопасное приложение-изолятор
+        (function() {
+            // Перехватываем все IPC сообщения
+            window.__TAURI_ISOLATION__ = {
+                validateCommand: function(command, args) {
+                    // Валидация команд
+                    if (command === 'read_file') {
+                        const path = args.path;
+
+                        // Проверяем, что путь безопасный
+                        if (path.includes('..') || path.startsWith('/etc/')) {
+                            throw new Error('Unsafe file path');
+                        }
+                    }
+
+                    // Проверяем размер данных
+                    if (JSON.stringify(args).length > 1024 * 1024) { // 1MB
+                        throw new Error('Payload too large');
+                    }
+
+                    return true;
+                },
+
+                sanitizeResponse: function(response) {
+                    // Очищаем ответ от потенциально опасных данных
+                    if (typeof response === 'string') {
+                        return response.replace(/<script>/gi, '');
+                    }
+                    return response;
+                }
+            };
+        })();
+    </script>
+</head>
+<body></body>
+</html>
+```
+
+## Межпроцессное взаимодействие (IPC)
+
+### Commands — вызов Rust из фронтенда
+
+```rust
+// src-tauri/src/commands.rs
+use serde::{Deserialize, Serialize};
+use tauri::State;
+use std::sync::Mutex;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct User {
+    id: u32,
+    name: String,
+    email: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateUserRequest {
+    name: String,
+    email: String,
+}
+
+// Состояние приложения
+pub struct AppState {
+    users: Mutex<Vec<User>>,
+    counter: Mutex<u32>,
+}
+
+impl AppState {
+    pub fn new() -> Self {
+        Self {
+            users: Mutex::new(Vec::new()),
+            counter: Mutex::new(0),
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn create_user(
+    request: CreateUserRequest,
+    state: State<'_, AppState>
+) -> Result<User, String> {
+    // Валидация входных данных
+    if request.name.trim().is_empty() {
+        return Err("Name cannot be empty".to_string());
+    }
+
+    if !request.email.contains('@') {
+        return Err("Invalid email format".to_string());
+    }
+
+    // Получаем следующий ID
+    let mut counter = state.counter.lock()
+        .map_err(|_| "Failed to access counter")?;
+    *counter += 1;
+    let id = *counter;
+
+    // Создаём пользователя
+    let user = User {
+        id,
+        name: request.name.trim().to_string(),
+        email: request.email.trim().to_lowercase(),
+    };
+
+    // Сохраняем в состоянии
+    let mut users = state.users.lock()
+        .map_err(|_| "Failed to access users")?;
+    users.push(user.clone());
+
+    Ok(user)
+}
+
+#[tauri::command]
+pub async fn get_users(state: State<'_, AppState>) -> Result<Vec<User>, String> {
+    let users = state.users.lock()
+        .map_err(|_| "Failed to access users")?;
+    Ok(users.clone())
+}
+```
+
+#### Использование команд во фронтенде:
+
+```typescript
+// src/api/tauri.ts
+import { invoke } from '@tauri-apps/api/core';
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+}
+
+export class UserService {
+  static async createUser(request: CreateUserRequest): Promise<User> {
+    try {
+      return await invoke<User>('create_user', { request });
+    } catch (error) {
+      throw new Error(`Failed to create user: ${error}`);
+    }
+  }
+
+  static async getUsers(): Promise<User[]> {
+    try {
+      return await invoke<User[]>('get_users');
+    } catch (error) {
+      throw new Error(`Failed to get users: ${error}`);
+    }
+  }
+}
+```
+
+### Events — асинхронная передача данных
+
+```rust
+// src-tauri/src/events.rs
+use tauri::{AppHandle, Emitter};
+use serde::Serialize;
+
+#[derive(Clone, Serialize)]
+pub struct ProgressUpdate {
+    current: u32,
+    total: u32,
+    message: String,
+}
+
+#[derive(Clone, Serialize)]
+pub struct NotificationData {
+    title: String,
+    message: String,
+    level: String, // "info", "warning", "error"
+}
+
+pub struct EventManager {
+    app_handle: AppHandle,
+}
+
+impl EventManager {
+    pub fn new(app_handle: AppHandle) -> Self {
+        Self { app_handle }
+    }
+
+    // Глобальное событие для всех окон
+    pub fn send_notification(&self, notification: NotificationData) -> Result<(), tauri::Error> {
+        self.app_handle.emit("notification", notification)
+    }
+
+    // Событие для specific окна
+    pub fn send_progress_to_window(&self, window_label: &str, progress: ProgressUpdate) -> Result<(), tauri::Error> {
+        self.app_handle.emit_to(window_label, "progress", progress)
+    }
+}
+```
+
+#### Обработка событий во фронтенде:
+
+```typescript
+// src/api/events.ts
+import { listen, UnlistenFn } from '@tauri-apps/api/event';
+
+export interface ProgressUpdate {
+  current: number;
+  total: number;
+  message: string;
+}
+
+export interface NotificationData {
+  title: string;
+  message: string;
+  level: 'info' | 'warning' | 'error';
+}
+
+export class EventService {
+  private listeners: UnlistenFn[] = [];
+
+  async setupEventListeners(): Promise<void> {
+    // Слушаем события прогресса
+    const progressListener = await listen<ProgressUpdate>('progress', (event) => {
+      const { current, total, message } = event.payload;
+      console.log(`Progress: ${current}/${total} - ${message}`);
+
+      // Обновляем UI
+      this.updateProgressBar(current, total, message);
+    });
+
+    // Слушаем уведомления
+    const notificationListener = await listen<NotificationData>('notification', (event) => {
+      const { title, message, level } = event.payload;
+      this.showNotification(title, message, level);
+    });
+
+    this.listeners = [progressListener, notificationListener];
+  }
+
+  cleanup(): void {
+    // Очищаем слушатели при размонтировании компонента
+    this.listeners.forEach((unlisten) => unlisten());
+    this.listeners = [];
+  }
+}
+```
+
+## Мобильная разработка
+
+### Инициализация мобильного проекта
+
+```bash
+# Инициализация для Android
+cargo tauri android init
+
+# Инициализация для iOS
+cargo tauri ios init
+
+# Запуск в режиме разработки
+cargo tauri android dev  # Для Android
+cargo tauri ios dev      # Для iOS
+```
+
+#### Конфигурация для мобильных платформ:
+
+```json
+// src-tauri/tauri.conf.json
+{
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "identifier": "com.yourcompany.yourapp",
+    "iOS": {
+      "minimumSystemVersion": "13.0",
+      "frameworks": [],
+      "developmentTeam": "YOUR_TEAM_ID"
+    },
+    "android": {
+      "minSdkVersion": 24,
+      "targetSdkVersion": 33,
+      "compileSdkVersion": 33,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.NFC"
+      ]
+    }
+  }
+}
+```
+
+### Мобильные плагины
+
+#### Android плагин (Kotlin):
+
+```kotlin
+// src-tauri/gen/android/app/src/main/kotlin/YourPlugin.kt
+package com.yourcompany.yourapp
+
+import app.tauri.annotation.Command
+import app.tauri.annotation.TauriPlugin
+import app.tauri.plugin.JSObject
+import app.tauri.plugin.Plugin
+import app.tauri.plugin.Invoke
+import android.content.Context
+
+@TauriPlugin
+class DeviceInfoPlugin(private val context: Context): Plugin(context) {
+
+    @Command
+    fun getDeviceInfo(invoke: Invoke) {
+        val deviceInfo = JSObject().apply {
+            put("model", android.os.Build.MODEL)
+            put("manufacturer", android.os.Build.MANUFACTURER)
+            put("version", android.os.Build.VERSION.RELEASE)
+            put("sdk", android.os.Build.VERSION.SDK_INT)
+            put("platform", "android")
+        }
+
+        invoke.resolve(deviceInfo)
+    }
+}
+```
+
+#### iOS плагин (Swift):
+
+```swift
+// src-tauri/gen/iOS/Sources/YourApp/YourPlugin.swift
+import Tauri
+import UIKit
+
+class DeviceInfoPlugin: Plugin {
+
+    @objc public func getDeviceInfo(_ invoke: Invoke) {
+        let device = UIDevice.current
+
+        let deviceInfo: [String: Any] = [
+            "model": device.model,
+            "name": device.name,
+            "systemName": device.systemName,
+            "systemVersion": device.systemVersion,
+            "platform": "ios"
+        ]
+
+        invoke.resolve(deviceInfo)
+    }
+}
+```
+
+## Производительность и оптимизация
+
+### Размер бандла и оптимизация Cargo
+
+```toml
+# src-tauri/Cargo.toml
+[profile.release]
+panic = "abort"          # Убираем обработку паник
+codegen-units = 1       # Оптимизация линковки
+lto = true              # Link Time Optimization
+opt-level = "s"         # Оптимизация размера
+strip = true            # Удаляем отладочные символы
+overflow-checks = false # Убираем проверки переполнения
+
+# Дополнительные оптимизации
+[profile.release.build-override]
+opt-level = 3
+
+# Оптимизация зависимостей
+[profile.release.package."*"]
+opt-level = "s"
+```
+
+### Пакетирование IPC вызовов
+
+```rust
+// src-tauri/src/batch_commands.rs
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+#[derive(Debug, Deserialize)]
+pub struct BatchRequest {
+    pub commands: Vec<SingleCommand>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SingleCommand {
+    pub id: String,
+    pub command: String,
+    pub args: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BatchResponse {
+    pub results: HashMap<String, CommandResult>,
+}
+
+#[derive(Debug, Serialize)]
+pub enum CommandResult {
+    Success(serde_json::Value),
+    Error(String),
+}
+
+#[tauri::command]
+pub async fn execute_batch(
+    request: BatchRequest,
+    app_handle: tauri::AppHandle
+) -> Result<BatchResponse, String> {
+    let mut results = HashMap::new();
+
+    // Выполняем команды пакетом для снижения IPC overhead
+    for cmd in request.commands {
+        let result = match cmd.command.as_str() {
+            "get_user" => {
+                match get_user_by_id(cmd.args["id"].as_u64().unwrap_or(0) as u32).await {
+                    Ok(user) => CommandResult::Success(serde_json::to_value(user).unwrap()),
+                    Err(e) => CommandResult::Error(e),
+                }
+            },
+            _ => CommandResult::Error("Unknown command".to_string()),
+        };
+
+        results.insert(cmd.id, result);
+    }
+
+    Ok(BatchResponse { results })
+}
+```
+
+## Тестирование
+
+### Интеграционные тесты
+
+```rust
+// src-tauri/tests/integration_tests.rs
+use tauri_runtime_wry::Wry;
+
+// Хелперы для тестирования
+pub fn create_test_app() -> tauri::App<Wry<tauri::EventLoopMessage>> {
+    tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![
+            create_user,
+            get_users,
+            delete_user
+        ])
+        .build(tauri::generate_context!())
+        .expect("failed to build app")
+}
+
+#[tokio::test]
+async fn test_user_commands() {
+    let app = create_test_app();
+    let window = tauri::WindowBuilder::new(
+        &app,
+        "test",
+        tauri::WindowUrl::default()
+    ).build().unwrap();
+
+    // Тестируем создание пользователя
+    let create_result = window.invoke_handler()
+        .invoke("create_user", serde_json::json!({
+            "request": {
+                "name": "Test User",
+                "email": "test@example.com"
+            }
+        }))
+        .await;
+
+    assert!(create_result.is_ok());
+}
+```
+
+### Тесты фронтенда с Tauri
+
+```javascript
+// src/tests/tauri-integration.test.js
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { UserService } from '../api/tauri';
+
+// Mock Tauri API для тестирования
+const mockInvoke = vi.fn();
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: mockInvoke,
+}));
+
+describe('UserService', () => {
+  beforeAll(() => {
+    // Настройка моков
+    mockInvoke.mockImplementation((command, args) => {
+      switch (command) {
+        case 'get_users':
+          return Promise.resolve([{ id: 1, name: 'Test User', email: 'test@example.com' }]);
+        case 'create_user':
+          return Promise.resolve({
+            id: 2,
+            name: args.request.name,
+            email: args.request.email,
+          });
+        default:
+          return Promise.reject(new Error('Unknown command'));
+      }
+    });
+  });
+
+  it('should get users', async () => {
+    const users = await UserService.getUsers();
+
+    expect(users).toHaveLength(1);
+    expect(users[0].name).toBe('Test User');
+    expect(mockInvoke).toHaveBeenCalledWith('get_users');
+  });
+});
+```
+
+## Чек-листы и лучшие практики
+
+### Чек-лист перед релизом
+
+- [ ] **Безопасность**:
+  - [ ] Настроены capabilities для всех окон
+  - [ ] Включён Isolation Pattern для критических приложений
+  - [ ] Проведён аудит разрешений плагинов
+  - [ ] Удалены все debug-команды из production сборки
+
+- [ ] **Производительность**:
+  - [ ] Настроен profile.release в Cargo.toml
+  - [ ] Минимизированы и сжаты frontend ресурсы
+  - [ ] Проверен размер итогового бандла
+  - [ ] Профилированы критические IPC вызовы
+
+- [ ] **Кроссплатформенность**:
+  - [ ] Тестирование на всех целевых платформах
+  - [ ] Проверка мобильных разрешений
+  - [ ] Валидация иконок и метаданных
+  - [ ] Тестирование автообновлений
+
+### Частые ошибки джунов
+
+#### 1. Неправильная работа с Capabilities
+
+```json
+// ❌ Плохо: слишком широкие разрешения
+{
+  "permissions": ["*:*"] // Открывает всё API
+}
+
+// ✅ Хорошо: минимальные необходимые разрешения
+{
+  "permissions": [
+    "core:window:allow-set-title",
+    "fs:allow-read-text-file",
+    "fs:scope-read-recursive"
+  ],
+  "scope": {
+    "allow": ["$APPDATA/**"]
+  }
+}
+```
+
+#### 2. Неэффективная работа с IPC
+
+```rust
+// ❌ Плохо: синхронные операции в командах
+#[tauri::command]
+fn read_large_file() -> String {
+    std::fs::read_to_string("large_file.txt").unwrap() // Блокирует UI
+}
+
+// ✅ Хорошо: асинхронные операции
+#[tauri::command]
+async fn read_large_file() -> Result<String, String> {
+    tokio::fs::read_to_string("large_file.txt")
+        .await
+        .map_err(|e| e.to_string())
+}
+```
+
+#### 3. Игнорирование обработки ошибок
+
+```typescript
+// ❌ Плохо: не обрабатываем ошибки
+const user = await invoke('get_user', { id: 1 });
+
+// ✅ Хорошо: правильная обработка
+try {
+  const user = await invoke<User>('get_user', { id: 1 });
+  return user;
+} catch (error) {
+  console.error('Failed to get user:', error);
+  throw new Error(`User retrieval failed: ${error}`);
+}
+```

@@ -1,0 +1,718 @@
+---
+globs: src-tauri/**/*,tauri.conf.json
+description: Tauri v2 security, performance and deployment best practices
+---
+
+# Tauri v2 Security & Performance
+
+## Система безопасности
+
+### Capabilities — детальный контроль доступа
+
+#### Минимальные разрешения
+
+```json
+// src-tauri/capabilities/minimal.json
+{
+  "identifier": "minimal",
+  "description": "Minimal permissions for basic functionality",
+  "windows": ["main"],
+  "permissions": ["core:default", "core:window:allow-set-title", "core:window:allow-minimize"]
+}
+```
+
+#### Расширенные разрешения для админа
+
+```json
+// src-tauri/capabilities/admin.json
+{
+  "identifier": "admin",
+  "description": "Admin permissions for privileged operations",
+  "windows": ["admin-*"],
+  "permissions": [
+    "core:default",
+    "fs:allow-write-text-file",
+    "fs:allow-remove-file",
+    "shell:allow-execute",
+    "process:allow-restart"
+  ],
+  "scope": {
+    "allow": ["$APPDATA/**", "$DOCUMENT/**", "/tmp/**"],
+    "deny": ["$HOME/.ssh/**", "/etc/**", "C:\\Windows\\System32\\**"]
+  }
+}
+```
+
+### Isolation Pattern — дополнительная защита
+
+```javascript
+// src-tauri/isolation/index.html
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        (function() {
+            window.__TAURI_ISOLATION__ = {
+                validateCommand: function(command, args) {
+                    // Валидация команд
+                    const allowedCommands = ['read_file', 'write_file', 'get_user'];
+                    if (!allowedCommands.includes(command)) {
+                        throw new Error(`Command ${command} not allowed`);
+                    }
+
+                    // Проверка размера данных
+                    const payloadSize = JSON.stringify(args).length;
+                    if (payloadSize > 1024 * 1024) { // 1MB
+                        throw new Error('Payload too large');
+                    }
+
+                    // Валидация путей файлов
+                    if (command.includes('file') && args.path) {
+                        if (args.path.includes('..') || args.path.startsWith('/etc/')) {
+                            throw new Error('Unsafe file path');
+                        }
+                    }
+
+                    return true;
+                },
+
+                sanitizeResponse: function(response) {
+                    // Очистка ответов от потенциально опасных данных
+                    if (typeof response === 'string') {
+                        return response
+                            .replace(/<script[^>]*>.*?<\/script>/gi, '')
+                            .replace(/javascript:/gi, '')
+                            .replace(/on\w+\s*=/gi, '');
+                    }
+                    return response;
+                }
+            };
+        })();
+    </script>
+</head>
+<body></body>
+</html>
+```
+
+### Валидация входных данных
+
+```rust
+// src-tauri/src/validation.rs
+use serde::{Deserialize, Serialize};
+use regex::Regex;
+use std::path::Path;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FileOperation {
+    pub path: String,
+    pub operation: String,
+}
+
+impl FileOperation {
+    pub fn validate(&self) -> Result<(), String> {
+        // Проверка пути
+        if self.path.contains("..") {
+            return Err("Path traversal not allowed".to_string());
+        }
+
+        if self.path.starts_with("/etc/") || self.path.starts_with("C:\\Windows\\") {
+            return Err("Access to system directories not allowed".to_string());
+        }
+
+        // Проверка операции
+        let allowed_operations = ["read", "write", "delete"];
+        if !allowed_operations.contains(&self.operation.as_str()) {
+            return Err("Invalid operation".to_string());
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserInput {
+    pub name: String,
+    pub email: String,
+}
+
+impl UserInput {
+    pub fn validate(&self) -> Result<(), String> {
+        // Валидация имени
+        if self.name.trim().is_empty() {
+            return Err("Name cannot be empty".to_string());
+        }
+
+        if self.name.len() > 100 {
+            return Err("Name too long".to_string());
+        }
+
+        // Валидация email
+        let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+            .map_err(|_| "Invalid regex pattern")?;
+
+        if !email_regex.is_match(&self.email) {
+            return Err("Invalid email format".to_string());
+        }
+
+        Ok(())
+    }
+}
+```
+
+## Производительность
+
+### Оптимизация Cargo для минимального размера
+
+```toml
+# src-tauri/Cargo.toml
+[profile.release]
+panic = "abort"          # Убираем обработку паник
+codegen-units = 1       # Оптимизация линковки
+lto = true              # Link Time Optimization
+opt-level = "z"         # Максимальная оптимизация размера
+strip = true            # Удаляем отладочные символы
+overflow-checks = false # Убираем проверки переполнения
+
+# Дополнительные оптимизации
+[profile.release.build-override]
+opt-level = 3
+
+# Оптимизация зависимостей
+[profile.release.package."*"]
+opt-level = "z"
+
+# Минимизация зависимостей
+[dependencies]
+tauri = { version = "2", features = ["api-all"] }
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.0", features = ["rt", "rt-multi-thread"] }
+```
+
+### Пакетирование IPC вызовов
+
+```rust
+// src-tauri/src/batch_commands.rs
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use tokio::time::{sleep, Duration};
+
+#[derive(Debug, Deserialize)]
+pub struct BatchRequest {
+    pub commands: Vec<SingleCommand>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SingleCommand {
+    pub id: String,
+    pub command: String,
+    pub args: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BatchResponse {
+    pub results: HashMap<String, CommandResult>,
+}
+
+#[derive(Debug, Serialize)]
+pub enum CommandResult {
+    Success(serde_json::Value),
+    Error(String),
+}
+
+#[tauri::command]
+pub async fn execute_batch(
+    request: BatchRequest,
+    app_handle: tauri::AppHandle
+) -> Result<BatchResponse, String> {
+    let mut results = HashMap::new();
+
+    // Выполняем команды пакетом для снижения IPC overhead
+    for cmd in request.commands {
+        let result = match cmd.command.as_str() {
+            "get_user" => {
+                match get_user_by_id(cmd.args["id"].as_u64().unwrap_or(0) as u32).await {
+                    Ok(user) => CommandResult::Success(serde_json::to_value(user).unwrap()),
+                    Err(e) => CommandResult::Error(e),
+                }
+            },
+            "create_user" => {
+                match serde_json::from_value::<CreateUserRequest>(cmd.args) {
+                    Ok(request) => {
+                        match create_user_internal(request).await {
+                            Ok(user) => CommandResult::Success(serde_json::to_value(user).unwrap()),
+                            Err(e) => CommandResult::Error(e),
+                        }
+                    },
+                    Err(e) => CommandResult::Error(format!("Invalid args: {}", e)),
+                }
+            },
+            _ => CommandResult::Error("Unknown command".to_string()),
+        };
+
+        results.insert(cmd.id, result);
+    }
+
+    Ok(BatchResponse { results })
+}
+```
+
+### Кэширование и мемоизация
+
+```rust
+// src-tauri/src/cache.rs
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use tokio::time::{Duration, Instant};
+
+#[derive(Clone)]
+pub struct CacheEntry<T> {
+    pub data: T,
+    pub expires_at: Instant,
+}
+
+pub struct Cache<T> {
+    entries: Arc<RwLock<HashMap<String, CacheEntry<T>>>>,
+    default_ttl: Duration,
+}
+
+impl<T: Clone> Cache<T> {
+    pub fn new(default_ttl: Duration) -> Self {
+        Self {
+            entries: Arc::new(RwLock::new(HashMap::new())),
+            default_ttl,
+        }
+    }
+
+    pub async fn get(&self, key: &str) -> Option<T> {
+        let mut entries = self.entries.write().await;
+
+        if let Some(entry) = entries.get(key) {
+            if entry.expires_at > Instant::now() {
+                return Some(entry.data.clone());
+            } else {
+                entries.remove(key);
+            }
+        }
+
+        None
+    }
+
+    pub async fn set(&self, key: String, value: T) {
+        let mut entries = self.entries.write().await;
+        let entry = CacheEntry {
+            data: value,
+            expires_at: Instant::now() + self.default_ttl,
+        };
+        entries.insert(key, entry);
+    }
+
+    pub async fn set_with_ttl(&self, key: String, value: T, ttl: Duration) {
+        let mut entries = self.entries.write().await;
+        let entry = CacheEntry {
+            data: value,
+            expires_at: Instant::now() + ttl,
+        };
+        entries.insert(key, entry);
+    }
+
+    pub async fn clear_expired(&self) {
+        let mut entries = self.entries.write().await;
+        let now = Instant::now();
+        entries.retain(|_, entry| entry.expires_at > now);
+    }
+}
+```
+
+## Логирование и мониторинг
+
+### Структурированное логирование
+
+```rust
+// src-tauri/src/logging.rs
+use tracing::{info, warn, error, debug, instrument};
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing_appender::rolling;
+use std::fs::OpenOptions;
+
+pub fn setup_logging() -> Result<(), Box<dyn std::error::Error>> {
+    let file_appender = rolling::daily("logs", "app.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+
+    tracing_subscriber::registry()
+        .with(
+            fmt::Layer::new()
+                .with_writer(non_blocking)
+                .with_ansi(false)
+                .with_target(true)
+                .with_thread_ids(true)
+                .with_file(true)
+                .with_line_number(true)
+        )
+        .with(
+            fmt::Layer::new()
+                .with_writer(std::io::stdout)
+                .with_ansi(true)
+        )
+        .with(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info"))
+        )
+        .init();
+
+    Ok(())
+}
+
+// Middleware для логирования команд
+#[instrument(skip(invoke))]
+pub fn log_command<R>(
+    command_name: &str,
+    invoke: tauri::Invoke<R>
+) where
+    R: tauri::Runtime,
+{
+    let start = std::time::Instant::now();
+
+    debug!(
+        command = command_name,
+        args = ?invoke.message.payload(),
+        "Command started"
+    );
+
+    // Здесь можно добавить логику измерения производительности
+}
+
+#[tauri::command]
+#[instrument]
+pub async fn debug_info(app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let info = serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "build_time": env!("BUILD_TIME"),
+        "git_hash": env!("GIT_HASH"),
+        "windows": app_handle.webview_windows().keys().collect::<Vec<_>>(),
+        "plugins": ["fs", "dialog", "shell", "http"],
+    });
+
+    info!("Debug info requested: {}", info);
+    Ok(info)
+}
+```
+
+### Мониторинг производительности
+
+```rust
+// src-tauri/src/performance.rs
+use std::time::Instant;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PerformanceMetrics {
+    pub command_name: String,
+    pub duration_ms: u64,
+    pub timestamp: String,
+    pub memory_usage: u64,
+}
+
+pub struct PerformanceMonitor {
+    metrics: Arc<RwLock<Vec<PerformanceMetrics>>>,
+    max_entries: usize,
+}
+
+impl PerformanceMonitor {
+    pub fn new(max_entries: usize) -> Self {
+        Self {
+            metrics: Arc::new(RwLock::new(Vec::new())),
+            max_entries,
+        }
+    }
+
+    pub async fn record_metric(&self, metric: PerformanceMetrics) {
+        let mut metrics = self.metrics.write().await;
+
+        // Ограничиваем количество записей
+        if metrics.len() >= self.max_entries {
+            metrics.remove(0);
+        }
+
+        metrics.push(metric);
+    }
+
+    pub async fn get_metrics(&self) -> Vec<PerformanceMetrics> {
+        let metrics = self.metrics.read().await;
+        metrics.clone()
+    }
+
+    pub async fn get_average_duration(&self, command_name: &str) -> Option<f64> {
+        let metrics = self.metrics.read().await;
+        let command_metrics: Vec<_> = metrics
+            .iter()
+            .filter(|m| m.command_name == command_name)
+            .collect();
+
+        if command_metrics.is_empty() {
+            return None;
+        }
+
+        let total: u64 = command_metrics.iter().map(|m| m.duration_ms).sum();
+        Some(total as f64 / command_metrics.len() as f64)
+    }
+}
+
+// Макрос для измерения производительности
+#[macro_export]
+macro_rules! measure_performance {
+    ($monitor:expr, $command_name:expr, $block:block) => {{
+        let start = Instant::now();
+        let result = $block;
+        let duration = start.elapsed();
+
+        let metric = PerformanceMetrics {
+            command_name: $command_name.to_string(),
+            duration_ms: duration.as_millis() as u64,
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            memory_usage: 0, // Можно добавить измерение памяти
+        };
+
+        $monitor.record_metric(metric).await;
+        result
+    }};
+}
+```
+
+## Тестирование
+
+### Unit тесты с моками
+
+```rust
+// src-tauri/tests/unit_tests.rs
+use mockall::mock;
+use mockall::predicate::*;
+
+mock! {
+    pub FileService {}
+
+    #[async_trait::async_trait]
+    impl FileService for FileService {
+        async fn read_file(&self, path: &str) -> Result<String, String>;
+        async fn write_file(&self, path: &str, content: &str) -> Result<(), String>;
+    }
+}
+
+#[tokio::test]
+async fn test_file_operations() {
+    let mut mock_service = MockFileService::new();
+
+    mock_service
+        .expect_read_file()
+        .with(eq("test.txt"))
+        .times(1)
+        .returning(|_| Ok("test content".to_string()));
+
+    mock_service
+        .expect_write_file()
+        .with(eq("output.txt"), eq("new content"))
+        .times(1)
+        .returning(|_, _| Ok(()));
+
+    // Тестируем с моком
+    let result = mock_service.read_file("test.txt").await;
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), "test content");
+}
+```
+
+### Integration тесты
+
+```rust
+// src-tauri/tests/integration_tests.rs
+use tauri_runtime_wry::Wry;
+
+pub fn create_test_app() -> tauri::App<Wry<tauri::EventLoopMessage>> {
+    tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![
+            create_user,
+            get_users,
+            delete_user
+        ])
+        .build(tauri::generate_context!())
+        .expect("failed to build app")
+}
+
+#[tokio::test]
+async fn test_user_crud_operations() {
+    let app = create_test_app();
+    let window = tauri::WindowBuilder::new(
+        &app,
+        "test",
+        tauri::WindowUrl::default()
+    ).build().unwrap();
+
+    // Тестируем создание пользователя
+    let create_result = window.invoke_handler()
+        .invoke("create_user", serde_json::json!({
+            "request": {
+                "name": "Test User",
+                "email": "test@example.com"
+            }
+        }))
+        .await;
+
+    assert!(create_result.is_ok());
+
+    // Тестируем получение пользователей
+    let get_result = window.invoke_handler()
+        .invoke("get_users", serde_json::json!({}))
+        .await;
+
+    assert!(get_result.is_ok());
+    let users: Vec<serde_json::Value> = serde_json::from_value(get_result.unwrap()).unwrap();
+    assert_eq!(users.len(), 1);
+}
+```
+
+## Деплой и CI/CD
+
+### GitHub Actions для сборки
+
+```yaml
+# .github/workflows/build.yml
+name: Build and Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          npm ci
+
+      - name: Run tests
+        run: |
+          cargo test --manifest-path=src-tauri/Cargo.toml
+          npm test
+
+      - name: Build release
+        run: npm run tauri build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-build
+          path: src-tauri/target/release/bundle/
+```
+
+### Конфигурация для продакшена
+
+```json
+// src-tauri/tauri.conf.json - production config
+{
+  "bundle": {
+    "active": true,
+    "category": "DeveloperTool",
+    "copyright": "",
+    "deb": {
+      "depends": []
+    },
+    "externalBin": [],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "identifier": "com.yourcompany.yourapp",
+    "longDescription": "",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
+    },
+    "resources": [],
+    "shortDescription": "",
+    "targets": "all",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
+  },
+  "productName": "YourApp",
+  "version": "0.1.0",
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "fs": {
+        "all": false,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": false,
+        "copyFile": false,
+        "createDir": false,
+        "removeDir": false,
+        "removeFile": false,
+        "renameFile": false
+      }
+    },
+    "security": {
+      "dangerousDisableAssetCspModification": false
+    }
+  }
+}
+```
+
+## Чек-лист безопасности и производительности
+
+### Безопасность
+
+- [ ] Настроены capabilities для всех окон
+- [ ] Включён Isolation Pattern для критических приложений
+- [ ] Проведён аудит разрешений плагинов
+- [ ] Удалены все debug-команды из production сборки
+- [ ] Валидация всех входных данных
+- [ ] Ограничение размера payload
+- [ ] Проверка путей файлов
+
+### Производительность
+
+- [ ] Настроен profile.release в Cargo.toml
+- [ ] Минимизированы и сжаты frontend ресурсы
+- [ ] Проверен размер итогового бандла
+- [ ] Профилированы критические IPC вызовы
+- [ ] Реализовано кэширование
+- [ ] Пакетирование IPC запросов
+- [ ] Мониторинг производительности
+
+### Качество кода
+
+- [ ] Все тесты проходят (`cargo test`, `npm test`)
+- [ ] Clippy не выдаёт предупреждений
+- [ ] Код отформатирован (`cargo fmt`)
+- [ ] Документация актуальна
+- [ ] Логирование настроено
+- [ ] Error handling реализован

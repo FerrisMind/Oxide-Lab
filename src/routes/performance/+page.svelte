@@ -1,7 +1,6 @@
 <script lang="ts">
   import PerformanceMetrics from '$lib/components/metrics/PerformanceMetrics.svelte';
   import MetricsAlerts from '$lib/components/metrics/MetricsAlerts.svelte';
-  import MemoryMonitor from '$lib/components/model-manager/MemoryMonitor.svelte';
 </script>
 
 <div class="performance-page">
@@ -19,10 +18,9 @@
 
   <!-- Основной контент -->
   <div class="performance-layout">
-    <!-- Метрики и мониторинг памяти -->
+    <!-- Метрики -->
     <main class="metrics-panel">
       <PerformanceMetrics />
-      <MemoryMonitor />
     </main>
 
     <!-- Информационная панель -->

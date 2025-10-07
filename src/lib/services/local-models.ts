@@ -1,25 +1,27 @@
 /**
- * Service for managing local model files
+ * Service for managing local and remote GGUF models through the Tauri backend.
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import type { LocalModelInfo } from '$lib/types/local-models';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import type {
+  DownloadProgressPayload,
+  DownloadedFileInfo,
+  FilterOptions,
+  ModelInfo,
+  RemoteModelFilters,
+  RemoteModelInfo,
+  SortField,
+  SortOrder,
+} from '$lib/types/local-models';
 
-/**
- * Local models service
- */
 export class LocalModelsService {
   /**
-   * Scan a folder for local model files
-   * @param folderPath - Path to the folder to scan
-   * @returns Promise with array of found models
+   * Scan a directory for local GGUF models.
    */
-  static async scanFolder(folderPath: string): Promise<LocalModelInfo[]> {
+  static async scanFolder(folderPath: string): Promise<ModelInfo[]> {
     try {
-      const models = await invoke<LocalModelInfo[]>('scan_local_models_folder', {
-        folderPath,
-      });
-      return models;
+      return await invoke<ModelInfo[]>('scan_models_folder', { folderPath });
     } catch (error) {
       console.error('Failed to scan folder:', error);
       throw new Error(`Failed to scan folder: ${error}`);
@@ -27,14 +29,23 @@ export class LocalModelsService {
   }
 
   /**
-   * Delete a local model file
-   * @param modelPath - Full path to the model file
+   * Request full GGUF metadata for a specific file.
+   */
+  static async parseMetadata(filePath: string) {
+    try {
+      return await invoke('parse_gguf_metadata', { filePath });
+    } catch (error) {
+      console.error('Failed to parse GGUF metadata:', error);
+      throw new Error(`Failed to parse GGUF metadata: ${error}`);
+    }
+  }
+
+  /**
+   * Delete a local model file.
    */
   static async deleteModel(modelPath: string): Promise<void> {
     try {
-      await invoke('delete_local_model', {
-        modelPath,
-      });
+      await invoke('delete_local_model', { modelPath });
     } catch (error) {
       console.error('Failed to delete model:', error);
       throw new Error(`Failed to delete model: ${error}`);
@@ -42,11 +53,56 @@ export class LocalModelsService {
   }
 
   /**
-   * Format file size to human-readable string
-   * @param bytes - File size in bytes
-   * @returns Formatted string (e.g., "1.5 GB", "256.3 MB")
+   * Search Hugging Face Hub for GGUF models.
+   */
+  static async searchRemote(
+    query: string,
+    filters: RemoteModelFilters = {},
+  ): Promise<RemoteModelInfo[]> {
+    try {
+      return await invoke<RemoteModelInfo[]>('search_huggingface_gguf', { query, filters });
+    } catch (error) {
+      console.error('Failed to search Hugging Face:', error);
+      throw new Error(`Failed to search Hugging Face: ${error}`);
+    }
+  }
+
+  /**
+   * Download a remote GGUF file and place it in destination directory.
+   */
+  static async downloadRemoteModel(
+    repoId: string,
+    filename: string,
+    destinationDir: string,
+  ): Promise<DownloadedFileInfo> {
+    try {
+      return await invoke<DownloadedFileInfo>('download_hf_model_file', {
+        repoId,
+        filename,
+        destinationDir,
+      });
+    } catch (error) {
+      console.error('Failed to download model:', error);
+      throw new Error(`Failed to download model: ${error}`);
+    }
+  }
+
+  /**
+   * Subscribe to backend download progress events.
+   */
+  static async onDownloadProgress(
+    handler: (payload: DownloadProgressPayload) => void,
+  ): Promise<UnlistenFn> {
+    return listen<DownloadProgressPayload>('model-download-progress', (event) => {
+      handler(event.payload);
+    });
+  }
+
+  /**
+   * Format bytes into a human-readable string.
    */
   static formatFileSize(bytes: number): string {
+    if (!Number.isFinite(bytes)) return '—';
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     let size = bytes;
     let unitIndex = 0;
@@ -56,21 +112,16 @@ export class LocalModelsService {
       unitIndex++;
     }
 
-    // Format with 2 decimal places for sizes >= 1 KB
-    if (unitIndex > 0) {
-      return `${size.toFixed(2)} ${units[unitIndex]}`;
-    }
-
-    return `${size} ${units[unitIndex]}`;
+    return unitIndex === 0 ? `${size} ${units[unitIndex]}` : `${size.toFixed(2)} ${units[unitIndex]}`;
   }
 
   /**
-   * Format timestamp to readable date string
-   * @param unixTimestamp - Unix timestamp in seconds
-   * @returns Formatted date string
+   * Format ISO date string for UI display.
    */
-  static formatDate(unixTimestamp: number): string {
-    const date = new Date(unixTimestamp * 1000);
+  static formatDate(isoString: string): string {
+    if (!isoString) return '—';
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return isoString;
     return date.toLocaleString('ru-RU', {
       year: 'numeric',
       month: 'short',
@@ -81,81 +132,73 @@ export class LocalModelsService {
   }
 
   /**
-   * Sort models by specified field and order
-   * @param models - Array of models to sort
-   * @param field - Field to sort by
-   * @param order - Sort order ('asc' or 'desc')
-   * @returns Sorted array of models
+   * Sort models by selected field and order.
    */
-  static sortModels(
-    models: LocalModelInfo[],
-    field: keyof LocalModelInfo,
-    order: 'asc' | 'desc',
-  ): LocalModelInfo[] {
+  static sortModels(models: ModelInfo[], field: SortField, order: SortOrder): ModelInfo[] {
     const sorted = [...models].sort((a, b) => {
-      const aValue = a[field];
-      const bValue = b[field];
+      const extractValue = (model: ModelInfo) => {
+        switch (field) {
+          case 'file_size':
+            return model.file_size;
+          case 'created_at':
+            return new Date(model.created_at).getTime();
+          case 'parameter_count':
+            return model.parameter_count ? parseFloat(model.parameter_count) : 0;
+          case 'architecture':
+            return model.architecture ?? '';
+          default:
+            return model.name;
+        }
+      };
 
-      // Handle undefined values
-      if (aValue === undefined && bValue === undefined) return 0;
-      if (aValue === undefined) return 1;
-      if (bValue === undefined) return -1;
+      const aVal = extractValue(a);
+      const bVal = extractValue(b);
 
-      // Compare values
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return aValue.localeCompare(bValue);
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return aVal - bVal;
       }
 
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return aValue - bValue;
-      }
-
-      return 0;
+      return String(aVal).localeCompare(String(bVal));
     });
 
     return order === 'desc' ? sorted.reverse() : sorted;
   }
 
   /**
-   * Filter models by criteria
-   * @param models - Array of models to filter
-   * @param options - Filter options
-   * @returns Filtered array of models
+   * Apply filters to the provided models list.
    */
-  static filterModels(
-    models: LocalModelInfo[],
-    options: {
-      format?: string;
-      architecture?: string;
-      quantization?: string;
-      searchText?: string;
-    },
-  ): LocalModelInfo[] {
+  static filterModels(models: ModelInfo[], options: FilterOptions): ModelInfo[] {
+    const searchText = options.searchText?.trim().toLowerCase() ?? '';
     return models.filter((model) => {
-      // Filter by format
-      if (options.format && model.format !== options.format) {
-        return false;
-      }
-
-      // Filter by architecture
       if (options.architecture && model.architecture !== options.architecture) {
         return false;
       }
 
-      // Filter by quantization
       if (options.quantization && model.quantization !== options.quantization) {
         return false;
       }
 
-      // Filter by search text
-      if (options.searchText) {
-        const searchLower = options.searchText.toLowerCase();
-        const matchesName = model.name.toLowerCase().includes(searchLower);
-        const matchesAuthor = model.author?.toLowerCase().includes(searchLower) || false;
-        const matchesArchitecture =
-          model.architecture?.toLowerCase().includes(searchLower) || false;
+      if (options.candleOnly && !model.candle_compatible) {
+        return false;
+      }
 
-        if (!matchesName && !matchesAuthor && !matchesArchitecture) {
+      if (options.validation && options.validation !== 'all') {
+        if (model.validation_status.level !== options.validation) {
+          return false;
+        }
+      }
+
+      if (searchText) {
+        const haystack = [
+          model.name,
+          model.model_name ?? '',
+          model.architecture ?? '',
+          model.quantization ?? '',
+          model.parameter_count ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(searchText)) {
           return false;
         }
       }
@@ -165,16 +208,13 @@ export class LocalModelsService {
   }
 
   /**
-   * Get unique values for a field across all models (for filter dropdowns)
-   * @param models - Array of models
-   * @param field - Field to extract unique values from
-   * @returns Array of unique values
+   * Get unique string values for filter dropdowns.
    */
-  static getUniqueValues(models: LocalModelInfo[], field: keyof LocalModelInfo): string[] {
+  static getUniqueValues(models: ModelInfo[], field: keyof ModelInfo): string[] {
     const values = models
       .map((model) => model[field])
-      .filter((value) => value !== undefined && value !== null) as string[];
+      .filter((value): value is string => typeof value === 'string' && value.length > 0);
 
-    return Array.from(new Set(values)).sort();
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
   }
 }

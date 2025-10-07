@@ -21,7 +21,14 @@ mod template;
 pub mod performance_api;
 pub use performance_api::{get_performance_metrics, get_average_duration, get_memory_usage, clear_performance_metrics};
 pub mod local_models;
-pub use local_models::{scan_local_models_folder, delete_local_model};
+pub use local_models::{
+    delete_local_model,
+    download_hf_model_file,
+    parse_gguf_metadata,
+    scan_local_models_folder,
+    scan_models_folder,
+    search_huggingface_gguf,
+};
 
 // Модальная индикация удалена: проект реализует единую обработку вложений независимо от модели.
 

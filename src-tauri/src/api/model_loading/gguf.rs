@@ -2,7 +2,6 @@ use super::emit_load_progress;
 use crate::core::device::{device_label, select_device};
 use crate::core::performance::ModelLoadTracker;
 use crate::core::state::ModelState;
-use tauri::Emitter;
 use crate::core::tokenizer::{
     extract_chat_template, find_chat_template_in_metadata, mark_special_chat_tokens,
     tokenizer_from_gguf_metadata,
@@ -12,9 +11,11 @@ use crate::models::common::model::ModelBackend;
 use crate::models::registry::{detect_arch, get_model_factory};
 use crate::{log_load, log_template};
 use candle::quantized::gguf_file;
+use std::collections::HashSet;
 use std::fs::File;
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
+use tauri::Emitter;
 
 pub fn load_gguf_model(
     app: &tauri::AppHandle,
@@ -26,14 +27,12 @@ pub fn load_gguf_model(
     // Создаём трекер загрузки модели
     let tracker_result = tokio::runtime::Runtime::new()
         .map_err(|e| e.to_string())?
-        .block_on(async {
-            ModelLoadTracker::new(guard.performance_monitor.clone()).await
-        });
+        .block_on(async { ModelLoadTracker::new(guard.performance_monitor.clone()).await });
     let mut tracker = tracker_result;
 
     emit_load_progress(app, "start", 0, Some("Начало загрузки GGUF"), false, None);
     tracker.start_stage("device_selection");
-    
+
     let dev = select_device(device_pref);
     guard.device = dev;
     log_load!("device selected: {}", device_label(&guard.device));
@@ -56,7 +55,7 @@ pub fn load_gguf_model(
         emit_load_progress(app, "cancel", 12, Some("Отменено"), true, Some("cancelled"));
         return Err("cancelled".into());
     }
-    
+
     tracker.start_stage("read_header");
     let content = gguf_file::Content::read(&mut file).map_err(|e| {
         let msg = e.with_path(PathBuf::from(model_path.clone())).to_string();
@@ -106,6 +105,18 @@ pub fn load_gguf_model(
         emit_load_progress(app, "detect_arch", 38, None, false, Some(&err));
         err
     })?;
+
+    // Проверяем наличие неподдерживаемых типов данных в тензорах
+    if let Err(dtype_error) = check_supported_dtypes(&content) {
+        let warning_msg = format!("Warning: {}", dtype_error);
+        emit_load_progress(app, "dtype_check", 35, Some(&warning_msg), false, None);
+
+        // Покажем пользователю предупреждение, но продолжим загрузку
+        log::warn!(
+            "GGUF file contains potentially unsupported data types: {}",
+            dtype_error
+        );
+    }
     emit_load_progress(
         app,
         "detect_arch",
@@ -258,29 +269,92 @@ pub fn load_gguf_model(
         false,
         None,
     );
-    
+
     // Финализируем метрики загрузки
     let model_size_mb = std::fs::metadata(guard.model_path.as_ref().unwrap())
         .map(|m| m.len() as f64 / (1024.0 * 1024.0))
         .unwrap_or(0.0);
-    
+
     let metrics = tokio::runtime::Runtime::new()
         .map_err(|e| e.to_string())?
-        .block_on(async {
-            tracker.finish(model_size_mb).await
-        });
-    
+        .block_on(async { tracker.finish(model_size_mb).await });
+
     log_load!(
         "Метрики загрузки: total_time={}ms, memory_delta={:.2}MB, stages={:?}",
         metrics.total_duration_ms,
         metrics.memory_delta_mb,
-        metrics.stages.iter().map(|s| format!("{}:{}ms", s.name, s.duration_ms)).collect::<Vec<_>>()
+        metrics
+            .stages
+            .iter()
+            .map(|s| format!("{}:{}ms", s.name, s.duration_ms))
+            .collect::<Vec<_>>()
     );
-    
+
     // Отправляем метрики на фронтенд
     let _ = app.emit("model_load_metrics", &metrics);
-    
+
     emit_load_progress(app, "complete", 100, Some("Готово"), true, None);
+
+    Ok(())
+}
+
+/// Проверяет наличие поддерживаемых типов данных в GGUF файле
+/// Возвращает ошибку, если найдены неподдерживаемые типы данных
+fn check_supported_dtypes(content: &gguf_file::Content) -> Result<(), String> {
+    // Известные поддерживаемые типы данных в текущей версии Candle
+    let supported_dtypes: HashSet<u32> = [
+        0, 1, 2, 3, 6, 7, 8,
+        9, // Старые типы (F32, F16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1)
+        10, 11, 12, 13, 14, 15, // Новые K-типы (Q2_K, Q3_K, Q4_K, Q5_K, Q6_K, Q8_K)
+        24, 25, 26, 27, 28, // Целые типы (I8, I16, I32, I64, F64)
+    ]
+    .into_iter()
+    .collect();
+
+    // Известные неподдерживаемые типы данных (новые IQ типы)
+    let unsupported_dtypes: HashSet<u32> = [
+        16, 17, 18, 19, 20, 21, 22, 23, 29, // IQ типы
+    ]
+    .into_iter()
+    .collect();
+
+    let mut found_unsupported = Vec::new();
+    let mut found_unknown = Vec::new();
+
+    // Проверяем каждый тензор в файле
+    for (_name, tensor_info) in &content.tensor_infos {
+        let dtype = tensor_info.ggml_dtype as u32;
+
+        if unsupported_dtypes.contains(&dtype) {
+            found_unsupported.push(dtype);
+        } else if !supported_dtypes.contains(&dtype) {
+            found_unknown.push(dtype);
+        }
+    }
+
+    if !found_unsupported.is_empty() || !found_unknown.is_empty() {
+        let mut error_msg = String::new();
+
+        if !found_unsupported.is_empty() {
+            error_msg.push_str(&format!(
+                "Found unsupported IQ quantization types: {:?}. ",
+                found_unsupported
+            ));
+            error_msg
+                .push_str("These require a newer version of Candle with IQ quantization support. ");
+        }
+
+        if !found_unknown.is_empty() {
+            error_msg.push_str(&format!("Found unknown data types: {:?}. ", found_unknown));
+            error_msg.push_str("These may be from a newer GGUF format version. ");
+        }
+
+        error_msg.push_str(
+            "Consider updating Candle to the latest version or using a different model file.",
+        );
+
+        return Err(error_msg);
+    }
 
     Ok(())
 }

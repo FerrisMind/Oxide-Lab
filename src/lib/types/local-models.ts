@@ -1,60 +1,93 @@
 /**
- * TypeScript interfaces for local models management
+ * Validation level reported by backend.
  */
+export type ValidationLevel = 'ok' | 'warning' | 'error';
 
 /**
- * Information about a local model file
+ * Validation status with severity and messages.
  */
-export interface LocalModelInfo {
-  /** Full path to the model file */
-  path: string;
-
-  /** Model name (filename without extension) */
-  name: string;
-
-  /** Model architecture (e.g., "llama", "gpt2", "bert") */
-  architecture?: string;
-
-  /** Number of parameters (e.g., "7B", "13B") */
-  parameters?: string;
-
-  /** Model author/publisher */
-  author?: string;
-
-  /** Quantization level (e.g., "Q4_K_M", "Q5_K_S", "F16") */
-  quantization?: string;
-
-  /** File size in bytes */
-  size_bytes: number;
-
-  /** File format ("gguf" or "safetensors") */
-  format: string;
-
-  /** Last modified timestamp (Unix epoch in seconds) */
-  last_modified: number;
+export interface ValidationStatus {
+  level: ValidationLevel;
+  messages: string[];
 }
 
 /**
- * Cache entry for local models
+ * Arbitrary GGUF metadata entry preserved as JSON.
+ */
+export interface GGUFKeyValue {
+  key: string;
+  value: unknown;
+}
+
+/**
+ * Detailed GGUF metadata extracted from the file header.
+ */
+export interface GGUFMetadata {
+  format_version: number;
+  architecture?: string;
+  name?: string;
+  version?: string;
+  author?: string;
+  alignment: number;
+  tensor_count: number;
+  metadata_kv_count: number;
+  parameter_count?: number;
+  size_label?: string;
+  context_length?: number;
+  embedding_length?: number;
+  block_count?: number;
+  attention_head_count?: number;
+  kv_head_count?: number;
+  rope_dimension?: number;
+  tokenizer_model?: string;
+  bos_token_id?: number;
+  eos_token_id?: number;
+  tokenizer_tokens?: string[];
+  tokenizer_scores?: number[];
+  custom_metadata: GGUFKeyValue[];
+}
+
+/**
+ * Normalized information about a locally available GGUF model.
+ */
+export interface ModelInfo {
+  path: string;
+  name: string;
+  file_size: number;
+  architecture?: string;
+  detected_architecture?: string;
+  model_name?: string;
+  version?: string;
+  context_length?: number;
+  parameter_count?: string;
+  quantization?: string;
+  tokenizer_type?: string;
+  vocab_size?: number;
+  candle_compatible: boolean;
+  validation_status: ValidationStatus;
+  created_at: string;
+  metadata: GGUFMetadata;
+}
+
+/**
+ * Cache entry for local models scan results.
  */
 export interface LocalModelsCache {
-  /** Folder path that was scanned */
   folder_path: string;
-
-  /** List of models found in the folder */
-  models: LocalModelInfo[];
-
-  /** Timestamp when the cache was created (Unix epoch in milliseconds) */
+  models: ModelInfo[];
   cached_at: number;
-
-  /** Cache validity duration in milliseconds (default: 5 minutes) */
   cache_duration?: number;
 }
 
 /**
- * Sort options for local models list
+ * Sort options for local models list.
  */
-export type SortField = 'name' | 'size_bytes' | 'last_modified' | 'parameters';
+export type SortField =
+  | 'name'
+  | 'file_size'
+  | 'created_at'
+  | 'parameter_count'
+  | 'architecture';
 export type SortOrder = 'asc' | 'desc';
 
 export interface SortOptions {
@@ -63,18 +96,82 @@ export interface SortOptions {
 }
 
 /**
- * Filter options for local models list
+ * Filter options for local models list.
  */
 export interface FilterOptions {
-  /** Filter by format (gguf, safetensors, or empty for all) */
-  format?: string;
-
-  /** Filter by architecture */
   architecture?: string;
-
-  /** Filter by quantization level */
   quantization?: string;
-
-  /** Search text to filter by name */
   searchText?: string;
+  candleOnly?: boolean;
+  validation?: ValidationLevel | 'all';
+}
+
+/**
+ * Representation of a remote GGUF file on Hugging Face.
+ */
+export interface RemoteGGUFFile {
+  filename: string;
+  size: number;
+  sha256?: string;
+  quantization?: string;
+  download_url: string;
+}
+
+/**
+ * Remote model information returned by backend search.
+ */
+export interface RemoteModelInfo {
+  repo_id: string;
+  name: string;
+  author?: string;
+  description?: string;
+  license?: string;
+  downloads: number;
+  likes: number;
+  tags: string[];
+  architectures: string[];
+  quantizations: string[];
+  gguf_files: RemoteGGUFFile[];
+  last_modified?: string;
+  created_at?: string;
+  parameter_count?: string;
+  context_length?: number;
+}
+
+/**
+ * Filters accepted by huggingface search command.
+ */
+export interface RemoteModelFilters {
+  architecture?: string;
+  license?: string;
+  quantization?: string;
+  max_file_size?: number;
+  min_downloads?: number;
+  sort_by?: 'downloads' | 'likes' | 'updated' | 'file_size';
+  sort_order?: SortOrder;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Metadata download info for a completed job.
+ */
+export interface DownloadedFileInfo {
+  repo_id: string;
+  filename: string;
+  local_path: string;
+  size: number;
+}
+
+/**
+ * Download progress signals emitted by backend.
+ */
+export type DownloadStage = 'started' | 'in_progress' | 'finished';
+
+export interface DownloadProgressPayload {
+  download_id: string;
+  filename: string;
+  current: number;
+  total: number;
+  stage: DownloadStage;
 }

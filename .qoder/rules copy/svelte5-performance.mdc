@@ -1,0 +1,386 @@
+---
+globs: *.svelte
+description: Svelte 5 performance optimization and advanced patterns
+---
+
+# Svelte 5 Performance & Advanced Patterns
+
+## Оптимизация производительности
+
+### Ленивая загрузка компонентов
+
+```javascript
+// Динамический импорт для больших компонентов
+const LazyChart = lazy(() => import('$lib/components/Chart.svelte'));
+```
+
+```svelte
+<script>
+    let showChart = $state(false);
+    let ChartComponent = $state(null);
+
+    // Загружаем компонент только когда нужно
+    $effect(async () => {
+        if (showChart && !ChartComponent) {
+            const module = await import('$lib/components/Chart.svelte');
+            ChartComponent = module.default;
+        }
+    });
+</script>
+
+{#if showChart && ChartComponent}
+    <svelte:component this={ChartComponent} />
+{/if}
+```
+
+### Оптимизация реактивности
+
+**Избегайте ненужных вычислений:**
+
+```svelte
+<script>
+    let items = $state([]);
+    let searchQuery = $state('');
+
+    // ✅ Хорошо: мемоизированные вычисления
+    let filteredItems = $derived(
+        searchQuery ?
+        items.filter(item => item.name.includes(searchQuery)) :
+        items
+    );
+
+    // ❌ Плохо: вычисления в шаблоне
+    // {items.filter(item => item.name.includes(searchQuery))}
+</script>
+```
+
+**Используйте $derived.by для сложной логики:**
+
+```svelte
+<script>
+    let data = $state([]);
+
+    let processedData = $derived.by(() => {
+        // Сложные вычисления выполняются только при изменении data
+        return data
+            .map(item => ({ ...item, processed: true }))
+            .sort((a, b) => a.priority - b.priority)
+            .slice(0, 10);
+    });
+</script>
+```
+
+### Оптимизация CSS
+
+```svelte
+<style>
+    /* Используйте CSS custom properties для динамических стилей */
+    .component {
+        --primary-color: #007bff;
+        --padding: 1rem;
+
+        background: var(--primary-color);
+        padding: var(--padding);
+    }
+
+    /* Ограничивайте область действия стилей */
+    :global(.global-class) {
+        /* Глобальные стили только когда необходимо */
+    }
+
+    /* Используйте селекторы с низкой специфичностью */
+    .btn { /* хорошо */ }
+    .container .header .btn { /* избегайте */ }
+</style>
+```
+
+## Продвинутые паттерны
+
+### Компонент с полной обработкой состояний
+
+```svelte
+<!-- Компонент с полной обработкой состояний -->
+<script>
+    let { apiEndpoint } = $props();
+    let data = $state(null);
+    let loading = $state(false);
+    let error = $state(null);
+
+    async function loadData() {
+        loading = true;
+        error = null;
+
+        try {
+            const response = await fetch(apiEndpoint);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            data = await response.json();
+        } catch (e) {
+            error = e.message;
+            console.error('Failed to load data:', e);
+        } finally {
+            loading = false;
+        }
+    }
+
+    // Загружаем данные при изменении endpoint
+    $effect(() => {
+        if (apiEndpoint) {
+            loadData();
+        }
+    });
+</script>
+
+{#if loading}
+    <div class="loading" role="status" aria-label="Loading data">
+        <span class="sr-only">Loading...</span>
+    </div>
+{:else if error}
+    <div class="error" role="alert">
+        <p>Failed to load data: {error}</p>
+        <button onclick={loadData}>Try again</button>
+    </div>
+{:else if data}
+    <div class="content">
+        <!-- Отображение данных -->
+    </div>
+{:else}
+    <div class="empty">No data available</div>
+{/if}
+```
+
+### Управление фокусом
+
+```svelte
+<script>
+    let dialogOpen = $state(false);
+    let dialog;
+    let lastFocusedElement;
+
+    function openDialog() {
+        lastFocusedElement = document.activeElement;
+        dialogOpen = true;
+    }
+
+    function closeDialog() {
+        dialogOpen = false;
+        lastFocusedElement?.focus();
+    }
+
+    // Trap focus внутри диалога
+    function trapFocus(event) {
+        if (!dialog) return;
+
+        const focusableElements = dialog.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (event.key === 'Tab') {
+            if (event.shiftKey) {
+                if (document.activeElement === firstElement) {
+                    event.preventDefault();
+                    lastElement.focus();
+                }
+            } else {
+                if (document.activeElement === lastElement) {
+                    event.preventDefault();
+                    firstElement.focus();
+                }
+            }
+        }
+    }
+</script>
+
+{#if dialogOpen}
+    <div
+        bind:this={dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dialog-title"
+        onkeydown={trapFocus}
+        class="dialog"
+    >
+        <h2 id="dialog-title">Confirm Action</h2>
+        <p>Are you sure you want to continue?</p>
+
+        <div class="dialog-actions">
+            <button onclick={closeDialog} autofocus>Cancel</button>
+            <button onclick={() => { /* confirm action */ closeDialog(); }}>
+                Confirm
+            </button>
+        </div>
+    </div>
+{/if}
+```
+
+### Объявление изменений для скрин-ридеров
+
+```svelte
+<script>
+    let notifications = $state([]);
+
+    function addNotification(message, type = 'info') {
+        const notification = {
+            id: Date.now(),
+            message,
+            type
+        };
+        notifications.push(notification);
+
+        // Автоматическое удаление через 5 секунд
+        setTimeout(() => {
+            notifications = notifications.filter(n => n.id !== notification.id);
+        }, 5000);
+    }
+</script>
+
+<!-- Live region для объявлений -->
+<div aria-live="polite" aria-atomic="true" class="sr-only">
+    {#each notifications as notification}
+        <div>{notification.message}</div>
+    {/each}
+</div>
+
+<!-- Визуальные уведомления -->
+<div class="notifications">
+    {#each notifications as notification}
+        <div class="notification notification--{notification.type}">
+            {notification.message}
+        </div>
+    {/each}
+</div>
+
+<style>
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+</style>
+```
+
+## Мониторинг и аналитика
+
+### Отслеживание производительности
+
+```javascript
+// utils/performance.js
+export function measurePerformance(name, fn) {
+  return async (...args) => {
+    const start = performance.now();
+    const result = await fn(...args);
+    const end = performance.now();
+
+    console.log(`${name} took ${end - start} milliseconds`);
+
+    // Отправить в систему мониторинга
+    if (end - start > 1000) {
+      // Медленные операции
+      analytics.track('slow_operation', {
+        operation: name,
+        duration: end - start,
+      });
+    }
+
+    return result;
+  };
+}
+
+// Использование
+const fetchData = measurePerformance('fetchData', async (url) => {
+  const response = await fetch(url);
+  return response.json();
+});
+```
+
+### Error tracking
+
+```javascript
+// utils/errorTracking.js
+export class ErrorTracker {
+  static track(error, context = {}) {
+    const errorInfo = {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      ...context,
+    };
+
+    // Отправить в сервис мониторинга (Sentry, LogRocket, etc.)
+    console.error('Tracked error:', errorInfo);
+
+    // В production отправляем на сервер
+    if (import.meta.env.PROD) {
+      fetch('/api/errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(errorInfo),
+      }).catch(() => {
+        // Не допускаем повторных ошибок при отправке
+      });
+    }
+  }
+}
+```
+
+## Responsive дизайн
+
+```svelte
+<style>
+    .container {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--spacing-unit);
+    }
+
+    .grid {
+        display: grid;
+        gap: calc(var(--spacing-unit) * 4);
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: calc(var(--spacing-unit) * 2);
+        }
+
+        .grid {
+            grid-template-columns: 1fr;
+            gap: calc(var(--spacing-unit) * 2);
+        }
+    }
+</style>
+```
+
+## Чек-лист производительности
+
+### Перед релизом
+
+- [ ] E2E тесты проходят
+- [ ] Performance budget соблюден
+- [ ] Bundle size в пределах нормы
+- [ ] SEO мета-теги настроены
+- [ ] Analytics настроена
+- [ ] Error tracking работает
+- [ ] Accessibility тестирование пройдено
+
+### Производительность
+
+- [ ] Профилирование критических участков
+- [ ] Использование правильных типов коллекций
+- [ ] Минимизация клонирований
+- [ ] Эффективные итераторы вместо циклов
+- [ ] Lazy-вычисления где возможно

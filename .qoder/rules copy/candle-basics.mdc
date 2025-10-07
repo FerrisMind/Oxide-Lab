@@ -1,0 +1,314 @@
+---
+description: Candle ML framework basics and core concepts for beginners
+globs: *.rs,Cargo.toml
+alwaysApply: false
+---
+
+# Candle ML Framework - Основы для джунов
+
+## Философия Candle
+
+Candle — это минималистичный ML фреймворк для Rust от Hugging Face, который сочетает знакомый PyTorch-подобный синтаксис с производительностью и безопасностью Rust. Основные принципы:
+
+- **Без Python runtime** в production — компактные бинарные файлы
+- **Безопасность типов** — compile-time проверки размерностей тензоров
+- **Интеграция с Hugging Face** — поддержка safetensors, GGUF и токенизаторов
+- **Serverless-ready** — идеально для развертывания без зависимостей
+
+## Настройка проекта
+
+### Базовая конфигурация Cargo.toml
+
+```toml
+[dependencies]
+candle-core = "0.9"           # Основная библиотека
+candle-nn = "0.9"             # Нейронные сети
+candle-transformers = "0.9"   # Трансформеры
+candle-hf-hub = "0.9"         # Hugging Face Hub
+
+# Выбор бэкенда (только один!)
+candle-core = { version = "0.9", features = ["cuda"] }    # CUDA GPU
+candle-core = { version = "0.9", features = ["metal"] }  # Metal GPU (macOS)
+candle-core = { version = "0.9", features = [] }         # CPU only
+```
+
+### Структура проекта
+
+```
+src/
+├── main.rs           # Точка входа
+├── model.rs          # Определения моделей
+├── utils.rs          # Вспомогательные функции
+├── data.rs           # Работа с данными
+└── lib.rs            # Публичные модули
+```
+
+## Работа с тензорами
+
+### Создание тензоров
+
+```rust
+use candle_core::{Tensor, Device, DType};
+
+// Всегда явно указывайте устройство и тип данных
+let device = Device::Cpu;
+let tensor = Tensor::zeros((2, 3), DType::F32, &device)?;
+
+// Создание с данными
+let data = vec![1.0, 2.0, 3.0, 4.0];
+let tensor = Tensor::from_slice(&data, (2, 2), &device)?;
+
+// Случайные тензоры
+let tensor = Tensor::randn(0f32, 1f32, (3, 4), &device)?;
+```
+
+### Операции с тензорами
+
+```rust
+// Правильное использование borrowing
+let a = Tensor::ones((2, 2), DType::F32, &device)?;
+let b = Tensor::ones((2, 2), DType::F32, &device)?;
+let c = &a + &b;  // Создает новый тензор
+
+// Индексирование (НЕ Python slicing!)
+let slice = tensor.i((.., ..4))?;  // Все строки, первые 4 колонки
+
+// Reshape с проверкой совместимости
+let reshaped = tensor.reshape((4, 2))?;
+```
+
+### Важные отличия от PyTorch
+
+- **Ownership модель**: операции не изменяют оригинальные тензоры
+- **Explicit device management**: всегда указывайте устройство
+- **Result types**: все операции возвращают Result<T, Error>
+- **Compile-time safety**: размерности проверяются на этапе компиляции
+
+## Управление устройствами
+
+### Создание устройств
+
+```rust
+use candle_core::Device;
+
+// CPU устройство
+let device = Device::Cpu;
+
+// CUDA устройство (требует feature "cuda")
+let device = Device::new_cuda(0)?;  // GPU 0
+
+// Metal устройство (требует feature "metal", только macOS)
+let device = Device::new_metal(0)?;
+```
+
+### Перенос тензоров между устройствами
+
+```rust
+let cpu_tensor = Tensor::ones((2, 2), DType::F32, &Device::Cpu)?;
+let gpu_device = Device::new_cuda(0)?;
+let gpu_tensor = cpu_tensor.to_device(&gpu_device)?;
+
+// Минимизируйте количество переносов!
+// Группируйте операции на одном устройстве
+```
+
+## Базовые операции
+
+### Математические операции
+
+```rust
+let a = Tensor::randn(0f32, 1f32, (3, 4), &device)?;
+let b = Tensor::randn(0f32, 1f32, (3, 4), &device)?;
+
+// Элементные операции
+let sum = &a + &b;
+let diff = &a - &b;
+let product = &a * &b;
+let quotient = &a / &b;
+
+// Матричные операции
+let c = Tensor::randn(0f32, 1f32, (4, 5), &device)?;
+let matmul = a.matmul(&c)?;  // (3, 4) @ (4, 5) = (3, 5)
+
+// Скалярные операции
+let scaled = &a * 2.0;
+```
+
+### Агрегация и статистика
+
+```rust
+let tensor = Tensor::randn(0f32, 1f32, (3, 4), &device)?;
+
+// Сумма по всем элементам
+let total_sum = tensor.sum_all()?;
+
+// Сумма по измерениям
+let sum_dim0 = tensor.sum(0)?;  // Сумма по первому измерению
+let sum_dim1 = tensor.sum(1)?;   // Сумма по второму измерению
+
+// Среднее значение
+let mean = tensor.mean_all()?;
+let mean_dim0 = tensor.mean(0)?;
+
+// Минимум и максимум
+let min_val = tensor.min_all()?;
+let max_val = tensor.max_all()?;
+```
+
+## Обработка ошибок
+
+### Правильный error handling
+
+```rust
+use candle_core::Result;
+
+fn process_tensor() -> Result<()> {
+    let device = Device::Cpu;
+    let tensor = Tensor::zeros((2, 2), DType::F32, &device)?;
+
+    // Все операции возвращают Result
+    let result = tensor.matmul(&tensor)?;
+
+    Ok(())
+}
+
+// Или с explicit error handling
+match tensor.matmul(&other) {
+    Ok(result) => println!("Успешно: {:?}", result.shape()),
+    Err(e) => eprintln!("Ошибка: {}", e),
+}
+```
+
+### Типичные ошибки и их решения
+
+```rust
+// ОШИБКА: Несовместимые размерности
+let a = Tensor::ones((2, 3), DType::F32, &device)?;
+let b = Tensor::ones((4, 5), DType::F32, &device)?;
+// let c = a.matmul(&b)?;  // ОШИБКА!
+
+// РЕШЕНИЕ: Проверьте размерности
+if a.dim(1) == b.dim(0) {
+    let c = a.matmul(&b)?;
+}
+
+// ОШИБКА: Move после использования
+let tensor = Tensor::ones((2, 2), DType::F32, &device)?;
+let result = tensor.matmul(&tensor)?;
+// println!("{:?}", tensor.shape());  // ОШИБКА! tensor был moved
+
+// РЕШЕНИЕ: Используйте borrowing
+let tensor = Tensor::ones((2, 2), DType::F32, &device)?;
+let result = tensor.matmul(&tensor)?;
+println!("{:?}", tensor.shape());  // OK
+```
+
+## Лучшие практики
+
+### 1. Всегда указывайте устройства явно
+
+```rust
+// Плохо
+let tensor = Tensor::zeros((2, 2), DType::F32, &Device::Cpu)?;
+
+// Хорошо
+let device = Device::Cpu;  // Или Device::new_cuda(0)?
+let tensor = Tensor::zeros((2, 2), DType::F32, &device)?;
+```
+
+### 2. Используйте осмысленные имена переменных
+
+```rust
+// Плохо
+let t1 = Tensor::ones((10, 20), DType::F32, &device)?;
+let t2 = t1.matmul(&t1)?;
+
+// Хорошо
+let input_features = Tensor::ones((batch_size, feature_dim), DType::F32, &device)?;
+let hidden_layer = input_features.matmul(&weight_matrix)?;
+```
+
+### 3. Группируйте операции на одном устройстве
+
+```rust
+// Плохо - много переносов между устройствами
+let cpu_tensor = Tensor::ones((2, 2), DType::F32, &Device::Cpu)?;
+let gpu_tensor = cpu_tensor.to_device(&gpu_device)?;
+let result = gpu_tensor.matmul(&gpu_tensor)?;
+let final_result = result.to_device(&Device::Cpu)?;
+
+// Хорошо - минимум переносов
+let gpu_tensor = Tensor::ones((2, 2), DType::F32, &gpu_device)?;
+let result = gpu_tensor.matmul(&gpu_tensor)?;
+// Переносим только финальный результат
+```
+
+### 4. Проверяйте размерности перед операциями
+
+```rust
+fn safe_matmul(a: &Tensor, b: &Tensor) -> Result<Tensor> {
+    if a.dim(1) != b.dim(0) {
+        return Err(candle_core::Error::Msg(format!(
+            "Несовместимые размерности: {} @ {}",
+            a.shape(), b.shape()
+        )));
+    }
+    a.matmul(b)
+}
+```
+
+## Типы данных
+
+### Поддерживаемые типы
+
+```rust
+use candle_core::DType;
+
+// Основные типы
+let f32_tensor = Tensor::zeros((2, 2), DType::F32, &device)?;  // 32-bit float
+let f16_tensor = Tensor::zeros((2, 2), DType::F16, &device)?;  // 16-bit float
+let bf16_tensor = Tensor::zeros((2, 2), DType::BF16, &device)?; // bfloat16
+let u8_tensor = Tensor::zeros((2, 2), DType::U8, &device)?;    // 8-bit unsigned
+let i32_tensor = Tensor::zeros((2, 2), DType::I32, &device)?;  // 32-bit signed
+```
+
+### Конвертация типов
+
+```rust
+let f32_tensor = Tensor::zeros((2, 2), DType::F32, &device)?;
+let f16_tensor = f32_tensor.to_dtype(DType::F16)?;
+let i32_tensor = f32_tensor.to_dtype(DType::I32)?;
+```
+
+## Память и производительность
+
+### Управление памятью
+
+```rust
+// Используйте scoped блоки для автоматического освобождения памяти
+{
+    let large_tensor = Tensor::randn(0f32, 1f32, (1000, 1000), &device)?;
+    let result = large_tensor.matmul(&large_tensor)?;
+    // Память автоматически освобождается здесь
+}
+
+// Для GPU особенно важно следить за VRAM
+let gpu_device = Device::new_cuda(0)?;
+// ... операции с GPU тензорами
+// Память освобождается при выходе из области видимости
+```
+
+### Батчинг операций
+
+```rust
+// Плохо - много маленьких операций
+for i in 0..batch_size {
+    let result = tensors[i].matmul(&weights)?;
+}
+
+// Хорошо - батчинг операций
+let batch_tensor = Tensor::stack(&tensors, 0)?;  // Объединяем в батч
+let batch_result = batch_tensor.matmul(&weights)?;  // Одна операция для всего батча
+```
+
+Это основные концепции Candle для начинающих. Следуйте этим принципам для создания эффективных и безопасных ML приложений на Rust.

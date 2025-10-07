@@ -70,7 +70,11 @@ pub fn run() {
             api::performance_api::get_memory_usage,
             api::performance_api::clear_performance_metrics,
             api::performance_api::get_startup_metrics,
+            api::local_models::parse_gguf_metadata,
+            api::local_models::scan_models_folder,
             api::local_models::scan_local_models_folder,
+            api::local_models::search_huggingface_gguf,
+            api::local_models::download_hf_model_file,
             api::local_models::delete_local_model,
         ])
         .setup(move |app| {

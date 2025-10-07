@@ -21,7 +21,14 @@ impl ModelWeights {
         let inner = candle_transformers::models::quantized_gemma3::ModelWeights::from_gguf(
             content, reader, device,
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            let error_msg = e.to_string();
+            if error_msg.contains("unknown dtype") {
+                format!("{} - This may be due to unsupported quantization types in the GGUF file. Consider using a different quantization or updating Candle.", error_msg)
+            } else {
+                error_msg
+            }
+        })?;
         Ok(Self { inner })
     }
 }
