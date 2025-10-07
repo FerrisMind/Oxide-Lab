@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.13.0 - 2025-10-07
+#### Features
+- **(icons)** update app icons and add new SVG icon - (6482b02) - FerrisMind
+- **(models)** implement comprehensive local and Hugging Face model management API - (0a532b7) - FerrisMind
+#### Style
+- **(model-manager)** add responsive styles to multiple components - (898d2c9) - FerrisMind
+
+- - -
+
 ## 0.12.0 - 2025-10-01
 #### Bug Fixes
 - улучшение читаемости кода и исправление стилей в компоненте ChatHistory.svelte - (156e82c) - FerrisMind
