@@ -563,7 +563,7 @@
     height: var(--composer-row-height);
     font-size: 14px;
     font-weight: 500;
-    cursor: pointer;
+    cursor: default;
     transition:
       transform 0.2s ease,
       box-shadow 0.2s ease,
@@ -673,7 +673,7 @@
     height: var(--composer-row-height);
     font-size: 14px;
     font-weight: 600;
-    cursor: pointer;
+    cursor: default;
     transition:
       transform 0.2s ease,
       box-shadow 0.2s ease,
@@ -750,7 +750,7 @@
     height: var(--composer-row-height);
     font-size: 14px;
     font-weight: 500;
-    cursor: pointer;
+    cursor: default;
     transition:
       transform 0.2s ease,
       box-shadow 0.2s ease,
@@ -819,7 +819,7 @@
     height: var(--composer-row-height);
     font-size: 14px;
     font-weight: 600;
-    cursor: pointer;
+    cursor: default;
     pointer-events: auto;
     transition:
       transform 0.2s ease,
@@ -898,7 +898,7 @@
     border: 1px solid var(--border-color);
     border-radius: var(--control-radius);
     background: var(--card);
-    cursor: pointer;
+    cursor: default;
     transition: all 0.2s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     position: relative;
@@ -1008,7 +1008,7 @@
     height: var(--composer-row-height);
     font-size: 14px;
     font-weight: 500;
-    cursor: pointer;
+    cursor: default;
     transition:
       transform 0.2s ease,
       box-shadow 0.2s ease,
@@ -1211,7 +1211,7 @@
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
-    cursor: pointer;
+    cursor: default;
     font-size: 18px;
     font-weight: 600;
     transition:

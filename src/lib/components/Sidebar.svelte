@@ -6,10 +6,12 @@
   import ChatCircle from 'phosphor-svelte/lib/ChatCircle';
   import Code from 'phosphor-svelte/lib/Code';
   import Database from 'phosphor-svelte/lib/Database';
-  import MagnifyingGlass from 'phosphor-svelte/lib/MagnifyingGlass';
   import ChartLine from 'phosphor-svelte/lib/ChartLine';
   import Gear from 'phosphor-svelte/lib/Gear';
   import Info from 'phosphor-svelte/lib/Info';
+  import ArrowCircleDown from 'phosphor-svelte/lib/ArrowCircleDown';
+
+  import DownloadManagerModal from './DownloadManagerModal.svelte';
 
   const baseNavigationItems = [
     {
@@ -44,13 +46,6 @@
       description: 'Управление загруженными моделями',
     },
     {
-      id: 'search',
-      title: 'Поиск моделей',
-      icon: MagnifyingGlass,
-      path: '/search',
-      description: 'Поиск в Hugging Face Hub',
-    },
-    {
       id: 'performance',
       title: 'Производительность',
       icon: ChartLine,
@@ -71,9 +66,85 @@
   );
 
   let showAbout = $state(false);
+  let appVersion = $state('0.13.0');
+  let showDownloadManager = $state(false);
+
   function toggleAbout() {
     showAbout = !showAbout;
+    if (showAbout) {
+      loadAppVersion();
+    }
   }
+
+  function handleBackdropKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      toggleAbout();
+    }
+  }
+
+  async function loadAppVersion() {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const appInfo = (await invoke('get_app_info')) as { version: string };
+      appVersion = appInfo.version;
+    } catch (error) {
+      console.warn('Не удалось получить версию приложения:', error);
+      appVersion = '0.13.0'; // Fallback версия
+    }
+  }
+
+  // Фокус-трап для модального окна
+  let modalElement = $state<HTMLDivElement | null>(null);
+
+  $effect(() => {
+    if (!showAbout || !modalElement) return;
+
+    const node = modalElement;
+    const focusableElements = Array.from(
+      node.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        toggleAbout();
+        return;
+      }
+
+      if (event.key !== 'Tab' || focusableElements.length === 0) {
+        return;
+      }
+
+      const activeElement = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey) {
+        if (activeElement === firstElement) {
+          event.preventDefault();
+          lastElement?.focus();
+        }
+      } else if (activeElement === lastElement) {
+        event.preventDefault();
+        firstElement?.focus();
+      }
+    };
+
+    node.addEventListener('keydown', handleKeydown);
+
+    if (firstElement) {
+      firstElement.focus();
+    } else {
+      node.focus();
+    }
+
+    return () => {
+      node.removeEventListener('keydown', handleKeydown);
+    };
+  });
 
   function navigateTo(path: string) {
     goto(path);
@@ -99,30 +170,62 @@
     {/each}
   </nav>
   <div class="sidebar-bottom">
+    {#if experimentalFeatures.enabled}
+      <button
+        class="nav-item"
+        title="Загрузки"
+        aria-label="Загрузки"
+        onclick={() => (showDownloadManager = true)}
+      >
+        <div class="nav-icon"><ArrowCircleDown size={20} weight="regular" /></div>
+      </button>
+    {/if}
     <button class="nav-item" title="О программе" aria-label="О программе" onclick={toggleAbout}>
       <div class="nav-icon"><Info size={20} weight="regular" /></div>
     </button>
   </div>
   {#if showAbout}
     <div
+      bind:this={modalElement}
       class="about-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="about-title"
       tabindex="-1"
-      onclick={toggleAbout}
-      onkeydown={(e) => {
-        if (e.key === 'Escape') toggleAbout();
+      onclick={(event) => {
+        if (event.target === event.currentTarget) {
+          toggleAbout();
+        }
       }}
+      onkeydown={handleBackdropKeydown}
     >
       <div class="about-content" role="document">
         <h2 id="about-title">О программе</h2>
-        <p>Oxide Lab — настольное приложение для локального инференса LLM на Tauri + Svelte.</p>
+        <div class="about-info">
+          <p>
+            <strong>Oxide Lab</strong> — настольное приложение для локального инференса LLM на базе современных
+            технологий.
+          </p>
+          <p><strong>Технологии:</strong> Tauri 2 + Svelte 5 + Rust + Candle ML</p>
+          <p><strong>Версия:</strong> {appVersion}</p>
+        </div>
         <div class="about-actions">
-          <button class="close-btn" onclick={toggleAbout}>Закрыть</button>
+          <button
+            class="close-btn"
+            onclick={(e) => {
+              e.stopPropagation();
+              toggleAbout();
+            }}
+            aria-label="Закрыть окно о программе"
+          >
+            Закрыть
+          </button>
         </div>
       </div>
     </div>
+  {/if}
+  {#if showDownloadManager}
+    <DownloadManagerModal on:close={() => (showDownloadManager = false)} />
   {/if}
 </aside>
 
@@ -217,7 +320,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 999;
+    z-index: 1000; /* Увеличиваем z-index для уверенности */
+    backdrop-filter: blur(2px); /* Добавляем размытие фона */
   }
   .about-content {
     background: var(--card);
@@ -229,14 +333,40 @@
     box-shadow: var(--shadow, 0 4px 20px rgb(0 0 0 / 0.06));
     pointer-events: auto;
   }
+  .about-info {
+    margin-top: 8px;
+  }
+
+  .about-info p {
+    margin: 6px 0;
+    line-height: 1.4;
+  }
+
   .about-actions {
-    margin-top: 12px;
+    margin-top: 16px;
     display: flex;
     justify-content: flex-end;
   }
   .close-btn {
     background: var(--accent);
     color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: default;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    min-width: 80px;
+  }
+
+  .close-btn:hover {
+    background: var(--accent-dark, #2563eb);
+  }
+
+  .close-btn:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   /* Dark mode */

@@ -322,7 +322,7 @@ fn check_supported_dtypes(content: &gguf_file::Content) -> Result<(), String> {
     let mut found_unknown = Vec::new();
 
     // Проверяем каждый тензор в файле
-    for (_name, tensor_info) in &content.tensor_infos {
+    for tensor_info in content.tensor_infos.values() {
         let dtype = tensor_info.ggml_dtype as u32;
 
         if unsupported_dtypes.contains(&dtype) {

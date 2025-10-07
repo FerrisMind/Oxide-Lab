@@ -5,8 +5,9 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type {
+  DownloadJob,
+  DownloadManagerSnapshot,
   DownloadProgressPayload,
-  DownloadedFileInfo,
   FilterOptions,
   ModelInfo,
   RemoteModelFilters,
@@ -68,18 +69,45 @@ export class LocalModelsService {
   }
 
   /**
+   * Fetch Markdown README for a remote model.
+   */
+  static async getModelReadme(repoId: string): Promise<string> {
+    try {
+      return await invoke<string>('get_model_readme', { repoId });
+    } catch (error) {
+      console.error('Failed to load model README:', error);
+      throw new Error(`Failed to load model README: ${error}`);
+    }
+  }
+
+  /**
    * Download a remote GGUF file and place it in destination directory.
    */
   static async downloadRemoteModel(
     repoId: string,
     filename: string,
     destinationDir: string,
-  ): Promise<DownloadedFileInfo> {
+    downloadUrl: string,
+    totalBytes?: number,
+    sha256?: string,
+  ): Promise<DownloadJob> {
     try {
-      return await invoke<DownloadedFileInfo>('download_hf_model_file', {
-        repoId,
+      const request: Record<string, unknown> = {
+        repo_id: repoId,
         filename,
-        destinationDir,
+        download_url: downloadUrl,
+        destination_dir: destinationDir,
+      };
+
+      if (typeof totalBytes === 'number') {
+        request.total_bytes = totalBytes;
+      }
+      if (sha256) {
+        request.sha256 = sha256;
+      }
+
+      return await invoke<DownloadJob>('start_model_download', {
+        request,
       });
     } catch (error) {
       console.error('Failed to download model:', error);
@@ -96,6 +124,71 @@ export class LocalModelsService {
     return listen<DownloadProgressPayload>('model-download-progress', (event) => {
       handler(event.payload);
     });
+  }
+
+  /**
+   * Subscribe to download manager aggregate updates.
+   */
+  static async onDownloadSnapshotUpdate(
+    handler: (snapshot: DownloadManagerSnapshot) => void,
+  ): Promise<UnlistenFn> {
+    return listen<DownloadManagerSnapshot>('download-manager-updated', (event) => {
+      handler(event.payload);
+    });
+  }
+
+  static async getDownloadSnapshot(): Promise<DownloadManagerSnapshot> {
+    try {
+      return await invoke<DownloadManagerSnapshot>('get_downloads_snapshot');
+    } catch (error) {
+      console.error('Failed to fetch downloads snapshot:', error);
+      throw new Error(`Failed to fetch downloads snapshot: ${error}`);
+    }
+  }
+
+  static async pauseDownload(jobId: string): Promise<void> {
+    try {
+      await invoke('pause_download', { job_id: jobId });
+    } catch (error) {
+      console.error('Failed to pause download:', error);
+      throw new Error(`Failed to pause download: ${error}`);
+    }
+  }
+
+  static async resumeDownload(jobId: string): Promise<void> {
+    try {
+      await invoke('resume_download', { job_id: jobId });
+    } catch (error) {
+      console.error('Failed to resume download:', error);
+      throw new Error(`Failed to resume download: ${error}`);
+    }
+  }
+
+  static async cancelDownload(jobId: string): Promise<void> {
+    try {
+      await invoke('cancel_download', { job_id: jobId });
+    } catch (error) {
+      console.error('Failed to cancel download:', error);
+      throw new Error(`Failed to cancel download: ${error}`);
+    }
+  }
+
+  static async removeDownloadEntry(jobId: string, deleteFile: boolean): Promise<void> {
+    try {
+      await invoke('remove_download_entry', { job_id: jobId, delete_file: deleteFile });
+    } catch (error) {
+      console.error('Failed to remove download entry:', error);
+      throw new Error(`Failed to remove download entry: ${error}`);
+    }
+  }
+
+  static async clearDownloadHistory(): Promise<void> {
+    try {
+      await invoke('clear_download_history');
+    } catch (error) {
+      console.error('Failed to clear download history:', error);
+      throw new Error(`Failed to clear download history: ${error}`);
+    }
   }
 
   /**

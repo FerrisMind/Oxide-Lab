@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Тест модального окна</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f5f5f5;
+      }
+
+      .sidebar {
+        width: 120px;
+        height: 100vh;
+        background: #fff;
+        border-right: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        left: 0;
+        top: 0;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        padding: 10px;
+        border: none;
+        background: transparent;
+        border-radius: 10px;
+        cursor: default;
+        transition: all 0.2s ease;
+        color: #333;
+        min-height: 48px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nav-item:hover {
+        background: #f0f0f0;
+      }
+
+      .about-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(2px);
+      }
+
+      .about-content {
+        background: #fff;
+        color: #333;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 24px;
+        width: min(520px, calc(100vw - 32px));
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        pointer-events: auto;
+      }
+
+      .about-info {
+        margin-top: 8px;
+      }
+
+      .about-info p {
+        margin: 8px 0;
+        line-height: 1.5;
+      }
+
+      .about-actions {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .close-btn {
+        background: #3b82f6;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        cursor: default;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background-color 0.2s ease;
+        min-width: 80px;
+      }
+
+      .close-btn:hover {
+        background: #2563eb;
+      }
+
+      .close-btn:focus {
+        outline: 2px solid #3b82f6;
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sidebar">
+      <button class="nav-item" onclick="toggleAbout()" title="О программе">ℹ️</button>
+    </div>
+
+    <div id="aboutModal" class="about-modal" style="display: none" onclick="toggleAbout()">
+      <div class="about-content" onclick="event.stopPropagation()">
+        <h2>О программе</h2>
+        <div class="about-info">
+          <p>
+            <strong>Oxide Lab</strong> — настольное приложение для локального инференса LLM на базе
+            современных технологий.
+          </p>
+          <p><strong>Технологии:</strong> Tauri 2 + Svelte 5 + Rust + Candle ML</p>
+          <p><strong>Версия:</strong> 0.12.0</p>
+        </div>
+        <div class="about-actions">
+          <button class="close-btn" onclick="closeAbout()">Закрыть</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function toggleAbout() {
+        const modal = document.getElementById('aboutModal');
+        if (modal.style.display === 'none') {
+          modal.style.display = 'flex';
+          modal.focus();
+        } else {
+          modal.style.display = 'none';
+        }
+      }
+
+      function closeAbout() {
+        document.getElementById('aboutModal').style.display = 'none';
+      }
+
+      // Обработка клавиши Escape
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && document.getElementById('aboutModal').style.display !== 'none') {
+          closeAbout();
+        }
+      });
+
+      // Фокус-трап
+      document.getElementById('aboutModal').addEventListener('keydown', function (e) {
+        if (e.key === 'Tab') {
+          const focusableElements = this.querySelectorAll('button');
+          const firstElement = focusableElements[0];
+          const lastElement = focusableElements[focusableElements.length - 1];
+
+          if (e.shiftKey) {
+            if (document.activeElement === firstElement) {
+              e.preventDefault();
+              lastElement.focus();
+            }
+          } else {
+            if (document.activeElement === lastElement) {
+              e.preventDefault();
+              firstElement.focus();
+            }
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

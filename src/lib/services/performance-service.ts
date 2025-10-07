@@ -7,6 +7,7 @@ import type {
   InferenceMetrics,
   PerformanceSummary,
   StartupMetrics,
+  SystemUsage,
 } from '$lib/types/performance';
 
 export class PerformanceService {
@@ -221,6 +222,18 @@ export class PerformanceService {
    */
   getCachedStartupMetrics(): StartupMetrics | null {
     return this.startupMetrics;
+  }
+
+  /**
+   * Получить текущее использование системных ресурсов (CPU, GPU, память)
+   */
+  async getSystemUsage(): Promise<SystemUsage> {
+    try {
+      return await invoke<SystemUsage>('get_system_usage');
+    } catch (error) {
+      console.error('Failed to get system usage:', error);
+      throw error;
+    }
   }
 }
 

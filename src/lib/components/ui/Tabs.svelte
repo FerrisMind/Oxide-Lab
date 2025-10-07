@@ -128,7 +128,7 @@
     color: var(--muted);
     font-size: 0.9375rem;
     font-weight: 500;
-    cursor: pointer;
+    cursor: default;
     transition: all 0.2s ease;
     white-space: nowrap;
     border-radius: 8px 8px 0 0;

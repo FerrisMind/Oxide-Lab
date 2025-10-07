@@ -9,7 +9,7 @@
 
   let {
     metrics = null,
-    mdStreamEl = null
+    mdStreamEl = null,
   }: {
     metrics?: InferenceMetrics | null;
     mdStreamEl?: HTMLElement | null;
@@ -24,7 +24,7 @@
       showingRaw = mdStreamEl.classList.toggle('show-raw');
       return;
     }
-    
+
     // Иначе ищем md-stream элемент в родительском сообщении
     const metricsEl = document.querySelector('.inference-metrics');
     if (metricsEl) {
@@ -51,7 +51,7 @@
             // Получаем текст из md-content (основной ответ)
             const mdContent = bubble.querySelector('.md-content');
             let textToCopy = '';
-            
+
             if (mdContent) {
               // Извлекаем текст из markdown контента
               textToCopy = (mdContent as HTMLElement).innerText || mdContent.textContent || '';
@@ -59,11 +59,11 @@
               // Fallback: весь текст пузыря
               textToCopy = (bubble as HTMLElement).innerText || bubble.textContent || '';
             }
-            
+
             // Копируем в буфер обмена
             await navigator.clipboard.writeText(textToCopy);
             copied = true;
-            
+
             // Возвращаем иконку обратно через 1.5 секунды
             setTimeout(() => {
               copied = false;
@@ -81,10 +81,10 @@
   <div class="inference-metrics">
     <Speedometer size={18} weight="regular" />
     <span class="speed">{performanceService.formatSpeed(metrics.tokens_per_second)}</span>
-    
+
     <!-- Показываем кнопку всегда для сообщений ассистента -->
-    <button 
-      class="view-button" 
+    <button
+      class="view-button"
       onclick={toggleRawView}
       title={showingRaw ? 'Скрыть исходный код' : 'Показать исходный код'}
     >
@@ -96,11 +96,7 @@
     </button>
 
     <!-- Кнопка копирования -->
-    <button 
-      class="copy-button" 
-      onclick={copyResponse}
-      title="Копировать ответ"
-    >
+    <button class="copy-button" onclick={copyResponse} title="Копировать ответ">
       {#if copied}
         <Check size={18} weight="regular" />
       {:else}
@@ -132,7 +128,7 @@
   .view-button {
     background: none;
     border: none;
-    cursor: pointer;
+    cursor: default;
     padding: 4px;
     border-radius: 5px;
     display: flex;
@@ -155,7 +151,7 @@
   .copy-button {
     background: none;
     border: none;
-    cursor: pointer;
+    cursor: default;
     padding: 4px;
     border-radius: 5px;
     display: flex;

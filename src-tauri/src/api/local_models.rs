@@ -10,7 +10,7 @@ use crate::models::registry::{detect_arch, ArchKind};
 use candle::quantized::gguf_file::{self, Content, Value as GgufValue, VersionedMagic};
 use chrono::{DateTime, Utc};
 use hf_hub::api::tokio::{ApiBuilder, Progress as HubProgress};
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use regex::Regex;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -24,6 +24,7 @@ use std::sync::{
     Arc,
 };
 use tauri::{async_runtime, AppHandle, Emitter};
+use tokio::sync::RwLock;
 
 /// Validation severity level for GGUF files.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -236,6 +237,12 @@ pub struct DownloadProgressPayload {
     pub stage: DownloadStage,
 }
 
+static README_CACHE: Lazy<RwLock<HashMap<String, String>>> =
+    Lazy::new(|| RwLock::new(HashMap::new()));
+
+const README_FALLBACK_MESSAGE: &str =
+    "README.md не найден или недоступен для этой модели на Hugging Face.";
+
 /// Wrapper around Hugging Face download progress reporting that emits Tauri events.
 #[derive(Clone)]
 struct HubProgressEmitter {
@@ -347,6 +354,7 @@ pub async fn search_huggingface_gguf(
         ("full", "true".to_string()),
         ("config", "true".to_string()),
         ("sort", "downloads".to_string()),
+        ("filter", "gguf".to_string()),
     ];
 
     if offset > 0 {
@@ -445,6 +453,75 @@ pub async fn download_hf_model_file(
         local_path: dest_file,
         size,
     })
+}
+
+#[tauri::command]
+pub async fn get_model_readme(repo_id: String) -> Result<String, String> {
+    let trimmed = repo_id.trim();
+    if trimmed.is_empty() {
+        return Err("Repository id cannot be empty".to_string());
+    }
+
+    if let Some(cached) = README_CACHE.read().await.get(trimmed).cloned() {
+        return Ok(cached);
+    }
+
+    let api = ApiBuilder::new()
+        .with_progress(false)
+        .build()
+        .map_err(|e| format!("Failed to initialize hf-hub API: {e}"))?;
+    let repo = api.model(trimmed.to_string());
+
+    let candidates = ["README.md", "README.MD", "Readme.md"];
+    let mut local_path = None;
+    for name in candidates {
+        match repo.get(name).await {
+            Ok(path) => {
+                local_path = Some(path);
+                break;
+            }
+            Err(_) => continue,
+        }
+    }
+
+    let readme_content = if let Some(path) = local_path {
+        let cloned_path = path.clone();
+        let content = async_runtime::spawn_blocking(move || {
+            std::fs::read_to_string(&cloned_path)
+                .map_err(|e| format!("Failed to read README from cache: {e}"))
+        })
+        .await
+        .map_err(|e| format!("Failed to join README read task: {e}"))??;
+        content
+    } else {
+        let client = build_http_client()?;
+        let fallback_url = format!("https://huggingface.co/{}/raw/main/README.md", trimmed);
+        let response = client
+            .get(&fallback_url)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to request README: {e}"))?;
+
+        if response.status().is_success() {
+            response
+                .text()
+                .await
+                .map_err(|e| format!("Failed to decode README response: {e}"))?
+        } else if response.status().as_u16() == 404 {
+            let mut cache = README_CACHE.write().await;
+            cache.insert(trimmed.to_string(), README_FALLBACK_MESSAGE.to_string());
+            return Ok(README_FALLBACK_MESSAGE.to_string());
+        } else {
+            return Err(format!(
+                "Failed to fetch README: HTTP {}",
+                response.status()
+            ));
+        }
+    };
+
+    let mut cache = README_CACHE.write().await;
+    cache.insert(trimmed.to_string(), readme_content.clone());
+    Ok(readme_content)
 }
 
 /// Envelope returned by GGUF parsing helper.
@@ -650,7 +727,7 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
     })
 }
 
-fn build_http_client() -> Result<Client, String> {
+pub(crate) fn build_http_client() -> Result<Client, String> {
     Client::builder()
         .user_agent(format!(
             "oxide-lab/{} (https://github.com/FerrisMind/Oxide-Lab)",
@@ -715,7 +792,12 @@ fn convert_detail_to_info(
                     return None;
                 }
             }
-            let quant = extract_quantization_from_filename(&file.rfilename);
+            let quant = extract_quantization_from_filename(&file.rfilename)
+                .map(|raw| canonicalize_quantization(&raw));
+            let quant = match quant {
+                Some(value) if is_allowed_quantization(&value) => Some(value),
+                _ => return None,
+            };
             if let Some(expected) = filters.quantization.as_ref() {
                 let matches = quant
                     .as_ref()
@@ -901,6 +983,24 @@ fn extract_quantization_from_filename(filename: &str) -> Option<String> {
     regex
         .find(&filename.to_uppercase())
         .map(|m| m.as_str().to_string())
+}
+
+const ALLOWED_QUANTIZATIONS: &[&str] = &["Q4_K_M", "Q5_K_M", "Q6_K_M", "Q8_K_M"];
+
+fn canonicalize_quantization(raw: &str) -> String {
+    let mut upper = raw.to_uppercase();
+    if let Some(idx) = upper.find("K_M") {
+        if idx > 0 && !upper[..idx].ends_with('_') {
+            upper.insert(idx, '_');
+        }
+    }
+    upper
+}
+
+fn is_allowed_quantization(value: &str) -> bool {
+    ALLOWED_QUANTIZATIONS
+        .iter()
+        .any(|allowed| allowed.eq_ignore_ascii_case(value))
 }
 
 fn metadata_get_string(metadata: &HashMap<String, GgufValue>, key: &str) -> Option<String> {

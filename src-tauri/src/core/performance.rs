@@ -2,8 +2,8 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use sysinfo::{Pid, System};
 use tokio::sync::RwLock;
-use sysinfo::{System, Pid};
 
 /// Метрики производительности для одной операции
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,6 +62,16 @@ pub struct StartupMetrics {
 pub struct StartupStage {
     pub name: String,
     pub duration_ms: u64,
+}
+
+/// Использование системных ресурсов
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemUsage {
+    pub cpu_usage_percent: f32,
+    pub memory_usage_mb: f64,
+    pub gpu_usage_percent: Option<f32>,
+    pub gpu_memory_mb: Option<f64>,
+    pub timestamp: String,
 }
 
 /// Монитор производительности
@@ -151,6 +161,35 @@ impl PerformanceMonitor {
     pub async fn get_startup_metrics(&self) -> Option<StartupMetrics> {
         let startup_metrics = self.startup_metrics.read().await;
         startup_metrics.clone()
+    }
+
+    /// Получить текущее использование системных ресурсов
+    pub async fn get_system_usage(&self) -> SystemUsage {
+        let mut system = self.system.write().await;
+
+        // Обновляем информацию о CPU
+        system.refresh_cpu_usage();
+
+        // Получаем среднее использование CPU по всем ядрам
+        let cpu_usage_percent = system.cpus().iter().map(|cpu| cpu.cpu_usage()).sum::<f32>()
+            / system.cpus().len() as f32;
+
+        // Получаем использование памяти
+        system.refresh_memory();
+        let memory_usage_mb = system.used_memory() as f64 / 1024.0 / 1024.0;
+
+        // GPU информация (пока заглушка, так как sysinfo не поддерживает GPU напрямую)
+        // Для реального GPU мониторинга может потребоваться отдельная библиотека как nvml-wrapper
+        let gpu_usage_percent = None;
+        let gpu_memory_mb = None;
+
+        SystemUsage {
+            cpu_usage_percent,
+            memory_usage_mb,
+            gpu_usage_percent,
+            gpu_memory_mb,
+            timestamp: chrono::Utc::now().to_rfc3339(),
+        }
     }
 }
 

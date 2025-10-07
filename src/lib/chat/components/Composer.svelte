@@ -1,21 +1,32 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
-  import ArrowUp from "phosphor-svelte/lib/ArrowUp";
-  import Stop from "phosphor-svelte/lib/Stop";
-  import Paperclip from "phosphor-svelte/lib/Paperclip";
-  import Broom from "phosphor-svelte/lib/Broom";
-  import Microphone from "phosphor-svelte/lib/Microphone";
-  import SlidersHorizontal from "phosphor-svelte/lib/SlidersHorizontal";
-  import ClockCounterClockwise from "phosphor-svelte/lib/ClockCounterClockwise";
-  import File from "phosphor-svelte/lib/File";
-  import X from "phosphor-svelte/lib/X";
+  import { createEventDispatcher } from 'svelte';
+  import ArrowUp from 'phosphor-svelte/lib/ArrowUp';
+  import Stop from 'phosphor-svelte/lib/Stop';
+  import Paperclip from 'phosphor-svelte/lib/Paperclip';
+  import Broom from 'phosphor-svelte/lib/Broom';
+  import Microphone from 'phosphor-svelte/lib/Microphone';
+  import SlidersHorizontal from 'phosphor-svelte/lib/SlidersHorizontal';
+  import ClockCounterClockwise from 'phosphor-svelte/lib/ClockCounterClockwise';
+  import File from 'phosphor-svelte/lib/File';
+  import X from 'phosphor-svelte/lib/X';
 
   type AttachDetail = {
     filename: string;
     content: string;
   };
 
-  const TEXT_EXTENSIONS = ['txt', 'md', 'markdown', 'json', 'log', 'csv', 'yaml', 'yml', 'xml', 'html'];
+  const TEXT_EXTENSIONS = [
+    'txt',
+    'md',
+    'markdown',
+    'json',
+    'log',
+    'csv',
+    'yaml',
+    'yml',
+    'xml',
+    'html',
+  ];
   const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
   const AUDIO_EXTENSIONS = ['wav', 'mp3', 'ogg', 'flac', 'm4a'];
   const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'mkv'];
@@ -29,7 +40,7 @@
     'toggle-chat-history': void;
   }>();
 
-  export let prompt: string = "";
+  export let prompt: string = '';
   export let busy: boolean = false;
   export let isLoaded: boolean = false;
   export let canStop: boolean = false;
@@ -48,7 +59,7 @@
   let errorTimer: ReturnType<typeof setTimeout> | null = null;
   let accept = DEFAULT_TEXT_ACCEPT;
   let attachedFiles: AttachDetail[] = [];
-  
+
   // Переменные для автоматического изменения высоты
   let textareaHeight = 34; // Стандартная высота однострочного поля
   const MIN_HEIGHT = 34; // Минимальная высота (как у кнопок)
@@ -56,40 +67,40 @@
 
   function triggerSend() {
     if (busy || !isLoaded || !prompt.trim()) return;
-    dispatch("send");
+    dispatch('send');
   }
 
   function triggerStop() {
     if (!canStop) return;
-    dispatch("stop");
+    dispatch('stop');
   }
 
   function triggerClear() {
     if (!prompt && !attachError) return;
-    prompt = "";
+    prompt = '';
     attachError = null;
     clearErrorTimer();
-    dispatch("clear");
+    dispatch('clear');
   }
 
   function triggerVoiceInput() {
     if (isRecording) {
       // Остановить запись
       isRecording = false;
-      console.log("Остановка записи голоса");
+      console.log('Остановка записи голоса');
     } else {
       // Начать запись
       isRecording = true;
-      console.log("Начало записи голоса");
+      console.log('Начало записи голоса');
     }
   }
 
   function triggerSettings() {
-    dispatch("toggle-loader-panel");
+    dispatch('toggle-loader-panel');
   }
 
   function triggerChatHistory() {
-    dispatch("toggle-chat-history");
+    dispatch('toggle-chat-history');
   }
 
   function removeAttachment(index: number) {
@@ -145,9 +156,7 @@
       const ext = (name.split('.').pop() || '').toLowerCase();
 
       const isTextLike =
-        topLevel === 'text' ||
-        TEXT_EXTENSIONS.includes(ext) ||
-        mime === 'application/json';
+        topLevel === 'text' || TEXT_EXTENSIONS.includes(ext) || mime === 'application/json';
       const isImage = topLevel === 'image' || IMAGE_EXTENSIONS.includes(ext);
       const isAudio = topLevel === 'audio' || AUDIO_EXTENSIONS.includes(ext);
       const isVideo = topLevel === 'video' || VIDEO_EXTENSIONS.includes(ext);
@@ -169,7 +178,7 @@
         const content = await file.text();
         const attachment = { filename: name, content };
         attachedFiles = [...attachedFiles, attachment];
-        dispatch("attach", attachment);
+        dispatch('attach', attachment);
         attachError = null;
         clearErrorTimer();
         return;
@@ -190,22 +199,22 @@
       if (marker) {
         const attachment = { filename: name, content: marker };
         attachedFiles = [...attachedFiles, attachment];
-        dispatch("attach", attachment);
+        dispatch('attach', attachment);
         attachError = null;
         clearErrorTimer();
       } else {
         setError('Неподдерживаемый тип файла');
       }
     } catch (err) {
-      console.error("Failed to read attachment", err);
+      console.error('Failed to read attachment', err);
       setError('Не удалось прочитать файл');
     } finally {
-      if (input) input.value = "";
+      if (input) input.value = '';
     }
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       triggerSend();
     }
@@ -213,13 +222,13 @@
 
   function adjustTextareaHeight() {
     if (!textareaElement) return;
-    
+
     // Сбрасываем высоту для корректного расчета
     textareaElement.style.height = 'auto';
-    
+
     // Получаем scrollHeight для определения необходимой высоты
     const scrollHeight = textareaElement.scrollHeight;
-    
+
     // Ограничиваем высоту минимальными и максимальными значениями
     if (scrollHeight <= MIN_HEIGHT) {
       textareaHeight = MIN_HEIGHT;
@@ -228,7 +237,7 @@
     } else {
       textareaHeight = scrollHeight;
     }
-    
+
     // Применяем новую высоту
     textareaElement.style.height = `${textareaHeight}px`;
   }
@@ -277,7 +286,9 @@
         rows="1"
         on:keydown={handleKeydown}
         on:input={handleTextareaInput}
-        style="height: {textareaHeight}px; overflow-y: {textareaHeight >= MAX_HEIGHT ? 'auto' : 'hidden'};"
+        style="height: {textareaHeight}px; overflow-y: {textareaHeight >= MAX_HEIGHT
+          ? 'auto'
+          : 'hidden'};"
       ></textarea>
     </div>
     <div class="composer__row composer__row--controls">
@@ -288,7 +299,7 @@
           class:composer__button--settings-active={isChatHistoryVisible}
           on:click={triggerChatHistory}
           disabled={false}
-          aria-label={isChatHistoryVisible ? "Скрыть историю чатов" : "Показать историю чатов"}
+          aria-label={isChatHistoryVisible ? 'Скрыть историю чатов' : 'Показать историю чатов'}
           draggable="false"
         >
           <ClockCounterClockwise size={16} weight="bold" />
@@ -361,7 +372,7 @@
     <input
       class="composer__file-input"
       type="file"
-      accept={accept}
+      {accept}
       bind:this={fileInput}
       on:change={handleFileChange}
     />
@@ -507,10 +518,12 @@
     background: none;
     border: none;
     color: var(--composer-muted);
-    cursor: pointer;
+    cursor: default;
     padding: 4px;
     border-radius: 50%;
-    transition: color 0.2s ease, background 0.2s ease;
+    transition:
+      color 0.2s ease,
+      background 0.2s ease;
     width: 20px;
     height: 20px;
     align-items: center;
@@ -538,7 +551,7 @@
     background: #1a1a1a;
     outline: none;
     box-shadow: none; /* Remove box shadow */
-    transition: 
+    transition:
       height 0.2s ease,
       background-color 0.2s ease; /* Remove border-color and box-shadow transitions */
     overflow-y: hidden;
@@ -569,9 +582,9 @@
     font-size: 14px;
     font-weight: 500;
     cursor: default;
-    transition: 
-      transform 0.2s ease, 
-      box-shadow 0.2s ease, 
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
       background 0.2s ease,
       border-color 0.2s ease,
       color 0.2s ease;
@@ -596,7 +609,7 @@
   }
 
   .composer__button:not(:disabled) {
-    cursor: pointer;
+    cursor: default;
     color: #ffffff;
   }
 
@@ -604,7 +617,7 @@
     transform: none;
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(0, 0, 0, 0.15),
       0 4px 12px rgba(0, 0, 0, 0.1);
   }
@@ -615,7 +628,7 @@
 
   .composer__button:not(:disabled):active {
     transform: translateY(-1px);
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(0, 0, 0, 0.2),
       0 2px 8px rgba(0, 0, 0, 0.15);
   }
@@ -632,7 +645,7 @@
     border: 2px solid transparent;
     color: #ffffff;
     font-weight: 600;
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(102, 126, 234, 0.3),
       0 2px 8px rgba(0, 0, 0, 0.1);
     width: var(--composer-row-height);
@@ -653,14 +666,19 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%, rgba(255, 255, 255, 0.1) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.1) 100%
+    );
     opacity: 0;
     transition: opacity 0.3s ease;
   }
 
   .composer__button--primary:not(:disabled):hover {
     background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(102, 126, 234, 0.4),
       0 4px 12px rgba(0, 0, 0, 0.15);
     transform: none;
@@ -674,7 +692,7 @@
   .composer__button--primary:not(:disabled):active {
     transform: none;
     scale: 1.02;
-    box-shadow: 
+    box-shadow:
       0 4px 15px rgba(102, 126, 234, 0.5),
       0 2px 8px rgba(0, 0, 0, 0.2);
   }
@@ -718,7 +736,7 @@
     transform: none;
     background: rgba(102, 126, 234, 0.25);
     border-color: rgba(102, 126, 234, 0.5);
-    box-shadow: 
+    box-shadow:
       0 8px 25px rgba(102, 126, 234, 0.3),
       0 4px 12px rgba(0, 0, 0, 0.1);
   }
@@ -782,7 +800,7 @@
     .composer__attachment-name {
       font-size: 10px;
     }
-    
+
     .composer__row--input {
       flex: 1;
     }

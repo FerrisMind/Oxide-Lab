@@ -1,6 +1,6 @@
 <script lang="ts">
-import { onMount } from 'svelte';
-import { open } from '@tauri-apps/plugin-dialog';
+  import { onMount } from 'svelte';
+  import { open } from '@tauri-apps/plugin-dialog';
   import {
     folderPath,
     models,
@@ -68,9 +68,7 @@ import { open } from '@tauri-apps/plugin-dialog';
   }
 
   async function handleDelete(model: ModelInfo) {
-    const confirmed = confirm(
-      `Удалить модель "${model.name}"?\nФайл будет перемещен в корзину.`,
-    );
+    const confirmed = confirm(`Удалить модель "${model.name}"?\nФайл будет перемещен в корзину.`);
     if (!confirmed) return;
 
     await deleteModel(model.path);
@@ -177,7 +175,8 @@ import { open } from '@tauri-apps/plugin-dialog';
       <label>
         Валидация
         <select
-          on:change={(event) => updateValidationFilter(event.currentTarget.value as ValidationLevel | 'all')}
+          on:change={(event) =>
+            updateValidationFilter(event.currentTarget.value as ValidationLevel | 'all')}
         >
           <option value="all" selected={$filterOptions.validation === 'all'}>Все</option>
           <option value="ok" selected={$filterOptions.validation === 'ok'}>Ок</option>
@@ -201,9 +200,7 @@ import { open } from '@tauri-apps/plugin-dialog';
         >
           <option value="name" selected={$sortOptions.field === 'name'}>Имя</option>
           <option value="file_size" selected={$sortOptions.field === 'file_size'}>Размер</option>
-          <option value="created_at" selected={$sortOptions.field === 'created_at'}>
-            Дата
-          </option>
+          <option value="created_at" selected={$sortOptions.field === 'created_at'}> Дата </option>
           <option value="parameter_count" selected={$sortOptions.field === 'parameter_count'}>
             Параметры
           </option>
@@ -306,7 +303,9 @@ import { open } from '@tauri-apps/plugin-dialog';
         <header>
           <h3>{$selectedModel.name}</h3>
           <div class="actions">
-            <button class="btn danger" on:click={() => handleDelete($selectedModel!)}>Удалить</button>
+            <button class="btn danger" on:click={() => handleDelete($selectedModel!)}
+              >Удалить</button
+            >
           </div>
         </header>
 
@@ -354,10 +353,7 @@ import { open } from '@tauri-apps/plugin-dialog';
         <section class="metadata">
           <header>
             <h4>GGUF метаданные</h4>
-            <button
-              class="btn secondary"
-              on:click={() => (metadataExpanded = !metadataExpanded)}
-            >
+            <button class="btn secondary" on:click={() => (metadataExpanded = !metadataExpanded)}>
               {metadataExpanded ? 'Скрыть' : 'Показать все'}
             </button>
           </header>
@@ -377,7 +373,11 @@ import { open } from '@tauri-apps/plugin-dialog';
             </div>
             <div>
               <dt>Token count</dt>
-              <dd>{$selectedModel.vocab_size ?? $selectedModel.metadata.tokenizer_tokens?.length ?? '—'}</dd>
+              <dd>
+                {$selectedModel.vocab_size ??
+                  $selectedModel.metadata.tokenizer_tokens?.length ??
+                  '—'}
+              </dd>
             </div>
           </dl>
 
@@ -587,7 +587,7 @@ import { open } from '@tauri-apps/plugin-dialog';
   }
 
   tbody tr {
-    cursor: pointer;
+    cursor: default;
     transition: background 0.15s ease;
   }
 
@@ -760,7 +760,7 @@ import { open } from '@tauri-apps/plugin-dialog';
     border: none;
     background: var(--accent, #3498db);
     color: #fff;
-    cursor: pointer;
+    cursor: default;
     font-size: 0.85rem;
     transition: opacity 0.2s ease;
     display: inline-flex;

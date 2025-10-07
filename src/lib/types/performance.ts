@@ -55,3 +55,11 @@ export interface PerformanceSummary {
   average_tokens_per_second: number;
   total_generated_tokens: number;
 }
+
+export interface SystemUsage {
+  cpu_usage_percent: number;
+  memory_usage_mb: number;
+  gpu_usage_percent?: number;
+  gpu_memory_mb?: number;
+  timestamp: string;
+}

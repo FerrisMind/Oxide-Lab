@@ -3620,6 +3620,7 @@ dependencies = [
  "candle-transformers",
  "chrono",
  "env_logger",
+ "futures-util",
  "hf-hub",
  "log",
  "minijinja",

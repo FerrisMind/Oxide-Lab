@@ -9,13 +9,24 @@ pub mod api;
 pub mod core;
 pub mod generate;
 pub mod models;
+
+// Команда для получения информации о приложении
+#[tauri::command]
+fn get_app_info() -> serde_json::Value {
+    serde_json::json!({
+        "name": env!("CARGO_PKG_NAME"),
+        "version": env!("CARGO_PKG_VERSION"),
+        "authors": env!("CARGO_PKG_AUTHORS"),
+        "description": env!("CARGO_PKG_DESCRIPTION"),
+    })
+}
 // модуль `model` удалён, всё перенесено в `models/`
 // moved heavy operations to api/
 use std::sync::{Arc, Mutex};
 // use candle::quantized::gguf_file;
+use crate::core::performance::StartupTracker;
 use crate::models::common::model::ModelBackend;
 use core::state::{ModelState, SharedState};
-use crate::core::performance::StartupTracker;
 use tauri::Emitter;
 // use crate::models::qwen3::ModelWeights as Qwen3Gguf;
 // не импортируем типы напрямую здесь, чтобы избежать предупреждений об их неиспользовании
@@ -46,6 +57,7 @@ pub fn run() {
         .manage(shared)
         .invoke_handler(tauri::generate_handler![
             api::greet,
+            get_app_info,
             api::load_model,
             api::unload_model,
             api::cancel_model_loading,
@@ -70,12 +82,21 @@ pub fn run() {
             api::performance_api::get_memory_usage,
             api::performance_api::clear_performance_metrics,
             api::performance_api::get_startup_metrics,
+            api::performance_api::get_system_usage,
             api::local_models::parse_gguf_metadata,
             api::local_models::scan_models_folder,
             api::local_models::scan_local_models_folder,
             api::local_models::search_huggingface_gguf,
             api::local_models::download_hf_model_file,
+            api::local_models::get_model_readme,
             api::local_models::delete_local_model,
+            api::download_manager::start_model_download,
+            api::download_manager::get_downloads_snapshot,
+            api::download_manager::pause_download,
+            api::download_manager::resume_download,
+            api::download_manager::cancel_download,
+            api::download_manager::remove_download_entry,
+            api::download_manager::clear_download_history,
         ])
         .setup(move |app| {
             let _app_handle = app.handle().clone();
@@ -96,12 +117,15 @@ pub fn run() {
 
                 // Завершаем трекинг и отправляем метрики на фронтенд
                 let startup_metrics = tracker.finish().await;
-                
+
                 if let Err(e) = _app_handle.emit("startup_metrics", &startup_metrics) {
                     eprintln!("Failed to emit startup metrics: {}", e);
                 }
 
-                println!("✅ Приложение запущено за {} мс", startup_metrics.total_duration_ms);
+                println!(
+                    "✅ Приложение запущено за {} мс",
+                    startup_metrics.total_duration_ms
+                );
             });
 
             Ok(())

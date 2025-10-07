@@ -15,8 +15,6 @@
   import Sidebar from '$lib/components/Sidebar.svelte';
   import ChatHistory from '$lib/components/ChatHistory.svelte';
   import GGUFUploadArea from '$lib/components/GGUFUploadArea.svelte';
-  import HeaderSearch from '$lib/components/HeaderSearch.svelte';
-  import { triggerHeaderSearch } from '$lib/stores/search';
   import { ensureGlobalChatStream } from '$lib/chat/global-stream';
   import Chat from '$lib/chat/Chat.svelte';
   import { showChatHistory } from '$lib/stores/sidebar';
@@ -26,7 +24,6 @@
   // Импортируем все страницы для постоянного монтирования
   import ApiPage from './api/+page.svelte';
   import ModelsPage from './models/+page.svelte';
-  import SearchPage from './search/+page.svelte';
   import PerformancePage from './performance/+page.svelte';
   import SettingsPage from './settings/+page.svelte';
 
@@ -37,18 +34,10 @@
     $page.url.pathname === '/' || ($page.url.pathname === '/api' && experimentalFeatures.enabled),
   );
 
-  // Определяем, должен ли отображаться HeaderSearch
-  let shouldShowHeaderSearch = $derived($page.url.pathname === '/search');
-
-  // Обработчик поиска из хедера
-  function handleHeaderSearch(event: CustomEvent<{ query: string }>) {
-    triggerHeaderSearch(event.detail.query);
-  }
-
   // Redirect to home if trying to access experimental pages when experimental features are disabled
   $effect(() => {
     if (experimentalFeatures.initialized && !experimentalFeatures.enabled) {
-      const experimentalPaths = ['/api', '/models', '/search', '/performance'];
+      const experimentalPaths = ['/api', '/models', '/performance'];
       if (experimentalPaths.includes($page.url.pathname)) {
         goto('/');
       }
@@ -162,11 +151,6 @@
         <div class="gguf-host" class:hidden={!shouldShowGGUFUploadArea}>
           <GGUFUploadArea />
         </div>
-
-        <!-- Поиск показывается только на вкладке поиска -->
-        {#if shouldShowHeaderSearch}
-          <HeaderSearch on:search={handleHeaderSearch} />
-        {/if}
       </div>
       <div class="window-controls">
         <button type="button" class="win-btn" title="Свернуть" onclick={() => appWindow.minimize()}>
@@ -214,9 +198,6 @@
           </div>
           <div class="page-container" class:active={$page.url.pathname === '/models'}>
             <ModelsPage />
-          </div>
-          <div class="page-container" class:active={$page.url.pathname === '/search'}>
-            <SearchPage />
           </div>
           <div class="page-container" class:active={$page.url.pathname === '/performance'}>
             <PerformancePage />
@@ -268,7 +249,7 @@
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    cursor: pointer;
+    cursor: default;
     background: transparent !important;
     border: none !important;
     padding: 4px 8px;

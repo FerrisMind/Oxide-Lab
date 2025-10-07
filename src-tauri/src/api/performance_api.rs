@@ -1,5 +1,5 @@
 // API команды для мониторинга производительности
-use crate::core::performance::{PerformanceMetric, StartupMetrics};
+use crate::core::performance::{PerformanceMetric, StartupMetrics, SystemUsage};
 use crate::core::state::SharedState;
 use crate::models::common::model::ModelBackend;
 
@@ -67,4 +67,17 @@ pub async fn get_startup_metrics(
     };
     let metrics = monitor.get_startup_metrics().await;
     Ok(metrics)
+}
+
+/// Получить текущее использование системных ресурсов (CPU, GPU, память)
+#[tauri::command]
+pub async fn get_system_usage(
+    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+) -> Result<SystemUsage, String> {
+    let monitor = {
+        let guard = state.lock().map_err(|e| e.to_string())?;
+        guard.performance_monitor.clone()
+    };
+    let usage = monitor.get_system_usage().await;
+    Ok(usage)
 }

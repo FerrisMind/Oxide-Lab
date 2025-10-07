@@ -55,7 +55,7 @@
     "highlight.js": "^11.11.1",
     "marked": "^16.1.2",
     "marked-highlight": "^2.2.2",
-    "phosphor-svelte": "^2.0.1",
+    "phosphor-svelte": "^3.0.1",
     "prismjs": "^1.29.0"
   },
   "devDependencies": {

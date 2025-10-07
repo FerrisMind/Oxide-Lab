@@ -15,7 +15,7 @@
 
 // Example usage
 console.log(fibonacci(10)); // 55`,
-    
+
     python: `def fibonacci(n):
     if n <= 1:
         return n
@@ -23,7 +23,7 @@ console.log(fibonacci(10)); // 55`,
 
 # Example usage
 print(fibonacci(10))  # 55`,
-    
+
     typescript: `interface User {
   id: number;
   name: string;
@@ -39,7 +39,7 @@ function createUser(name: string, email: string): User {
 }
 
 const user = createUser("John Doe", "john@example.com");`,
-    
+
     html: `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,18 +51,18 @@ const user = createUser("John Doe", "john@example.com");`,
     <h1>Hello, World!</h1>
     <p>This is a sample HTML page.</p>
 </body>
-</html>`
+</html>`,
   };
 
   function startStreaming() {
     if (isStreaming) return;
-    
+
     isStreaming = true;
     code = '';
-    
+
     const targetCode = sampleCodes[language as keyof typeof sampleCodes] || sampleCodes.javascript;
     let currentIndex = 0;
-    
+
     streamingInterval = setInterval(() => {
       if (currentIndex < targetCode.length) {
         code += targetCode[currentIndex];
@@ -112,7 +112,7 @@ const user = createUser("John Doe", "john@example.com");`,
 
 <div class="demo-container">
   <h2>StreamingCodeBlock Demo</h2>
-  
+
   <div class="controls">
     <div class="control-group">
       <label for="language-select">Language:</label>
@@ -123,17 +123,11 @@ const user = createUser("John Doe", "john@example.com");`,
         <option value="html">HTML</option>
       </select>
     </div>
-    
+
     <div class="control-group">
-      <button on:click={startStreaming} disabled={isStreaming}>
-        Start Streaming
-      </button>
-      <button on:click={stopStreaming} disabled={!isStreaming}>
-        Stop Streaming
-      </button>
-      <button on:click={resetDemo}>
-        Reset
-      </button>
+      <button on:click={startStreaming} disabled={isStreaming}> Start Streaming </button>
+      <button on:click={stopStreaming} disabled={!isStreaming}> Stop Streaming </button>
+      <button on:click={resetDemo}> Reset </button>
     </div>
   </div>
 
@@ -166,7 +160,10 @@ const user = createUser("John Doe", "john@example.com");`,
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
   }
 
   .controls {
@@ -202,7 +199,7 @@ const user = createUser("John Doe", "john@example.com");`,
   }
 
   .control-group button {
-    cursor: pointer;
+    cursor: default;
     background: var(--accent-color, #007acc);
     color: white;
     border-color: var(--accent-color, #007acc);

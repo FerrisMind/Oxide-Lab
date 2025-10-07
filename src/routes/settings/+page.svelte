@@ -389,7 +389,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    cursor: pointer;
+    cursor: default;
     position: relative;
   }
 

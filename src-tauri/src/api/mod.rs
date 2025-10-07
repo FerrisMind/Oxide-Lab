@@ -8,26 +8,26 @@ use crate::{log_load, log_template};
 use candle::quantized::gguf_file;
 use candle::Device;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
-use std::fs::{File, create_dir_all};
+use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
+use std::path::Path;
 use tauri::Manager;
 
 // Import our new modules
 mod model_loading;
 use model_loading::{gguf, hub_gguf, safetensors};
 mod device;
-mod template;
 pub mod performance_api;
-pub use performance_api::{get_performance_metrics, get_average_duration, get_memory_usage, clear_performance_metrics};
+mod template;
+pub use performance_api::{
+    clear_performance_metrics, get_average_duration, get_memory_usage, get_performance_metrics,
+    get_startup_metrics, get_system_usage,
+};
+pub mod download_manager;
 pub mod local_models;
 pub use local_models::{
-    delete_local_model,
-    download_hf_model_file,
-    parse_gguf_metadata,
-    scan_local_models_folder,
-    scan_models_folder,
-    search_huggingface_gguf,
+    delete_local_model, download_hf_model_file, get_model_readme, parse_gguf_metadata,
+    scan_local_models_folder, scan_models_folder, search_huggingface_gguf,
 };
 
 // Модальная индикация удалена: проект реализует единую обработку вложений независимо от модели.
@@ -455,7 +455,10 @@ pub fn get_experimental_features_enabled(app: tauri::AppHandle) -> Result<bool, 
 }
 
 #[tauri::command]
-pub fn set_experimental_features_enabled(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+pub fn set_experimental_features_enabled(
+    app: tauri::AppHandle,
+    enabled: bool,
+) -> Result<(), String> {
     let dir = app
         .path()
         .app_local_data_dir()

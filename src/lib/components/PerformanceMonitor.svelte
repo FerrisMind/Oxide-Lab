@@ -1,7 +1,13 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { performanceService } from '$lib/services/performance-service';
-  import type { ModelLoadMetrics, InferenceMetrics, PerformanceSummary, StartupMetrics } from '$lib/types/performance';
+  import type {
+    ModelLoadMetrics,
+    InferenceMetrics,
+    PerformanceSummary,
+    StartupMetrics,
+    SystemUsage,
+  } from '$lib/types/performance';
   import StartupMetricsDisplay from './StartupMetricsDisplay.svelte';
   import ChartBar from 'phosphor-svelte/lib/ChartBar';
   import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
@@ -14,18 +20,28 @@
   import Clock from 'phosphor-svelte/lib/Clock';
   import TrendUp from 'phosphor-svelte/lib/TrendUp';
   import Warning from 'phosphor-svelte/lib/Warning';
+  import Cpu from 'phosphor-svelte/lib/Cpu';
+  import GraphicsCard from 'phosphor-svelte/lib/GraphicsCard';
 
   let summary: PerformanceSummary | null = null;
+  let systemUsage: SystemUsage | null = null;
   let loading = false;
   let error: string | null = null;
-  let autoRefresh = false;
+  let autoRefresh = true; // Включено по умолчанию для постоянного мониторинга
   let refreshInterval: number | null = null;
 
   async function loadSummary() {
     loading = true;
     error = null;
     try {
-      summary = await performanceService.getPerformanceSummary();
+      // Загружаем данные параллельно для лучшей производительности
+      const [summaryData, systemUsageData] = await Promise.all([
+        performanceService.getPerformanceSummary(),
+        performanceService.getSystemUsage().catch(() => null), // Игнорируем ошибки системного мониторинга
+      ]);
+
+      summary = summaryData;
+      systemUsage = systemUsageData;
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load performance summary';
       console.error('Error loading performance summary:', e);
@@ -45,23 +61,38 @@
     }
   }
 
-  function toggleAutoRefresh() {
-    autoRefresh = !autoRefresh;
-    
-    if (autoRefresh) {
+  function startAutoRefresh() {
+    if (!autoRefresh && !refreshInterval) {
       refreshInterval = window.setInterval(() => {
         loadSummary();
-      }, 2000); // Обновление каждые 2 секунды
-    } else if (refreshInterval) {
+      }, 1000); // Обновление каждую секунду для реального времени
+    }
+  }
+
+  function stopAutoRefresh() {
+    if (refreshInterval) {
       clearInterval(refreshInterval);
       refreshInterval = null;
     }
   }
 
+  function toggleAutoRefresh() {
+    autoRefresh = !autoRefresh;
+
+    if (autoRefresh) {
+      startAutoRefresh();
+    } else {
+      stopAutoRefresh();
+    }
+  }
+
   onMount(async () => {
     await loadSummary();
-    
-    // Подписываемся на события метрик
+
+    // Автоматически включаем реальное время обновление
+    startAutoRefresh();
+
+    // Подписываемся на события метрик для дополнительного обновления
     await performanceService.setupEventListeners(
       (modelLoadMetrics: ModelLoadMetrics) => {
         console.log('Received model load metrics:', modelLoadMetrics);
@@ -74,7 +105,7 @@
       (startupMetrics: StartupMetrics) => {
         console.log('✅ Received startup metrics:', startupMetrics);
         loadSummary();
-      }
+      },
     );
   });
 
@@ -97,18 +128,10 @@
         <ArrowClockwise size={16} class={loading ? 'animate-spin' : ''} />
         Обновить
       </button>
-      <button 
-        on:click={toggleAutoRefresh} 
-        class:active={autoRefresh}
-        class="btn-auto-refresh"
-      >
-        {#if autoRefresh}
-          <Pause size={16} />
-        {:else}
-          <Play size={16} />
-        {/if}
-        Авто
-      </button>
+      <div class="status-indicator" class:active={autoRefresh}>
+        <div class="pulse-dot"></div>
+        <span>Реальное время</span>
+      </div>
       <button on:click={clearMetrics} class="btn-clear">
         <Trash size={16} />
         Очистить
@@ -123,10 +146,49 @@
     </div>
   {/if}
 
-  {#if summary}
+  {#if summary || systemUsage}
     <div class="metrics-grid">
+      <!-- System Resources -->
+      {#if systemUsage}
+        <!-- CPU Usage -->
+        <div class="metric-card">
+          <div class="metric-icon">
+            <Cpu size={32} />
+          </div>
+          <div class="metric-content">
+            <div class="metric-label">Нагрузка CPU</div>
+            <div class="metric-value">
+              {systemUsage.cpu_usage_percent.toFixed(1)}%
+            </div>
+            <div class="metric-sub">Системное использование процессора</div>
+          </div>
+        </div>
+
+        <!-- GPU Usage (если доступно) -->
+        {#if systemUsage.gpu_usage_percent !== undefined && systemUsage.gpu_usage_percent !== null}
+          <div class="metric-card">
+            <div class="metric-icon">
+              <GraphicsCard size={32} />
+            </div>
+            <div class="metric-content">
+              <div class="metric-label">Нагрузка GPU</div>
+              <div class="metric-value">
+                {systemUsage.gpu_usage_percent.toFixed(1)}%
+              </div>
+              <div class="metric-sub">
+                {#if systemUsage.gpu_memory_mb !== undefined && systemUsage.gpu_memory_mb !== null}
+                  Память: {performanceService.formatMemory(systemUsage.gpu_memory_mb)}
+                {:else}
+                  Графический процессор
+                {/if}
+              </div>
+            </div>
+          </div>
+        {/if}
+      {/if}
+
       <!-- Startup Metrics -->
-      {#if summary.startup}
+      {#if summary && summary.startup}
         <div class="metric-card full-width startup-card">
           <div class="metric-content">
             <StartupMetricsDisplay />
@@ -135,20 +197,22 @@
       {/if}
 
       <!-- Текущая память -->
-      <div class="metric-card">
-        <div class="metric-icon">
-          <Memory size={32} />
-        </div>
-        <div class="metric-content">
-          <div class="metric-label">Использование памяти</div>
-          <div class="metric-value">
-            {performanceService.formatMemory(summary.current_memory_mb)}
+      {#if summary}
+        <div class="metric-card">
+          <div class="metric-icon">
+            <Memory size={32} />
+          </div>
+          <div class="metric-content">
+            <div class="metric-label">Использование памяти</div>
+            <div class="metric-value">
+              {performanceService.formatMemory(summary.current_memory_mb)}
+            </div>
           </div>
         </div>
-      </div>
+      {/if}
 
       <!-- Последняя загрузка модели -->
-      {#if summary.last_model_load}
+      {#if summary && summary.last_model_load}
         <div class="metric-card">
           <div class="metric-icon">
             <Package size={32} />
@@ -160,7 +224,7 @@
             </div>
             <div class="metric-sub">
               Размер: {performanceService.formatMemory(summary.last_model_load.model_size_mb)}
-              <br>
+              <br />
               Δ памяти: {performanceService.formatMemory(summary.last_model_load.memory_delta_mb)}
             </div>
           </div>
@@ -188,7 +252,7 @@
       {/if}
 
       <!-- Последний inference -->
-      {#if summary.last_inference}
+      {#if summary && summary.last_inference}
         <div class="metric-card">
           <div class="metric-icon">
             <Lightning size={32} />
@@ -214,16 +278,20 @@
               {performanceService.formatDuration(summary.last_inference.total_duration_ms)}
             </div>
             <div class="metric-sub">
-              Prefill: {performanceService.formatDuration(summary.last_inference.prefill_duration_ms)}
-              <br>
-              Generation: {performanceService.formatDuration(summary.last_inference.generation_duration_ms)}
+              Prefill: {performanceService.formatDuration(
+                summary.last_inference.prefill_duration_ms,
+              )}
+              <br />
+              Generation: {performanceService.formatDuration(
+                summary.last_inference.generation_duration_ms,
+              )}
             </div>
           </div>
         </div>
       {/if}
 
       <!-- Общая статистика -->
-      {#if summary.total_generated_tokens > 0}
+      {#if summary && summary.total_generated_tokens > 0}
         <div class="metric-card">
           <div class="metric-icon">
             <TrendUp size={32} />
@@ -282,7 +350,7 @@
     background: var(--bg-tertiary, #2a2a2a);
     color: var(--text-primary, #e0e0e0);
     border-radius: 4px;
-    cursor: pointer;
+    cursor: default;
     font-size: 0.85rem;
     transition: all 0.2s;
     display: flex;
@@ -300,13 +368,51 @@
     cursor: not-allowed;
   }
 
-  button.active {
-    background: var(--accent-color, #4a9eff);
-    border-color: var(--accent-color, #4a9eff);
-  }
-
   .btn-refresh {
     font-size: 1rem;
+  }
+
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    background: var(--bg-tertiary, #252525);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 4px;
+    color: var(--text-secondary, #888);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .status-indicator.active {
+    color: var(--accent-color, #4a9eff);
+    border-color: var(--accent-color, #4a9eff);
+    background: rgba(74, 158, 255, 0.05);
+  }
+
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-secondary, #888);
+    animation: pulse 2s infinite;
+  }
+
+  .status-indicator.active .pulse-dot {
+    background: var(--accent-color, #4a9eff);
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.2);
+    }
   }
 
   .error {
@@ -351,7 +457,11 @@
   }
 
   .startup-card {
-    background: linear-gradient(135deg, var(--bg-tertiary, #252525) 0%, rgba(74, 158, 255, 0.05) 100%);
+    background: linear-gradient(
+      135deg,
+      var(--bg-tertiary, #252525) 0%,
+      rgba(74, 158, 255, 0.05) 100%
+    );
   }
 
   .metric-icon {

@@ -5,7 +5,6 @@
   import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
   import hljs from 'highlight.js/lib/common';
 
-
   export let code: string = '';
   export let language: string = '';
   export let isStreaming: boolean = false;
@@ -19,7 +18,7 @@
   export const readonly: boolean = true;
 
   const dispatch = createEventDispatcher();
-  
+
   let container: HTMLElement;
   let preEl: HTMLPreElement | null = null;
   let codeEl: HTMLElement | null = null;
@@ -124,7 +123,8 @@
     if (!container) return;
     if (!preEl || !codeEl || !container.contains(codeEl)) {
       const className = 'hljs language-' + activeLanguage();
-      container.innerHTML = '<pre class="' + className + '"><code class="' + className + '"></code></pre>';
+      container.innerHTML =
+        '<pre class="' + className + '"><code class="' + className + '"></code></pre>';
       preEl = container.querySelector('pre');
       codeEl = container.querySelector('code');
     }
@@ -168,7 +168,8 @@
       preEl.style.fontSize = '0.85rem';
       preEl.style.background = 'transparent';
       preEl.style.color = 'var(--code-fg, var(--text-primary))';
-      preEl.style.fontFamily = 'var(--font-monospace, ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace)';
+      preEl.style.fontFamily =
+        'var(--font-monospace, ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace)';
     }
 
     if (codeEl) {
@@ -178,8 +179,12 @@
 
     if (scrollIntoView && preEl) {
       requestAnimationFrame(() => {
-        try { preEl!.scrollTop = preEl!.scrollHeight; } catch {}
-        try { container.scrollIntoView({ block: 'end', behavior: 'auto' }); } catch {}
+        try {
+          preEl!.scrollTop = preEl!.scrollHeight;
+        } catch {}
+        try {
+          container.scrollIntoView({ block: 'end', behavior: 'auto' });
+        } catch {}
       });
     }
   }
@@ -217,10 +222,7 @@
   }
 
   function escapeHtml(value: string): string {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   function handleProgressBarClick() {
@@ -234,7 +236,7 @@
     if (streamingTimeout) {
       clearTimeout(streamingTimeout);
     }
-    
+
     // Auto-complete streaming after 30 seconds of inactivity
     streamingTimeout = setTimeout(() => {
       if (isStreaming) {
@@ -243,7 +245,9 @@
     }, 30000);
   }
 
-  onMount(() => { createEditor(); });
+  onMount(() => {
+    createEditor();
+  });
 
   function _handleCopyFromProgressBar() {
     try {
@@ -280,14 +284,19 @@
     if (isExpanded) isExpanded = false;
     autoExpandedDone = false;
     // Cancel any pending auto-collapse/expand timers
-    if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; }
+    if (collapseTimer) {
+      clearTimeout(collapseTimer);
+      collapseTimer = null;
+    }
     handleStreamingTimeout();
     // Coalesced incremental updates during streaming to avoid UI jank
     scheduleStreamingUpdate(code);
     // Keep block in view (stick to bottom of viewport)
     if (container) {
       requestAnimationFrame(() => {
-        try { container.scrollIntoView({ block: 'end', behavior: 'auto' }); } catch {}
+        try {
+          container.scrollIntoView({ block: 'end', behavior: 'auto' });
+        } catch {}
       });
     }
     wasStreaming = true;
@@ -302,7 +311,9 @@
     // If we just finished a streaming session, auto-expand once and then don't auto-toggle anymore
     if (wasStreaming && prevIsStreaming && !isStreaming) {
       // Small delay to avoid races with the final chunk
-      if (collapseTimer) { clearTimeout(collapseTimer); }
+      if (collapseTimer) {
+        clearTimeout(collapseTimer);
+      }
       collapseTimer = setTimeout(() => {
         if (!isStreaming && !autoExpandedDone) {
           isExpanded = true;
@@ -329,7 +340,9 @@
   // No external expand/collapse controls; header click toggles collapsed state
 
   // React to other prop changes: re-render when code changes and not streaming
-  $: if (container && !isStreaming && code !== undefined) { updateEditorFull(code); }
+  $: if (container && !isStreaming && code !== undefined) {
+    updateEditorFull(code);
+  }
   // Recreate on theme change (rare) to keep header/widget layout intact
   $: if (container && theme) {
     // Re-render to pick new theme
@@ -353,7 +366,7 @@
         createEditor();
       };
       mediaQuery.addEventListener('change', handleChange);
-      
+
       return () => {
         mediaQuery.removeEventListener('change', handleChange);
       };
@@ -362,9 +375,23 @@
 </script>
 
 <div class="streaming-code-block" class:streaming={isStreaming} class:collapsed={!isExpanded}>
-  <div class="streaming-code-header" role="button" aria-label="Code header" aria-expanded={isExpanded} aria-disabled={isStreaming} tabindex={isStreaming ? -1 : 0} on:click={handleProgressBarClick} on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleProgressBarClick()}>
+  <div
+    class="streaming-code-header"
+    role="button"
+    aria-label="Code header"
+    aria-expanded={isExpanded}
+    aria-disabled={isStreaming}
+    tabindex={isStreaming ? -1 : 0}
+    on:click={handleProgressBarClick}
+    on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleProgressBarClick()}
+  >
     <div class="left">
-      <span class="header-icon" aria-hidden="true" class:visible={headerIconState !== 'hidden'} class:spinner={headerIconState === 'spinner'}>
+      <span
+        class="header-icon"
+        aria-hidden="true"
+        class:visible={headerIconState !== 'hidden'}
+        class:spinner={headerIconState === 'spinner'}
+      >
         {#if headerIconState === 'spinner'}
           <CircleNotch size={14} weight="bold" class="spinner-icon" />
         {:else if headerIconState === 'check'}
@@ -374,7 +401,13 @@
       <span class="status">{language || 'text'}</span>
     </div>
     <div class="right">
-      <button class="copy-btn" type="button" aria-label="Копировать" title="Копировать" on:click|stopPropagation={copyCurrentCode}>
+      <button
+        class="copy-btn"
+        type="button"
+        aria-label="Копировать"
+        title="Копировать"
+        on:click|stopPropagation={copyCurrentCode}
+      >
         <CopySimple size={16} />
       </button>
     </div>
@@ -419,21 +452,55 @@
     border: 1px solid var(--border-color);
     border-bottom: none;
     border-radius: 8px 8px 0 0;
-    cursor: pointer;
+    cursor: default;
   }
-  .streaming-code-header .left { display: flex; align-items: center; gap: 8px; }
-  .streaming-code-header .header-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; opacity: 0; transition: opacity 200ms linear, transform 200ms ease; }
-  .streaming-code-header .header-icon.visible { opacity: 1; transform: translateY(0); }
-  .streaming-code-header .header-icon :global(svg) { color: var(--accent-color); width: 18px; height: 18px; display: block; transform-box: fill-box; }
-  :global(.header-icon.spinner) { animation: cm-spinner-rotate 1s linear infinite; }
-  :global(.header-icon) :global(.spinner-icon) { animation: cm-spinner-rotate 1s linear infinite; }
-  :global(.header-icon) :global(.spinner-icon) { transform-origin: center center; }
-  :global(.header-icon) :global(.check) { transform: scale(0.95); }
-  .streaming-code-header[aria-disabled="true"] {
+  .streaming-code-header .left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .streaming-code-header .header-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    opacity: 0;
+    transition:
+      opacity 200ms linear,
+      transform 200ms ease;
+  }
+  .streaming-code-header .header-icon.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .streaming-code-header .header-icon :global(svg) {
+    color: var(--accent-color);
+    width: 18px;
+    height: 18px;
+    display: block;
+    transform-box: fill-box;
+  }
+  :global(.header-icon.spinner) {
+    animation: cm-spinner-rotate 1s linear infinite;
+  }
+  :global(.header-icon) :global(.spinner-icon) {
+    animation: cm-spinner-rotate 1s linear infinite;
+  }
+  :global(.header-icon) :global(.spinner-icon) {
+    transform-origin: center center;
+  }
+  :global(.header-icon) :global(.check) {
+    transform: scale(0.95);
+  }
+  .streaming-code-header[aria-disabled='true'] {
     opacity: 0.75;
     cursor: not-allowed;
   }
-  .streaming-code-header .status { font-size: 12px; color: var(--muted); }
+  .streaming-code-header .status {
+    font-size: 12px;
+    color: var(--muted);
+  }
   .streaming-code-header .copy-btn {
     display: grid;
     place-items: center;
@@ -448,7 +515,9 @@
   }
 
   /* Collapse styles */
-  .streaming-code-block.collapsed .code-wrapper { display: none; }
+  .streaming-code-block.collapsed .code-wrapper {
+    display: none;
+  }
   .streaming-code-block.collapsed .streaming-code-header {
     border-bottom: 1px solid var(--border-color);
     border-radius: 8px;
@@ -463,7 +532,8 @@
   }
 
   @keyframes cm-spinner-rotate {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
-
 </style>

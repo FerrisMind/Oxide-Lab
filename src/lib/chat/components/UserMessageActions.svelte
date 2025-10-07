@@ -10,7 +10,7 @@
     try {
       await navigator.clipboard.writeText(messageContent);
       copied = true;
-      
+
       // Возвращаем иконку обратно через 1.5 секунды
       setTimeout(() => {
         copied = false;
@@ -22,11 +22,7 @@
 </script>
 
 <div class="user-message-actions">
-  <button 
-    class="copy-button" 
-    onclick={copyMessage}
-    title="Копировать сообщение"
-  >
+  <button class="copy-button" onclick={copyMessage} title="Копировать сообщение">
     {#if copied}
       <Check size={18} weight="regular" />
     {:else}
@@ -34,7 +30,6 @@
     {/if}
   </button>
 </div>
-
 
 <style>
   .user-message-actions {
@@ -54,7 +49,7 @@
   .copy-button {
     background: none;
     border: none;
-    cursor: pointer;
+    cursor: default;
     padding: 4px;
     border-radius: 5px;
     display: flex;

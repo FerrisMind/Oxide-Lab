@@ -175,3 +175,47 @@ export interface DownloadProgressPayload {
   total: number;
   stage: DownloadStage;
 }
+
+export type DownloadStatus =
+  | 'queued'
+  | 'downloading'
+  | 'paused'
+  | 'completed'
+  | 'error'
+  | 'cancelled';
+
+export interface DownloadJob {
+  id: string;
+  repo_id: string;
+  filename: string;
+  download_url: string;
+  destination_dir: string;
+  total_bytes?: number;
+  downloaded_bytes: number;
+  status: DownloadStatus;
+  speed_bytes_per_sec?: number;
+  eta_seconds?: number;
+  started_at?: string;
+  updated_at?: string;
+  finished_at?: string;
+  error?: string;
+  sha256?: string;
+}
+
+export interface DownloadHistoryEntry {
+  id: string;
+  repo_id: string;
+  filename: string;
+  destination_path: string;
+  status: DownloadStatus;
+  total_bytes?: number;
+  downloaded_bytes: number;
+  finished_at: string;
+  error?: string;
+  sha256?: string;
+}
+
+export interface DownloadManagerSnapshot {
+  active: DownloadJob[];
+  history: DownloadHistoryEntry[];
+}
