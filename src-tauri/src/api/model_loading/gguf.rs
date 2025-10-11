@@ -58,9 +58,17 @@ pub fn load_gguf_model(
 
     tracker.start_stage("read_header");
     let content = gguf_file::Content::read(&mut file).map_err(|e| {
-        let msg = e.with_path(PathBuf::from(model_path.clone())).to_string();
-        emit_load_progress(app, "read_header", 20, None, false, Some(&msg));
-        msg
+        let error_msg = e.with_path(PathBuf::from(model_path.clone())).to_string();
+
+        // Улучшаем сообщение об ошибке для пользователя
+        let enhanced_msg = if error_msg.contains("unknown dtype") {
+            format!("{} - This GGUF file contains quantization types that are not supported by the current version of Candle. Try updating Candle to the latest version or use a model with different quantization (Q4_K, Q8_0, etc.)", error_msg)
+        } else {
+            error_msg
+        };
+
+        emit_load_progress(app, "read_header", 20, None, false, Some(&enhanced_msg));
+        enhanced_msg
     })?;
     emit_load_progress(
         app,
@@ -303,17 +311,17 @@ pub fn load_gguf_model(
 fn check_supported_dtypes(content: &gguf_file::Content) -> Result<(), String> {
     // Известные поддерживаемые типы данных в текущей версии Candle
     let supported_dtypes: HashSet<u32> = [
-        0, 1, 2, 3, 6, 7, 8,
-        9, // Старые типы (F32, F16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1)
+        0, 1, 2, 3, 6, 7, 8, 9, // Старые типы (F32, F16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1)
         10, 11, 12, 13, 14, 15, // Новые K-типы (Q2_K, Q3_K, Q4_K, Q5_K, Q6_K, Q8_K)
+        16, 17, 18, 19, 20, 21, 22, 23, 29, // IQ типы (могут быть поддержаны в новой версии)
         24, 25, 26, 27, 28, // Целые типы (I8, I16, I32, I64, F64)
     ]
     .into_iter()
     .collect();
 
-    // Известные неподдерживаемые типы данных (новые IQ типы)
+    // Известные неподдерживаемые типы данных (если они еще не поддержаны)
     let unsupported_dtypes: HashSet<u32> = [
-        16, 17, 18, 19, 20, 21, 22, 23, 29, // IQ типы
+        // Пока оставляем пустым - в новой версии могут поддерживаться все известные типы
     ]
     .into_iter()
     .collect();

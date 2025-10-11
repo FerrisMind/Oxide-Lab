@@ -167,21 +167,35 @@ impl PerformanceMonitor {
     pub async fn get_system_usage(&self) -> SystemUsage {
         let mut system = self.system.write().await;
 
-        // Обновляем информацию о CPU
+        // Обновляем информацию о системе
+        system.refresh_all();
+
+        // Для корректного измерения CPU: обновляем CPU usage
         system.refresh_cpu_usage();
 
         // Получаем среднее использование CPU по всем ядрам
-        let cpu_usage_percent = system.cpus().iter().map(|cpu| cpu.cpu_usage()).sum::<f32>()
-            / system.cpus().len() as f32;
+        let total_cpu_usage: f32 = system.cpus().iter().map(|cpu| cpu.cpu_usage()).sum();
+        let cpu_count = system.cpus().len() as f32;
+        let mut cpu_usage_percent = total_cpu_usage / cpu_count;
+
+        // Валидация CPU usage (sysinfo может возвращать некорректные значения)
+        if !(0.0..=100.0).contains(&cpu_usage_percent) {
+            cpu_usage_percent = 0.0; // Устанавливаем в 0, если значение некорректное
+        }
 
         // Получаем использование памяти
-        system.refresh_memory();
         let memory_usage_mb = system.used_memory() as f64 / 1024.0 / 1024.0;
 
-        // GPU информация (пока заглушка, так как sysinfo не поддерживает GPU напрямую)
-        // Для реального GPU мониторинга может потребоваться отдельная библиотека как nvml-wrapper
+        // GPU информация (sysinfo не поддерживает GPU напрямую)
+        // Для реального GPU мониторинга потребуется nvml-wrapper или аналог
         let gpu_usage_percent = None;
         let gpu_memory_mb = None;
+
+        // Логируем для отладки
+        println!(
+            "CPU usage: {:.2}%, Memory: {:.2} MB, CPUs: {}",
+            cpu_usage_percent, memory_usage_mb, cpu_count
+        );
 
         SystemUsage {
             cpu_usage_percent,

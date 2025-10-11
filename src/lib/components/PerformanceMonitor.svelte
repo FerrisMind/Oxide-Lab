@@ -35,13 +35,30 @@
     error = null;
     try {
       // Загружаем данные параллельно для лучшей производительности
-      const [summaryData, systemUsageData] = await Promise.all([
+      const [summaryData, systemUsageData] = await Promise.allSettled([
         performanceService.getPerformanceSummary(),
-        performanceService.getSystemUsage().catch(() => null), // Игнорируем ошибки системного мониторинга
+        performanceService.getSystemUsage(),
       ]);
 
-      summary = summaryData;
-      systemUsage = systemUsageData;
+      // Обрабатываем результаты
+      if (summaryData.status === 'fulfilled') {
+        summary = summaryData.value;
+      } else {
+        console.error('Failed to load performance summary:', summaryData.reason);
+      }
+
+      if (systemUsageData.status === 'fulfilled') {
+        systemUsage = systemUsageData.value;
+        console.log('System usage loaded:', systemUsage);
+      } else {
+        console.error('Failed to load system usage:', systemUsageData.reason);
+        systemUsage = null;
+      }
+
+      // Если оба запроса провалились, показываем ошибку
+      if (summaryData.status === 'rejected' && systemUsageData.status === 'rejected') {
+        error = 'Не удалось загрузить данные мониторинга производительности';
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load performance summary';
       console.error('Error loading performance summary:', e);

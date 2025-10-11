@@ -16,12 +16,14 @@
 - [What is this?](#-what-is-this)
 - [Who is this app for?](#-who-is-this-app-for)
 - [Key Features](#-key-features)
+- [Installation & Setup](#️-installation--setup)
 - [How to Start Using](#-how-to-start-using)
 - [Interface Features](#-interface-features)
 - [Privacy and Security](#-privacy-and-security)
 - [Tips and Recommendations](#-tips-and-recommendations)
 - [System Requirements and Limitations](#-system-requirements-and-limitations)
 - [Support the Project](#-support-the-project)
+- [Contributing](#-contributing)
 
 ---
 
@@ -63,6 +65,71 @@
 
 - Support for local Qwen3 models in GGUF format (other models — in plans)
 - Intelligent memory management
+
+---
+
+## 🛠️ Installation & Setup
+
+### Prerequisites
+
+Before installing Oxide Lab, ensure you have the following installed:
+
+- **Node.js** (version 18 or higher) - [Download](https://nodejs.org/)
+- **Rust** (latest stable) - [Install](https://rustup.rs/)
+- **Git** - [Download](https://git-scm.com/)
+
+#### For GPU Acceleration (Optional but Recommended)
+
+- **CUDA 12.0+** for NVIDIA GPUs (Windows/Linux)
+- **Metal** for Apple Silicon (macOS)
+
+### Installation Steps
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/FerrisMind/Oxide-Lab.git
+   cd Oxide-Lab
+   ```
+
+2. **Install dependencies:**
+
+   ```bash
+   npm install
+   ```
+
+3. **Run in development mode:**
+
+   ```bash
+   # For CPU-only mode
+   npm run tauri:dev:cpu
+
+   # For CUDA GPU mode (if CUDA is available)
+   npm run tauri:dev:cuda
+   ```
+
+4. **Build for production:**
+
+   ```bash
+   # CPU-only build
+   npm run tauri:build:cpu
+
+   # CUDA build
+   npm run tauri:build:cuda
+   ```
+
+### System Requirements
+
+- **OS:** Windows 10/11, Linux, macOS
+- **RAM:** Minimum 4GB, Recommended 8GB+
+- **Storage:** 500MB for application + model size
+- **GPU:** Optional, but recommended for better performance
+
+### Troubleshooting
+
+- If you encounter build issues, ensure Rust and Node.js are properly installed
+- For GPU support, verify CUDA/Metal installation
+- Check the [Issues](https://github.com/FerrisMind/Oxide-Lab/issues) page for common problems
 
 ---
 
@@ -180,6 +247,25 @@ If Oxide Lab has been useful to you:
 - 🐛 Report bugs
 - 💡 Suggest new features
 - 🤝 Share with friends
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for detailed information on:
+
+- Development setup
+- Code style guidelines
+- Testing requirements
+- Pull request process
+
+### Ways to Contribute
+
+- 🐛 **Report bugs** - Open an issue with detailed description
+- 💡 **Suggest features** - Share your ideas for improvements
+- 🔧 **Code contributions** - Fix bugs or add new features
+- 📖 **Documentation** - Improve docs or add tutorials
+- 🧪 **Testing** - Add tests or help with testing
 
 ---
 
