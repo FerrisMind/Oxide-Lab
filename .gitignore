@@ -37,6 +37,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.github/copilot-instructions.md
 
 # Env files (keep examples)
 .env
