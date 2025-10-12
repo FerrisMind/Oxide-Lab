@@ -23,6 +23,7 @@
 - [Tips and Recommendations](#-tips-and-recommendations)
 - [System Requirements and Limitations](#-system-requirements-and-limitations)
 - [Support the Project](#-support-the-project)
+- [Acknowledgments](#-acknowledgments)
 
 ---
 
@@ -245,6 +246,17 @@ If Oxide Lab has been useful to you:
 - 🐛 Report bugs
 - 💡 Suggest new features
 - 🤝 Share with friends
+
+---
+
+## 🙏 Acknowledgments
+
+Oxide Lab is built with the help of amazing open-source technologies:
+
+- **[Rust](https://www.rust-lang.org/)** - Systems programming language that guarantees memory safety and performance
+- **[Tauri](https://tauri.app/)** - Framework for building fast and secure desktop applications
+- **[Candle](https://github.com/huggingface/candle)** - Minimalist ML framework for Rust
+- **[Phosphor Icons](https://phosphoricons.com/)** - Beautiful and consistent icon set
 
 ---
 
