@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte/svelte5';
 import { describe, it, expect } from 'vitest';
 import Tabs from '../lib/components/ui/Tabs.svelte';
 
@@ -10,11 +10,11 @@ describe('Tabs component', () => {
   ];
 
   it('renders tabs correctly', () => {
-    render(Tabs, {
+    render(Tabs as any, {
       props: {
         tabs: mockTabs,
         activeTab: 'tab1',
-        children: () => '<div>Tab content</div>',
+        children: () => {},
       },
     });
 
@@ -25,11 +25,11 @@ describe('Tabs component', () => {
   });
 
   it('shows active tab with correct styling', () => {
-    render(Tabs, {
+    render(Tabs as any, {
       props: {
         tabs: mockTabs,
         activeTab: 'tab2',
-        children: () => '<div>Tab content</div>',
+        children: () => {},
       },
     });
 
@@ -38,30 +38,33 @@ describe('Tabs component', () => {
   });
 
   it('changes active tab on click', async () => {
-    const mockActiveTab = { value: 'tab1' };
+    const { userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
 
-    render(Tabs, {
+    let activeTabValue = 'tab1';
+
+    render(Tabs as any, {
       props: {
         tabs: mockTabs,
-        activeTab: mockActiveTab.value,
-        children: () => '<div>Tab content</div>',
+        activeTab: activeTabValue,
+        children: () => {},
       },
     });
 
     const tab2 = screen.getByText('Tab 2');
-    await fireEvent.click(tab2);
+    await user.click(tab2);
 
-    // Note: In a real implementation, you'd need to use proper binding
-    // This is a simplified test to demonstrate the concept
+    // Note: Since activeTab is not bound in this test setup,
+    // we just verify the tab is present and clickable
     expect(tab2).toBeInTheDocument();
   });
 
   it('renders tablist with proper accessibility attributes', () => {
-    render(Tabs, {
+    render(Tabs as any, {
       props: {
         tabs: mockTabs,
         activeTab: 'tab1',
-        children: () => '<div>Tab content</div>',
+        children: () => {},
       },
     });
 
@@ -71,11 +74,11 @@ describe('Tabs component', () => {
   });
 
   it('renders tab buttons with proper accessibility attributes', () => {
-    render(Tabs, {
+    render(Tabs as any, {
       props: {
         tabs: mockTabs,
         activeTab: 'tab1',
-        children: () => '<div>Tab content</div>',
+        children: () => {},
       },
     });
 

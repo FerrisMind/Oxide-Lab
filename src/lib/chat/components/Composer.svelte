@@ -9,6 +9,7 @@
   import ClockCounterClockwise from 'phosphor-svelte/lib/ClockCounterClockwise';
   import File from 'phosphor-svelte/lib/File';
   import X from 'phosphor-svelte/lib/X';
+  import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
 
   type AttachDetail = {
     filename: string;
@@ -329,30 +330,32 @@
         {/if}
       </div>
       <div class="composer__controls composer__controls--right">
-        <button
-          type="button"
-          class="composer__button composer__button--icon"
-          on:click={triggerAttach}
-          disabled={busy || !isLoaded}
-          aria-label="Прикрепить файл"
-          draggable="false"
-        >
-          <Paperclip size={16} weight="bold" />
-        </button>
-        <button
-          type="button"
-          class="composer__button composer__button--icon"
-          on:click={triggerVoiceInput}
-          disabled={busy || !isLoaded}
-          aria-label={isRecording ? 'Остановить запись' : 'Начать запись голоса'}
-          draggable="false"
-        >
-          {#if isRecording}
-            <Stop size={16} weight="bold" />
-          {:else}
-            <Microphone size={16} weight="bold" />
-          {/if}
-        </button>
+        {#if experimentalFeatures.enabled}
+          <button
+            type="button"
+            class="composer__button composer__button--icon"
+            on:click={triggerAttach}
+            disabled={busy || !isLoaded}
+            aria-label="Прикрепить файл"
+            draggable="false"
+          >
+            <Paperclip size={16} weight="bold" />
+          </button>
+          <button
+            type="button"
+            class="composer__button composer__button--icon"
+            on:click={triggerVoiceInput}
+            disabled={busy || !isLoaded}
+            aria-label={isRecording ? 'Остановить запись' : 'Начать запись голоса'}
+            draggable="false"
+          >
+            {#if isRecording}
+              <Stop size={16} weight="bold" />
+            {:else}
+              <Microphone size={16} weight="bold" />
+            {/if}
+          </button>
+        {/if}
         <button
           type="button"
           class="composer__button composer__button--primary"
