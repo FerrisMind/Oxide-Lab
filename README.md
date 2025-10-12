@@ -23,7 +23,6 @@
 - [Tips and Recommendations](#-tips-and-recommendations)
 - [System Requirements and Limitations](#-system-requirements-and-limitations)
 - [Support the Project](#-support-the-project)
-- [Contributing](#-contributing)
 
 ---
 
@@ -81,7 +80,6 @@ Before installing Oxide Lab, ensure you have the following installed:
 #### For GPU Acceleration (Optional but Recommended)
 
 - **CUDA 12.0+** for NVIDIA GPUs (Windows/Linux)
-- **Metal** for Apple Silicon (macOS)
 
 ### Installation Steps
 
@@ -128,7 +126,7 @@ Before installing Oxide Lab, ensure you have the following installed:
 ### Troubleshooting
 
 - If you encounter build issues, ensure Rust and Node.js are properly installed
-- For GPU support, verify CUDA/Metal installation
+- For GPU support, verify CUDA installation
 - Check the [Issues](https://github.com/FerrisMind/Oxide-Lab/issues) page for common problems
 
 ---
@@ -139,7 +137,7 @@ Before installing Oxide Lab, ensure you have the following installed:
 
 Download a model in `.gguf` format and `tokenizer.json` file:
 
-- **Recommended models:** Qwen3 7B (and other Qwen3 variants in GGUF)
+- **Recommended models:** Qwen3 4B (and other Qwen3 variants in GGUF)
 - **Where to download:** [Hugging Face](https://huggingface.co/collections/Qwen/qwen3-67dd247413f0e2e4f653967f), official model repositories
 
 ### 2️⃣ **Load into Application**
@@ -247,25 +245,6 @@ If Oxide Lab has been useful to you:
 - 🐛 Report bugs
 - 💡 Suggest new features
 - 🤝 Share with friends
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for detailed information on:
-
-- Development setup
-- Code style guidelines
-- Testing requirements
-- Pull request process
-
-### Ways to Contribute
-
-- 🐛 **Report bugs** - Open an issue with detailed description
-- 💡 **Suggest features** - Share your ideas for improvements
-- 🔧 **Code contributions** - Fix bugs or add new features
-- 📖 **Documentation** - Improve docs or add tutorials
-- 🧪 **Testing** - Add tests or help with testing
 
 ---
 
