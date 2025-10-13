@@ -41,8 +41,10 @@ mod tests {
         // Test validation with empty list
         let result = weights::validate_safetensors_files(&[]);
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("No safetensors paths provided"));
+        assert!(
+            result
+                .unwrap_err()
+                .contains("No safetensors paths provided")
+        );
     }
 }

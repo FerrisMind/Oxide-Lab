@@ -294,17 +294,28 @@
     </div>
     <div class="composer__row composer__row--controls">
       <div class="composer__controls composer__controls--left">
-        <button
-          type="button"
-          class="composer__button composer__button--icon"
-          class:composer__button--settings-active={isChatHistoryVisible}
-          on:click={triggerChatHistory}
-          disabled={false}
-          aria-label={isChatHistoryVisible ? 'Скрыть историю чатов' : 'Показать историю чатов'}
-          draggable="false"
-        >
-          <ClockCounterClockwise size={16} weight="bold" />
-        </button>
+        {#if experimentalFeatures.initialized && experimentalFeatures.enabled}
+          <button
+            type="button"
+            class="composer__button composer__button--icon"
+            class:composer__button--settings-active={isChatHistoryVisible}
+            on:click={triggerChatHistory}
+            disabled={false}
+            aria-label={isChatHistoryVisible ? 'Скрыть историю чатов' : 'Показать историю чатов'}
+            draggable="false"
+          >
+            <ClockCounterClockwise size={16} weight="bold" />
+          </button>
+        {:else}
+          <!-- Debug info for history button -->
+          <div
+            style="position: absolute; top: -30px; left: 0; font-size: 10px; color: red; background: rgba(255,255,255,0.9); padding: 2px;"
+          >
+            Hist: {experimentalFeatures.enabled ? 'ON' : 'OFF'} | Init: {experimentalFeatures.initialized
+              ? 'YES'
+              : 'NO'}
+          </div>
+        {/if}
         <button
           type="button"
           class="composer__button composer__button--icon"
@@ -330,7 +341,7 @@
         {/if}
       </div>
       <div class="composer__controls composer__controls--right">
-        {#if experimentalFeatures.enabled}
+        {#if experimentalFeatures.initialized && experimentalFeatures.enabled}
           <button
             type="button"
             class="composer__button composer__button--icon"
@@ -355,6 +366,15 @@
               <Microphone size={16} weight="bold" />
             {/if}
           </button>
+        {:else}
+          <!-- Debug info for experimental buttons -->
+          <div
+            style="position: absolute; top: -50px; right: 0; font-size: 10px; color: red; background: rgba(255,255,255,0.9); padding: 2px;"
+          >
+            Exp: {experimentalFeatures.enabled ? 'ON' : 'OFF'} | Init: {experimentalFeatures.initialized
+              ? 'YES'
+              : 'NO'}
+          </div>
         {/if}
         <button
           type="button"

@@ -50,12 +50,12 @@ impl Qwen3ModelBuilder {
         &self,
         metadata: &HashMap<String, candle::quantized::gguf_file::Value>,
     ) -> Option<ArchKind> {
-        if let Some(arch_value) = metadata.get("general.architecture") {
-            if let Ok(arch_str) = arch_value.to_string() {
-                match arch_str.to_lowercase().as_str() {
-                    "qwen2" | "qwen3" => return Some(ArchKind::Qwen3),
-                    _ => {}
-                }
+        if let Some(arch_value) = metadata.get("general.architecture")
+            && let Ok(arch_str) = arch_value.to_string()
+        {
+            match arch_str.to_lowercase().as_str() {
+                "qwen2" | "qwen3" => return Some(ArchKind::Qwen3),
+                _ => {}
             }
         }
         // Fallback

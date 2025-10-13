@@ -19,24 +19,10 @@
     downloadsLoaded,
     ensureDownloadManager,
     stopDownloadManager,
-    pauseDownload as pauseDownloadJob,
-    resumeDownload as resumeDownloadJob,
-    cancelDownload as cancelDownloadJob,
-    removeDownload as removeDownloadEntry,
-    clearHistory as clearDownloadHistory,
   } from '$lib/stores/download-manager';
-  import type {
-    DownloadHistoryEntry,
-    DownloadJob,
-    RemoteGGUFFile,
-    RemoteModelInfo,
-  } from '$lib/types/local-models';
+  import type { RemoteGGUFFile, RemoteModelInfo } from '$lib/types/local-models';
   import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
-  import Pause from 'phosphor-svelte/lib/Pause';
-  import Play from 'phosphor-svelte/lib/Play';
-  import X from 'phosphor-svelte/lib/X';
-  import Trash from 'phosphor-svelte/lib/Trash';
   import Clock from 'phosphor-svelte/lib/Clock';
   import Heart from 'phosphor-svelte/lib/Heart';
   import Cube from 'phosphor-svelte/lib/Cube';
@@ -54,19 +40,9 @@
   const ALLOWED_QUANTIZATIONS = ['Q4_K_M', 'Q5_K_M', 'Q6_K_M', 'Q8_K_M'];
 
   const RECOMMENDED_QUANT = 'Q5_K_M';
-  const STATUS_LABELS: Record<DownloadJob['status'], string> = {
-    queued: 'В очереди',
-    downloading: 'Загружается',
-    paused: 'Приостановлена',
-    completed: 'Завершена',
-    error: 'Ошибка',
-    cancelled: 'Отменена',
-  };
-
   let destinationDir = '';
   let hasSearched = false;
   let selectedModel: RemoteModelInfo | null = null;
-  let isDownloadsOpen = false;
   let selectedQuantizations: Record<string, string> = {};
   let currentSelectedQuant: string | undefined;
   let currentQuantDescription: string | undefined;
@@ -215,10 +191,6 @@
     selectedQuantizations = { ...selectedQuantizations, [model.repo_id]: value };
   }
 
-  function formatFileSize(bytes: number) {
-    return LocalModelsService.formatFileSize(bytes);
-  }
-
   async function handleDownload(model: RemoteModelInfo, quant?: string) {
     if (!destinationDir) {
       alert('Сначала укажите папку в секции <Локальные> и повторите попытку.');
@@ -241,7 +213,6 @@
 
     try {
       await downloadRemoteModel(model.repo_id, destinationDir, file);
-      isDownloadsOpen = true;
     } catch (error) {
       console.error('Download failed', error);
       alert(
@@ -262,21 +233,6 @@
       }
       return Boolean(canonical) && file.filename.toUpperCase().includes(String(canonical));
     });
-  }
-
-  function getSelectedFile(model: RemoteModelInfo): RemoteGGUFFile | undefined {
-    const selected = getSelectedQuantization(model);
-    if (selected) {
-      const byQuant = findFileForQuantization(model, selected);
-      if (byQuant) {
-        return byQuant;
-      }
-    }
-    const fallback = model.gguf_files.find((file) => {
-      const canonical = canonicalizeQuantization(file.quantization);
-      return canonical ? ALLOWED_QUANTIZATIONS.includes(canonical) : false;
-    });
-    return fallback ?? model.gguf_files[0];
   }
 
   function uniqueArchitectures(result: RemoteModelInfo) {
@@ -356,45 +312,6 @@
     selectedModel = model;
   }
 
-  function computeProgress(job: { downloaded_bytes: number; total_bytes?: number | null }) {
-    if (!job.total_bytes || job.total_bytes === 0) {
-      return 0;
-    }
-    return Math.min(100, Math.round((job.downloaded_bytes / job.total_bytes) * 100));
-  }
-
-  function formatSpeed(speed?: number | null) {
-    if (!speed || speed <= 0) {
-      return '—';
-    }
-    return `${LocalModelsService.formatFileSize(speed)} / c`;
-  }
-
-  function formatEta(seconds?: number | null) {
-    if (!seconds || !Number.isFinite(seconds) || seconds <= 0) {
-      return '—';
-    }
-    const total = Math.ceil(seconds);
-    const hours = Math.floor(total / 3600);
-    const minutes = Math.floor((total % 3600) / 60);
-    const secs = total % 60;
-    if (hours > 0) {
-      return `${hours}ч ${minutes.toString().padStart(2, '0')}м`;
-    }
-    return `${minutes}м ${secs.toString().padStart(2, '0')}с`;
-  }
-
-  function formatStatus(status: DownloadJob['status']) {
-    return STATUS_LABELS[status] ?? status;
-  }
-
-  function formatTimestamp(timestamp?: string) {
-    if (!timestamp) {
-      return '—';
-    }
-    return LocalModelsService.formatDate(timestamp);
-  }
-
   async function loadReadmeForModel(model: RemoteModelInfo) {
     const repoId = model.repo_id;
     if (readmeCache.has(repoId)) {
@@ -426,68 +343,6 @@
     }
   }
 
-  async function handlePause(job: DownloadJob) {
-    try {
-      await pauseDownloadJob(job);
-    } catch (error) {
-      console.error('Failed to pause download', error);
-      alert(
-        `Не удалось поставить на паузу: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-
-  async function handleResume(job: DownloadJob) {
-    try {
-      await resumeDownloadJob(job);
-    } catch (error) {
-      console.error('Failed to resume download', error);
-      alert(
-        `Не удалось возобновить загрузку: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    }
-  }
-
-  async function handleCancel(job: DownloadJob) {
-    const confirmed = confirm(`Отменить загрузку «${job.filename}»?`);
-    if (!confirmed) return;
-    try {
-      await cancelDownloadJob(job);
-    } catch (error) {
-      console.error('Failed to cancel download', error);
-      alert(
-        `Не удалось отменить загрузку: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-
-  async function handleRemoveHistory(entry: DownloadHistoryEntry, deleteFile: boolean) {
-    if (deleteFile) {
-      const confirmed = confirm(`Удалить файл и запись «${entry.filename}»?`);
-      if (!confirmed) return;
-    }
-    try {
-      await removeDownloadEntry(entry, deleteFile);
-    } catch (error) {
-      console.error('Failed to remove history entry', error);
-      alert(`Не удалось удалить запись: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  async function handleClearHistory() {
-    const confirmed = confirm('Очистить историю завершённых загрузок?');
-    if (!confirmed) return;
-    try {
-      await clearDownloadHistory();
-    } catch (error) {
-      console.error('Failed to clear history', error);
-      alert(
-        `Не удалось очистить историю: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
 </script>
 
 <div class="remote-models-panel">

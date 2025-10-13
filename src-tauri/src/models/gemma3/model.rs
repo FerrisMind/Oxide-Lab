@@ -1,6 +1,6 @@
-use candle::quantized::gguf_file::Content;
 use candle::Device;
 use candle::Tensor;
+use candle::quantized::gguf_file::Content;
 use std::io::{Read, Seek};
 
 /// Wrapper around candle_transformers' quantized Gemma3 implementation

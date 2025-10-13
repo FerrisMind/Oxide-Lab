@@ -93,7 +93,7 @@ impl Component {
 /// Макрос для логирования с префиксом компонента
 #[macro_export]
 macro_rules! log_info {
-    ($component:expr, $($arg:tt)*) => {
+    ($component:expr_2021, $($arg:tt)*) => {
         {
             $crate::core::log::init();
             log::info!(target: $component.as_str(), $($arg)*)
@@ -103,7 +103,7 @@ macro_rules! log_info {
 
 #[macro_export]
 macro_rules! log_warn {
-    ($component:expr, $($arg:tt)*) => {
+    ($component:expr_2021, $($arg:tt)*) => {
         {
             $crate::core::log::init();
             log::warn!(target: $component.as_str(), $($arg)*)
@@ -113,7 +113,7 @@ macro_rules! log_warn {
 
 #[macro_export]
 macro_rules! log_error {
-    ($component:expr, $($arg:tt)*) => {
+    ($component:expr_2021, $($arg:tt)*) => {
         {
             $crate::core::log::init();
             log::error!(target: $component.as_str(), $($arg)*)
@@ -123,7 +123,7 @@ macro_rules! log_error {
 
 #[macro_export]
 macro_rules! log_debug {
-    ($component:expr, $($arg:tt)*) => {
+    ($component:expr_2021, $($arg:tt)*) => {
         {
             $crate::core::log::init();
             log::debug!(target: $component.as_str(), $($arg)*)

@@ -489,7 +489,7 @@ impl StartupTracker {
 /// Макрос для измерения производительности блока кода
 #[macro_export]
 macro_rules! measure_performance {
-    ($monitor:expr, $operation_name:expr, $block:expr) => {{
+    ($monitor:expr_2021, $operation_name:expr_2021, $block:expr_2021) => {{
         let timer = $crate::core::performance::PerformanceTimer::with_monitor(
             $operation_name,
             $monitor.clone(),

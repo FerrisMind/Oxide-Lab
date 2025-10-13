@@ -13,20 +13,16 @@ fn is_txt_md(att: &Attachment) -> bool {
             ok = true;
         }
     }
-    if !ok {
-        if let Some(path) = &att.path {
-            let p = path.to_lowercase();
-            if p.ends_with(".txt") || p.ends_with(".md") {
-                ok = true;
-            }
+    if !ok && let Some(path) = &att.path {
+        let p = path.to_lowercase();
+        if p.ends_with(".txt") || p.ends_with(".md") {
+            ok = true;
         }
     }
-    if !ok {
-        if let Some(mime) = &att.mime {
-            let mm = mime.to_lowercase();
-            if mm == "text/plain" || mm == "text/markdown" || mm == "text/x-markdown" {
-                ok = true;
-            }
+    if !ok && let Some(mime) = &att.mime {
+        let mm = mime.to_lowercase();
+        if mm == "text/plain" || mm == "text/markdown" || mm == "text/x-markdown" {
+            ok = true;
         }
     }
     ok
@@ -57,15 +53,13 @@ fn read_bytes(att: &Attachment) -> Result<Option<Vec<u8>>, String> {
     }
     if let Some(p) = &att.path {
         // Проверяем размер по метаданным до чтения
-        if let Ok(meta) = std::fs::metadata(p) {
-            if meta.len() > MAX_SIZE_BYTES {
-                return Err(format!(
-                    "Файл '{}' превышает лимит {} МБ ({} байт)",
-                    p,
-                    MAX_SIZE_BYTES / (1024 * 1024),
-                    meta.len()
-                ));
-            }
+        if let Ok(meta) = std::fs::metadata(p) && meta.len() > MAX_SIZE_BYTES {
+            return Err(format!(
+                "Файл '{}' превышает лимит {} МБ ({} байт)",
+                p,
+                MAX_SIZE_BYTES / (1024 * 1024),
+                meta.len()
+            ));
         }
         let bytes = std::fs::read(p)
             .map_err(|e| format!("Failed to read attachment from path {}: {}", p, e))?;

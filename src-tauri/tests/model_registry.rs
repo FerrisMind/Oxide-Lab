@@ -1,5 +1,5 @@
 use candle::quantized::gguf_file::Value;
-use llm_chat_lib::models::registry::{detect_arch, ArchKind};
+use llm_chat_lib::models::registry::{ArchKind, detect_arch};
 use std::collections::HashMap;
 
 #[test]

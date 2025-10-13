@@ -53,14 +53,13 @@ impl TokenOutputStream {
                 // составных графем (U+FFFD, ZWJ, variation selectors, skin tone modifiers),
                 // подождём следующий токен, чтобы избежать артефактов вроде "�".
                 let mut hold = false;
-                if let Some(last) = delta.chars().last() {
-                    if last == '\u{FFFD}'
+                if let Some(last) = delta.chars().last()
+                    && (last == '\u{FFFD}'
                         || last == '\u{200D}'
                         || last == '\u{FE0F}'
-                        || ('\u{1F3FB}'..='\u{1F3FF}').contains(&last)
-                    {
-                        hold = true;
-                    }
+                        || ('\u{1F3FB}'..='\u{1F3FF}').contains(&last))
+                {
+                    hold = true;
                 }
                 if hold {
                     return Ok(None);

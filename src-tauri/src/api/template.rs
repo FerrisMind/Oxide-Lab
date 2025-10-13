@@ -1,5 +1,5 @@
 use crate::log_template;
-use minijinja::{context, Environment, Value};
+use minijinja::{Environment, Value, context};
 
 pub fn render_prompt(
     chat_template: &Option<String>,

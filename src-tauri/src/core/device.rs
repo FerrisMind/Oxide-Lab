@@ -1,7 +1,7 @@
 use crate::core::types::DevicePreference;
 use crate::{log_device, log_device_error};
-use candle::utils::{cuda_is_available, metal_is_available};
 use candle::Device;
+use candle::utils::{cuda_is_available, metal_is_available};
 
 pub fn select_device(pref: Option<DevicePreference>) -> Device {
     match pref.unwrap_or(DevicePreference::Auto) {

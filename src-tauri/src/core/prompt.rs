@@ -3,7 +3,7 @@
 //! using Jinja-style chat templates extracted from tokenizers.
 
 use crate::{log_template, log_template_error};
-use minijinja::{context, Environment, Value};
+use minijinja::{Environment, Value, context};
 use serde::{Deserialize, Serialize};
 
 /// Represents a chat message with role and content

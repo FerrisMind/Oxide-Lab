@@ -2,9 +2,9 @@
 name = "oxide-lab"
 version = "0.13.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["FerrisMind"]
 license = "MIT"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

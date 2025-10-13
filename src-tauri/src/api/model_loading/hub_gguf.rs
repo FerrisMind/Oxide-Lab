@@ -78,7 +78,7 @@ pub fn load_hub_gguf_model(
             return Err(format!(
                 "Tokenizer must be embedded in GGUF metadata: {}",
                 e
-            ))
+            ));
         }
     };
     mark_special_chat_tokens(&mut tokenizer);
@@ -169,27 +169,27 @@ pub fn load_hub_gguf_model(
         })?;
 
     // Если есть JSON-конфигурация в guard.model_config_json — применим её
-    if let Some(gg) = guard.model_config_json.as_ref() {
-        if let Ok(cfg_val) = serde_json::from_str::<serde_json::Value>(gg) {
-            if let Err(e) = model_backend.apply_config(&cfg_val) {
-                emit_load_progress(
-                    app,
-                    "apply_config",
-                    75,
-                    None,
-                    false,
-                    Some(&format!("Model apply_config failed: {}", e)),
-                );
-            } else {
-                emit_load_progress(
-                    app,
-                    "apply_config",
-                    75,
-                    None,
-                    false,
-                    Some("Model config applied"),
-                );
-            }
+    if let Some(gg) = guard.model_config_json.as_ref()
+        && let Ok(cfg_val) = serde_json::from_str::<serde_json::Value>(gg)
+    {
+        if let Err(e) = model_backend.apply_config(&cfg_val) {
+            emit_load_progress(
+                app,
+                "apply_config",
+                75,
+                None,
+                false,
+                Some(&format!("Model apply_config failed: {}", e)),
+            );
+        } else {
+            emit_load_progress(
+                app,
+                "apply_config",
+                75,
+                None,
+                false,
+                Some("Model config applied"),
+            );
         }
     }
     emit_load_progress(

@@ -64,7 +64,17 @@ impl MinPFilter {
         if self.log_prints < 5 {
             let delta = max_val - threshold;
             let gap12 = max_val - second_val;
-            log_infer!("min_p applied: p={:.3}, temp={:.3}, max={:.4}, threshold={:.4}, delta={:.4}, gap12={:.4}, kept={} of {}", min_p, self.temperature, max_val, threshold, delta, gap12, kept, masked.len());
+            log_infer!(
+                "min_p applied: p={:.3}, temp={:.3}, max={:.4}, threshold={:.4}, delta={:.4}, gap12={:.4}, kept={} of {}",
+                min_p,
+                self.temperature,
+                max_val,
+                threshold,
+                delta,
+                gap12,
+                kept,
+                masked.len()
+            );
             self.log_prints += 1;
         }
         Tensor::new(masked.as_slice(), logits.device()).map_err(|e| e.to_string())

@@ -18,6 +18,7 @@
   } from '$lib/stores/local-models';
   import { LocalModelsService } from '$lib/services/local-models';
   import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local-models';
+  import Checkbox from '$lib/components/ui/Checkbox.svelte';
 
   const validationLabels: Record<ValidationLevel, string> = {
     ok: 'Валидно',
@@ -161,14 +162,11 @@
     </div>
 
     <div class="filter-group checkbox">
-      <label>
-        <input
-          type="checkbox"
-          checked={$filterOptions.candleOnly ?? false}
-          on:change={(event) => updateFilter({ candleOnly: event.currentTarget.checked })}
-        />
-        Только совместимые с Candle
-      </label>
+      <Checkbox
+        id="candle-only"
+        label="Только совместимые с Candle"
+        bind:checked={$filterOptions.candleOnly}
+      />
     </div>
 
     <div class="filter-group">

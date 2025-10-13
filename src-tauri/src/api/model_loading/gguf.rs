@@ -92,7 +92,7 @@ pub fn load_gguf_model(
                 return Err(format!(
                     "Tokenizer must be embedded in GGUF metadata: {}",
                     e
-                ))
+                ));
             }
         };
     mark_special_chat_tokens(&mut tokenizer);
@@ -311,9 +311,11 @@ pub fn load_gguf_model(
 fn check_supported_dtypes(content: &gguf_file::Content) -> Result<(), String> {
     // Известные поддерживаемые типы данных в текущей версии Candle
     let supported_dtypes: HashSet<u32> = [
-        0, 1, 2, 3, 6, 7, 8, 9, // Старые типы (F32, F16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1)
+        0, 1, 2, 3, 6, 7, 8,
+        9, // Старые типы (F32, F16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1)
         10, 11, 12, 13, 14, 15, // Новые K-типы (Q2_K, Q3_K, Q4_K, Q5_K, Q6_K, Q8_K)
-        16, 17, 18, 19, 20, 21, 22, 23, 29, // IQ типы (могут быть поддержаны в новой версии)
+        16, 17, 18, 19, 20, 21, 22, 23,
+        29, // IQ типы (могут быть поддержаны в новой версии)
         24, 25, 26, 27, 28, // Целые типы (I8, I16, I32, I64, F64)
     ]
     .into_iter()

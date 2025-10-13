@@ -11,8 +11,6 @@
   import StartupMetricsDisplay from './StartupMetricsDisplay.svelte';
   import ChartBar from 'phosphor-svelte/lib/ChartBar';
   import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
-  import Play from 'phosphor-svelte/lib/Play';
-  import Pause from 'phosphor-svelte/lib/Pause';
   import Trash from 'phosphor-svelte/lib/Trash';
   import Memory from 'phosphor-svelte/lib/Memory';
   import Package from 'phosphor-svelte/lib/Package';
@@ -27,7 +25,7 @@
   let systemUsage: SystemUsage | null = null;
   let loading = false;
   let error: string | null = null;
-  let autoRefresh = true; // Включено по умолчанию для постоянного мониторинга
+  const autoRefresh = true; // Включено по умолчанию для постоянного мониторинга
   let refreshInterval: number | null = null;
 
   async function loadSummary() {
@@ -79,7 +77,7 @@
   }
 
   function startAutoRefresh() {
-    if (!autoRefresh && !refreshInterval) {
+    if (!refreshInterval) {
       refreshInterval = window.setInterval(() => {
         loadSummary();
       }, 1000); // Обновление каждую секунду для реального времени
@@ -90,16 +88,6 @@
     if (refreshInterval) {
       clearInterval(refreshInterval);
       refreshInterval = null;
-    }
-  }
-
-  function toggleAutoRefresh() {
-    autoRefresh = !autoRefresh;
-
-    if (autoRefresh) {
-      startAutoRefresh();
-    } else {
-      stopAutoRefresh();
     }
   }
 
@@ -128,9 +116,7 @@
 
   onDestroy(() => {
     performanceService.cleanup();
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
-    }
+    stopAutoRefresh();
   });
 </script>
 

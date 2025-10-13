@@ -3,7 +3,7 @@
 //! This module provides functions to load models from safetensors files
 //! using the unified ModelBuilder interface.
 
-use hf_hub::{api::sync::Api, Repo, RepoType};
+use hf_hub::{Repo, RepoType, api::sync::Api};
 use std::path::Path;
 
 use super::emit_load_progress;
@@ -263,8 +263,8 @@ pub fn load_hub_safetensors_model(
     }
 
     // Загружаем config.json (если есть) и сохраняем как строку
-    let config_json = if let Ok(cfg_path) = api.get("config.json") {
-        match std::fs::read(&cfg_path) {
+    let config_json = match api.get("config.json") {
+        Ok(cfg_path) => match std::fs::read(&cfg_path) {
             Ok(bytes) => {
                 let json_str = String::from_utf8_lossy(&bytes).to_string();
                 guard.model_config_json = Some(json_str.clone());
@@ -274,9 +274,8 @@ pub fn load_hub_safetensors_model(
                 log_hub_error!("config.json read error: {}", e);
                 None
             }
-        }
-    } else {
-        None
+        },
+        _ => None,
     };
 
     // Используем универсальный загрузчик весов для определения списка файлов safetensors

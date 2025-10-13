@@ -6,7 +6,7 @@
 //! * Hugging Face Hub search focused on GGUF artifacts with filtering
 //! * Download helper with progress events bridged to the Svelte frontend
 
-use crate::models::registry::{detect_arch, ArchKind};
+use crate::models::registry::{ArchKind, detect_arch};
 use candle::quantized::gguf_file::{self, Content, Value as GgufValue, VersionedMagic};
 use chrono::{DateTime, Utc};
 use hf_hub::api::tokio::{ApiBuilder, Progress as HubProgress};
@@ -20,10 +20,10 @@ use std::fs;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::sync::{
-    atomic::{AtomicU64, Ordering},
     Arc,
+    atomic::{AtomicU64, Ordering},
 };
-use tauri::{async_runtime, AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, async_runtime};
 use tokio::sync::RwLock;
 
 /// Validation severity level for GGUF files.
@@ -486,13 +486,12 @@ pub async fn get_model_readme(repo_id: String) -> Result<String, String> {
 
     let readme_content = if let Some(path) = local_path {
         let cloned_path = path.clone();
-        let content = async_runtime::spawn_blocking(move || {
+        async_runtime::spawn_blocking(move || {
             std::fs::read_to_string(&cloned_path)
                 .map_err(|e| format!("Failed to read README from cache: {e}"))
         })
         .await
-        .map_err(|e| format!("Failed to join README read task: {e}"))??;
-        content
+        .map_err(|e| format!("Failed to join README read task: {e}"))??
     } else {
         let client = build_http_client()?;
         let fallback_url = format!("https://huggingface.co/{}/raw/main/README.md", trimmed);
@@ -761,24 +760,22 @@ fn convert_detail_to_info(
     }
 
     let license = extract_license(&detail);
-    if let Some(expected) = filters.license.as_ref() {
-        if license
+    if let Some(expected) = filters.license.as_ref()
+        && license
             .as_ref()
             .map(|l| !l.eq_ignore_ascii_case(expected))
             .unwrap_or(true)
-        {
-            return Ok(None);
-        }
+    {
+        return Ok(None);
     }
 
     let architectures = extract_architectures(&detail);
-    if let Some(target_arch) = filters.architecture.as_ref() {
-        if !architectures
+    if let Some(target_arch) = filters.architecture.as_ref()
+        && !architectures
             .iter()
             .any(|arch| arch.eq_ignore_ascii_case(target_arch))
-        {
-            return Ok(None);
-        }
+    {
+        return Ok(None);
     }
 
     let gguf_files: Vec<RemoteGGUFFile> = detail
@@ -787,10 +784,8 @@ fn convert_detail_to_info(
         .filter(|file| file.rfilename.to_lowercase().ends_with(".gguf"))
         .filter_map(|file| {
             let size = file.size?;
-            if let Some(limit) = filters.max_file_size {
-                if size > limit {
-                    return None;
-                }
+            if let Some(limit) = filters.max_file_size && size > limit {
+                return None;
             }
             let quant = extract_quantization_from_filename(&file.rfilename)
                 .map(|raw| canonicalize_quantization(&raw));
@@ -827,10 +822,8 @@ fn convert_detail_to_info(
     }
 
     let downloads = detail.downloads.unwrap_or(0);
-    if let Some(min_downloads) = filters.min_downloads {
-        if downloads < min_downloads {
-            return Ok(None);
-        }
+    if let Some(min_downloads) = filters.min_downloads && downloads < min_downloads {
+        return Ok(None);
     }
 
     let quantizations: Vec<String> = gguf_files
@@ -989,10 +982,11 @@ const ALLOWED_QUANTIZATIONS: &[&str] = &["Q4_K_M", "Q5_K_M", "Q6_K_M", "Q8_K_M"]
 
 fn canonicalize_quantization(raw: &str) -> String {
     let mut upper = raw.to_uppercase();
-    if let Some(idx) = upper.find("K_M") {
-        if idx > 0 && !upper[..idx].ends_with('_') {
-            upper.insert(idx, '_');
-        }
+    if let Some(idx) = upper.find("K_M")
+        && idx > 0
+        && !upper[..idx].ends_with('_')
+    {
+        upper.insert(idx, '_');
     }
     upper
 }
@@ -1097,7 +1091,7 @@ fn extract_tokenizer_data(
                         _ => {
                             return Err(
                                 "tokenizer.ggml.scores contains non-floating entry".to_string()
-                            )
+                            );
                         }
                     }
                 }
@@ -1180,10 +1174,10 @@ fn parse_datetime(value: &Option<String>) -> Option<DateTime<Utc>> {
 }
 
 fn extract_license(detail: &HFModelDetail) -> Option<String> {
-    if let Some(card_data) = detail.card_data.as_ref() {
-        if let Some(license) = card_data.get("license").and_then(|v| v.as_str()) {
-            return Some(license.to_string());
-        }
+    if let Some(card_data) = detail.card_data.as_ref()
+        && let Some(license) = card_data.get("license").and_then(|v| v.as_str())
+    {
+        return Some(license.to_string());
     }
     detail.tags.as_ref().and_then(|tags| {
         tags.iter()

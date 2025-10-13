@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { get } from 'svelte/store';
-  import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
   import WarningCircle from 'phosphor-svelte/lib/WarningCircle';
   import XCircle from 'phosphor-svelte/lib/XCircle';
   import Pause from 'phosphor-svelte/lib/Pause';
@@ -14,7 +13,6 @@
     activeDownloads,
     downloadHistory,
     downloadsLoaded,
-    completedDownloads,
     pauseDownload,
     resumeDownload,
     cancelDownload,

@@ -18,7 +18,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::{
     fs::OpenOptions,
     io::{AsyncSeekExt, AsyncWriteExt},
-    sync::{mpsc, RwLock},
+    sync::{RwLock, mpsc},
     task::JoinHandle,
 };
 
@@ -436,10 +436,12 @@ async fn run_download_loop(
         Err(err) => return DownloadLoopOutcome::Error(format!("Failed to open file: {err}")),
     };
 
-    if downloaded_bytes > 0 {
-        if let Err(err) = file.seek(std::io::SeekFrom::Start(downloaded_bytes)).await {
-            return DownloadLoopOutcome::Error(format!("Failed to seek partial file: {err}"));
-        }
+    if downloaded_bytes > 0
+        && let Err(err) = file
+            .seek(std::io::SeekFrom::Start(downloaded_bytes))
+            .await
+    {
+        return DownloadLoopOutcome::Error(format!("Failed to seek partial file: {err}"));
     }
 
     let mut last_instant = Instant::now();
@@ -804,13 +806,16 @@ pub async fn resume_download(app: AppHandle, job_id: String) -> Result<(), Strin
 pub async fn cancel_download(app: AppHandle, job_id: String) -> Result<(), String> {
     MANAGER.ensure_history_loaded(&app).await?;
     let mut cancelled_job = None;
-    if let Some(control) = MANAGER.get_task_control(&job_id).await {
-        control
-            .send(DownloadControl::Cancel)
-            .await
-            .map_err(|_| "Failed to send cancel command".to_string())?;
-    } else {
-        cancelled_job = MANAGER.remove_job(&job_id).await;
+    match MANAGER.get_task_control(&job_id).await {
+        Some(control) => {
+            control
+                .send(DownloadControl::Cancel)
+                .await
+                .map_err(|_| "Failed to send cancel command".to_string())?;
+        }
+        _ => {
+            cancelled_job = MANAGER.remove_job(&job_id).await;
+        }
     }
 
     if let Some(handle) = MANAGER.take_task_handle(&job_id).await {
@@ -858,13 +863,13 @@ pub async fn remove_download_entry(
         let mut guard = MANAGER.state.write().await;
         if let Some(pos) = guard.history.iter().position(|entry| entry.id == job_id) {
             let entry = guard.history.remove(pos);
-            if delete_file && entry.status == DownloadStatus::Completed {
-                if let Err(err) = fs::remove_file(&entry.destination_path) {
-                    log::warn!(
-                        "Failed to delete file {}: {err}",
-                        entry.destination_path.display()
-                    );
-                }
+            if delete_file && entry.status == DownloadStatus::Completed
+                && let Err(err) = fs::remove_file(&entry.destination_path)
+            {
+                log::warn!(
+                    "Failed to delete file {}: {err}",
+                    entry.destination_path.display()
+                );
             }
         }
     }

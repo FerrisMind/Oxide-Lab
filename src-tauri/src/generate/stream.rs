@@ -27,12 +27,11 @@ pub async fn generate_stream_cmd(
     CANCEL_GENERATION.store(false, Ordering::SeqCst);
     let app_clone = app.clone();
     let state_arc: SharedState<Box<dyn ModelBackend + Send>> = state.inner().clone();
-    let res = tauri::async_runtime::spawn_blocking(move || {
+    tauri::async_runtime::spawn_blocking(move || {
         generate_stream_impl(app_clone, state_arc, req)
     })
     .await
-    .map_err(|e| e.to_string())?;
-    res
+    .map_err(|e| e.to_string())?
 }
 
 fn generate_stream_impl(
@@ -84,7 +83,14 @@ fn generate_stream_impl(
     };
     log_infer!(
         "request: prompt_len={}, temperature={:.3}, top_k={:?}, top_p={:?}, min_p={:?}, repeat_penalty={:?}, repeat_last_n={}, use_custom_params={}",
-        req.prompt.len(), temperature, top_k, top_p, min_p, repeat_penalty, req.repeat_last_n, req.use_custom_params
+        req.prompt.len(),
+        temperature,
+        top_k,
+        top_p,
+        min_p,
+        repeat_penalty,
+        req.repeat_last_n,
+        req.use_custom_params
     );
     let _ = app.emit("token", String::new());
 
@@ -138,13 +144,13 @@ fn generate_stream_impl(
     }
     let ctx_slice = ContextSlice::new(full_context_tokens.clone(), guard.context_length.max(1));
     let effective_context_tokens: Vec<u32> = ctx_slice.effective_context_tokens.clone();
-    
+
     // Создаём трекер inference
     let mut inference_tracker = InferenceTracker::new(
         effective_context_tokens.len(),
-        guard.performance_monitor.clone()
+        guard.performance_monitor.clone(),
     );
-    
+
     if ctx_slice.base_context_len != ctx_slice.encoded_len {
         log_infer!(
             "context: encoded={}, using={}, truncated_by={}",
@@ -190,7 +196,7 @@ fn generate_stream_impl(
 
     // Начинаем prefill
     inference_tracker.start_prefill();
-    
+
     // Prefill: пошагово прогоняем весь контекст через kv_cache, без кастомной causal mask
     let mut next_token = {
         let mut last_logits_opt: Option<Tensor> = None;
@@ -199,20 +205,23 @@ fn generate_stream_impl(
                 .map_err(|e| e.to_string())?
                 .unsqueeze(0)
                 .map_err(|e| e.to_string())?;
-            let logits = if let Some(mut model) = guard.gguf_model.take() {
-                let res = model.forward_layered(&input, i);
-                match res {
-                    Ok(v) => {
-                        guard.gguf_model = Some(model);
-                        v
-                    }
-                    Err(e) => {
-                        guard.gguf_model = Some(model);
-                        return Err(e.to_string());
+            let logits = match guard.gguf_model.take() {
+                Some(mut model) => {
+                    let res = model.forward_layered(&input, i);
+                    match res {
+                        Ok(v) => {
+                            guard.gguf_model = Some(model);
+                            v
+                        }
+                        Err(e) => {
+                            guard.gguf_model = Some(model);
+                            return Err(e.to_string());
+                        }
                     }
                 }
-            } else {
-                return Err("Model is not loaded".into());
+                _ => {
+                    return Err("Model is not loaded".into());
+                }
             };
             last_logits_opt = Some(logits);
         }
@@ -226,7 +235,7 @@ fn generate_stream_impl(
 
     // Начинаем generation
     inference_tracker.start_generation();
-    
+
     let mut emitter = ChunkEmitter::new(app.clone());
 
     if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
@@ -250,39 +259,40 @@ fn generate_stream_impl(
             .map_err(|e| e.to_string())?
             .unsqueeze(0)
             .map_err(|e| e.to_string())?;
-        let logits = if let Some(mut model) = guard.gguf_model.take() {
-            let res = model.forward_layered(&input, ctx_slice.base_context_len + index);
-            match res {
-                Ok(v) => {
-                    guard.gguf_model = Some(model);
-                    v
-                }
-                Err(e) => {
-                    guard.gguf_model = Some(model);
-                    return Err(e.to_string());
+        let logits = match guard.gguf_model.take() {
+            Some(mut model) => {
+                let res = model.forward_layered(&input, ctx_slice.base_context_len + index);
+                match res {
+                    Ok(v) => {
+                        guard.gguf_model = Some(model);
+                        v
+                    }
+                    Err(e) => {
+                        guard.gguf_model = Some(model);
+                        return Err(e.to_string());
+                    }
                 }
             }
-        } else {
-            return Err("Model is not loaded".into());
+            _ => {
+                return Err("Model is not loaded".into());
+            }
         };
         let mut logits = logits.squeeze(0).map_err(|e| e.to_string())?;
-        if let Some(rp) = repeat_penalty {
-            if (rp - 1.0).abs() > f32::EPSILON {
-                if index == 0 {
-                    log_infer!(
-                        "repeat_penalty enabled: value={:.3}, last_n={}",
-                        rp,
-                        req.repeat_last_n
-                    );
-                }
-                let start_at = all_tokens.len().saturating_sub(req.repeat_last_n);
-                logits = candle_transformers::utils::apply_repeat_penalty(
-                    &logits,
+        if let Some(rp) = repeat_penalty && (rp - 1.0).abs() > f32::EPSILON {
+            if index == 0 {
+                log_infer!(
+                    "repeat_penalty enabled: value={:.3}, last_n={}",
                     rp,
-                    &all_tokens[start_at..],
-                )
-                .map_err(|e| e.to_string())?;
+                    req.repeat_last_n
+                );
             }
+            let start_at = all_tokens.len().saturating_sub(req.repeat_last_n);
+            logits = candle_transformers::utils::apply_repeat_penalty(
+                &logits,
+                rp,
+                &all_tokens[start_at..],
+            )
+            .map_err(|e| e.to_string())?;
         }
         let logits = minp.apply(&logits)?;
         next_token = logits_processor
@@ -290,7 +300,7 @@ fn generate_stream_impl(
             .map_err(|e| e.to_string())?;
         all_tokens.push(next_token);
         inference_tracker.increment_generated_tokens();
-        
+
         if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
             emitter.push_maybe_emit(&t);
             // textual stop patterns for models that emit plain tags instead of special ids
@@ -321,14 +331,12 @@ fn generate_stream_impl(
         emitter.push_maybe_emit(&rest);
     }
     emitter.finalize();
-    
+
     // Финализируем метрики inference
     let inference_metrics = tokio::runtime::Runtime::new()
         .map_err(|e| e.to_string())?
-        .block_on(async {
-            inference_tracker.finish().await
-        });
-    
+        .block_on(async { inference_tracker.finish().await });
+
     log_infer!(
         "Метрики inference: prompt_tokens={}, generated_tokens={}, total_time={}ms, tokens/sec={:.2}, memory={:.2}MB",
         inference_metrics.prompt_tokens,
@@ -337,10 +345,10 @@ fn generate_stream_impl(
         inference_metrics.tokens_per_second,
         inference_metrics.memory_usage_mb
     );
-    
+
     // Отправляем метрики на фронтенд
     let _ = app.emit("inference_metrics", &inference_metrics);
-    
+
     Ok(())
 }
 

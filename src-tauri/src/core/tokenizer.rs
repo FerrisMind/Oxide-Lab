@@ -17,10 +17,10 @@ pub fn find_tokenizer_json_in_metadata(md: &HashMap<String, gguf_file::Value>) -
         "tokenizer.ggml.tokenizer_json",
         "tokenizer.model",
     ] {
-        if let Some(v) = md.get(key) {
-            if let Ok(s) = v.to_string() {
-                return Some(s.clone());
-            }
+        if let Some(v) = md.get(key)
+            && let Ok(s) = v.to_string()
+        {
+            return Some(s.clone());
         }
     }
     // 2) Эвристика: найти любой строковый JSON, который успешно парсится как tokenizers JSON
@@ -205,37 +205,36 @@ struct TokenizerConfig {
 pub fn extract_eos_ids(tokenizer: &Tokenizer) -> Vec<u32> {
     let mut ids = Vec::new();
     // 1) Попробуем вытащить из json-конфига токенизатора все special_tokens с ролью EOS
-    if let Ok(json) = tokenizer.to_string(true) {
-        if let Ok(cfg) = serde_json::from_str::<TokenizerConfig>(&json) {
-            let vocab = tokenizer.get_vocab(true);
-            for entry in cfg
-                .special_tokens
-                .into_iter()
-                .chain(cfg.added_tokens.into_iter())
-            {
-                if let Some(obj) = entry.as_object() {
-                    let content = obj.get("content").and_then(|v| v.as_str());
-                    let special = obj
-                        .get("special")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false);
-                    let role = obj.get("role").and_then(|v| v.as_str());
-                    if special {
-                        if let Some(tok) = content {
-                            if let Some(&id) = vocab.get(tok) {
-                                // Грубая эвристика: role=="eos" либо имя/контент содержит признаки EOS
-                                if role == Some("eos")
-                                    || tok.eq_ignore_ascii_case("</s>")
-                                    || tok.eq_ignore_ascii_case("<eos>")
-                                    || tok.contains("end_of_turn")
-                                    || tok.contains("eot")
-                                    || tok.contains("im_end")
-                                    || tok.contains("endoftext")
-                                {
-                                    ids.push(id);
-                                }
-                            }
-                        }
+    if let Ok(json) = tokenizer.to_string(true)
+        && let Ok(cfg) = serde_json::from_str::<TokenizerConfig>(&json)
+    {
+        let vocab = tokenizer.get_vocab(true);
+        for entry in cfg
+            .special_tokens
+            .into_iter()
+            .chain(cfg.added_tokens.into_iter())
+        {
+            if let Some(obj) = entry.as_object() {
+                let content = obj.get("content").and_then(|v| v.as_str());
+                let special = obj
+                    .get("special")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let role = obj.get("role").and_then(|v| v.as_str());
+                if special
+                    && let Some(tok) = content
+                    && let Some(&id) = vocab.get(tok)
+                {
+                    // Грубая эвристика: role=="eos" либо имя/контент содержит признаки EOS
+                    if role == Some("eos")
+                        || tok.eq_ignore_ascii_case("</s>")
+                        || tok.eq_ignore_ascii_case("<eos>")
+                        || tok.contains("end_of_turn")
+                        || tok.contains("eot")
+                        || tok.contains("im_end")
+                        || tok.contains("endoftext")
+                    {
+                        ids.push(id);
                     }
                 }
             }
@@ -251,10 +250,8 @@ pub fn extract_eos_ids(tokenizer: &Tokenizer) -> Vec<u32> {
         "<end_of_turn>",
         "<eos>",
     ] {
-        if let Some(&id) = vocab.get(key) {
-            if !ids.contains(&id) {
-                ids.push(id);
-            }
+        if let Some(&id) = vocab.get(key) && !ids.contains(&id) {
+            ids.push(id);
         }
     }
     ids
@@ -263,31 +260,31 @@ pub fn extract_eos_ids(tokenizer: &Tokenizer) -> Vec<u32> {
 /// Try to extract BOS token string from tokenizer config or known specials
 pub fn extract_bos_token_str(tokenizer: &Tokenizer) -> Option<String> {
     // Parse JSON to search for role-specific tokens
-    if let Ok(json) = tokenizer.to_string(true) {
-        if let Ok(cfg) = serde_json::from_str::<TokenizerConfig>(&json) {
-            let vocab = tokenizer.get_vocab(true);
-            for entry in cfg.special_tokens.iter().chain(cfg.added_tokens.iter()) {
-                if let Some(obj) = entry.as_object() {
-                    let content = obj.get("content").and_then(|v| v.as_str());
-                    let special = obj
-                        .get("special")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false);
-                    let role = obj.get("role").and_then(|v| v.as_str());
-                    if special && role == Some("bos") {
-                        if let Some(tok) = content {
-                            if vocab.contains_key(tok) {
-                                return Some(tok.to_string());
-                            }
-                        }
-                    }
+    if let Ok(json) = tokenizer.to_string(true)
+        && let Ok(cfg) = serde_json::from_str::<TokenizerConfig>(&json)
+    {
+        let vocab = tokenizer.get_vocab(true);
+        for entry in cfg.special_tokens.iter().chain(cfg.added_tokens.iter()) {
+            if let Some(obj) = entry.as_object() {
+                let content = obj.get("content").and_then(|v| v.as_str());
+                let special = obj
+                    .get("special")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let role = obj.get("role").and_then(|v| v.as_str());
+                if special
+                    && role == Some("bos")
+                    && let Some(tok) = content
+                    && vocab.contains_key(tok)
+                {
+                    return Some(tok.to_string());
                 }
             }
-            // Heuristics: common BOS strings
-            for key in ["<s>", "<bos>", "<BOS>", "<|begin_of_text|>"] {
-                if tokenizer.get_vocab(true).contains_key(key) {
-                    return Some(key.to_string());
-                }
+        }
+        // Heuristics: common BOS strings
+        for key in ["<s>", "<bos>", "<BOS>", "<|begin_of_text|>"] {
+            if vocab.contains_key(key) {
+                return Some(key.to_string());
             }
         }
     }
@@ -308,21 +305,23 @@ pub fn find_chat_template_in_metadata(md: &HashMap<String, gguf_file::Value>) ->
         "general.chat_template",
         "chat_template",
     ] {
-        if let Some(v) = md.get(key) {
-            if let Ok(s) = v.to_string() {
-                return Some(s.clone());
-            }
+        if let Some(v) = md.get(key)
+            && let Ok(s) = v.to_string()
+        {
+            return Some(s.clone());
         }
     }
     // 2) Эвристика: ищем большие строковые значения, содержащие конструкции Jinja
     let mut best: Option<String> = None;
     for (_k, v) in md.iter() {
-        if let Ok(s) = v.to_string() {
-            if (s.contains("add_generation_prompt") || s.contains("messages") && s.contains("role"))
-                && best.as_ref().is_none_or(|cur| s.len() > cur.len())
-            {
-                best = Some(s.clone());
-            }
+        if let Ok(s) = v.to_string()
+            && (s.contains("add_generation_prompt")
+                || s.contains("messages") && s.contains("role"))
+            && best
+                .as_ref()
+                .is_none_or(|cur| s.len() > cur.len())
+        {
+            best = Some(s.clone());
         }
     }
     best

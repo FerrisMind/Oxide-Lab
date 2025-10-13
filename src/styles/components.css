@@ -79,3 +79,66 @@ select:focus {
     padding: 16px;
   }
 }
+
+/* Стилизация чекбоксов */
+.checkbox-input {
+  display: none;
+}
+
+.checkbox-label {
+  position: relative;
+  padding-left: 30px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  color: var(--text);
+  transition: color 0.2s ease;
+}
+
+.checkbox-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--card);
+  transition: all 0.2s ease;
+}
+
+.checkbox-input:checked + .checkbox-label::before {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgb(59 130 246 / 0.1);
+  content: '✓';
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkbox-label:hover::before {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 1px rgb(59 130 246 / 0.2);
+}
+
+/* Адаптивность для чекбоксов */
+@media (width <= 768px) {
+  .checkbox-label {
+    padding-left: 32px;
+    font-size: 16px;
+  }
+
+  .checkbox-label::before {
+    width: 20px;
+    height: 20px;
+  }
+
+  .checkbox-input:checked + .checkbox-label::before {
+    font-size: 16px;
+  }
+}

@@ -29,12 +29,12 @@ impl Gemma3ModelBuilder {
         flag: bool,
     ) -> Result<Box<dyn ModelBackend>, String> {
         // Guard: позволяем GGUF только для архитектуры gemma3
-        if let Some(v) = content.metadata.get("general.architecture") {
-            if let Ok(s) = v.to_string() {
-                let s = s.to_lowercase();
-                if !s.contains("gemma3") {
-                    return Err("GGUF: обнаружена архитектура, отличная от 'gemma3' (для 'gemma' используйте safetensors/float путь)".to_string());
-                }
+        if let Some(v) = content.metadata.get("general.architecture")
+            && let Ok(s) = v.to_string()
+        {
+            let s = s.to_lowercase();
+            if !s.contains("gemma3") {
+                return Err("GGUF: обнаружена архитектура, отличная от 'gemma3' (для 'gemma' используйте safetensors/float путь)".to_string());
             }
         }
         let model = Gemma3Gguf::from_gguf(content, reader, device, context_length, flag)
@@ -60,15 +60,15 @@ impl Gemma3ModelBuilder {
         metadata: &HashMap<String, candle::quantized::gguf_file::Value>,
     ) -> Option<ArchKind> {
         // Prefer exact gemma3 detection; plain "gemma" maps to Gemma (text-only here)
-        if let Some(arch_value) = metadata.get("general.architecture") {
-            if let Ok(arch_str) = arch_value.to_string() {
-                let s = arch_str.to_lowercase();
-                if s.contains("gemma3") {
-                    return Some(ArchKind::Gemma3);
-                }
-                if s == "gemma" || (s.contains("gemma") && !s.contains("gemma3")) {
-                    return Some(ArchKind::Gemma);
-                }
+        if let Some(arch_value) = metadata.get("general.architecture")
+            && let Ok(arch_str) = arch_value.to_string()
+        {
+            let s = arch_str.to_lowercase();
+            if s.contains("gemma3") {
+                return Some(ArchKind::Gemma3);
+            }
+            if s == "gemma" || (s.contains("gemma") && !s.contains("gemma3")) {
+                return Some(ArchKind::Gemma);
             }
         }
         // Fallback: heuristic over all string metadata
