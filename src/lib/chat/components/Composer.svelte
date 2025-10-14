@@ -9,7 +9,9 @@
   import ClockCounterClockwise from 'phosphor-svelte/lib/ClockCounterClockwise';
   import File from 'phosphor-svelte/lib/File';
   import X from 'phosphor-svelte/lib/X';
+  import { listen } from '@tauri-apps/api/event';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+  import { loadRagDocument, queryRag, type RagResponse } from '$lib/api/rag';
 
   type AttachDetail = {
     filename: string;
@@ -27,6 +29,23 @@
     'yml',
     'xml',
     'html',
+    'pdf',
+    'docx',
+    // Code files
+    'js',
+    'ts',
+    'jsx',
+    'tsx',
+    'py',
+    'rs',
+    'go',
+    'java',
+    'cpp',
+    'c',
+    'cs',
+    'php',
+    'rb',
+    'swift'
   ];
   const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
   const AUDIO_EXTENSIONS = ['wav', 'mp3', 'ogg', 'flac', 'm4a'];
@@ -60,14 +79,39 @@
   let errorTimer: ReturnType<typeof setTimeout> | null = null;
   let accept = DEFAULT_TEXT_ACCEPT;
   let attachedFiles: AttachDetail[] = [];
+  let isDragging = $state(false);
+  let processingProgress = $state(0);
+  let processingStage = $state('');
+  let processingMessage = $state<string | null>(null);
+  let processingPath = $state<string | null>(null);
+  let progressClearTimer: ReturnType<typeof setTimeout> | null = null;
+  const PROGRESS_RESET_DELAY = 1500;
+  const DEFAULT_RAG_TOP_K = 5;
 
   // Переменные для автоматического изменения высоты
   let textareaHeight = 34; // Стандартная высота однострочного поля
   const MIN_HEIGHT = 34; // Минимальная высота (как у кнопок)
   const MAX_HEIGHT = 102; // Максимальная высота (3 строки)
 
-  function triggerSend() {
+  async function triggerSend() {
     if (busy || !isLoaded || !prompt.trim()) return;
+
+    const hasRagDocuments = attachedFiles.some((file) =>
+      file.content.startsWith('[RAG Document:'),
+    );
+
+    if (hasRagDocuments) {
+      try {
+        const ragResult = await queryRag(prompt, DEFAULT_RAG_TOP_K);
+        if (ragResult?.hits?.length) {
+          const contextualPrompt = buildContextualPrompt(prompt, ragResult);
+          prompt = contextualPrompt;
+        }
+      } catch (error) {
+        console.warn('RAG query failed', error);
+      }
+    }
+
     dispatch('send');
   }
 
@@ -106,6 +150,12 @@
 
   function removeAttachment(index: number) {
     attachedFiles = attachedFiles.filter((_, i) => i !== index);
+    const hasRagDocuments = attachedFiles.some((file) =>
+      file.content.startsWith('[RAG Document:'),
+    );
+    if (!hasRagDocuments) {
+      resetProgressIndicators();
+    }
   }
 
   function triggerAttach() {
@@ -122,6 +172,43 @@
     if (supports_audio) extensions.push(...AUDIO_EXTENSIONS.map((ext) => `.${ext}`));
     if (supports_video) extensions.push(...VIDEO_EXTENSIONS.map((ext) => `.${ext}`));
     return extensions.join(',') || DEFAULT_TEXT_ACCEPT;
+  }
+
+  const STAGE_LABELS: Record<string, string> = {
+    reading: 'Reading source',
+    processing: 'Processing',
+    chunking: 'Chunking',
+    embedding: 'Embedding',
+    indexing: 'Indexing',
+    queued: 'Queued',
+    complete: 'Complete',
+    error: 'Error',
+  };
+
+  function describeStage(stage: string): string {
+    return STAGE_LABELS[stage] ?? stage;
+  }
+
+  function resetProgressIndicators() {
+    processingProgress = 0;
+    processingStage = '';
+    processingMessage = null;
+    processingPath = null;
+    if (progressClearTimer) {
+      clearTimeout(progressClearTimer);
+      progressClearTimer = null;
+    }
+  }
+
+  function scheduleProgressReset() {
+    if (progressClearTimer) {
+      clearTimeout(progressClearTimer);
+      progressClearTimer = null;
+    }
+    progressClearTimer = setTimeout(() => {
+      resetProgressIndicators();
+      progressClearTimer = null;
+    }, PROGRESS_RESET_DELAY);
   }
 
   function clearErrorTimer() {
@@ -146,73 +233,240 @@
     if (!file) return;
 
     try {
-      if (file.size > MAX_FILE_SIZE) {
-        setError('Файл слишком большой. Максимальный размер — 20 МБ.');
-        return;
+      const handled = await processFile(file);
+      if (!handled) {
+        setError('Unsupported attachment type');
       }
-
-      const name = file.name;
-      const mime = file.type || '';
-      const topLevel = mime.split('/')[0];
-      const ext = (name.split('.').pop() || '').toLowerCase();
-
-      const isTextLike =
-        topLevel === 'text' || TEXT_EXTENSIONS.includes(ext) || mime === 'application/json';
-      const isImage = topLevel === 'image' || IMAGE_EXTENSIONS.includes(ext);
-      const isAudio = topLevel === 'audio' || AUDIO_EXTENSIONS.includes(ext);
-      const isVideo = topLevel === 'video' || VIDEO_EXTENSIONS.includes(ext);
-
-      if (isImage && !supports_image) {
-        setError('Модель не поддерживает изображения');
-        return;
-      }
-      if (isAudio && !supports_audio) {
-        setError('Модель не поддерживает аудио');
-        return;
-      }
-      if (isVideo && !supports_video) {
-        setError('Модель не поддерживает видео');
-        return;
-      }
-
-      if (isTextLike) {
-        const content = await file.text();
-        const attachment = { filename: name, content };
-        attachedFiles = [...attachedFiles, attachment];
-        dispatch('attach', attachment);
-        attachError = null;
-        clearErrorTimer();
-        return;
-      }
-
-      let marker: string | null = null;
-      if (isImage) {
-        const url = URL.createObjectURL(file);
-        marker = `[image: ${url}]`;
-      } else if (isAudio) {
-        const url = URL.createObjectURL(file);
-        marker = `[audio: ${url}]`;
-      } else if (isVideo) {
-        const url = URL.createObjectURL(file);
-        marker = `[video: ${url}]`;
-      }
-
-      if (marker) {
-        const attachment = { filename: name, content: marker };
-        attachedFiles = [...attachedFiles, attachment];
-        dispatch('attach', attachment);
-        attachError = null;
-        clearErrorTimer();
-      } else {
-        setError('Неподдерживаемый тип файла');
-      }
-    } catch (err) {
-      console.error('Failed to read attachment', err);
-      setError('Не удалось прочитать файл');
+    } catch (error) {
+      console.error('Failed to process file', error);
+      setError('Failed to process file');
     } finally {
-      if (input) input.value = '';
+      if (input) {
+        input.value = '';
+      }
     }
   }
+
+  async function processFile(file: File): Promise<boolean> {
+    const ragHandled = await handleRagUpload(file);
+    if (ragHandled) {
+      return true;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > MAX_FILE_SIZE) {
+      setError('File is too large. Maximum supported size is 20 MB.');
+    }
+
+    const name = file.name;
+    const mime = file.type || '';
+    const topLevel = mime.split('/')[0];
+    const ext = (name.split('.').pop() || '').toLowerCase();
+
+    const isTextLike =
+      topLevel === 'text' || TEXT_EXTENSIONS.includes(ext) || mime === 'application/json';
+    const isImage = topLevel === 'image' || IMAGE_EXTENSIONS.includes(ext);
+    const isAudio = topLevel === 'audio' || AUDIO_EXTENSIONS.includes(ext);
+    const isVideo = topLevel === 'video' || VIDEO_EXTENSIONS.includes(ext);
+
+    if (isImage && !supports_image) {
+    if (isImage && !supports_image) {
+      setError('Image attachments are not supported by the current model');
+    }
+    if (isAudio && !supports_audio) {
+    if (isAudio && !supports_audio) {
+      setError('Audio attachments are not supported by the current model');
+    }
+    if (isVideo && !supports_video) {
+    if (isVideo && !supports_video) {
+      setError('Video attachments are not supported by the current model');
+    }
+
+    if (isTextLike) {
+      const content = await file.text();
+      const attachment = { filename: name, content };
+      attachedFiles = [...attachedFiles, attachment];
+      dispatch('attach', attachment);
+      attachError = null;
+      clearErrorTimer();
+      return true;
+    }
+
+    let marker: string | null = null;
+    if (isImage) {
+      const url = URL.createObjectURL(file);
+      marker = `[image: ${url}]`;
+    } else if (isAudio) {
+      const url = URL.createObjectURL(file);
+      marker = `[audio: ${url}]`;
+    } else if (isVideo) {
+      const url = URL.createObjectURL(file);
+      marker = `[video: ${url}]`;
+    }
+
+    if (marker) {
+      const attachment = { filename: name, content: marker };
+      attachedFiles = [...attachedFiles, attachment];
+      dispatch('attach', attachment);
+      attachError = null;
+      clearErrorTimer();
+      return true;
+    }
+
+    return false;
+  }
+
+  function extractFilePath(file: File): string | null {
+    const candidate =
+      (file as any)?.path ?? (file as any)?.pathName ?? (file as any)?.webkitRelativePath;
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      return candidate;
+    }
+    return null;
+  }
+
+  async function handleRagUpload(file: File): Promise<boolean> {
+    const filePath = extractFilePath(file);
+    if (!filePath) {
+      return false;
+    }
+
+    try {
+      processingPath = file.name || filePath;
+      processingStage = 'queued';
+      processingProgress = 0;
+      processingMessage = null;
+
+      const doc = await loadRagDocument(filePath);
+      const placeholder = `[RAG Document: ${doc.path}]`;
+      const attachment = { filename: file.name, content: placeholder };
+
+      const exists = attachedFiles.some(
+        (item) => item.filename === attachment.filename && item.content === attachment.content,
+      );
+      if (!exists) {
+        attachedFiles = [...attachedFiles, attachment];
+        dispatch('attach', attachment);
+      }
+      attachError = null;
+      clearErrorTimer();
+      return true;
+    } catch (error) {
+      console.error('RAG ingestion failed', error);
+      const message = error instanceof Error ? error.message : String(error ?? 'Unknown error');
+      processingStage = 'error';
+      processingMessage = message;
+      scheduleProgressReset();
+      setError(`Failed to index document: ${message}`);
+      return true;
+    }
+  }
+
+  function handleDragEnter(event: DragEvent) {
+    event.preventDefault();
+    isDragging = true;
+  }
+
+  function handleDragOver(event: DragEvent) {
+    event.preventDefault();
+    isDragging = true;
+  }
+
+  function handleDragLeave(event: DragEvent) {
+    if (event.currentTarget instanceof Node && event.relatedTarget instanceof Node) {
+      if (event.currentTarget.contains(event.relatedTarget)) {
+        return;
+      }
+    }
+    isDragging = false;
+  }
+
+  async function handleDrop(event: DragEvent) {
+    event.preventDefault();
+    isDragging = false;
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      await processFile(file);
+    }
+  }
+
+  function buildContextualPrompt(question: string, rag: RagResponse): string {
+    if (!rag?.hits?.length) {
+      return question;
+    }
+
+    const context = rag.hits
+      .map((hit, index) => {
+        const parts: string[] = [`Hit ${index + 1}`];
+        if (typeof hit.score === 'number' && Number.isFinite(hit.score)) {
+          parts.push(`score ${hit.score.toFixed(3)}`);
+        }
+        if (hit.document_path) {
+          parts.push(`source ${hit.document_path}`);
+        }
+        const header = parts.join(' | ');
+        return `### ${header}\n${hit.text.trim()}`;
+      })
+      .join('\n\n');
+
+    return `Use the following retrieved context to answer the question.\n\n${context}\n\nQuestion:\n${question}`;
+  }
+
+  $effect(() => {
+    const unlistenPromise = listen<{
+      stage?: string;
+      progress?: number;
+      path?: string;
+      message?: string;
+    }>('rag_progress', (event) => {
+      const payload = event?.payload ?? {};
+      if (typeof payload.path === 'string' && payload.path.length > 0) {
+        const normalized = payload.path.replace(/\\/g, '/');
+        const segments = normalized.split('/');
+        processingPath = segments[segments.length - 1] || payload.path;
+      }
+      if (typeof payload.stage === 'string') {
+        processingStage = payload.stage;
+      }
+      if (typeof payload.progress === 'number' && Number.isFinite(payload.progress)) {
+        const clamped = Math.min(1, Math.max(0, payload.progress));
+        processingProgress = clamped;
+      }
+      if (typeof payload.message === 'string' && payload.message.length > 0) {
+        processingMessage = payload.message;
+      } else if (payload.stage === 'error') {
+        processingMessage = 'Indexing failed';
+      } else {
+        processingMessage = null;
+      }
+
+      if (payload.stage === 'complete') {
+        processingProgress = 1;
+        scheduleProgressReset();
+      } else if (payload.stage === 'error') {
+        setError(payload.message ?? 'RAG indexing failed');
+        scheduleProgressReset();
+      } else if (progressClearTimer) {
+        clearTimeout(progressClearTimer);
+        progressClearTimer = null;
+      }
+    });
+
+    return () => {
+      unlistenPromise
+        .then((fn) => fn())
+        .catch(() => {});
+      if (progressClearTimer) {
+        clearTimeout(progressClearTimer);
+        progressClearTimer = null;
+      }
+    };
+  });
+
+
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -257,7 +511,14 @@
 </script>
 
 <div class="composer-wrapper">
-  <div class="composer">
+  <div
+    class="composer"
+    class:composer--dragging={isDragging}
+    on:dragenter={handleDragEnter}
+    on:dragover={handleDragOver}
+    on:dragleave={handleDragLeave}
+    on:drop={handleDrop}
+  >
     {#if attachedFiles.length > 0}
       <div class="composer__row composer__row--attachments">
         {#each attachedFiles as attachment, index}
@@ -276,6 +537,28 @@
             </button>
           </div>
         {/each}
+      </div>
+    {/if}
+    {#if processingStage}
+      <div class="composer__rag-status">
+        <div class="composer__rag-status-header">
+          <span class="composer__rag-status-stage">{describeStage(processingStage)}</span>
+          <span class="composer__rag-status-percent">
+            {Math.round(Math.min(processingProgress, 1) * 100)}%
+          </span>
+        </div>
+        <div class="composer__rag-status-bar">
+          <div
+            class="composer__rag-status-bar-fill"
+            style={`width: ${Math.min(processingProgress, 1) * 100}%`}
+          ></div>
+        </div>
+        {#if processingMessage}
+          <div class="composer__rag-status-message">{processingMessage}</div>
+        {/if}
+        {#if processingPath}
+          <div class="composer__rag-status-path">{processingPath}</div>
+        {/if}
       </div>
     {/if}
     <div class="composer__row composer__row--input">
@@ -306,15 +589,6 @@
           >
             <ClockCounterClockwise size={16} weight="bold" />
           </button>
-        {:else}
-          <!-- Debug info for history button -->
-          <div
-            style="position: absolute; top: -30px; left: 0; font-size: 10px; color: red; background: rgba(255,255,255,0.9); padding: 2px;"
-          >
-            Hist: {experimentalFeatures.enabled ? 'ON' : 'OFF'} | Init: {experimentalFeatures.initialized
-              ? 'YES'
-              : 'NO'}
-          </div>
         {/if}
         <button
           type="button"
@@ -366,15 +640,6 @@
               <Microphone size={16} weight="bold" />
             {/if}
           </button>
-        {:else}
-          <!-- Debug info for experimental buttons -->
-          <div
-            style="position: absolute; top: -50px; right: 0; font-size: 10px; color: red; background: rgba(255,255,255,0.9); padding: 2px;"
-          >
-            Exp: {experimentalFeatures.enabled ? 'ON' : 'OFF'} | Init: {experimentalFeatures.initialized
-              ? 'YES'
-              : 'NO'}
-          </div>
         {/if}
         <button
           type="button"
@@ -445,6 +710,11 @@
       box-shadow 0.2s ease;
   }
 
+  .composer--dragging {
+    border-color: rgba(102, 126, 234, 0.4);
+    background: rgba(102, 126, 234, 0.08);
+  }
+
   .composer:focus-within {
     border-color: rgba(226, 198, 255, 0.35);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
@@ -490,6 +760,65 @@
     flex-wrap: wrap;
     gap: 8px;
     align-items: flex-start;
+  }
+
+  .composer__rag-status {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: var(--composer-control-radius);
+    padding: 8px 12px;
+    color: var(--composer-text);
+  }
+
+  .composer__rag-status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .composer__rag-status-stage {
+    color: rgba(226, 198, 255, 0.9);
+  }
+
+  .composer__rag-status-percent {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .composer__rag-status-bar {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .composer__rag-status-bar-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.6), rgba(118, 75, 162, 0.8));
+    border-radius: inherit;
+    transition: width 0.2s ease;
+  }
+
+  .composer__rag-status-message {
+    font-size: 11px;
+    color: rgba(255, 205, 178, 0.95);
+  }
+
+  .composer__rag-status-path {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    word-break: break-all;
   }
 
   .composer__attachment {

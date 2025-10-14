@@ -9,6 +9,7 @@ pub mod api;
 pub mod core;
 pub mod generate;
 pub mod models;
+pub mod rag;
 
 // Команда для получения информации о приложении
 #[tauri::command]
@@ -26,6 +27,7 @@ use std::sync::{Arc, Mutex};
 // use candle::quantized::gguf_file;
 use crate::core::performance::StartupTracker;
 use crate::models::common::model::ModelBackend;
+use crate::rag::{RagConfig, RagService, RagServiceState};
 use core::state::{ModelState, SharedState};
 use tauri::Emitter;
 // use crate::models::qwen3::ModelWeights as Qwen3Gguf;
@@ -50,11 +52,18 @@ pub fn run() {
         guard.performance_monitor.clone()
     };
 
+    let rag_config = RagConfig::new(".oxide-data/rag");
+    let rag_service =
+        tauri::async_runtime::block_on(async { RagService::initialise(rag_config).await })
+            .expect("Failed to initialize RAG service");
+    let rag_state: RagServiceState = Arc::new(tokio::sync::RwLock::new(rag_service));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(shared)
+        .manage(rag_state)
         .invoke_handler(tauri::generate_handler![
             api::greet,
             get_app_info,
@@ -97,6 +106,10 @@ pub fn run() {
             api::download_manager::cancel_download,
             api::download_manager::remove_download_entry,
             api::download_manager::clear_download_history,
+            crate::rag::tauri_integration::load_document,
+            crate::rag::tauri_integration::query_rag,
+            crate::rag::tauri_integration::list_rag_documents,
+            crate::rag::tauri_integration::delete_rag_document,
         ])
         .setup(move |app| {
             let _app_handle = app.handle().clone();

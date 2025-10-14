@@ -4,6 +4,7 @@
   import LoaderPanel from '$lib/chat/components/LoaderPanel.svelte';
   import MessageList from '$lib/chat/components/MessageList.svelte';
   import Composer from '$lib/chat/components/Composer.svelte';
+  import RagSettings from '$lib/chat/components/RagSettings.svelte';
   // Chat styles are loaded globally from layout to avoid UI changes when navigating between pages
   // Убрали переключатель «сырого» Markdown
   import type { ChatMessage } from '$lib/chat/types';
@@ -650,6 +651,7 @@
               bind:repeat_penalty_value
             />
           {/if}
+          <RagSettings />
         </LoaderPanel>
       </div>
     {/if}
