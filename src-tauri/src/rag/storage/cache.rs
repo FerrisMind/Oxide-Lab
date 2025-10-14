@@ -97,11 +97,11 @@ impl EmbeddingCache {
     pub fn lookup(&self, key: &str) -> Option<Arc<Vec<f32>>> {
         let mut guard = self.inner.write();
         if let Some(entry) = guard.get_mut(key) {
-            if let Some(expiry) = entry.expires_at {
-                if SystemTime::now() > expiry {
-                    guard.remove(key);
-                    return None;
-                }
+            if let Some(expiry) = entry.expires_at
+                && SystemTime::now() > expiry
+            {
+                guard.remove(key);
+                return None;
             }
             entry.last_used = SystemTime::now();
             return Some(Arc::clone(&entry.embedding));
@@ -123,4 +123,3 @@ impl EmbeddingCache {
         }
     }
 }
-

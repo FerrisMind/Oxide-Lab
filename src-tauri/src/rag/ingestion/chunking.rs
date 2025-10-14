@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -16,7 +17,11 @@ pub enum DocumentKind {
 
 impl DocumentKind {
     pub fn from_path(path: &std::path::Path) -> Option<Self> {
-        match path.extension().and_then(|ext| ext.to_str()).map(|ext| ext.to_lowercase()) {
+        match path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.to_lowercase())
+        {
             Some(ext) if ext == "pdf" => Some(DocumentKind::Pdf),
             Some(ext) if ext == "txt" => Some(DocumentKind::PlainText),
             Some(ext) if ext == "docx" => Some(DocumentKind::Docx),
@@ -24,7 +29,19 @@ impl DocumentKind {
             Some(ext)
                 if matches!(
                     ext.as_str(),
-                    "rs" | "py" | "js" | "ts" | "jsx" | "tsx" | "java" | "go" | "cpp" | "c" | "cs" | "php" | "rb" | "swift"
+                    "rs" | "py"
+                        | "js"
+                        | "ts"
+                        | "jsx"
+                        | "tsx"
+                        | "java"
+                        | "go"
+                        | "cpp"
+                        | "c"
+                        | "cs"
+                        | "php"
+                        | "rb"
+                        | "swift"
                 ) =>
             {
                 Some(DocumentKind::Code)
@@ -148,7 +165,10 @@ impl SemanticChunker {
         text: &str,
         origin_metadata: &HashMap<String, String>,
     ) -> Vec<DocumentChunk> {
-        let mut sections: Vec<&str> = text.split("\n\n").filter(|s| !s.trim().is_empty()).collect();
+        let mut sections: Vec<&str> = text
+            .split("\n\n")
+            .filter(|s| !s.trim().is_empty())
+            .collect();
         if sections.is_empty() {
             sections.push(text);
         }
@@ -260,7 +280,10 @@ impl SemanticChunker {
                     buffer = if overlap_buffer.is_empty() {
                         Vec::new()
                     } else {
-                        overlap_buffer.split_whitespace().map(|s| s.to_string()).collect::<Vec<String>>()
+                        overlap_buffer
+                            .split_whitespace()
+                            .map(|s| s.to_string())
+                            .collect::<Vec<String>>()
                     };
                     token_sum = buffer
                         .iter()
@@ -276,14 +299,15 @@ impl SemanticChunker {
             if !buffer.is_empty() {
                 let combined = buffer.join(" ");
                 let mut token_count = estimate_token_count(&combined);
-                if token_count < self.config.min_tokens && !chunks.is_empty() {
-                    if let Some(last) = chunks.last_mut() {
-                        last.text.push(' ');
-                        last.text.push_str(&combined);
-                        last.token_count += token_count;
-                        last.coordinate.end_token += token_count;
-                        continue;
-                    }
+                if token_count < self.config.min_tokens
+                    && !chunks.is_empty()
+                    && let Some(last) = chunks.last_mut()
+                {
+                    last.text.push(' ');
+                    last.text.push_str(&combined);
+                    last.token_count += token_count;
+                    last.coordinate.end_token += token_count;
+                    continue;
                 }
 
                 token_count = token_count.max(self.config.min_tokens);
@@ -303,6 +327,8 @@ impl SemanticChunker {
 
             section_index += 1;
         }
+
+        debug!("Chunking completed");
 
         chunks
     }
@@ -346,4 +372,3 @@ fn build_metadata(
     metadata.insert("chunk_index".into(), index.to_string());
     metadata
 }
-

@@ -24,6 +24,7 @@ use inference::{DocumentIndexer, InferenceConfig, RagEngine, RagQuery, RagResult
 use ingestion::{FileIngestionConfig, IngestionPipeline, IngestionStats};
 use std::path::{Path, PathBuf};
 use storage::{CacheConfig, EmbeddingCache, StorageConfig, VectorStore, VectorStoreFactory};
+use tracing::{info, instrument};
 
 pub type RagServiceState = Arc<RwLock<RagService>>;
 
@@ -59,6 +60,7 @@ pub struct RagService {
 }
 
 impl RagService {
+    #[instrument(skip(config))]
     pub async fn initialise(config: RagConfig) -> anyhow::Result<Self> {
         let cache = EmbeddingCache::new(config.cache.clone());
         let factory = VectorStoreFactory::new(cache.clone());
@@ -85,6 +87,11 @@ impl RagService {
                 Arc::clone(&stats),
             )
             .await?,
+        );
+
+        info!(
+            workspace = %config.workspace_dir.display(),
+            "RagService initialised"
         );
 
         Ok(Self {
@@ -116,6 +123,7 @@ impl RagService {
         Arc::clone(&self.last_loaded)
     }
 
+    #[instrument(skip(self))]
     pub async fn query(&self, query: RagQuery) -> anyhow::Result<RagResult> {
         self.engine.query(query).await
     }

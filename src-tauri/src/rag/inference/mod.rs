@@ -8,18 +8,21 @@ use std::sync::Arc;
 use anyhow::Context;
 use async_trait::async_trait;
 use candle::Device;
-use candle_nn::{linear, Linear, Module, VarBuilder};
+use candle_nn::{Linear, Module, VarBuilder, linear};
 use candle_transformers::models::bert::{BertModel, Config as BertConfig, DTYPE};
-use hf_hub::{api::sync::Api, Repo, RepoType};
+use hf_hub::{Repo, RepoType, api::sync::Api};
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
 use tokenizers::{EncodeInput, Tokenizer};
+use tokio::sync::Mutex;
+use tracing::{debug, info, instrument};
 use uuid::Uuid;
 
 use crate::core::device::select_device;
 use crate::core::types::DevicePreference;
 use crate::rag::ingestion::{DocumentChunk, DocumentKind};
-use crate::rag::storage::{DocumentPayload, EmbeddingCache, PayloadChunk, VectorQuery, VectorStore};
+use crate::rag::storage::{
+    DocumentPayload, EmbeddingCache, PayloadChunk, VectorQuery, VectorStore,
+};
 
 use self::embeddings::{EmbeddingModel, EmbeddingModelConfig};
 use self::search::{HybridSearcher, SearchConfig};
@@ -113,6 +116,7 @@ pub struct RagEngine {
 }
 
 impl RagEngine {
+    #[instrument(skip(storage, cache), fields(workspace = %workspace_dir.display()))]
     pub async fn new(
         storage: Arc<dyn VectorStore>,
         cache: EmbeddingCache,
@@ -127,11 +131,18 @@ impl RagEngine {
         let searcher = Arc::new(HybridSearcher::new(search_dir, config.search.clone())?);
         let reranker = if let Some(rerank_config) = config.cross_encoder.clone() {
             Some(Arc::new(Mutex::new(
-                CrossEncoder::load(rerank_config, device).await?,
+                CrossEncoder::load(rerank_config, device.clone()).await?,
             )))
         } else {
             None
         };
+        info!(
+            device = ?device,
+            max_vector_results = config.max_vector_results,
+            reranker_enabled = reranker.is_some(),
+            "Initialised RAG engine"
+        );
+
         Ok(Self {
             storage,
             embedder,
@@ -142,7 +153,12 @@ impl RagEngine {
         })
     }
 
+    #[instrument(skip(self, query), fields(top_k = query.top_k))]
     pub async fn query(&self, query: RagQuery) -> anyhow::Result<RagResult> {
+        let preview = truncate_query(&query.text);
+        info!(query_preview = %preview, "Executing RAG query");
+
+        let start = std::time::Instant::now();
         let embedding = self.embed(vec![query.text.clone()]).await?;
         let embedding = embedding
             .into_iter()
@@ -160,6 +176,13 @@ impl RagEngine {
         let bm25_hits = self
             .searcher
             .search(&query.text, self.config.max_vector_results)?;
+        let vector_results_len = vector_results.len();
+        let bm25_results_len = bm25_hits.len();
+        debug!(
+            vector_results = vector_results_len,
+            bm25_results = bm25_results_len,
+            "Retrieved candidate chunks"
+        );
 
         let mut aggregated: HashMap<Uuid, AggregatedHit> = HashMap::new();
 
@@ -204,10 +227,10 @@ impl RagEngine {
                         })
                     })
             });
-            if entry.embedding.is_none() {
-                if let Some(stored) = stored.clone() {
-                    entry.embedding = Some(stored.embedding);
-                }
+            if entry.embedding.is_none()
+                && let Some(stored) = stored.clone()
+            {
+                entry.embedding = Some(stored.embedding);
             }
             entry.bm25_score = hit.score;
         }
@@ -222,6 +245,10 @@ impl RagEngine {
             .fold(0.0f32, f32::max);
 
         let rerank_candidates = self.config.search.rerank_top_k.min(query.top_k * 2);
+        debug!(
+            vector_hits = aggregated.len(),
+            rerank_candidates, "Aggregated initial hits"
+        );
         let mut scored_hits: Vec<_> = aggregated
             .into_values()
             .map(|mut entry| {
@@ -257,12 +284,13 @@ impl RagEngine {
                     .score_with_cross_encoder(&query.text, &candidate.chunk.text, reranker)
                     .await?;
                 candidate.rerank = Some(rerank_score);
-                candidate.combined = (1.0 - self
-                    .config
-                    .cross_encoder
-                    .as_ref()
-                    .map(|cfg| cfg.weight)
-                    .unwrap_or(0.0))
+                candidate.combined = (1.0
+                    - self
+                        .config
+                        .cross_encoder
+                        .as_ref()
+                        .map(|cfg| cfg.weight)
+                        .unwrap_or(0.0))
                     * candidate.combined
                     + rerank_score
                         * self
@@ -280,7 +308,7 @@ impl RagEngine {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let hits = scored_hits
+        let hits: Vec<_> = scored_hits
             .into_iter()
             .take(query.top_k)
             .map(|entry| RagHit {
@@ -292,12 +320,40 @@ impl RagEngine {
             })
             .collect();
 
+        let elapsed = start.elapsed();
+        info!(
+            hits = hits.len(),
+            elapsed_ms = elapsed.as_millis(),
+            "RAG query completed"
+        );
+        for (index, hit) in hits.iter().enumerate() {
+            debug!(
+                index,
+                combined_score = hit.combined_score,
+                vector_score = hit.vector_score,
+                bm25_score = hit.bm25_score,
+                rerank_score = hit.rerank_score,
+                path = %hit
+                    .chunk
+                    .metadata
+                    .get("source")
+                    .cloned()
+                    .unwrap_or_default(),
+                chunk_index = hit.chunk.coordinate.index,
+                preview = %truncate_snippet(&hit.chunk.text),
+                "Final RAG hit"
+            );
+        }
+
         Ok(RagResult { hits })
     }
 
+    #[instrument(skip(self, texts), fields(batch = texts.len()))]
     async fn embed(&self, texts: Vec<String>) -> anyhow::Result<Vec<Vec<f32>>> {
         let mut results: Vec<Option<Vec<f32>>> = vec![None; texts.len()];
         let mut missing = Vec::new();
+
+        debug!(batch = texts.len(), "Checking embedding cache");
 
         for (idx, text) in texts.iter().enumerate() {
             let key = cache_key_for_text(text);
@@ -310,7 +366,8 @@ impl RagEngine {
 
         if !missing.is_empty() {
             let embedder = Arc::clone(&self.embedder);
-            let compute_texts: Vec<String> = missing.iter().map(|(_, text, _)| text.clone()).collect();
+            let compute_texts: Vec<String> =
+                missing.iter().map(|(_, text, _)| text.clone()).collect();
             let embeddings = tokio::task::spawn_blocking(move || {
                 let embedder = embedder.blocking_lock();
                 embedder.encode(&compute_texts)
@@ -345,17 +402,16 @@ impl RagEngine {
 
 #[async_trait]
 impl DocumentIndexer for RagEngine {
+    #[instrument(skip(self, chunks), fields(path = %path.display(), kind = ?kind, chunk_count = chunks.len()))]
     async fn index_document(
         &self,
         path: &std::path::Path,
         kind: DocumentKind,
         chunks: Vec<DocumentChunk>,
     ) -> anyhow::Result<()> {
-        let texts: Vec<String> = chunks
-            .iter()
-            .map(|chunk| chunk.text.clone())
-            .collect();
+        let texts: Vec<String> = chunks.iter().map(|chunk| chunk.text.clone()).collect();
 
+        debug!(path = %path.display(), chunk_count = chunks.len(), "Embedding document chunks");
         let embeddings = self.embed(texts).await?;
         let mut payload_chunks = Vec::new();
         for (chunk, embedding) in chunks.into_iter().zip(embeddings.into_iter()) {
@@ -365,6 +421,7 @@ impl DocumentIndexer for RagEngine {
         }
 
         self.searcher.commit()?;
+        info!(path = %path.display(), total_chunks = payload_chunks.len(), "Persisting document payload");
 
         let payload = DocumentPayload {
             path: path.to_path_buf(),
@@ -429,21 +486,13 @@ impl CrossEncoder {
             .unwrap_or(1) as usize;
         let bert_config: BertConfig = serde_json::from_value(raw_config)?;
         let tokenizer = Tokenizer::from_file(tokenizer_path).map_err(anyhow::Error::msg)?;
-        let vb = if weights_path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            == Some("bin")
-        {
+        let vb = if weights_path.extension().and_then(|ext| ext.to_str()) == Some("bin") {
             VarBuilder::from_pth(weights_path, DTYPE, &device)?
         } else {
             unsafe { VarBuilder::from_mmaped_safetensors(&[weights_path], DTYPE, &device)? }
         };
         let bert = BertModel::load(vb.pp("bert"), &bert_config)?;
-        let classifier = linear(
-            bert_config.hidden_size,
-            num_labels,
-            vb.pp("classifier"),
-        )?;
+        let classifier = linear(bert_config.hidden_size, num_labels, vb.pp("classifier"))?;
         Ok(Self {
             bert,
             classifier,
@@ -461,11 +510,9 @@ impl CrossEncoder {
             candle::Tensor::new(encoding.get_ids().to_vec(), &self.device)?.unsqueeze(0)?;
         let type_ids =
             candle::Tensor::new(encoding.get_type_ids().to_vec(), &self.device)?.unsqueeze(0)?;
-        let attention_mask = candle::Tensor::new(
-            encoding.get_attention_mask().to_vec(),
-            &self.device,
-        )?
-        .unsqueeze(0)?;
+        let attention_mask =
+            candle::Tensor::new(encoding.get_attention_mask().to_vec(), &self.device)?
+                .unsqueeze(0)?;
 
         let outputs = self
             .bert
@@ -492,11 +539,20 @@ fn cache_key_for_text(text: &str) -> String {
     format!("query:{}", hash)
 }
 
+fn truncate_query(text: &str) -> String {
+    const MAX_LEN: usize = 120;
+    if text.len() > MAX_LEN {
+        format!("{}...", &text[..MAX_LEN])
+    } else {
+        text.to_string()
+    }
+}
 
-
-
-
-
-
-
-
+fn truncate_snippet(text: &str) -> String {
+    const MAX_LEN: usize = 160;
+    if text.len() > MAX_LEN {
+        format!("{}...", &text[..MAX_LEN])
+    } else {
+        text.to_string()
+    }
+}

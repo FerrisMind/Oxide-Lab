@@ -7,9 +7,11 @@
   import Microphone from 'phosphor-svelte/lib/Microphone';
   import SlidersHorizontal from 'phosphor-svelte/lib/SlidersHorizontal';
   import ClockCounterClockwise from 'phosphor-svelte/lib/ClockCounterClockwise';
-  import File from 'phosphor-svelte/lib/File';
+  import FileIcon from 'phosphor-svelte/lib/File';
   import X from 'phosphor-svelte/lib/X';
   import { listen } from '@tauri-apps/api/event';
+  import { open as openDialog } from '@tauri-apps/plugin-dialog';
+  import { readFile } from '@tauri-apps/plugin-fs';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   import { loadRagDocument, queryRag, type RagResponse } from '$lib/api/rag';
 
@@ -60,25 +62,28 @@
     'toggle-chat-history': void;
   }>();
 
-  export let prompt: string = '';
-  export let busy: boolean = false;
-  export let isLoaded: boolean = false;
-  export let canStop: boolean = false;
-  export let isRecording: boolean = false;
-  export let supports_text: boolean = true;
-  export let supports_image: boolean = false;
-  export let supports_audio: boolean = false;
-  export let supports_video: boolean = false;
-  export let isLoaderPanelVisible: boolean = false;
-  export let isChatHistoryVisible: boolean = false;
+  let {
+    prompt = $bindable(''),
+    busy = false,
+    isLoaded = false,
+    canStop = false,
+    supports_text = true,
+    supports_image = false,
+    supports_audio = false,
+    supports_video = false,
+    isLoaderPanelVisible = false,
+    isChatHistoryVisible = false,
+    isRecording: initialRecording = false,
+  } = $props();
 
+  let isRecording = $state(initialRecording);
   let fileInput: HTMLInputElement | null = null;
   let textareaElement: HTMLTextAreaElement | null = null;
   const MAX_FILE_SIZE = 20 * 1024 * 1024;
-  let attachError: string | null = null;
+  let attachError = $state<string | null>(null);
   let errorTimer: ReturnType<typeof setTimeout> | null = null;
-  let accept = DEFAULT_TEXT_ACCEPT;
-  let attachedFiles: AttachDetail[] = [];
+  const accept = $derived(buildAccept());
+  let attachedFiles = $state<AttachDetail[]>([]);
   let isDragging = $state(false);
   let processingProgress = $state(0);
   let processingStage = $state('');
@@ -88,8 +93,26 @@
   const PROGRESS_RESET_DELAY = 1500;
   const DEFAULT_RAG_TOP_K = 5;
 
+  const ragLog = (...args: unknown[]) => {
+    if (typeof console?.info === 'function') {
+      console.info('[RAG]', ...args);
+    } else {
+      console.log('[RAG]', ...args);
+    }
+  };
+  const isTauri =
+    typeof window !== 'undefined' && Boolean((window as typeof window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
+  const MAX_LOG_SNIPPET = 160;
+  const logSnippet = (value: string) =>
+    typeof value === 'string' && value.length > MAX_LOG_SNIPPET
+      ? `${value.slice(0, MAX_LOG_SNIPPET)}...`
+      : value;
+
+  let lastProgressStage: string | null = null;
+  let lastProgressPath: string | null = null;
+
   // Переменные для автоматического изменения высоты
-  let textareaHeight = 34; // Стандартная высота однострочного поля
+  let textareaHeight = $state(34); // Стандартная высота однострочного поля
   const MIN_HEIGHT = 34; // Минимальная высота (как у кнопок)
   const MAX_HEIGHT = 102; // Максимальная высота (3 строки)
 
@@ -102,16 +125,43 @@
 
     if (hasRagDocuments) {
       try {
+        const ragDocNames = attachedFiles
+          .filter((file) => file.content.startsWith('[RAG Document:'))
+          .map((file) => file.filename);
+        ragLog('Executing contextual retrieval', {
+          attachments: ragDocNames,
+          topK: DEFAULT_RAG_TOP_K,
+          promptPreview: logSnippet(prompt),
+        });
         const ragResult = await queryRag(prompt, DEFAULT_RAG_TOP_K);
+        ragLog('Contextual retrieval completed', {
+          hitCount: ragResult?.hits?.length ?? 0,
+          queryTimeMs: ragResult?.query_time_ms ?? 0,
+        });
         if (ragResult?.hits?.length) {
+          const topHit = ragResult.hits[0];
+          if (topHit) {
+            ragLog('Top retrieved chunk', {
+              documentPath: topHit.document_path,
+              score: topHit.score,
+              preview: logSnippet(topHit.text),
+            });
+          }
           const contextualPrompt = buildContextualPrompt(prompt, ragResult);
+          ragLog('Prompt augmented with retrieved context', {
+            newPromptPreview: logSnippet(contextualPrompt),
+          });
           prompt = contextualPrompt;
         }
       } catch (error) {
         console.warn('RAG query failed', error);
+        ragLog('Contextual retrieval failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
+    ragLog('Dispatching send event');
     dispatch('send');
   }
 
@@ -149,6 +199,10 @@
   }
 
   function removeAttachment(index: number) {
+    const removed = attachedFiles[index];
+    if (removed) {
+      ragLog('Removing attachment', { filename: removed.filename });
+    }
     attachedFiles = attachedFiles.filter((_, i) => i !== index);
     const hasRagDocuments = attachedFiles.some((file) =>
       file.content.startsWith('[RAG Document:'),
@@ -158,12 +212,19 @@
     }
   }
 
-  function triggerAttach() {
+  async function triggerAttach() {
+    if (isTauri) {
+      const handled = await openTauriFilePicker();
+      if (handled) {
+        return;
+      }
+      ragLog('Falling back to DOM file chooser');
+    }
+
     if (!fileInput) return;
+    ragLog('Opening DOM file chooser');
     fileInput.click();
   }
-
-  $: accept = buildAccept();
 
   function buildAccept() {
     const extensions: string[] = [];
@@ -172,6 +233,75 @@
     if (supports_audio) extensions.push(...AUDIO_EXTENSIONS.map((ext) => `.${ext}`));
     if (supports_video) extensions.push(...VIDEO_EXTENSIONS.map((ext) => `.${ext}`));
     return extensions.join(',') || DEFAULT_TEXT_ACCEPT;
+  }
+
+  function buildDialogExtensions(): string[] {
+    const extensions: string[] = [];
+    if (supports_text) extensions.push(...TEXT_EXTENSIONS);
+    if (supports_image) extensions.push(...IMAGE_EXTENSIONS);
+    if (supports_audio) extensions.push(...AUDIO_EXTENSIONS);
+    if (supports_video) extensions.push(...VIDEO_EXTENSIONS);
+    if (extensions.length === 0) {
+      extensions.push(...TEXT_EXTENSIONS);
+    }
+    return Array.from(new Set(extensions));
+  }
+
+  async function openTauriFilePicker(): Promise<boolean> {
+    try {
+      ragLog('Opening Tauri file dialog');
+      const selection = await openDialog({
+        multiple: true,
+        filters: [
+          {
+            name: 'Supported files',
+            extensions: buildDialogExtensions(),
+          },
+        ],
+      });
+
+      if (!selection) {
+        ragLog('Tauri dialog closed without selection');
+        return true;
+      }
+
+      const paths = Array.isArray(selection) ? selection : [selection];
+      if (paths.length === 0) {
+        ragLog('No paths returned from Tauri dialog');
+        return true;
+      }
+
+      ragLog('Tauri dialog selection', { count: paths.length, paths });
+      for (const path of paths) {
+        await processFileFromPath(path);
+      }
+      return true;
+    } catch (error) {
+      ragLog('Tauri file dialog failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  async function processFileFromPath(path: string): Promise<void> {
+    try {
+      const filename = path.split(/[/\\]/).pop() ?? 'attachment';
+      ragLog('Reading file from filesystem', { path, filename });
+      const data = await readFile(path);
+      const file = new File([data], filename);
+      Object.defineProperty(file, 'path', { value: path, configurable: true });
+      const handled = await processFile(file);
+      if (!handled) {
+        ragLog('File selected via dialog was not handled by attachment pipeline', { path });
+      }
+    } catch (error) {
+      ragLog('Failed to process filesystem attachment', {
+        path,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      setError('Failed to process file');
+    }
   }
 
   const STAGE_LABELS: Record<string, string> = {
@@ -194,6 +324,8 @@
     processingStage = '';
     processingMessage = null;
     processingPath = null;
+    lastProgressStage = null;
+    lastProgressPath = null;
     if (progressClearTimer) {
       clearTimeout(progressClearTimer);
       progressClearTimer = null;
@@ -219,6 +351,7 @@
   }
 
   function setError(message: string) {
+    ragLog('Attachment error', { message });
     attachError = message;
     clearErrorTimer();
     errorTimer = setTimeout(() => {
@@ -229,8 +362,15 @@
 
   async function handleFileChange(event: Event) {
     const input = event.currentTarget as HTMLInputElement | null;
+    const pendingCount = input?.files?.length ?? 0;
+    ragLog('File input change received', { fileCount: pendingCount });
     const file = input?.files?.[0];
     if (!file) return;
+    ragLog('File selected via picker', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
 
     try {
       const handled = await processFile(file);
@@ -247,18 +387,19 @@
     }
   }
 
-  async function processFile(file: File): Promise<boolean> {
+  async function processFile(file: globalThis.File): Promise<boolean> {
     const ragHandled = await handleRagUpload(file);
     if (ragHandled) {
+      ragLog('File handled by RAG ingestion flow', { name: file.name });
       return true;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-    if (file.size > MAX_FILE_SIZE) {
       setError('File is too large. Maximum supported size is 20 MB.');
+      return false;
     }
 
-    const name = file.name;
+    const name = file.name || 'attachment';
     const mime = file.type || '';
     const topLevel = mime.split('/')[0];
     const ext = (name.split('.').pop() || '').toLowerCase();
@@ -268,18 +409,27 @@
     const isImage = topLevel === 'image' || IMAGE_EXTENSIONS.includes(ext);
     const isAudio = topLevel === 'audio' || AUDIO_EXTENSIONS.includes(ext);
     const isVideo = topLevel === 'video' || VIDEO_EXTENSIONS.includes(ext);
+    ragLog('Classified attachment', {
+      name,
+      mime,
+      ext,
+      isTextLike,
+      isImage,
+      isAudio,
+      isVideo,
+    });
 
     if (isImage && !supports_image) {
-    if (isImage && !supports_image) {
       setError('Image attachments are not supported by the current model');
+      return false;
     }
-    if (isAudio && !supports_audio) {
     if (isAudio && !supports_audio) {
       setError('Audio attachments are not supported by the current model');
+      return false;
     }
     if (isVideo && !supports_video) {
-    if (isVideo && !supports_video) {
       setError('Video attachments are not supported by the current model');
+      return false;
     }
 
     if (isTextLike) {
@@ -287,6 +437,10 @@
       const attachment = { filename: name, content };
       attachedFiles = [...attachedFiles, attachment];
       dispatch('attach', attachment);
+      ragLog('Added text attachment', {
+        filename: name,
+        size: content.length,
+      });
       attachError = null;
       clearErrorTimer();
       return true;
@@ -308,15 +462,20 @@
       const attachment = { filename: name, content: marker };
       attachedFiles = [...attachedFiles, attachment];
       dispatch('attach', attachment);
+      ragLog('Added binary attachment placeholder', {
+        filename: name,
+        category: isImage ? 'image' : isAudio ? 'audio' : 'video',
+      });
       attachError = null;
       clearErrorTimer();
       return true;
     }
 
+    ragLog('Unsupported attachment type encountered', { filename: name });
     return false;
   }
 
-  function extractFilePath(file: File): string | null {
+  function extractFilePath(file: globalThis.File): string | null {
     const candidate =
       (file as any)?.path ?? (file as any)?.pathName ?? (file as any)?.webkitRelativePath;
     if (typeof candidate === 'string' && candidate.length > 0) {
@@ -325,13 +484,20 @@
     return null;
   }
 
-  async function handleRagUpload(file: File): Promise<boolean> {
+  async function handleRagUpload(file: globalThis.File): Promise<boolean> {
     const filePath = extractFilePath(file);
     if (!filePath) {
+      ragLog('File is missing filesystem path; skipping RAG ingestion', {
+        filename: file.name,
+      });
       return false;
     }
 
     try {
+      ragLog('Submitting file for RAG ingestion', {
+        filename: file.name,
+        path: filePath,
+      });
       processingPath = file.name || filePath;
       processingStage = 'queued';
       processingProgress = 0;
@@ -347,6 +513,11 @@
       if (!exists) {
         attachedFiles = [...attachedFiles, attachment];
         dispatch('attach', attachment);
+        ragLog('RAG document placeholder attached', {
+          filename: attachment.filename,
+          docPath: doc.path,
+          chunks: doc.chunks_count,
+        });
       }
       attachError = null;
       clearErrorTimer();
@@ -354,6 +525,11 @@
     } catch (error) {
       console.error('RAG ingestion failed', error);
       const message = error instanceof Error ? error.message : String(error ?? 'Unknown error');
+      ragLog('RAG ingestion failed', {
+        filename: file.name,
+        path: filePath,
+        error: message,
+      });
       processingStage = 'error';
       processingMessage = message;
       scheduleProgressReset();
@@ -388,6 +564,10 @@
     const files = event.dataTransfer?.files;
     if (!files || files.length === 0) return;
 
+    ragLog('Files dropped into composer', {
+      count: files.length,
+      names: Array.from(files).map((file) => file.name),
+    });
     for (const file of Array.from(files)) {
       await processFile(file);
     }
@@ -423,13 +603,27 @@
       message?: string;
     }>('rag_progress', (event) => {
       const payload = event?.payload ?? {};
+      const stageChanged =
+        typeof payload.stage === 'string' && payload.stage !== lastProgressStage;
+      const pathChanged = typeof payload.path === 'string' && payload.path !== lastProgressPath;
+      if (stageChanged || pathChanged || typeof payload.message === 'string') {
+        ragLog('RAG progress event', {
+          stage: payload.stage,
+          progress: payload.progress,
+          path: payload.path,
+          message: payload.message,
+        });
+      }
+
       if (typeof payload.path === 'string' && payload.path.length > 0) {
         const normalized = payload.path.replace(/\\/g, '/');
         const segments = normalized.split('/');
         processingPath = segments[segments.length - 1] || payload.path;
+        lastProgressPath = payload.path;
       }
       if (typeof payload.stage === 'string') {
         processingStage = payload.stage;
+        lastProgressStage = payload.stage;
       }
       if (typeof payload.progress === 'number' && Number.isFinite(payload.progress)) {
         const clamped = Math.min(1, Math.max(0, payload.progress));
@@ -502,35 +696,41 @@
   }
 
   // Реактивное обновление высоты при изменении prompt
-  $: if (prompt !== undefined) {
-    // Используем setTimeout для корректного обновления после рендера
-    setTimeout(() => {
+  $effect(() => {
+    prompt;
+    const timer = setTimeout(() => {
       adjustTextareaHeight();
     }, 0);
-  }
+
+    return () => {
+      clearTimeout(timer);
+    };
+  });
 </script>
 
 <div class="composer-wrapper">
   <div
     class="composer"
     class:composer--dragging={isDragging}
-    on:dragenter={handleDragEnter}
-    on:dragover={handleDragOver}
-    on:dragleave={handleDragLeave}
-    on:drop={handleDrop}
+    role="group"
+    aria-label="Message composer"
+    ondragenter={handleDragEnter}
+    ondragover={handleDragOver}
+    ondragleave={handleDragLeave}
+    ondrop={handleDrop}
   >
     {#if attachedFiles.length > 0}
       <div class="composer__row composer__row--attachments">
         {#each attachedFiles as attachment, index}
           <div class="composer__attachment">
             <div class="composer__attachment-icon">
-              <File size={16} weight="bold" />
+              <FileIcon size={16} weight="bold" />
             </div>
             <span class="composer__attachment-name">{attachment.filename}</span>
             <button
               type="button"
               class="composer__attachment-remove"
-              on:click={() => removeAttachment(index)}
+              onclick={() => removeAttachment(index)}
               aria-label="Удалить файл"
             >
               <X size={12} weight="bold" />
@@ -568,8 +768,8 @@
         bind:this={textareaElement}
         placeholder="Напишите сообщение..."
         rows="1"
-        on:keydown={handleKeydown}
-        on:input={handleTextareaInput}
+        onkeydown={handleKeydown}
+        oninput={handleTextareaInput}
         style="height: {textareaHeight}px; overflow-y: {textareaHeight >= MAX_HEIGHT
           ? 'auto'
           : 'hidden'};"
@@ -582,7 +782,7 @@
             type="button"
             class="composer__button composer__button--icon"
             class:composer__button--settings-active={isChatHistoryVisible}
-            on:click={triggerChatHistory}
+            onclick={triggerChatHistory}
             disabled={false}
             aria-label={isChatHistoryVisible ? 'Скрыть историю чатов' : 'Показать историю чатов'}
             draggable="false"
@@ -594,7 +794,7 @@
           type="button"
           class="composer__button composer__button--icon"
           class:composer__button--settings-active={isLoaderPanelVisible}
-          on:click={triggerSettings}
+          onclick={triggerSettings}
           disabled={false}
           aria-label="Настройки лоадер панели"
           draggable="false"
@@ -605,7 +805,7 @@
           <button
             type="button"
             class="composer__button composer__button--icon"
-            on:click={triggerClear}
+            onclick={triggerClear}
             disabled={busy || !isLoaded}
             aria-label="Очистить"
             draggable="false"
@@ -619,7 +819,7 @@
           <button
             type="button"
             class="composer__button composer__button--icon"
-            on:click={triggerAttach}
+            onclick={triggerAttach}
             disabled={busy || !isLoaded}
             aria-label="Прикрепить файл"
             draggable="false"
@@ -629,7 +829,7 @@
           <button
             type="button"
             class="composer__button composer__button--icon"
-            on:click={triggerVoiceInput}
+            onclick={triggerVoiceInput}
             disabled={busy || !isLoaded}
             aria-label={isRecording ? 'Остановить запись' : 'Начать запись голоса'}
             draggable="false"
@@ -644,7 +844,7 @@
         <button
           type="button"
           class="composer__button composer__button--primary"
-          on:click={busy ? triggerStop : triggerSend}
+          onclick={busy ? triggerStop : triggerSend}
           disabled={!isLoaded || (!busy && !prompt.trim())}
           aria-label={busy ? 'Стоп' : 'Отправить'}
           draggable="false"
@@ -662,7 +862,7 @@
       type="file"
       {accept}
       bind:this={fileInput}
-      on:change={handleFileChange}
+      onchange={handleFileChange}
     />
   </div>
 

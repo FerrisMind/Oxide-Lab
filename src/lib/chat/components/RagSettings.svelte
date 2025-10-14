@@ -71,7 +71,12 @@
       <h3>Indexed Documents</h3>
       <p class="rag-settings__subtitle">Manage your Retrieval-Augmented documents.</p>
     </div>
-    <button type="button" class="rag-settings__refresh" on:click={() => void loadDocuments()} disabled={loading}>
+    <button
+      type="button"
+      class="rag-settings__refresh"
+      onclick={() => void loadDocuments()}
+      disabled={loading}
+    >
       {#if loading}
         Refreshing...
       {:else}
@@ -100,7 +105,13 @@
               <span class="rag-settings__date">Indexed {formatDate(doc.indexed_at)}</span>
             </span>
           </div>
-          <button type="button" class="rag-settings__delete" on:click={() => void handleDelete(doc.path)}>Delete</button>
+          <button
+            type="button"
+            class="rag-settings__delete"
+            onclick={() => void handleDelete(doc.path)}
+          >
+            Delete
+          </button>
         </li>
       {/each}
     </ul>

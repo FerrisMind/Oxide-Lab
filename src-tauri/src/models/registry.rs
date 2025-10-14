@@ -18,9 +18,17 @@ pub enum ArchKind {
     DeepSeek, // Covers DeepSeek-R1 variants
     Pixtral,
     SmolLM2, // SmolLM 2
-             // Removed architectures not in the user's list:
-             // Falcon, OLMo, StarCoder2, Arctic, Cohere, CommandR, DBRX,
-             // Granite, GraniteMoE, InternLM2, Jais, JinaBert, JinaReranker, JinaEmbeddings, Minicpm, Mpt
+    /// Embedding models
+    Bert,
+    Roberta,
+    MpNet,
+    E5,
+    Bge,
+    Gte,
+    ClipText,
+    // Removed architectures not in the user's list:
+    // Falcon, OLMo, StarCoder2, Arctic, Cohere, CommandR, DBRX,
+    // Granite, GraniteMoE, InternLM2, Jais, JinaBert, JinaReranker, JinaEmbeddings, Minicpm, Mpt
 }
 
 /// Global model factory instance

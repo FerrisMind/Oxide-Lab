@@ -27,11 +27,9 @@ pub async fn generate_stream_cmd(
     CANCEL_GENERATION.store(false, Ordering::SeqCst);
     let app_clone = app.clone();
     let state_arc: SharedState<Box<dyn ModelBackend + Send>> = state.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        generate_stream_impl(app_clone, state_arc, req)
-    })
-    .await
-    .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || generate_stream_impl(app_clone, state_arc, req))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 fn generate_stream_impl(
@@ -278,7 +276,9 @@ fn generate_stream_impl(
             }
         };
         let mut logits = logits.squeeze(0).map_err(|e| e.to_string())?;
-        if let Some(rp) = repeat_penalty && (rp - 1.0).abs() > f32::EPSILON {
+        if let Some(rp) = repeat_penalty
+            && (rp - 1.0).abs() > f32::EPSILON
+        {
             if index == 0 {
                 log_infer!(
                     "repeat_penalty enabled: value={:.3}, last_n={}",

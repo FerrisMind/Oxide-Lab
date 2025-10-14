@@ -269,11 +269,13 @@ impl IngestionPipeline {
     }
 
     #[instrument(skip(self), fields(path = %path.display(), kind = ?kind))]
-    pub fn queue_document(&self, path: PathBuf, kind: DocumentKind) -> anyhow::Result<()> {
+    pub async fn queue_document(&self, path: PathBuf, kind: DocumentKind) -> anyhow::Result<()> {
         if self.inner.queued.insert(path.clone(), ()).is_none() {
             self.inner
                 .queue_tx
-                .blocking_send(QueuedFile { path, kind })
+                .clone()
+                .send(QueuedFile { path, kind })
+                .await
                 .map_err(|e| anyhow::anyhow!("failed to queue document: {e}"))?;
             info!("Queued document for ingestion");
         } else {
@@ -314,7 +316,6 @@ struct ProcessError {
 }
 
 impl IngestionInner {
-
     #[instrument(skip(self))]
     async fn scan_once(&self) -> anyhow::Result<()> {
         info!("Scanning watch roots");
@@ -335,10 +336,10 @@ impl IngestionInner {
                     }
                 };
                 if entry.file_type().is_file() {
-                    if let Some(ext) = entry.path().extension().and_then(|s| s.to_str()) {
-                        if !is_supported_extension(ext) {
-                            continue;
-                        }
+                    if let Some(ext) = entry.path().extension().and_then(|s| s.to_str())
+                        && !is_supported_extension(ext)
+                    {
+                        continue;
                     }
                     let path = entry.path().to_path_buf();
                     let fingerprint = match fingerprint(&path).await {
@@ -352,7 +353,9 @@ impl IngestionInner {
                     let is_new_or_changed = self
                         .fingerprints
                         .get(&path)
-                        .map(|fp| fp.hash != fingerprint.hash || fp.modified != fingerprint.modified)
+                        .map(|fp| {
+                            fp.hash != fingerprint.hash || fp.modified != fingerprint.modified
+                        })
                         .unwrap_or(true);
 
                     if is_new_or_changed {
@@ -381,114 +384,117 @@ impl IngestionInner {
         Ok(())
     }
 
-
-
-#[instrument(skip(self, job), fields(path = %job.path.display(), kind = ?job.kind))]
-async fn process_file(&self, job: QueuedFile) -> Result<(), ProcessError> {
-    self.event_tx
-        .send(IngestionEvent::FileProcessing {
-            path: job.path.clone(),
-        })
-        .ok();
-
-    let job_path = job.path.clone();
-    let result = self.process_file_inner(job).await;
-    self.queued.remove(&job_path);
-
-    match result {
-        Ok(_) => {
-            info!("Completed document processing");
-            Ok(())
-        }
-        Err(error) => {
-            error!(error = ?error, "Document processing failed");
-            Err(ProcessError {
-                path: job_path,
-                error,
+    #[instrument(skip(self, job), fields(path = %job.path.display(), kind = ?job.kind))]
+    async fn process_file(&self, job: QueuedFile) -> Result<(), ProcessError> {
+        self.event_tx
+            .send(IngestionEvent::FileProcessing {
+                path: job.path.clone(),
             })
+            .ok();
+
+        let job_path = job.path.clone();
+        let started_at = std::time::Instant::now();
+        let result = self.process_file_inner(job).await;
+        self.queued.remove(&job_path);
+
+        match result {
+            Ok(_) => {
+                info!(
+                    elapsed_ms = started_at.elapsed().as_millis(),
+                    "Completed document processing"
+                );
+                Ok(())
+            }
+            Err(error) => {
+                error!(
+                    error = ?error,
+                    elapsed_ms = started_at.elapsed().as_millis(),
+                    "Document processing failed"
+                );
+                Err(ProcessError {
+                    path: job_path,
+                    error,
+                })
+            }
         }
+    }
+
+    #[instrument(skip(self, job), fields(path = %job.path.display(), kind = ?job.kind))]
+    async fn process_file_inner(&self, job: QueuedFile) -> anyhow::Result<()> {
+        let text = extract_text(&job.path, job.kind)
+            .await
+            .with_context(|| format!("failed to extract text from {:?}", job.path))?;
+        let text_len = text.len();
+
+        let mut metadata = HashMap::new();
+        metadata.insert(
+            "path".to_string(),
+            job.path
+                .strip_prefix(&self.root_dir)
+                .unwrap_or(&job.path)
+                .to_string_lossy()
+                .to_string(),
+        );
+        metadata.insert("source".into(), job.path.to_string_lossy().into_owned());
+        metadata.insert("kind".into(), format!("{:?}", job.kind));
+
+        let chunks = self.chunker.chunk(job.kind, &text, &metadata);
+        let chunk_count = chunks.len();
+        debug!(text_len, chunk_count, "Chunking produced segments");
+
+        if chunks.is_empty() {
+            info!("Skipping document because no chunks were generated");
+            self.event_tx
+                .send(IngestionEvent::FileSkipped {
+                    path: job.path.clone(),
+                    reason: "no chunks generated".into(),
+                })
+                .ok();
+            let mut stats = self.stats.write().await;
+            stats.skipped_files += 1;
+            return Ok(());
+        }
+
+        self.indexer
+            .index_document(&job.path, job.kind, chunks.clone())
+            .await
+            .with_context(|| format!("failed to index {:?}", job.path))?;
+        info!(chunk_count, "Document indexed");
+
+        self.indexed_documents.insert(
+            job.path.clone(),
+            StoredDocument {
+                indexed_at: SystemTime::now(),
+                chunks: chunk_count,
+            },
+        );
+
+        for (idx, chunk) in chunks.iter().enumerate() {
+            trace!(chunk_index = idx, chunk_id = %chunk.id, "Emitting chunk stored event");
+            self.event_tx
+                .send(IngestionEvent::ChunkStored {
+                    path: job.path.clone(),
+                    chunk_id: chunk.id,
+                    chunk_index: idx,
+                })
+                .ok();
+        }
+
+        {
+            let mut stats = self.stats.write().await;
+            stats.processed_files += 1;
+            stats.processed_chunks += chunk_count;
+            trace!(
+                total_files = stats.processed_files,
+                total_chunks = stats.processed_chunks,
+                "Updated ingestion statistics"
+            );
+        }
+
+        Ok(())
     }
 }
 
-
-
-
-        #[instrument(skip(self, job), fields(path = %job.path.display(), kind = ?job.kind))]
-        async fn process_file_inner(&self, job: QueuedFile) -> anyhow::Result<()> {
-            let text = extract_text(&job.path, job.kind)
-                .await
-                .with_context(|| format!("failed to extract text from {:?}", job.path))?;
-            let text_len = text.len();
-
-            let mut metadata = HashMap::new();
-            metadata.insert(
-                "path".to_string(),
-                job.path
-                    .strip_prefix(&self.root_dir)
-                    .unwrap_or(&job.path)
-                    .to_string_lossy()
-                    .to_string(),
-            );
-            metadata.insert("source".into(), job.path.to_string_lossy().into_owned());
-            metadata.insert("kind".into(), format!("{:?}", job.kind));
-
-            let chunks = self.chunker.chunk(job.kind, &text, &metadata);
-            let chunk_count = chunks.len();
-            debug!(text_len, chunk_count, "Chunking produced segments");
-
-            if chunks.is_empty() {
-                info!("Skipping document because no chunks were generated");
-                self.event_tx
-                    .send(IngestionEvent::FileSkipped {
-                        path: job.path.clone(),
-                        reason: "no chunks generated".into(),
-                    })
-                    .ok();
-                let mut stats = self.stats.write().await;
-                stats.skipped_files += 1;
-                return Ok(());
-            }
-
-            self.indexer
-                .index_document(&job.path, job.kind, chunks.clone())
-                .await
-                .with_context(|| format!("failed to index {:?}", job.path))?;
-            info!(chunk_count, "Document indexed");
-
-            self.indexed_documents.insert(
-                job.path.clone(),
-                StoredDocument {
-                    indexed_at: SystemTime::now(),
-                    chunks: chunk_count,
-                },
-            );
-
-            for (idx, chunk) in chunks.iter().enumerate() {
-                trace!(chunk_index = idx, chunk_id = %chunk.id, "Emitting chunk stored event");
-                self.event_tx
-                    .send(IngestionEvent::ChunkStored {
-                        path: job.path.clone(),
-                        chunk_id: chunk.id,
-                        chunk_index: idx,
-                    })
-                    .ok();
-            }
-
-            {
-                let mut stats = self.stats.write().await;
-                stats.processed_files += 1;
-                stats.processed_chunks += chunk_count;
-                trace!(
-                    total_files = stats.processed_files,
-                    total_chunks = stats.processed_chunks,
-                    "Updated ingestion statistics"
-                );
-            }
-
-            Ok(())
-        }
-
-async fn fingerprint
 async fn fingerprint(path: &Path) -> anyhow::Result<FileFingerprint> {
     use tokio::fs::File;
     use tokio::io::{AsyncReadExt, BufReader};
@@ -571,4 +577,48 @@ fn extract_docx_text(path: &Path) -> anyhow::Result<String> {
     }
 
     Ok(out)
+}
+
+fn is_supported_extension(ext: &str) -> bool {
+    matches!(
+        ext.to_ascii_lowercase().as_str(),
+        "pdf"
+            | "txt"
+            | "md"
+            | "markdown"
+            | "docx"
+            | "rs"
+            | "py"
+            | "js"
+            | "ts"
+            | "java"
+            | "cpp"
+            | "c"
+            | "go"
+            | "cs"
+            | "swift"
+            | "kt"
+    )
+}
+
+fn detect_kind(path: &Path) -> DocumentKind {
+    match path
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_lowercase())
+    {
+        Some(ext) if ext == "pdf" => DocumentKind::Pdf,
+        Some(ext) if ext == "txt" => DocumentKind::PlainText,
+        Some(ext) if ext == "docx" => DocumentKind::Docx,
+        Some(ext) if ext == "md" || ext == "markdown" => DocumentKind::Markdown,
+        Some(ext)
+            if matches!(
+                ext.as_str(),
+                "rs" | "py" | "js" | "ts" | "cpp" | "c" | "java" | "go" | "cs" | "swift" | "kt"
+            ) =>
+        {
+            DocumentKind::Code
+        }
+        _ => DocumentKind::Unknown,
+    }
 }

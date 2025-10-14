@@ -49,7 +49,7 @@ quick-xml = "0.31"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 aes-gcm = "0.10"
 rusqlite = { version = "0.31", features = ["bundled"] }
-sqlite-vec = "0.3"
+sqlite-vec = "0.1"
 
 # Candle (ML) and related crates
 # Отключаем default-features; включение CUDA делаем через нашу feature `cuda` ниже
@@ -59,6 +59,14 @@ candle-transformers = { git = "https://github.com/huggingface/candle.git", defau
 # Опционально: flash-attn (включается через нашу feature `flash-attn` ниже)
 tokenizers = { version = "0.21", features = ["onig"] }
 minijinja = "2"
+
+# Поддержка всех основных BLAS библиотек
+openblas-src = { version = "0.10", features = ["cblas", "system"], optional = true }
+intel-mkl-src = { version = "0.8", optional = true }
+blis-src = { version = "0.2", optional = true }
+
+# CPU детектирование
+raw-cpuid = "11.0"
 
 # Image processing (removed multimodality)
 
@@ -84,10 +92,12 @@ regex = "1"
 
 
 [features]
-# По умолчанию — включаем поддержку CUDA в сборке.
-# На системах без CUDA приложение продолжит работать, так как загрузка CUDA происходит динамически,
-# а наш код по умолчанию использует CPU и не обращается к CUDA без явного переключения.
-default = ["cuda"]
+default = ["auto-blas", "cuda"]
+auto-blas = ["openblas-src"]  # По умолчанию OpenBLAS для совместимости
+intel-optimized = ["intel-mkl-src"]
+amd-optimized = ["openblas-src", "blis-src"]
+# По умолчанию собираем только CPU-билд для ускорения компиляции.
+# GPU-бэкэнды можно включать через `--features cuda` или `--features metal` при необходимости.
 
 # Объявление фичи `cuda` (нужно, иначе Cargo ругается, что default ссылается на несуществующую фичу)
 cuda = [
@@ -105,8 +115,43 @@ metal = [
     "candle-transformers/metal",
 ]
 
+# Заглушка для опционального backend'а Qdrant (чтобы cfg(feature = "rag-qdrant") не считался неожиданным)
+rag-qdrant = []
+
 # Audio processing features
 ## no extra features
 
 [package.metadata.cargo-machete]
 ignored = ["rand"]
+
+[profile.dev]
+opt-level = 0
+debug = 1
+debug-assertions = true
+overflow-checks = true
+incremental = true
+lto = false
+codegen-units = 256
+
+[profile.dev.build-override]
+opt-level = 0
+codegen-units = 256
+debug = false
+
+[profile.dev.package."candle-core"]
+debug = false
+
+[profile.dev.package."candle-nn"]
+debug = false
+
+[profile.dev.package."candle-transformers"]
+debug = false
+
+[profile.release]
+codegen-units = 8
+lto = "thin"
+strip = "symbols"
+debug = false
+
+[profile.test]
+inherits = "dev"

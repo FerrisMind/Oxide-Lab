@@ -53,7 +53,9 @@ fn read_bytes(att: &Attachment) -> Result<Option<Vec<u8>>, String> {
     }
     if let Some(p) = &att.path {
         // Проверяем размер по метаданным до чтения
-        if let Ok(meta) = std::fs::metadata(p) && meta.len() > MAX_SIZE_BYTES {
+        if let Ok(meta) = std::fs::metadata(p)
+            && meta.len() > MAX_SIZE_BYTES
+        {
             return Err(format!(
                 "Файл '{}' превышает лимит {} МБ ({} байт)",
                 p,

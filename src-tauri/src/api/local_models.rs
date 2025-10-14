@@ -6,7 +6,10 @@
 //! * Hugging Face Hub search focused on GGUF artifacts with filtering
 //! * Download helper with progress events bridged to the Svelte frontend
 
-use crate::models::registry::{ArchKind, detect_arch};
+use crate::{
+    core::tokenizer::find_tokenizer_json_in_metadata,
+    models::registry::{ArchKind, detect_arch},
+};
 use candle::quantized::gguf_file::{self, Content, Value as GgufValue, VersionedMagic};
 use chrono::{DateTime, Utc};
 use hf_hub::api::tokio::{ApiBuilder, Progress as HubProgress};
@@ -97,6 +100,13 @@ pub struct GGUFMetadata {
 
 /// Local model description returned to the frontend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "model_type", rename_all = "snake_case")]
+pub enum ModelKind {
+    Llm,
+    Embedding { quantization: Option<String> },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelInfo {
     pub name: String,
     pub path: PathBuf,
@@ -119,6 +129,7 @@ pub struct ModelInfo {
     pub tokenizer_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vocab_size: Option<usize>,
+    pub kind: ModelKind,
     pub candle_compatible: bool,
     pub validation_status: ValidationStatus,
     pub created_at: DateTime<Utc>,
@@ -617,7 +628,7 @@ fn read_gguf_metadata(path: &Path, include_tokens: bool) -> Result<MetadataEnvel
     metadata.custom_metadata = custom_metadata;
 
     let detected_arch = detect_arch(&content.metadata);
-    let validation = validate_metadata(&metadata, detected_arch.is_some());
+    let validation = validate_metadata(&metadata, &content.metadata, detected_arch.is_some());
 
     Ok(MetadataEnvelope {
         metadata,
@@ -691,7 +702,8 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
     let created_at = DateTime::<Utc>::from(created_at);
 
     let quantization =
-        extract_quantization_from_filename(path.file_name().and_then(|s| s.to_str()).unwrap_or(""));
+        extract_quantization_from_filename(path.file_name().and_then(|s| s.to_str()).unwrap_or(""))
+            .map(|q| canonicalize_quantization(&q));
 
     let vocab_size = envelope.vocab_size;
     let detected_architecture = envelope
@@ -706,6 +718,8 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
             .map(format_parameter_count)
     });
 
+    let kind = detect_model_kind(&envelope, quantization.as_deref());
+
     Ok(ModelInfo {
         name: file_name,
         path: path.to_path_buf(),
@@ -719,6 +733,7 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
         quantization,
         tokenizer_type: envelope.metadata.tokenizer_model.clone(),
         vocab_size,
+        kind,
         candle_compatible: envelope.detected_arch.is_some(),
         validation_status: envelope.validation,
         created_at,
@@ -784,7 +799,9 @@ fn convert_detail_to_info(
         .filter(|file| file.rfilename.to_lowercase().ends_with(".gguf"))
         .filter_map(|file| {
             let size = file.size?;
-            if let Some(limit) = filters.max_file_size && size > limit {
+            if let Some(limit) = filters.max_file_size
+                && size > limit
+            {
                 return None;
             }
             let quant = extract_quantization_from_filename(&file.rfilename)
@@ -822,7 +839,9 @@ fn convert_detail_to_info(
     }
 
     let downloads = detail.downloads.unwrap_or(0);
-    if let Some(min_downloads) = filters.min_downloads && downloads < min_downloads {
+    if let Some(min_downloads) = filters.min_downloads
+        && downloads < min_downloads
+    {
         return Ok(None);
     }
 
@@ -882,7 +901,11 @@ fn apply_search_sorting(
     }
 }
 
-fn validate_metadata(metadata: &GGUFMetadata, candle_ready: bool) -> ValidationStatus {
+fn validate_metadata(
+    metadata: &GGUFMetadata,
+    raw_metadata: &HashMap<String, GgufValue>,
+    candle_ready: bool,
+) -> ValidationStatus {
     let mut errors = Vec::new();
     let mut warnings = Vec::new();
 
@@ -906,16 +929,46 @@ fn validate_metadata(metadata: &GGUFMetadata, candle_ready: bool) -> ValidationS
     }
 
     if metadata.tokenizer_tokens.is_none() {
-        // Проверим, есть ли другие способы восстановить токенизатор
-        let has_tokenizer_json = metadata
-            .custom_metadata
-            .iter()
-            .any(|kv| kv.key.contains("tokenizer") && kv.key.contains("json"));
+        const TOKEN_KEYS: &[&str] = &[
+            "tokenizer.ggml.tokens",
+            "tokenizer.tokens",
+            "tokenizer.vocab",
+            "tokenizer.ggml.vocab",
+            "tokens",
+            "vocab",
+        ];
+        const MERGE_KEYS: &[&str] = &[
+            "tokenizer.ggml.merges",
+            "tokenizer.ggml.bpe_merges",
+            "tokenizer.merges",
+            "merges",
+            "bpe_merges",
+        ];
+        const SENTENCEPIECE_KEYS: &[&str] = &[
+            "tokenizer.model",
+            "tokenizer.ggml.model",
+            "tokenizer.spm.model",
+        ];
 
-        if !has_tokenizer_json {
+        let has_tokenizer_json = find_tokenizer_json_in_metadata(raw_metadata).is_some();
+        let has_vocab_tokens = TOKEN_KEYS.iter().any(|key| raw_metadata.contains_key(*key));
+        let has_merges = MERGE_KEYS.iter().any(|key| raw_metadata.contains_key(*key));
+        let has_sentencepiece_blob = SENTENCEPIECE_KEYS
+            .iter()
+            .any(|key| raw_metadata.contains_key(*key));
+
+        let tokenizer_recoverable =
+            has_tokenizer_json || has_sentencepiece_blob || has_vocab_tokens;
+
+        if !tokenizer_recoverable {
             errors.push(
                 "Tokenizer tokens are absent in metadata (GGUF must embed tokenizer definition)"
                     .to_string(),
+            );
+        } else if !has_tokenizer_json && !has_sentencepiece_blob && has_vocab_tokens && !has_merges
+        {
+            warnings.push(
+                "Tokenizer metadata lacks merges; fallback reconstruction may be lossy".to_string(),
             );
         }
     }
@@ -978,7 +1031,7 @@ fn extract_quantization_from_filename(filename: &str) -> Option<String> {
         .map(|m| m.as_str().to_string())
 }
 
-const ALLOWED_QUANTIZATIONS: &[&str] = &["Q4_K_M", "Q5_K_M", "Q6_K_M", "Q8_K_M"];
+const ALLOWED_QUANTIZATIONS: &[&str] = &["Q4_K_M", "Q5_K_M", "Q6_K_M", "Q8_0"];
 
 fn canonicalize_quantization(raw: &str) -> String {
     let mut upper = raw.to_uppercase();
@@ -988,6 +1041,9 @@ fn canonicalize_quantization(raw: &str) -> String {
     {
         upper.insert(idx, '_');
     }
+    if upper == "Q8_K_M" {
+        upper = "Q8_0".to_string();
+    }
     upper
 }
 
@@ -995,6 +1051,61 @@ fn is_allowed_quantization(value: &str) -> bool {
     ALLOWED_QUANTIZATIONS
         .iter()
         .any(|allowed| allowed.eq_ignore_ascii_case(value))
+}
+
+fn is_embedding_quantization(value: Option<&str>) -> bool {
+    value.map(is_allowed_quantization).unwrap_or(false)
+}
+
+fn detect_model_kind(envelope: &MetadataEnvelope, quantization: Option<&str>) -> ModelKind {
+    let quant_ok = is_embedding_quantization(quantization);
+
+    if let Some(arch) = envelope.detected_arch.as_ref() {
+        match *arch {
+            ArchKind::Bert
+            | ArchKind::Roberta
+            | ArchKind::MpNet
+            | ArchKind::E5
+            | ArchKind::Bge
+            | ArchKind::Gte
+            | ArchKind::ClipText
+                if quant_ok =>
+            {
+                return ModelKind::Embedding {
+                    quantization: quantization.map(|q| q.to_string()),
+                };
+            }
+            _ => {}
+        }
+    }
+
+    let arch_str = envelope
+        .metadata
+        .architecture
+        .clone()
+        .unwrap_or_default()
+        .to_lowercase();
+    let embedding_arches = [
+        "bert",
+        "roberta",
+        "mpnet",
+        "e5",
+        "bge",
+        "gte",
+        "cliptext",
+        "clip_text",
+    ];
+    if quant_ok
+        && embedding_arches
+            .iter()
+            .any(|needle| arch_str.contains(needle))
+    {
+        return ModelKind::Embedding {
+            quantization: quantization.map(|q| q.to_string()),
+        };
+    }
+
+    ModelKind::Llm
 }
 
 fn metadata_get_string(metadata: &HashMap<String, GgufValue>, key: &str) -> Option<String> {

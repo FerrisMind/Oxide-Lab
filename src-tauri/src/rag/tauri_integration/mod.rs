@@ -2,11 +2,13 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::path::{Path, PathBuf};
-use tauri::{self, AppHandle, Manager, State};
+use std::time::Instant;
+use tauri::Emitter;
+use tauri::{self, AppHandle, State};
 use tracing::{debug, error, info, instrument, trace, warn};
 
-use crate::rag::ingestion::{DocumentKind, IngestionEvent, StoredDocument};
 use crate::rag::RagServiceState;
+use crate::rag::ingestion::{DocumentKind, IngestionEvent, StoredDocument};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocumentInfo {
@@ -38,6 +40,7 @@ pub async fn load_document(
     state: State<'_, RagServiceState>,
 ) -> Result<DocumentInfo, String> {
     info!("Received request to ingest document");
+    let started_at = Instant::now();
     let path_buf = PathBuf::from(&path);
     if !path_buf.exists() {
         error!("Document not found on disk");
@@ -51,7 +54,13 @@ pub async fn load_document(
     if let Some(stats) = ingestion.lookup_indexed(&path_buf) {
         info!("Document already indexed, returning cached metadata");
         emit_stage(&app_handle, "complete", 1.0, &path, None);
-        return Ok(build_document_info(&path_buf, &stats));
+        let info = build_document_info(&path_buf, &stats);
+        info!(
+            elapsed_ms = started_at.elapsed().as_millis(),
+            chunks = info.chunks_count,
+            "Served cached document metadata"
+        );
+        return Ok(info);
     }
 
     let mut receiver = ingestion.subscribe();
@@ -60,32 +69,47 @@ pub async fn load_document(
             path_buf.clone(),
             DocumentKind::from_path(&path_buf).unwrap_or(DocumentKind::Unknown),
         )
+        .await
         .map_err(|e| {
             error!(error = ?e, "Failed to queue document for ingestion");
             e.to_string()
         })?;
     debug!("Document queued for ingestion pipeline");
 
-    let mut completed_emitted = false;
     while let Ok(event) = receiver.recv().await {
         match event {
             IngestionEvent::FileQueued { path: event_path } if event_path == path_buf => {
-                debug!("File queued event received");
+                debug!(
+                    path = %event_path.display(),
+                    "File queued event received"
+                );
                 emit_stage(&app_handle, "queued", 0.1, &path, None);
             }
             IngestionEvent::FileProcessing { path: event_path } if event_path == path_buf => {
-                debug!("File processing event received");
+                debug!(
+                    path = %event_path.display(),
+                    "File processing event received"
+                );
                 emit_stage(&app_handle, "processing", 0.4, &path, None);
             }
-            IngestionEvent::ChunkStored { path: event_path, .. } if event_path == path_buf => {
-                trace!("Chunk stored event received");
+            IngestionEvent::ChunkStored {
+                path: event_path, ..
+            } if event_path == path_buf => {
+                trace!(
+                    path = %event_path.display(),
+                    "Chunk stored event received"
+                );
                 emit_stage(&app_handle, "indexing", 0.75, &path, None);
             }
-            IngestionEvent::Completed { processed_files, .. } if processed_files > 0 => {
+            IngestionEvent::Completed {
+                processed_files, ..
+            } if processed_files > 0 => {
                 if ingestion.lookup_indexed(&path_buf).is_some() {
-                    info!("Document ingestion completed successfully");
+                    info!(
+                        elapsed_ms = started_at.elapsed().as_millis(),
+                        "Document ingestion completed successfully"
+                    );
                     emit_stage(&app_handle, "complete", 1.0, &path, None);
-                    completed_emitted = true;
                     break;
                 }
             }
@@ -93,7 +117,11 @@ pub async fn load_document(
                 path: Some(event_path),
                 message,
             } if event_path == path_buf => {
-                error!(message = %message, "Ingestion pipeline reported error");
+                error!(
+                    message = %message,
+                    elapsed_ms = started_at.elapsed().as_millis(),
+                    "Ingestion pipeline reported error"
+                );
                 emit_stage(&app_handle, "error", 0.0, &path, Some(&message));
                 return Err(message);
             }
@@ -101,22 +129,24 @@ pub async fn load_document(
         }
 
         if ingestion.lookup_indexed(&path_buf).is_some() {
-            if !completed_emitted {
-                info!("Document marked as indexed by ingestion cache");
-                emit_stage(&app_handle, "complete", 1.0, &path, None);
-                completed_emitted = true;
-            }
+            info!("Document marked as indexed by ingestion cache");
+            emit_stage(&app_handle, "complete", 1.0, &path, None);
             break;
         }
     }
 
-    ingestion
-        .lookup_indexed(&path_buf)
-        .map(|stats| build_document_info(&path_buf, &stats))
-        .ok_or_else(|| {
-            error!("Ingestion succeeded but document stats not found");
-            "���㬥�� �� �� �ந�����஢��".to_string()
-        })
+    if let Some(stats) = ingestion.lookup_indexed(&path_buf) {
+        let info = build_document_info(&path_buf, &stats);
+        info!(
+            elapsed_ms = started_at.elapsed().as_millis(),
+            chunks = info.chunks_count,
+            "Document ingestion flow finalised"
+        );
+        Ok(info)
+    } else {
+        error!("Ingestion succeeded but document stats not found");
+        Err("���㬥�� �� �� �ந�����஢��".to_string())
+    }
 }
 
 #[tauri::command]
@@ -143,24 +173,39 @@ pub async fn query_rag(
             e.to_string()
         })?;
 
-    let hits = result
-        .hits
-        .into_iter()
-        .map(|hit| RagHitResponse {
+    let mut hits = Vec::with_capacity(result.hits.len());
+    for (idx, hit) in result.hits.into_iter().enumerate() {
+        let document_path = hit
+            .chunk
+            .metadata
+            .get("source")
+            .cloned()
+            .unwrap_or_default();
+        debug!(
+            index = idx,
+            combined_score = hit.combined_score,
+            vector_score = hit.vector_score,
+            bm25_score = hit.bm25_score,
+            rerank_score = hit.rerank_score,
+            path = %document_path,
+            chunk_index = hit.chunk.coordinate.index,
+            preview = %truncate_snippet(&hit.chunk.text),
+            "RAG hit scored"
+        );
+        hits.push(RagHitResponse {
             text: hit.chunk.text,
             score: hit.combined_score,
-            document_path: hit
-                .chunk
-                .metadata
-                .get("source")
-                .cloned()
-                .unwrap_or_default(),
+            document_path,
             chunk_index: hit.chunk.coordinate.index,
-        })
-        .collect::<Vec<_>>();
+        });
+    }
 
     let elapsed = start.elapsed();
-    info!(hits = hits.len(), elapsed_ms = elapsed.as_millis(), "RAG query completed");
+    info!(
+        hits = hits.len(),
+        elapsed_ms = elapsed.as_millis(),
+        "RAG query completed"
+    );
 
     Ok(RagResponse {
         hits,
@@ -186,17 +231,17 @@ pub async fn list_rag_documents(
             .map(|(path, stats)| build_document_info(&path, &stats))
             .collect::<Vec<_>>();
         documents.sort_by(|a, b| a.path.cmp(&b.path));
-        info!(count = documents.len(), "Returning indexed documents from ingestion cache");
+        info!(
+            count = documents.len(),
+            "Returning indexed documents from ingestion cache"
+        );
         return Ok(documents);
     }
 
-    let paths = storage
-        .list_documents()
-        .await
-        .map_err(|e| {
-            error!(error = ?e, "Failed to list documents from storage");
-            e.to_string()
-        })?;
+    let paths = storage.list_documents().await.map_err(|e| {
+        error!(error = ?e, "Failed to list documents from storage");
+        e.to_string()
+    })?;
     let mut fallback_docs = Vec::with_capacity(paths.len());
 
     for path in paths {
@@ -217,7 +262,10 @@ pub async fn list_rag_documents(
     }
 
     fallback_docs.sort_by(|a, b| a.path.cmp(&b.path));
-    info!(count = fallback_docs.len(), "Returning indexed documents from storage listing");
+    info!(
+        count = fallback_docs.len(),
+        "Returning indexed documents from storage listing"
+    );
     Ok(fallback_docs)
 }
 
@@ -233,13 +281,10 @@ pub async fn delete_rag_document(
     drop(service);
 
     let path_buf = PathBuf::from(&path);
-    storage
-        .remove_document(path_buf.clone())
-        .await
-        .map_err(|e| {
-            error!(error = ?e, "Failed to remove document from storage");
-            e.to_string()
-        })?;
+    storage.remove_document(&path_buf).await.map_err(|e| {
+        error!(error = ?e, "Failed to remove document from storage");
+        e.to_string()
+    })?;
     ingestion.remove_indexed(&path_buf);
     info!("Document removed from vector store and cache");
     Ok(())
@@ -266,6 +311,14 @@ fn emit_stage(
     path: &str,
     message: Option<&str>,
 ) {
+    if let Some(message) = message {
+        trace!(
+            stage,
+            progress, path, message, "Emitting rag_progress event"
+        );
+    } else {
+        trace!(stage, progress, path, "Emitting rag_progress event");
+    }
     let payload = if let Some(message) = message {
         json!({
             "stage": stage,
@@ -289,8 +342,17 @@ fn emit_stage(
 fn truncate_query(query: &str) -> String {
     const MAX_LEN: usize = 120;
     if query.len() > MAX_LEN {
-        format!("{}…", &query[..MAX_LEN])
+        format!("{}...", &query[..MAX_LEN])
     } else {
         query.to_string()
+    }
+}
+
+fn truncate_snippet(text: &str) -> String {
+    const MAX_LEN: usize = 160;
+    if text.len() > MAX_LEN {
+        format!("{}...", &text[..MAX_LEN])
+    } else {
+        text.to_string()
     }
 }

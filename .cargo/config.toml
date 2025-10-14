@@ -3,5 +3,11 @@
 cargo.excludeDirs = ["examples"]
 files.excludeDirs = ["examples", "target", ".cargo"]
 
+[build]
+# Включаем pipelining для ускорения повторных сборок
+pipelining = true
+# Убираем встраивание LLVM bitcode, что сокращает время компиляции и размер артефактов
+rustflags = ["-Cembed-bitcode=no"]
+
 
 

@@ -1,22 +1,23 @@
 use aes_gcm::aead::{Aead, KeyInit};
-use rand::{rngs::OsRng, RngCore};
+use rand::{RngCore, rngs::OsRng};
 use std::collections::HashMap;
+use std::mem::transmute;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use async_trait::async_trait;
-use base64::{engine::general_purpose::STANDARD_NO_PAD, Engine as _};
+use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
 use parking_lot::Mutex;
-use rusqlite::{params, Connection, OptionalExtension, Transaction};
-use rusqlite::ffi::sqlite3_auto_extension;
+use rusqlite::ffi::{sqlite3, sqlite3_api_routines, sqlite3_auto_extension};
+use rusqlite::{Connection, OptionalExtension, Transaction, params};
 use serde::{Deserialize, Serialize};
-use sqlite_vec::sqlite3_vec_init;
 #[cfg(feature = "rag-qdrant")]
 use serde_json::Value;
+use sqlite_vec::sqlite3_vec_init;
 #[cfg(feature = "rag-qdrant")]
 use tokio::task::JoinHandle;
-use tracing::warn;
+use tracing::{debug, info, instrument, warn};
 use uuid::Uuid;
 
 use crate::rag::ingestion::DocumentKind;
@@ -134,14 +135,13 @@ impl VectorStoreFactory {
         Self { cache }
     }
 
+    #[instrument(skip(self, config), fields(backend = ?config.backend))]
     pub async fn build(&self, config: &StorageConfig) -> anyhow::Result<Box<dyn VectorStore>> {
         tokio::fs::create_dir_all(&config.data_dir).await?;
+        debug!(data_dir = %config.data_dir.display(), "Initialising vector store backend");
         match config.backend {
             VectorBackend::Sqlite => {
-                let sqlite_cfg = config
-                    .sqlite
-                    .clone()
-                    .unwrap_or_default();
+                let sqlite_cfg = config.sqlite.clone().unwrap_or_default();
                 let path = config.data_dir.join(sqlite_cfg.filename);
                 let store = SqliteVectorStore::new(
                     path,
@@ -155,10 +155,7 @@ impl VectorStoreFactory {
             VectorBackend::Qdrant => {
                 #[cfg(feature = "rag-qdrant")]
                 {
-                    let qdrant_cfg = config
-                        .qdrant
-                        .clone()
-                        .unwrap_or_default();
+                    let qdrant_cfg = config.qdrant.clone().unwrap_or_default();
                     let store = QdrantVectorStore::new(qdrant_cfg, self.cache.clone()).await?;
                     Ok(Box::new(store))
                 }
@@ -172,14 +169,14 @@ impl VectorStoreFactory {
 }
 
 fn register_sqlite_vec_extension() -> anyhow::Result<()> {
-    SQLITE_VEC_REGISTRATION.get_or_try_init(|| {
-        unsafe {
-            sqlite3_auto_extension(Some(std::mem::transmute(
-                sqlite3_vec_init as *const (),
-            )));
-        }
-        Ok(())
-    })?;
+    SQLITE_VEC_REGISTRATION.get_or_init(|| unsafe {
+        let init_fn: unsafe extern "C" fn(
+            *mut sqlite3,
+            *mut *const i8,
+            *const sqlite3_api_routines,
+        ) -> i32 = transmute(sqlite3_vec_init as unsafe extern "C" fn() -> ());
+        let _ = sqlite3_auto_extension(Some(init_fn));
+    });
     Ok(())
 }
 
@@ -192,12 +189,14 @@ struct SqliteVectorStore {
 }
 
 impl SqliteVectorStore {
+    #[instrument(skip(cache, encryption_key), fields(path = %path.display(), quantize = quantize))]
     fn new(
         path: PathBuf,
         quantize: bool,
         encryption_key: Option<Vec<u8>>,
         cache: EmbeddingCache,
     ) -> anyhow::Result<Self> {
+        info!(path = %path.display(), "Opening SQLite vector store");
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -234,7 +233,14 @@ impl SqliteVectorStore {
 
 #[async_trait]
 impl VectorStore for SqliteVectorStore {
+    #[instrument(skip(self, payload), fields(path = %payload.path.display(), chunks = payload.chunks.len()))]
     async fn persist(&self, payload: DocumentPayload) -> anyhow::Result<()> {
+        info!(
+            path = %payload.path.display(),
+            kind = ?payload.kind,
+            chunk_count = payload.chunks.len(),
+            "Persisting document into SQLite store"
+        );
         let quantize = self.quantize;
         let encryptor = self.encryptor.clone();
         let cache = self.cache.clone();
@@ -255,6 +261,7 @@ impl VectorStore for SqliteVectorStore {
             )?;
 
             for payload_chunk in chunks {
+                debug!(chunk_id = %payload_chunk.chunk.id, index = payload_chunk.chunk.coordinate.index, "Writing chunk row");
                 let serialized_metadata =
                     serialize_metadata(&payload_chunk.chunk.metadata, encryptor.as_ref())?;
                 let (embedding_blob, quantized_blob) =
@@ -325,12 +332,15 @@ impl VectorStore for SqliteVectorStore {
                 );
             }
             tx.commit()?;
+            info!(path = %path.display(), "SQLite transaction committed");
             Ok(())
         })
         .await
     }
 
+    #[instrument(skip(self), fields(path = %path.display()))]
     async fn remove_document(&self, path: &Path) -> anyhow::Result<()> {
+        info!(path = %path.display(), "Removing document from SQLite store");
         let path = path.to_path_buf();
         self.with_conn(move |conn| {
             if chunk_index_exists(conn)? {
@@ -349,26 +359,44 @@ impl VectorStore for SqliteVectorStore {
                 "DELETE FROM chunks WHERE document_id = (SELECT id FROM documents WHERE path = ?1)",
                 params![path.to_string_lossy()],
             )?;
-            conn.execute("DELETE FROM documents WHERE path = ?1", params![path.to_string_lossy()])?;
+            conn.execute(
+                "DELETE FROM documents WHERE path = ?1",
+                params![path.to_string_lossy()],
+            )?;
             Ok(())
         })
         .await
     }
 
+    #[instrument(skip(self, query), fields(top_k = query.top_k, filter_count = query.filters.len()))]
     async fn vector_search(&self, query: &VectorQuery) -> anyhow::Result<Vec<StoredChunk>> {
         let query = query.clone();
+        let top_k = query.top_k;
+        let filter_count = query.filters.len();
+        debug!(top_k, filter_count, "Executing vector search");
         let encryptor = self.encryptor.clone();
         let quantize = self.quantize;
-        self.with_conn(move |conn| {
-            if chunk_index_exists(conn)? {
-                vector_search_with_index(conn, &query, encryptor.as_ref(), quantize)
-            } else {
-                brute_force_vector_search(conn, &query, encryptor.as_ref(), quantize)
-            }
-        })
-        .await
+        let started = std::time::Instant::now();
+        let results = self
+            .with_conn(move |conn| {
+                if chunk_index_exists(conn)? {
+                    vector_search_with_index(conn, &query, encryptor.as_ref(), quantize)
+                } else {
+                    brute_force_vector_search(conn, &query, encryptor.as_ref(), quantize)
+                }
+            })
+            .await?;
+        debug!(
+            top_k,
+            filter_count,
+            result_count = results.len(),
+            elapsed_ms = started.elapsed().as_millis(),
+            "Vector search completed"
+        );
+        Ok(results)
     }
 
+    #[instrument(skip(self))]
     async fn list_documents(&self) -> anyhow::Result<Vec<PathBuf>> {
         self.with_conn(|conn| {
             let mut stmt = conn.prepare("SELECT path FROM documents")?;
@@ -379,11 +407,13 @@ impl VectorStore for SqliteVectorStore {
             for row in rows {
                 paths.push(PathBuf::from(row?));
             }
+            info!(count = paths.len(), "Fetched document paths");
             Ok(paths)
         })
         .await
     }
 
+    #[instrument(skip(self), fields(chunk_id = %chunk_id))]
     async fn get_chunk(&self, chunk_id: Uuid) -> anyhow::Result<Option<StoredChunk>> {
         let id = chunk_id.to_string();
         let encryptor = self.encryptor.clone();
@@ -444,6 +474,7 @@ impl VectorStore for SqliteVectorStore {
                     })
                 })
                 .optional()?;
+            debug!(found = row_opt.is_some(), "Chunk lookup finished");
             Ok(row_opt)
         })
         .await
@@ -474,15 +505,13 @@ impl QdrantVectorStore {
                 .create_collection(&qdrant_client::qdrant::CreateCollection {
                     collection_name: collection_name_clone,
                     vectors_config: Some(qdrant_client::qdrant::VectorsConfig {
-                        config: Some(
-                            qdrant_client::qdrant::vectors_config::Config::Params(
-                                qdrant_client::qdrant::VectorParams {
-                                    size: 1024,
-                                    distance: qdrant_client::qdrant::Distance::Cosine as i32,
-                                    ..Default::default()
-                                },
-                            ),
-                        ),
+                        config: Some(qdrant_client::qdrant::vectors_config::Config::Params(
+                            qdrant_client::qdrant::VectorParams {
+                                size: 1024,
+                                distance: qdrant_client::qdrant::Distance::Cosine as i32,
+                                ..Default::default()
+                            },
+                        )),
                         ..Default::default()
                     }),
                     ..Default::default()
@@ -517,9 +546,18 @@ impl VectorStore for QdrantVectorStore {
                     chunk.chunk.id.to_string(),
                     chunk.embedding.clone(),
                     [
-                        ("path".into(), Value::String(payload.path.to_string_lossy().into())),
-                        ("chunk_index".into(), Value::Number(chunk.chunk.coordinate.index.into())),
-                        ("token_count".into(), Value::Number(chunk.chunk.token_count.into())),
+                        (
+                            "path".into(),
+                            Value::String(payload.path.to_string_lossy().into()),
+                        ),
+                        (
+                            "chunk_index".into(),
+                            Value::Number(chunk.chunk.coordinate.index.into()),
+                        ),
+                        (
+                            "token_count".into(),
+                            Value::Number(chunk.chunk.token_count.into()),
+                        ),
                     ]
                     .into_iter()
                     .collect(),
@@ -537,30 +575,28 @@ impl VectorStore for QdrantVectorStore {
             .delete(
                 &self.collection_name,
                 &qdrant_client::qdrant::DeletePoints {
-                    points_selector: Some(
-                        qdrant_client::qdrant::PointsSelector::Filter(
-                            qdrant_client::qdrant::Filter {
-                                must: vec![qdrant_client::qdrant::Condition {
-                                    condition_one_of: Some(
-                                        qdrant_client::qdrant::condition::ConditionOneOf::Field(
-                                            qdrant_client::qdrant::FieldCondition {
-                                                key: "path".into(),
-                                                r#match: Some(
-                                                    qdrant_client::qdrant::r#match::Match::Text(
-                                                        qdrant_client::qdrant::MatchText {
-                                                            text: path.to_string_lossy().into(),
-                                                        },
-                                                    ),
+                    points_selector: Some(qdrant_client::qdrant::PointsSelector::Filter(
+                        qdrant_client::qdrant::Filter {
+                            must: vec![qdrant_client::qdrant::Condition {
+                                condition_one_of: Some(
+                                    qdrant_client::qdrant::condition::ConditionOneOf::Field(
+                                        qdrant_client::qdrant::FieldCondition {
+                                            key: "path".into(),
+                                            r#match: Some(
+                                                qdrant_client::qdrant::r#match::Match::Text(
+                                                    qdrant_client::qdrant::MatchText {
+                                                        text: path.to_string_lossy().into(),
+                                                    },
                                                 ),
-                                                ..Default::default()
-                                            },
-                                        ),
+                                            ),
+                                            ..Default::default()
+                                        },
                                     ),
-                                }],
-                                ..Default::default()
-                            },
-                        ),
-                    ),
+                                ),
+                            }],
+                            ..Default::default()
+                        },
+                    )),
                     ..Default::default()
                 },
             )
@@ -569,14 +605,23 @@ impl VectorStore for QdrantVectorStore {
     }
 
     async fn vector_search(&self, query: &VectorQuery) -> anyhow::Result<Vec<StoredChunk>> {
+        let started = std::time::Instant::now();
         let result = self
             .client
-            .search_points(&self.collection_name, query.embedding.clone(), query.top_k as u64, None)
+            .search_points(
+                &self.collection_name,
+                query.embedding.clone(),
+                query.top_k as u64,
+                None,
+            )
             .await?;
         let mut out = Vec::new();
         for scored_point in result.result {
             let chunk_id = Uuid::parse_str(&scored_point.id)?;
-            if let Some(embedding) = self.cache.lookup(&chunk_id.to_string()).map(|v| (*v).clone())
+            if let Some(embedding) = self
+                .cache
+                .lookup(&chunk_id.to_string())
+                .map(|v| (*v).clone())
             {
                 let metadata = scored_point
                     .payload
@@ -610,6 +655,13 @@ impl VectorStore for QdrantVectorStore {
                 });
             }
         }
+        debug!(
+            top_k = query.top_k,
+            filter_count = query.filters.len(),
+            result_count = out.len(),
+            elapsed_ms = started.elapsed().as_millis(),
+            "Qdrant vector search completed"
+        );
         Ok(out)
     }
 
@@ -728,15 +780,14 @@ struct Encryptor {
 impl Encryptor {
     fn new(key: Vec<u8>) -> anyhow::Result<Self> {
         let key_bytes = ensure_key_len(key)?;
-        let key = Key::<aes_gcm::Aes256Gcm>::from_slice(&key_bytes);
-        Ok(Self {
-            cipher: aes_gcm::Aes256Gcm::new(key),
-        })
+        let cipher = aes_gcm::Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| anyhow!(e))?;
+        Ok(Self { cipher })
     }
 
     fn encrypt(&self, plaintext: &[u8]) -> anyhow::Result<Vec<u8>> {
         let mut nonce_bytes = [0u8; 12];
         OsRng.fill_bytes(&mut nonce_bytes);
+        #[allow(deprecated)]
         let nonce = aes_gcm::Nonce::from_slice(&nonce_bytes);
         let mut ciphertext = self
             .cipher
@@ -752,11 +803,9 @@ impl Encryptor {
             anyhow::bail!("ciphertext too short");
         }
         let (nonce_bytes, payload) = ciphertext.split_at(12);
+        #[allow(deprecated)]
         let nonce = aes_gcm::Nonce::from_slice(nonce_bytes);
-        self
-            .cipher
-            .decrypt(nonce, payload)
-            .map_err(|e| anyhow!(e))
+        self.cipher.decrypt(nonce, payload).map_err(|e| anyhow!(e))
     }
 }
 
@@ -838,9 +887,12 @@ fn metadata_matches_filters(
     metadata: &HashMap<String, String>,
     filters: &HashMap<String, String>,
 ) -> bool {
-    filters
-        .iter()
-        .all(|(key, expected)| metadata.get(key).map(|value| value == expected).unwrap_or(false))
+    filters.iter().all(|(key, expected)| {
+        metadata
+            .get(key)
+            .map(|value| value == expected)
+            .unwrap_or(false)
+    })
 }
 
 fn serialize_metadata(
@@ -884,8 +936,8 @@ fn ensure_vector_table_tx(tx: &Transaction<'_>, dimension: usize) -> anyhow::Res
         anyhow::bail!("некорректная размерность вектора (0)");
     }
 
-    if chunk_index_exists(tx.conn())? {
-        if let Some(existing) = read_stored_dimension(tx.conn())? {
+    if chunk_index_exists(tx)? {
+        if let Some(existing) = read_stored_dimension(tx)? {
             anyhow::ensure!(
                 existing == dimension,
                 "embedding dimension mismatch: stored {existing}, incoming {dimension}"
@@ -972,12 +1024,18 @@ fn vector_search_with_index(
             c.metadata,
             c.embedding,
             c.quantized,
-            v.distance
-        FROM chunk_index v
-        JOIN chunks c ON c.rowid = v.rowid
-        WHERE v.embedding MATCH ?1
-        ORDER BY v.distance
-        LIMIT ?2
+            sub.distance
+        FROM (
+            SELECT
+                rowid,
+                distance
+            FROM chunk_index
+            WHERE embedding MATCH ?1
+            ORDER BY distance
+            LIMIT ?2
+        ) AS sub
+        JOIN chunks c ON c.rowid = sub.rowid
+        ORDER BY sub.distance
         "#,
     )?;
 
@@ -1014,9 +1072,7 @@ fn vector_search_with_index(
         let metadata = match deserialize_metadata(&metadata_raw, encryptor) {
             Ok(meta) => meta,
             Err(err) => {
-                warn!(
-                    "Не удалось расшифровать/десериализовать метаданные блока {id_str}: {err:?}"
-                );
+                warn!("Не удалось расшифровать/десериализовать метаданные блока {id_str}: {err:?}");
                 continue;
             }
         };
@@ -1025,14 +1081,14 @@ fn vector_search_with_index(
             continue;
         }
 
-        let embedding =
-            match restore_embedding(embedding_blob, quantized_blob, encryptor, quantize) {
-                Ok(vec) => vec,
-                Err(err) => {
-                    warn!("Не удалось восстановить embedding для блока {id_str}: {err:?}");
-                    continue;
-                }
-            };
+        let embedding = match restore_embedding(embedding_blob, quantized_blob, encryptor, quantize)
+        {
+            Ok(vec) => vec,
+            Err(err) => {
+                warn!("Не удалось восстановить embedding для блока {id_str}: {err:?}");
+                continue;
+            }
+        };
 
         let chunk = crate::rag::ingestion::DocumentChunk {
             id: Uuid::parse_str(&id_str).unwrap_or_else(|_| Uuid::new_v4()),
@@ -1122,9 +1178,7 @@ fn brute_force_vector_search(
         let metadata = match deserialize_metadata(&metadata_raw, encryptor) {
             Ok(meta) => meta,
             Err(err) => {
-                warn!(
-                    "Не удалось расшифровать/десериализовать метаданные блока {id_str}: {err:?}"
-                );
+                warn!("Не удалось расшифровать/десериализовать метаданные блока {id_str}: {err:?}");
                 continue;
             }
         };
@@ -1133,14 +1187,14 @@ fn brute_force_vector_search(
             continue;
         }
 
-        let embedding =
-            match restore_embedding(embedding_blob, quantized_blob, encryptor, quantize) {
-                Ok(vec) => vec,
-                Err(err) => {
-                    warn!("Не удалось восстановить embedding для блока {id_str}: {err:?}");
-                    continue;
-                }
-            };
+        let embedding = match restore_embedding(embedding_blob, quantized_blob, encryptor, quantize)
+        {
+            Ok(vec) => vec,
+            Err(err) => {
+                warn!("Не удалось восстановить embedding для блока {id_str}: {err:?}");
+                continue;
+            }
+        };
 
         let chunk = crate::rag::ingestion::DocumentChunk {
             id: Uuid::parse_str(&id_str).unwrap_or_else(|_| Uuid::new_v4()),
@@ -1203,22 +1257,7 @@ fn cache_key(path: &Path, chunk_index: usize) -> String {
     format!("{}#{chunk_index}", path.to_string_lossy())
 }
 
-
-
-
-
-
-
-
-
 fn map_anyhow_to_rusqlite(err: anyhow::Error) -> rusqlite::Error {
     let boxed: Box<dyn std::error::Error + Send + Sync> = err.into();
     rusqlite::Error::ToSqlConversionFailure(boxed)
 }
-
-
-
-
-
-
-
