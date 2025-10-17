@@ -1,2 +1,29 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Исключить все C/C++ из статистики языков
+*.c linguist-vendored
+*.cpp linguist-vendored
+*.cc linguist-vendored
+*.cxx linguist-vendored
+*.h linguist-vendored
+*.hpp linguist-vendored
+*.hxx linguist-vendored
+*.cu linguist-vendored
+*.cuh linguist-vendored
+
+# Исключить зависимости и сборочные артефакты
+target/** linguist-generated
+vendor/** linguist-vendored
+third_party/** linguist-vendored
+deps/** linguist-vendored
+build/** linguist-generated
+out/** linguist-generated
+
+# Исключить Cargo и системные файлы
+Cargo.lock linguist-generated
+*.toml linguist-language=TOML
+
+# Принудительно отметить как Rust проект
+*.rs linguist-detectable=true
+Cargo.toml linguist-language=TOML
