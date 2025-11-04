@@ -784,7 +784,9 @@ fn convert_detail_to_info(
         .filter(|file| file.rfilename.to_lowercase().ends_with(".gguf"))
         .filter_map(|file| {
             let size = file.size?;
-            if let Some(limit) = filters.max_file_size && size > limit {
+            if let Some(limit) = filters.max_file_size
+                && size > limit
+            {
                 return None;
             }
             let quant = extract_quantization_from_filename(&file.rfilename)
@@ -822,7 +824,9 @@ fn convert_detail_to_info(
     }
 
     let downloads = detail.downloads.unwrap_or(0);
-    if let Some(min_downloads) = filters.min_downloads && downloads < min_downloads {
+    if let Some(min_downloads) = filters.min_downloads
+        && downloads < min_downloads
+    {
         return Ok(None);
     }
 

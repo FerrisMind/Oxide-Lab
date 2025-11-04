@@ -250,7 +250,9 @@ pub fn extract_eos_ids(tokenizer: &Tokenizer) -> Vec<u32> {
         "<end_of_turn>",
         "<eos>",
     ] {
-        if let Some(&id) = vocab.get(key) && !ids.contains(&id) {
+        if let Some(&id) = vocab.get(key)
+            && !ids.contains(&id)
+        {
             ids.push(id);
         }
     }
@@ -315,11 +317,8 @@ pub fn find_chat_template_in_metadata(md: &HashMap<String, gguf_file::Value>) ->
     let mut best: Option<String> = None;
     for (_k, v) in md.iter() {
         if let Ok(s) = v.to_string()
-            && (s.contains("add_generation_prompt")
-                || s.contains("messages") && s.contains("role"))
-            && best
-                .as_ref()
-                .is_none_or(|cur| s.len() > cur.len())
+            && (s.contains("add_generation_prompt") || s.contains("messages") && s.contains("role"))
+            && best.as_ref().is_none_or(|cur| s.len() > cur.len())
         {
             best = Some(s.clone());
         }

@@ -437,9 +437,7 @@ async fn run_download_loop(
     };
 
     if downloaded_bytes > 0
-        && let Err(err) = file
-            .seek(std::io::SeekFrom::Start(downloaded_bytes))
-            .await
+        && let Err(err) = file.seek(std::io::SeekFrom::Start(downloaded_bytes)).await
     {
         return DownloadLoopOutcome::Error(format!("Failed to seek partial file: {err}"));
     }
@@ -863,7 +861,8 @@ pub async fn remove_download_entry(
         let mut guard = MANAGER.state.write().await;
         if let Some(pos) = guard.history.iter().position(|entry| entry.id == job_id) {
             let entry = guard.history.remove(pos);
-            if delete_file && entry.status == DownloadStatus::Completed
+            if delete_file
+                && entry.status == DownloadStatus::Completed
                 && let Err(err) = fs::remove_file(&entry.destination_path)
             {
                 log::warn!(
