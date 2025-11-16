@@ -16,6 +16,7 @@
   import { chatState } from '$lib/stores/chat';
   import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local-models';
   import Checkbox from '$lib/components/ui/Checkbox.svelte';
+  import Dropdown from '$lib/components/ui/Dropdown.svelte';
   import { open } from '@tauri-apps/plugin-dialog';
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
 
@@ -82,6 +83,28 @@
     }));
     ox.loadGGUF();
   }
+
+  function toggleModelSelection(model: ModelInfo) {
+    if ($selectedModel?.path === model.path) {
+      // Если модель уже выбрана, отменяем выбор
+      selectedModel.set(null);
+    } else {
+      // Иначе выбираем новую модель
+      selectedModel.set(model);
+    }
+  }
+
+  $: menuItems = [
+    {
+      label: 'Выбрать папку',
+      onclick: handleSelectFolder,
+    },
+    {
+      label: 'Пересканировать',
+      onclick: () => $folderPath && scanFolder($folderPath, true),
+      disabled: !$folderPath,
+    },
+  ];
 </script>
 
 <div class="local-models-panel">
@@ -95,16 +118,7 @@
           </span>
         </div>
       </div>
-      <div class="controls-actions">
-        <button class="btn" on:click={handleSelectFolder}>Выбрать папку</button>
-        <button
-          class="btn secondary"
-          disabled={!$folderPath}
-          on:click={() => $folderPath && scanFolder($folderPath, true)}
-        >
-          Пересканировать
-        </button>
-      </div>
+      <Dropdown items={menuItems} label="⋯" />
     </div>
 
     <div class="controls-right">
@@ -119,14 +133,14 @@
           />
         </label>
       </div>
+    </div>
 
-      <div class="filter-group checkbox">
-        <Checkbox
-          id="candle-only"
-          label="Только совместимые с Candle"
-          bind:checked={$filterOptions.candleOnly}
-        />
-      </div>
+    <div class="checkbox-wrapper">
+      <Checkbox
+        id="candle-only"
+        label="Только совместимые с Candle"
+        bind:checked={$filterOptions.candleOnly}
+      />
     </div>
   </section>
 
@@ -166,7 +180,7 @@
           {#each $filteredModels as model (model.path)}
             <tr
               class:selected={$selectedModel?.path === model.path}
-              on:click={() => selectedModel.set(model)}
+              on:click={() => toggleModelSelection(model)}
             >
               <td>{model.architecture ?? '—'}</td>
               <td>{model.parameter_count ?? '—'}</td>
@@ -202,8 +216,8 @@
       </table>
     </div>
 
-    <aside class="details">
-      {#if $selectedModel}
+    {#if $selectedModel}
+      <aside class="details">
         <header>
           <h3>{$selectedModel.name}</h3>
           <div class="actions">
@@ -314,12 +328,8 @@
             </div>
           {/if}
         </section>
-      {:else}
-        <div class="placeholder">
-          <p>Выберите модель, чтобы посмотреть подробности.</p>
-        </div>
-      {/if}
-    </aside>
+      </aside>
+    {/if}
   </div>
 </div>
 
@@ -344,51 +354,65 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 2rem;
+    gap: 1rem;
     background: var(--card);
     border-radius: 12px;
-    padding: 1rem 1.25rem;
+    padding: 0.5rem 0.75rem;
     border: 1px solid var(--border-color, #d8dee5);
     box-shadow: var(--shadow);
+    flex-wrap: wrap;
   }
 
   .controls-left {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1rem;
     flex: 1;
+    min-width: 0;
   }
 
   .controls-right {
     display: flex;
-    align-items: end;
-    gap: 1rem;
-    min-width: 400px;
-  }
-
-  .controls-actions {
-    display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    justify-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .path-group {
     display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 0 1 250px;
   }
 
   .path-group .label {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .path-display {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    justify-content: space-between;
+    gap: 0.5rem;
     font-family: var(--mono-font, 'JetBrains Mono', monospace);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    min-width: 0;
+    flex: 1;
+    border: 1px solid var(--border-color, #d8dee5);
+    border-radius: 6px;
+    padding: 0.35rem 0.5rem;
+    background: #1a1a1a;
+  }
+
+  .path-display span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
 
@@ -399,7 +423,7 @@
   }
 
   .metric {
-    background: var(--card);
+    background: #1a1a1a;
     border-radius: 10px;
     border: 1px solid var(--border-color, #d8dee5);
     padding: 0.75rem;
@@ -432,23 +456,24 @@
 
   .filter-group {
     display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    font-size: 0.85rem;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
   }
 
   .filter-group input {
-    width: 100%;
-    padding: 0.45rem 0.6rem;
-    border-radius: 8px;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
     border: 1px solid var(--border-color, #d8dee5);
-    background: var(--card);
+    background: #1a1a1a;
+    font-size: 0.8rem;
+    min-width: 200px;
   }
 
-  .filter-group.checkbox {
-    flex-direction: row;
+  .checkbox-wrapper {
+    display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
   }
 
   .error-banner {
@@ -464,11 +489,15 @@
 
   .content {
     display: grid;
-    grid-template-columns: 1fr minmax(320px, 360px);
+    grid-template-columns: 1fr;
     gap: 1rem;
     height: 100%;
     min-height: 0;
     overflow: hidden;
+  }
+
+  .content:has(.details) {
+    grid-template-columns: 1fr minmax(320px, 360px);
   }
 
   .content.loading {
@@ -480,7 +509,7 @@
     overflow: auto;
     border-radius: 12px;
     border: 1px solid var(--border-color, #d8dee5);
-    background: var(--card);
+    background: #1a1a1a;
     box-shadow: var(--shadow);
     min-height: 0;
   }
@@ -491,7 +520,7 @@
   }
 
   thead {
-    background: var(--card, #f2f4f8);
+    background: #1a1a1a;
   }
 
   th,
@@ -562,7 +591,7 @@
   .details {
     border-radius: 12px;
     border: 1px solid var(--border-color, #d8dee5);
-    background: var(--card);
+    background: #1a1a1a;
     padding: 1rem 1.2rem;
     overflow: auto;
     display: flex;
@@ -681,17 +710,18 @@
   }
 
   .btn {
-    padding: 0.45rem 0.9rem;
-    border-radius: 8px;
+    padding: 0.35rem 0.7rem;
+    border-radius: 6px;
     border: none;
     background: var(--accent, #3498db);
     color: #fff;
     cursor: default;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     transition: opacity 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.25rem;
+    white-space: nowrap;
   }
 
   .btn.secondary {

@@ -1,35 +1,42 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import Tabs from '$lib/components/ui/Tabs.svelte';
+  import { onMount, onDestroy } from 'svelte';
   import LocalModelsPanel from '$lib/components/model-manager/LocalModelsPanel.svelte';
   import RemoteModelsPanel from '$lib/components/model-manager/RemoteModelsPanel.svelte';
   import { folderPath, scanFolder } from '$lib/stores/local-models';
+  import { setPageTabs, clearPageTabs, activePageTab } from '$lib/stores/page-tabs.svelte';
 
   type TabId = 'local' | 'remote';
 
-  let activeTab: TabId = 'local';
-  const tabs = [
+  let activeTab = $state<TabId>('local');
+  const tabs: { id: TabId; label: string }[] = [
     { id: 'local', label: 'Мои модели' },
     { id: 'remote', label: 'Поиск моделей' },
   ];
 
   onMount(() => {
+    setPageTabs(tabs, 'local');
     if ($folderPath) {
       scanFolder($folderPath).catch((error) => console.error(error));
     }
   });
+
+  onDestroy(() => {
+    clearPageTabs();
+  });
+
+  $effect(() => {
+    activeTab = $activePageTab as TabId;
+  });
 </script>
 
 <section class="models-page">
-  <Tabs bind:activeTab={activeTab} {tabs}>
-    <div class="models-panel">
-      {#if activeTab === 'local'}
-        <LocalModelsPanel />
-      {:else if activeTab === 'remote'}
-        <RemoteModelsPanel />
-      {/if}
-    </div>
-  </Tabs>
+  <div class="models-panel">
+    {#if activeTab === 'local'}
+      <LocalModelsPanel />
+    {:else if activeTab === 'remote'}
+      <RemoteModelsPanel />
+    {/if}
+  </div>
 </section>
 
 <style>

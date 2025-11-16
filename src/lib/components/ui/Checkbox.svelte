@@ -28,6 +28,22 @@
 
 <style>
   .checkbox-wrapper {
-    display: inline-block;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .checkbox-input {
+    margin: 0;
+  }
+
+  .checkbox-label {
+    font-size: 0.7rem;
+    color: var(--text);
+    cursor: pointer;
+    max-width: 100px;
+    word-wrap: break-word;
+    white-space: normal;
+    line-height: 1.2;
   }
 </style>

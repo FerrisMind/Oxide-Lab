@@ -20,6 +20,7 @@
   import { showChatHistory } from '$lib/stores/sidebar';
 
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+  import { pageTabsList, activePageTab } from '$lib/stores/page-tabs.svelte';
 
   // Импортируем все страницы для постоянного монтирования
   import ApiPage from './api/+page.svelte';
@@ -44,7 +45,6 @@
     }
   });
 
-  const appName = 'Oxide Lab';
   const appIcon = '/icon.svg';
   let isMaximized = $state(false);
   const appWindow = getCurrentWindow();
@@ -144,9 +144,24 @@
     <header class="app-header">
       <button class="brand" onclick={goHome} title="Домой">
         <img src={appIcon} alt="App icon" class="brand-icon" />
-        <span class="brand-title">{appName}</span>
       </button>
       <div class="header-center">
+        <!-- Page tabs -->
+        {#if $pageTabsList.length > 0}
+          <nav class="page-tabs" aria-label="Вкладки страницы">
+            {#each $pageTabsList as tab}
+              <button
+                class="page-tab"
+                class:active={$activePageTab === tab.id}
+                onclick={() => activePageTab.set(tab.id)}
+                aria-current={$activePageTab === tab.id ? 'page' : undefined}
+              >
+                {tab.label}
+              </button>
+            {/each}
+          </nav>
+        {/if}
+        
         <!-- GGUF upload: всегда смонтирован, скрывается классом -->
         <div class="gguf-host" class:hidden={!shouldShowGGUFUploadArea}>
           <GGUFUploadArea />
@@ -240,7 +255,7 @@
     justify-content: space-between;
     padding: 0 12px;
     height: 48px;
-    background: var(--card);
+    background: #1a1a1a;
     border-bottom: 1px solid var(--border-color);
     position: relative;
     z-index: 100;
@@ -274,20 +289,46 @@
     height: 20px;
     pointer-events: none;
   }
-  .brand-title {
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    color: var(--text) !important;
-    opacity: 0.9;
-    pointer-events: none;
-  }
   .header-center {
     flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 1rem;
     max-width: 600px;
     margin: 0 auto;
+  }
+
+  .page-tabs {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .page-tab {
+    padding: 0.4rem 0.9rem;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    cursor: default;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+    -webkit-app-region: no-drag;
+  }
+
+  .page-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: none;
+  }
+
+  .page-tab.active {
+    background: rgba(255, 255, 255, 0.2);
+    font-weight: 600;
+    transform: none;
   }
   .gguf-host.hidden {
     display: none;

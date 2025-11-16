@@ -361,7 +361,7 @@
     display: flex;
     gap: 0.75rem;
     align-items: center;
-    background: var(--card);
+    background: #1a1a1a;
     border: 1px solid var(--border-color, #d8dee5);
     border-radius: 12px;
     padding: 1rem;
@@ -429,7 +429,7 @@
     border: none;
     border-radius: 10px;
     padding: 0.75rem;
-    background: var(--card);
+    background: #1a1a1a;
     color: var(--text);
     display: flex;
     justify-content: space-between;
@@ -464,7 +464,7 @@
     padding: 0.2rem 0.55rem;
     border-radius: 999px;
     font-size: 0.7rem;
-    background: var(--card);
+    background: #1a1a1a;
     border: 1px solid var(--border-color, #d8dee5);
   }
 
@@ -484,7 +484,7 @@
     border-radius: 14px;
     padding: 1rem 1.25rem;
     border: 1px solid var(--border-color, #d8dee5);
-    background: var(--card);
+    background: #1a1a1a;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;

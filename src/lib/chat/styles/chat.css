@@ -15,8 +15,8 @@
 
 .messages {
   margin-top: 0;
-  background: #faf9f7;
-  border: 1px dashed #e8e6e3;
+  background: #1a1a1a;
+  border: none;
   border-radius: 10px;
   padding: 12px;
   flex: 1 1 auto;
@@ -58,7 +58,7 @@
   max-width: 80%;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #eae6f8;
+  background: #2d2d2d;
   color: var(--text);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -79,7 +79,7 @@
 }
 
 .message.assistant .bubble {
-  background: #e8f0f8;
+  background: #2d2d2d;
 }
 
 /* Modern toggle switch */
@@ -136,7 +136,7 @@
 .segmented-toggle {
   display: inline-flex;
   border: 1px solid var(--border-color, #e8e6e3);
-  background: var(--card, #fcfbfa);
+  background: #1a1a1a;
   border-radius: 12px;
   overflow: hidden;
   padding: 2px;

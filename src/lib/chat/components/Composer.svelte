@@ -433,7 +433,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: #1a1a1a;
+    background: var(--card);
     border: 2px solid transparent;
     border-radius: 16px;
     padding: 12px;
@@ -570,8 +570,8 @@
     padding: 8px 16px 8px 8px;
     font-size: 14px;
     line-height: 1.2;
-    color: #ffffff;
-    background: #1a1a1a;
+    color: var(--text);
+    background: var(--card);
     outline: none;
     box-shadow: none; /* Remove box shadow */
     transition:
@@ -586,7 +586,7 @@
 
   .composer__input:focus {
     border-color: transparent; /* Remove focus border */
-    background: #1a1a1a;
+    background: var(--card);
     box-shadow: none; /* Remove focus shadow */
   }
 

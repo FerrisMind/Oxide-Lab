@@ -17,7 +17,7 @@
     showModelNotice?: boolean;
   } = $props();
 
-  const baseBackground = '#2d2d2d';
+  const baseBackground = '#1a1a1a';
   
   // Производное значение для placeholderOnly
   let placeholderOnly = $derived(showModelNotice && messages.length === 0);

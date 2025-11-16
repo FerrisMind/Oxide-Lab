@@ -164,7 +164,7 @@ pub async fn download_model_card_format(
 
     let mut downloaded = Vec::new();
     let group_id = format!("model-card::{}::{}", card.id, card_format.as_str());
-    let display_name = format!("{} ({})", card.name, card_format.as_str());
+    let display_name = format!("{}/{} ({})", publisher, repo_name, card_format.as_str());
 
     for file in files {
         let (repo_id, repo_revision) = card.repo_for_file(card_format, &file);

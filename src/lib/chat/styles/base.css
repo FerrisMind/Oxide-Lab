@@ -96,7 +96,7 @@
 
 .loader,
 .chat {
-  background: var(--card);
+  background: #1a1a1a;
 
   /* increased rounding for chat and loader */
   border-radius: 14px;
