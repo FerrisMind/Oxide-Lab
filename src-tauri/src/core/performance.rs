@@ -192,10 +192,10 @@ impl PerformanceMonitor {
         let gpu_memory_mb = None;
 
         // Логируем для отладки
-        println!(
-            "CPU usage: {:.2}%, Memory: {:.2} MB, CPUs: {}",
-            cpu_usage_percent, memory_usage_mb, cpu_count
-        );
+        // println!(
+        //     "CPU usage: {:.2}%, Memory: {:.2} MB, CPUs: {}",
+        //     cpu_usage_percent, memory_usage_mb, cpu_count
+        // );
 
         SystemUsage {
             cpu_usage_percent,
