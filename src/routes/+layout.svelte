@@ -14,7 +14,6 @@
   import X from 'phosphor-svelte/lib/X';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import ChatHistory from '$lib/components/ChatHistory.svelte';
-  import GGUFUploadArea from '$lib/components/GGUFUploadArea.svelte';
   import { ensureGlobalChatStream } from '$lib/chat/global-stream';
   import Chat from '$lib/chat/Chat.svelte';
   import { showChatHistory } from '$lib/stores/sidebar';
@@ -29,11 +28,6 @@
   import SettingsPage from './settings/+page.svelte';
 
   const { children } = $props();
-
-  // Определяем, должен ли отображаться GGUFUploadArea
-  let shouldShowGGUFUploadArea = $derived(
-    $page.url.pathname === '/' || ($page.url.pathname === '/api' && experimentalFeatures.enabled),
-  );
 
   // Redirect to home if trying to access experimental pages when experimental features are disabled
   $effect(() => {
@@ -142,30 +136,24 @@
 <div class="app-shell">
   <div class="app-header-wrapper" onmousedown={startDragging} role="toolbar" tabindex="0">
     <header class="app-header">
-      <button class="brand" onclick={goHome} title="Домой">
-        <img src={appIcon} alt="App icon" class="brand-icon" />
-      </button>
       <div class="header-center">
         <!-- Page tabs -->
-        {#if $pageTabsList.length > 0}
-          <nav class="page-tabs" aria-label="Вкладки страницы">
-            {#each $pageTabsList as tab}
-              <button
-                class="page-tab"
-                class:active={$activePageTab === tab.id}
-                onclick={() => activePageTab.set(tab.id)}
-                aria-current={$activePageTab === tab.id ? 'page' : undefined}
-              >
-                {tab.label}
-              </button>
-            {/each}
-          </nav>
+        {#if $page.url.pathname === '/models'}
+          {#if $pageTabsList.length > 0}
+            <nav class="page-tabs" aria-label="Вкладки страницы">
+              {#each $pageTabsList as tab}
+                <button
+                  class="page-tab"
+                  class:active={$activePageTab === tab.id}
+                  onclick={() => activePageTab.set(tab.id)}
+                  aria-current={$activePageTab === tab.id ? 'page' : undefined}
+                >
+                  {tab.label}
+                </button>
+              {/each}
+            </nav>
+          {/if}
         {/if}
-        
-        <!-- GGUF upload: всегда смонтирован, скрывается классом -->
-        <div class="gguf-host" class:hidden={!shouldShowGGUFUploadArea}>
-          <GGUFUploadArea />
-        </div>
       </div>
       <div class="window-controls">
         <button type="button" class="win-btn" title="Свернуть" onclick={() => appWindow.minimize()}>
@@ -236,16 +224,22 @@
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
+    position: relative;
   }
 
   .app-header-wrapper {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 40px;
+    right: 0;
+    height: 32px;
+    box-sizing: border-box;
     -webkit-app-region: drag; /* Enable window dragging */
+    z-index: 200;
   }
 
   /* Disable dragging on interactive elements */
-  .app-header-wrapper button,
-  .app-header-wrapper .gguf-host {
+  .app-header-wrapper button {
     -webkit-app-region: no-drag;
   }
 
@@ -254,40 +248,11 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 12px;
-    height: 48px;
+    height: 44px;
     background: #1a1a1a;
     border-bottom: 1px solid var(--border-color);
     position: relative;
     z-index: 100;
-  }
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    cursor: default;
-    background: transparent !important;
-    border: none !important;
-    padding: 4px 8px;
-    border-radius: 8px;
-    transition: none !important;
-    color: var(--text) !important;
-    outline: none !important;
-    box-shadow: none !important;
-    transform: none !important;
-  }
-  .brand:hover,
-  .brand:active,
-  .brand:focus {
-    background: transparent !important;
-    color: var(--text) !important;
-    transform: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-  }
-  .brand-icon {
-    width: 20px;
-    height: 20px;
-    pointer-events: none;
   }
   .header-center {
     flex: 1;
@@ -330,14 +295,16 @@
     font-weight: 600;
     transform: none;
   }
-  .gguf-host.hidden {
-    display: none;
-  }
   .app-body {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
     overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 40px;
+    right: 0;
+    bottom: 0;
   }
   .app-main {
     flex: 1 1 auto;
@@ -345,7 +312,7 @@
     display: flex;
     overflow: hidden;
     padding: var(--content-gap);
-    padding-top: var(--content-gap-top);
+    padding-top: calc(var(--content-gap-top) + 44px);
   }
 
   /* Переключение страниц через CSS - все смонтированы одновременно */

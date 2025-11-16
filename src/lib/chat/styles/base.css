@@ -94,14 +94,22 @@
   box-sizing: border-box;
 }
 
-.loader,
 .chat {
   background: #1a1a1a;
 
   /* increased rounding for chat and loader */
   border-radius: 14px;
   padding: 16px;
-  box-shadow: 0 6px 30px rgb(0 0 0 / 0.05);
+  box-shadow: none;
+}
+
+.loader {
+  background: #242424;
+
+  /* increased rounding for chat and loader */
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: none;
 }
 
 .switch {

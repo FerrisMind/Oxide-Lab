@@ -440,6 +440,8 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
     flex-shrink: 0;
     width: 100%;
+    max-width: 768px;
+    margin: 0 auto;
     transition:
       border-color 0.2s ease,
       box-shadow 0.2s ease;
@@ -640,9 +642,7 @@
     transform: none;
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.2);
-    box-shadow:
-      0 8px 25px rgba(0, 0, 0, 0.15),
-      0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
   }
 
   .composer__button:not(:disabled):hover::before {
@@ -701,11 +701,8 @@
 
   .composer__button--primary:not(:disabled):hover {
     background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-    box-shadow:
-      0 8px 25px rgba(102, 126, 234, 0.4),
-      0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: none;
     transform: none;
-    scale: 1.05;
   }
 
   .composer__button--primary:not(:disabled):hover::before {
@@ -741,7 +738,6 @@
 
   .composer__button--icon:not(:disabled):hover {
     transform: none;
-    scale: 1.1;
   }
 
   .composer__button--icon:not(:disabled):active {
@@ -759,9 +755,7 @@
     transform: none;
     background: rgba(102, 126, 234, 0.25);
     border-color: rgba(102, 126, 234, 0.5);
-    box-shadow:
-      0 8px 25px rgba(102, 126, 234, 0.3),
-      0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
   }
 
   .composer__button--icon.composer__button--settings-active:not(:disabled):active {
