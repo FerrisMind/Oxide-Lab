@@ -180,6 +180,22 @@ export function createActions(ctx: ChatControllerCtx) {
             device: ctx.use_gpu ? { kind: 'cuda', index: 0 } : { kind: 'cpu' },
           },
         });
+      } else if (ctx.format === 'local_safetensors') {
+        if (!ctx.modelPath) {
+          await message('Укажите директорию с моделью safetensors', {
+            title: 'Локальная модель',
+            kind: 'warning',
+          });
+          return;
+        }
+        await invoke('load_model', {
+          req: {
+            format: 'local_safetensors',
+            model_path: ctx.modelPath,
+            context_length,
+            device: ctx.use_gpu ? { kind: 'cuda', index: 0 } : { kind: 'cpu' },
+          },
+        });
       }
       await refreshDeviceInfo();
       if (ctx.isCancelling) return;

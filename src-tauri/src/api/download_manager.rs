@@ -57,6 +57,10 @@ pub struct DownloadJob {
     pub finished_at: Option<DateTime<Utc>>,
     pub error: Option<String>,
     pub sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
 }
 
 /// Download job persisted to history once finished.
@@ -72,6 +76,10 @@ pub struct DownloadHistoryEntry {
     pub finished_at: DateTime<Utc>,
     pub error: Option<String>,
     pub sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -124,6 +132,8 @@ struct DownloadContext {
     destination_dir: PathBuf,
     total_bytes: Option<u64>,
     sha256: Option<String>,
+    group_id: Option<String>,
+    display_name: Option<String>,
 }
 
 #[derive(Debug)]
@@ -145,6 +155,10 @@ pub struct StartDownloadRequest {
     pub total_bytes: Option<u64>,
     #[serde(default)]
     pub sha256: Option<String>,
+    #[serde(default)]
+    pub group_id: Option<String>,
+    #[serde(default)]
+    pub display_name: Option<String>,
 }
 
 /// Snapshot emitted to the frontend.
@@ -344,6 +358,8 @@ async fn run_download_loop(
         destination_dir,
         total_bytes,
         sha256,
+        group_id,
+        display_name,
     } = ctx;
     let mut total_bytes = total_bytes;
 
@@ -547,6 +563,8 @@ async fn run_download_loop(
                 finished_at: Utc::now(),
                 error: None,
                 sha256,
+                group_id: group_id.clone(),
+                display_name: display_name.clone(),
             })
             .await;
         if let Err(err) = manager.persist_history(&app).await {
@@ -578,6 +596,8 @@ async fn init_job(request: &StartDownloadRequest, job_id: &str) -> Result<Downlo
         finished_at: None,
         error: None,
         sha256: request.sha256.clone(),
+        group_id: request.group_id.clone(),
+        display_name: request.display_name.clone(),
     })
 }
 
@@ -592,6 +612,8 @@ async fn start_task(app: AppHandle, job: DownloadJob) -> Result<(), String> {
         destination_dir: job.destination_dir.clone(),
         total_bytes: job.total_bytes,
         sha256: job.sha256.clone(),
+        group_id: job.group_id.clone(),
+        display_name: job.display_name.clone(),
     };
 
     {
@@ -648,6 +670,8 @@ async fn start_task(app: AppHandle, job: DownloadJob) -> Result<(), String> {
                             finished_at: Utc::now(),
                             error: None,
                             sha256: job.sha256.clone(),
+                            group_id: job.group_id.clone(),
+                            display_name: job.display_name.clone(),
                         })
                         .await;
                     if let Err(err) = MANAGER.persist_history(&app_clone).await {
@@ -686,6 +710,8 @@ async fn start_task(app: AppHandle, job: DownloadJob) -> Result<(), String> {
                         finished_at: Utc::now(),
                         error: job.error.clone(),
                         sha256: job.sha256.clone(),
+                        group_id: job.group_id.clone(),
+                        display_name: job.display_name.clone(),
                     };
                     drop(guard);
                     manager.record_history(entry).await;
@@ -840,6 +866,8 @@ pub async fn cancel_download(app: AppHandle, job_id: String) -> Result<(), Strin
                 finished_at: Utc::now(),
                 error: None,
                 sha256: job.sha256.clone(),
+                group_id: job.group_id.clone(),
+                display_name: job.display_name.clone(),
             })
             .await;
         manager.persist_history(&app).await?;

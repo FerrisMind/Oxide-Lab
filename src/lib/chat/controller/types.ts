@@ -3,8 +3,8 @@ import type { ChatMessage } from '$lib/chat/types';
 export type ChatControllerCtx = {
   get modelPath(): string;
   set modelPath(v: string);
-  get format(): 'gguf' | 'hub_gguf' | 'hub_safetensors';
-  set format(v: 'gguf' | 'hub_gguf' | 'hub_safetensors');
+  get format(): 'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors';
+  set format(v: 'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors');
   get repoId(): string;
   set repoId(v: string);
   get revision(): string;

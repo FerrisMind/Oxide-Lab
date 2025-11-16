@@ -7,7 +7,7 @@
 
   const dispatch = createEventDispatcher();
 
-  export let format: 'gguf' | 'hub_gguf' | 'hub_safetensors' = 'gguf';
+  export let format: 'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors' = 'gguf';
   export let modelPath = '';
   export let repoId = '';
   export let revision = '';
@@ -54,7 +54,7 @@
   <!-- format selection buttons removed (GGUF / HF Hub) — upload controls moved to header -->
   <!-- Панель индикаторов модальностей удалена по требованию -->
 
-  {#if format === 'gguf'}
+  {#if format === 'gguf' || format === 'local_safetensors'}
     <DeviceSelector
       bind:use_gpu
       bind:cuda_available

@@ -50,10 +50,13 @@ export interface GGUFMetadata {
 /**
  * Normalized information about a locally available GGUF model.
  */
+export type ModelFormat = 'gguf' | 'safetensors';
+
 export interface ModelInfo {
   path: string;
   name: string;
   file_size: number;
+  format: ModelFormat;
   architecture?: string;
   detected_architecture?: string;
   model_name?: string;
@@ -63,6 +66,9 @@ export interface ModelInfo {
   quantization?: string;
   tokenizer_type?: string;
   vocab_size?: number;
+  source_repo_id?: string;
+  source_repo_name?: string;
+  source_quantization?: string;
   candle_compatible: boolean;
   validation_status: ValidationStatus;
   created_at: string;
@@ -104,6 +110,7 @@ export interface FilterOptions {
   searchText?: string;
   candleOnly?: boolean;
   validation?: ValidationLevel | 'all';
+  format?: ModelFormat;
 }
 
 /**
@@ -200,6 +207,8 @@ export interface DownloadJob {
   finished_at?: string;
   error?: string;
   sha256?: string;
+  group_id?: string;
+  display_name?: string;
 }
 
 export interface DownloadHistoryEntry {
@@ -213,6 +222,8 @@ export interface DownloadHistoryEntry {
   finished_at: string;
   error?: string;
   sha256?: string;
+  group_id?: string;
+  display_name?: string;
 }
 
 export interface DownloadManagerSnapshot {

@@ -1,15 +1,11 @@
 <script lang="ts">
+  import { get } from 'svelte/store';
   import { onMount } from 'svelte';
-  import { open } from '@tauri-apps/plugin-dialog';
   import {
     folderPath,
     models,
     filteredModels,
     filterOptions,
-    sortOptions,
-    uniqueArchitectures,
-    uniqueQuantizations,
-    validationCounters,
     scanFolder,
     deleteModel,
     selectedModel,
@@ -17,8 +13,11 @@
     error,
   } from '$lib/stores/local-models';
   import { LocalModelsService } from '$lib/services/local-models';
+  import { chatState } from '$lib/stores/chat';
   import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local-models';
   import Checkbox from '$lib/components/ui/Checkbox.svelte';
+  import { open } from '@tauri-apps/plugin-dialog';
+  import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
 
   const validationLabels: Record<ValidationLevel, string> = {
     ok: 'Валидно',
@@ -42,15 +41,15 @@
 
   async function handleSelectFolder() {
     try {
-      const selected = await open({
+      const selected = (await open({
         directory: true,
         multiple: false,
         recursive: false,
-      });
-
-      if (typeof selected === 'string' && selected.length > 0) {
-        folderPath.set(selected);
-        await scanFolder(selected, true);
+      })) as string | string[] | undefined;
+      const path = Array.isArray(selected) ? selected[0] : selected;
+      if (typeof path === 'string' && path.length > 0) {
+        folderPath.set(path);
+        await scanFolder(path, true);
       }
     } catch (err) {
       console.error('Failed to select folder', err);
@@ -64,165 +63,70 @@
     }));
   }
 
-  function updateValidationFilter(level: ValidationLevel | 'all') {
-    updateFilter({ validation: level });
-  }
-
   async function handleDelete(model: ModelInfo) {
     const confirmed = confirm(`Удалить модель "${model.name}"?\nФайл будет перемещен в корзину.`);
     if (!confirmed) return;
 
     await deleteModel(model.path);
   }
+
+  function loadSelectedModel() {
+    const model = get(selectedModel);
+    if (!model) return;
+    const ox = (window as any).__oxide;
+    if (!ox?.loadGGUF) return;
+    chatState.update((state) => ({
+      ...state,
+      modelPath: model.path,
+      format: model.format === 'gguf' ? 'gguf' : 'local_safetensors',
+    }));
+    ox.loadGGUF();
+  }
 </script>
 
 <div class="local-models-panel">
-  <section class="toolbar">
-    <div class="path-group">
-      <span class="label">Папка с моделями</span>
-      <div class="path-display">
-        <span title={$folderPath || 'Папка не выбрана'}>
-          {$folderPath || 'Не выбрано'}
-        </span>
-        <div class="toolbar-actions">
-          <button class="btn" on:click={handleSelectFolder}>Выбрать папку</button>
-          <button
-            class="btn secondary"
-            disabled={!$folderPath}
-            on:click={() => $folderPath && scanFolder($folderPath, true)}
-          >
-            Пересканировать
-          </button>
+  <section class="controls">
+    <div class="controls-left">
+      <div class="path-group">
+        <span class="label">Папка с моделями</span>
+        <div class="path-display">
+          <span title={$folderPath || 'Папка не выбрана'}>
+            {$folderPath || 'Не выбрано'}
+          </span>
         </div>
       </div>
-    </div>
-    <div class="metrics">
-      <div class="metric">
-        <span class="metric-title">Всего</span>
-        <span class="metric-value">{$validationCounters.total}</span>
-      </div>
-      <div class="metric ok">
-        <span class="metric-title">Ок</span>
-        <span class="metric-value">{$validationCounters.ok}</span>
-      </div>
-      <div class="metric warn">
-        <span class="metric-title">Предупр.</span>
-        <span class="metric-value">{$validationCounters.warning}</span>
-      </div>
-      <div class="metric error">
-        <span class="metric-title">Ошибки</span>
-        <span class="metric-value">{$validationCounters.error}</span>
+      <div class="controls-actions">
+        <button class="btn" on:click={handleSelectFolder}>Выбрать папку</button>
+        <button
+          class="btn secondary"
+          disabled={!$folderPath}
+          on:click={() => $folderPath && scanFolder($folderPath, true)}
+        >
+          Пересканировать
+        </button>
       </div>
     </div>
-  </section>
 
-  <section class="filters">
-    <div class="filter-group">
-      <label>
-        Поиск
-        <input
-          type="search"
-          placeholder="Название, архитектура, квантизация..."
-          value={$filterOptions.searchText ?? ''}
-          on:input={(event) => updateFilter({ searchText: event.currentTarget.value })}
+    <div class="controls-right">
+      <div class="filter-group">
+        <label>
+          Поиск
+          <input
+            type="search"
+            placeholder="Название, архитектура, квантизация..."
+            value={$filterOptions.searchText ?? ''}
+            on:input={(event) => updateFilter({ searchText: event.currentTarget.value })}
+          />
+        </label>
+      </div>
+
+      <div class="filter-group checkbox">
+        <Checkbox
+          id="candle-only"
+          label="Только совместимые с Candle"
+          bind:checked={$filterOptions.candleOnly}
         />
-      </label>
-    </div>
-
-    <div class="filter-group">
-      <label>
-        Архитектура
-        <select
-          on:change={(event) =>
-            updateFilter({ architecture: event.currentTarget.value || undefined })}
-        >
-          <option value="">Все</option>
-          {#each $uniqueArchitectures as arch}
-            <option value={arch} selected={arch === $filterOptions.architecture}>{arch}</option>
-          {/each}
-        </select>
-      </label>
-    </div>
-
-    <div class="filter-group">
-      <label>
-        Квантизация
-        <select
-          on:change={(event) =>
-            updateFilter({ quantization: event.currentTarget.value || undefined })}
-        >
-          <option value="">Все</option>
-          {#each $uniqueQuantizations as quant}
-            <option value={quant} selected={quant === $filterOptions.quantization}>
-              {quant}
-            </option>
-          {/each}
-        </select>
-      </label>
-    </div>
-
-    <div class="filter-group checkbox">
-      <Checkbox
-        id="candle-only"
-        label="Только совместимые с Candle"
-        bind:checked={$filterOptions.candleOnly}
-      />
-    </div>
-
-    <div class="filter-group">
-      <label>
-        Валидация
-        <select
-          on:change={(event) =>
-            updateValidationFilter(event.currentTarget.value as ValidationLevel | 'all')}
-        >
-          <option value="all" selected={$filterOptions.validation === 'all'}>Все</option>
-          <option value="ok" selected={$filterOptions.validation === 'ok'}>Ок</option>
-          <option value="warning" selected={$filterOptions.validation === 'warning'}>
-            Предупреждение
-          </option>
-          <option value="error" selected={$filterOptions.validation === 'error'}>Ошибка</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="filter-group">
-      <label>
-        Сортировка
-        <select
-          on:change={(event) =>
-            sortOptions.update((prev) => ({
-              ...prev,
-              field: event.currentTarget.value as typeof prev.field,
-            }))}
-        >
-          <option value="name" selected={$sortOptions.field === 'name'}>Имя</option>
-          <option value="file_size" selected={$sortOptions.field === 'file_size'}>Размер</option>
-          <option value="created_at" selected={$sortOptions.field === 'created_at'}> Дата </option>
-          <option value="parameter_count" selected={$sortOptions.field === 'parameter_count'}>
-            Параметры
-          </option>
-          <option value="architecture" selected={$sortOptions.field === 'architecture'}>
-            Архитектура
-          </option>
-        </select>
-      </label>
-    </div>
-
-    <div class="filter-group">
-      <label>
-        Порядок
-        <select
-          on:change={(event) =>
-            sortOptions.update((prev) => ({
-              ...prev,
-              order: event.currentTarget.value as typeof prev.order,
-            }))}
-        >
-          <option value="asc" selected={$sortOptions.order === 'asc'}>Возр.</option>
-          <option value="desc" selected={$sortOptions.order === 'desc'}>Убыв.</option>
-        </select>
-      </label>
+      </div>
     </div>
   </section>
 
@@ -248,16 +152,15 @@
 
       <table>
         <thead>
-          <tr>
-            <th>Модель</th>
-            <th>Архитектура</th>
-            <th>Квант.</th>
-            <th>Параметры</th>
-            <th>Контекст</th>
-            <th>Размер</th>
-            <th>Валидация</th>
-            <th>Candle</th>
-          </tr>
+        <tr>
+          <th>Архитектура</th>
+          <th>Параметры</th>
+          <th>Публишер</th>
+          <th>Название модели</th>
+          <th>Квант</th>
+          <th>Размер</th>
+          <th>Формат</th>
+        </tr>
         </thead>
         <tbody>
           {#each $filteredModels as model (model.path)}
@@ -265,31 +168,34 @@
               class:selected={$selectedModel?.path === model.path}
               on:click={() => selectedModel.set(model)}
             >
+              <td>{model.architecture ?? '—'}</td>
+              <td>{model.parameter_count ?? '—'}</td>
+              <td>{model.metadata?.author ?? '—'}</td>
               <td>
                 <div class="model-title">
-                  <strong>{model.name}</strong>
-                  {#if model.model_name && model.model_name !== model.name}
+                  <strong title={model.name}>
+                    {#if model.format === 'safetensors'}
+                      {model.source_repo_name ?? '—'}
+                    {:else}
+                      {model.name}
+                    {/if}
+                  </strong>
+                  {#if model.format === 'safetensors'}
+                    <span class="muted">{model.name}</span>
+                  {:else if model.model_name && model.model_name !== model.name}
                     <span class="muted">{model.model_name}</span>
                   {/if}
                 </div>
               </td>
-              <td>{model.architecture ?? '—'}</td>
-              <td>{model.quantization ?? '—'}</td>
-              <td>{model.parameter_count ?? '—'}</td>
-              <td>{model.context_length ?? '—'}</td>
-              <td>{LocalModelsService.formatFileSize(model.file_size)}</td>
               <td>
-                <span class={`badge ${validationColors[model.validation_status.level]}`}>
-                  {validationLabels[model.validation_status.level]}
-                </span>
-              </td>
-              <td>
-                {#if model.candle_compatible}
-                  <span class="badge badge-success">Да</span>
+                {#if model.format === 'safetensors'}
+                  {model.source_quantization ?? '—'}
                 {:else}
-                  <span class="badge badge-muted">Нет</span>
+                  {model.quantization ?? '—'}
                 {/if}
               </td>
+              <td>{LocalModelsService.formatFileSize(model.file_size)}</td>
+              <td class="format-cell">{model.format.toUpperCase()}</td>
             </tr>
           {/each}
         </tbody>
@@ -304,6 +210,10 @@
             <button class="btn danger" on:click={() => handleDelete($selectedModel!)}
               >Удалить</button
             >
+            <button class="btn primary" on:click={loadSelectedModel}>
+              <DownloadSimple size={16} />
+              Загрузить в чат
+            </button>
           </div>
         </header>
 
@@ -323,6 +233,10 @@
           <div>
             <dt>Архитектура</dt>
             <dd>{$selectedModel.architecture ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>Формат</dt>
+            <dd class="format-cell">{$selectedModel.format.toUpperCase()}</dd>
           </div>
           <div>
             <dt>Детектировано</dt>
@@ -426,15 +340,35 @@
     color: var(--text);
   }
 
-  .toolbar {
+  .controls {
     display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
     background: var(--card);
     border-radius: 12px;
     padding: 1rem 1.25rem;
     border: 1px solid var(--border-color, #d8dee5);
     box-shadow: var(--shadow);
+  }
+
+  .controls-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex: 1;
+  }
+
+  .controls-right {
+    display: flex;
+    align-items: end;
+    gap: 1rem;
+    min-width: 400px;
+  }
+
+  .controls-actions {
+    display: flex;
+    gap: 0.5rem;
   }
 
   .path-group {
@@ -457,10 +391,6 @@
     font-size: 0.9rem;
   }
 
-  .toolbar-actions {
-    display: flex;
-    gap: 0.5rem;
-  }
 
   .metrics {
     display: grid;
@@ -499,17 +429,6 @@
     font-size: 1.1rem;
   }
 
-  .filters {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 0.75rem;
-    align-items: end;
-    background: var(--card);
-    border: 1px solid var(--border-color, #d8dee5);
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-    box-shadow: var(--shadow);
-  }
 
   .filter-group {
     display: flex;
@@ -518,8 +437,7 @@
     font-size: 0.85rem;
   }
 
-  .filter-group input,
-  .filter-group select {
+  .filter-group input {
     width: 100%;
     padding: 0.45rem 0.6rem;
     border-radius: 8px;
@@ -582,6 +500,11 @@
     text-align: left;
     border-bottom: 1px solid var(--border-color, #e1e5ea);
     font-size: 0.9rem;
+  }
+
+  td.format-cell {
+    font-weight: 600;
+    text-transform: uppercase;
   }
 
   tbody tr {
@@ -653,6 +576,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+  }
+
+  .details header .actions {
+    display: inline-flex;
+    gap: 0.5rem;
   }
 
   .details h3 {

@@ -34,7 +34,7 @@
   let messages = $state<ChatMessage[]>([]);
   let messagesEl = $state<HTMLDivElement | null>(null);
   let busy = $state(false);
-  let format = $state<'gguf' | 'hub_gguf' | 'hub_safetensors'>('gguf');
+  let format = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>('gguf');
   let isLoaded = $state(false);
   let errorText = $state('');
   // Устройство

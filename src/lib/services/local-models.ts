@@ -148,7 +148,7 @@ export class LocalModelsService {
 
   static async pauseDownload(jobId: string): Promise<void> {
     try {
-      await invoke('pause_download', { job_id: jobId });
+      await invoke('pause_download', { jobId });
     } catch (error) {
       console.error('Failed to pause download:', error);
       throw new Error(`Failed to pause download: ${error}`);
@@ -157,7 +157,7 @@ export class LocalModelsService {
 
   static async resumeDownload(jobId: string): Promise<void> {
     try {
-      await invoke('resume_download', { job_id: jobId });
+      await invoke('resume_download', { jobId });
     } catch (error) {
       console.error('Failed to resume download:', error);
       throw new Error(`Failed to resume download: ${error}`);
@@ -166,7 +166,7 @@ export class LocalModelsService {
 
   static async cancelDownload(jobId: string): Promise<void> {
     try {
-      await invoke('cancel_download', { job_id: jobId });
+      await invoke('cancel_download', { jobId });
     } catch (error) {
       console.error('Failed to cancel download:', error);
       throw new Error(`Failed to cancel download: ${error}`);
@@ -175,7 +175,7 @@ export class LocalModelsService {
 
   static async removeDownloadEntry(jobId: string, deleteFile: boolean): Promise<void> {
     try {
-      await invoke('remove_download_entry', { job_id: jobId, delete_file: deleteFile });
+      await invoke('remove_download_entry', { jobId, deleteFile });
     } catch (error) {
       console.error('Failed to remove download entry:', error);
       throw new Error(`Failed to remove download entry: ${error}`);
@@ -271,6 +271,10 @@ export class LocalModelsService {
         return false;
       }
 
+      if (options.format && model.format !== options.format) {
+        return false;
+      }
+
       if (options.candleOnly && !model.candle_compatible) {
         return false;
       }
@@ -287,6 +291,8 @@ export class LocalModelsService {
           model.model_name ?? '',
           model.architecture ?? '',
           model.quantization ?? '',
+          model.source_repo_name ?? '',
+          model.source_quantization ?? '',
           model.parameter_count ?? '',
         ]
           .join(' ')

@@ -28,6 +28,9 @@
       } else if ($chatState.format === 'hub_safetensors' && !$chatState.repoId) {
         // Don't start loading if HF Hub safetensors repoId is missing
         return;
+      } else if ($chatState.format === 'local_safetensors' && !$chatState.modelPath) {
+        // Don't start loading if local safetensors path is missing
+        return;
       }
       // If we passed all checks, proceed with loading
       return ox.loadGGUF();

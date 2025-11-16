@@ -7,7 +7,7 @@ export type ChatPersistedState = {
   repoId: string;
   revision: string;
   hubGgufFilename: string;
-  format: 'gguf' | 'hub_gguf' | 'hub_safetensors';
+  format: 'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors';
 
   // Chat state
   prompt: string;

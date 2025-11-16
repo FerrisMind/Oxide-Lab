@@ -18,6 +18,7 @@
     cancelDownload,
     removeDownload,
     clearHistory,
+    ensureDownloadManager,
   } from '$lib/stores/download-manager';
   import type { DownloadHistoryEntry, DownloadJob } from '$lib/types/local-models';
 
@@ -175,6 +176,7 @@
   }
 
   onMount(() => {
+    void ensureDownloadManager();
     // Центрируем окно при открытии
     if (modalElement) {
       const rect = modalElement.getBoundingClientRect();
@@ -200,13 +202,6 @@
     event.stopPropagation();
   }
 
-  function toPercent(job: DownloadJob): number | null {
-    const total = job.total_bytes ?? 0;
-    if (!total) return null;
-    if (total <= 0) return null;
-    return Math.min(100, Math.round((job.downloaded_bytes / total) * 100));
-  }
-
   function formatBytes(value?: number | null): string {
     if (!value || value <= 0) return '—';
     const units = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'];
@@ -218,21 +213,6 @@
     }
     const formatted = index === 0 ? size.toFixed(0) : size.toFixed(2);
     return `${formatted} ${units[index]}`;
-  }
-
-  function formatSpeed(value?: number | null): string {
-    if (!value || value <= 0) return '—';
-    return `${formatBytes(value)}/с`;
-  }
-
-  function formatEta(value?: number | null): string {
-    if (!value || value <= 0) return '—';
-    const minutes = Math.floor(value / 60);
-    const seconds = Math.floor(value % 60);
-    if (minutes > 0) {
-      return `${minutes} мин ${seconds.toString().padStart(2, '0')} с`;
-    }
-    return `${seconds} с`;
   }
 
   function formatDate(iso?: string | null): string {
@@ -247,6 +227,117 @@
       minute: '2-digit',
     });
   }
+
+  type DownloadStatus = DownloadJob['status'];
+
+  type DownloadGroup = {
+    id: string;
+    title: string;
+    jobs: DownloadJob[];
+    status: DownloadStatus;
+    downloadedBytes: number;
+    totalBytes: number | null;
+    updatedAt?: string;
+  };
+
+  type HistoryGroup = {
+    id: string;
+    title: string;
+    entries: DownloadHistoryEntry[];
+    status: DownloadStatus;
+    downloadedBytes: number;
+    totalBytes: number | null;
+    finishedAt?: string;
+  };
+
+  const STATUS_PRIORITY: Record<DownloadStatus, number> = {
+    error: 6,
+    cancelled: 5,
+    downloading: 4,
+    queued: 3,
+    paused: 2,
+    completed: 1,
+  };
+
+  function mergeStatus(current: DownloadStatus, incoming: DownloadStatus): DownloadStatus {
+    return STATUS_PRIORITY[incoming] > STATUS_PRIORITY[current] ? incoming : current;
+  }
+
+  function groupActiveDownloadsList(jobs: DownloadJob[]): DownloadGroup[] {
+    const map = new Map<string, DownloadGroup>();
+    for (const job of jobs) {
+      const key = job.group_id ?? job.id;
+      const title = job.display_name ?? job.filename;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key,
+          title,
+          jobs: [],
+          status: job.status,
+          downloadedBytes: 0,
+          totalBytes: job.total_bytes ?? null,
+          updatedAt: job.updated_at ?? job.started_at,
+        });
+      }
+      const group = map.get(key)!;
+      group.jobs = [...group.jobs, job];
+      group.status = mergeStatus(group.status, job.status);
+      group.downloadedBytes += job.downloaded_bytes;
+      if (group.totalBytes !== null && typeof job.total_bytes === 'number') {
+        group.totalBytes = (group.totalBytes ?? 0) + job.total_bytes;
+      } else if (job.total_bytes === undefined || job.total_bytes === null) {
+        group.totalBytes = null;
+      }
+      group.updatedAt = job.updated_at ?? group.updatedAt;
+    }
+    return Array.from(map.values()).sort((a, b) => {
+      const aTime = a.updatedAt ?? '';
+      const bTime = b.updatedAt ?? '';
+      return bTime.localeCompare(aTime);
+    });
+  }
+
+  function groupHistoryEntriesList(entries: DownloadHistoryEntry[]): HistoryGroup[] {
+    const map = new Map<string, HistoryGroup>();
+    for (const entry of entries) {
+      const key = entry.group_id ?? entry.id;
+      const title = entry.display_name ?? entry.filename;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key,
+          title,
+          entries: [],
+          status: entry.status as DownloadStatus,
+          downloadedBytes: 0,
+          totalBytes: entry.total_bytes ?? null,
+          finishedAt: entry.finished_at,
+        });
+      }
+      const group = map.get(key)!;
+      group.entries = [...group.entries, entry];
+      group.status = mergeStatus(group.status, entry.status as DownloadStatus);
+      group.downloadedBytes += entry.downloaded_bytes;
+      if (group.totalBytes !== null && typeof entry.total_bytes === 'number') {
+        group.totalBytes = (group.totalBytes ?? 0) + entry.total_bytes;
+      } else if (entry.total_bytes === undefined || entry.total_bytes === null) {
+        group.totalBytes = null;
+      }
+      if (
+        entry.finished_at &&
+        (!group.finishedAt || new Date(entry.finished_at) > new Date(group.finishedAt))
+      ) {
+        group.finishedAt = entry.finished_at;
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => {
+      const aTime = a.finishedAt ?? '';
+      const bTime = b.finishedAt ?? '';
+      return bTime.localeCompare(aTime);
+    });
+  }
+
+  let groupedActiveDownloads = $derived(groupActiveDownloadsList($activeDownloads));
+  let groupedHistoryEntries = $derived(groupHistoryEntriesList($downloadHistory));
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
@@ -269,26 +360,43 @@
     }
   }
 
-  async function handlePause(job: DownloadJob) {
-    await pauseDownload(job);
-  }
-
-  async function handleResume(job: DownloadJob) {
-    await resumeDownload(job);
-  }
-
-  async function handleCancel(job: DownloadJob) {
-    await cancelDownload(job);
-  }
-
-  async function handleRemove(entry: DownloadHistoryEntry, deleteFile: boolean) {
-    await removeDownload(entry, deleteFile);
-  }
-
   async function handleClearHistory() {
     const history = get(downloadHistory);
     if (!history.length) return;
     await clearHistory();
+  }
+
+  async function handleGroupPause(group: DownloadGroup) {
+    await Promise.all(
+      group.jobs
+        .filter((job) => job.status === 'downloading' || job.status === 'queued')
+        .map((job) => pauseDownload(job)),
+    );
+  }
+
+  async function handleGroupResume(group: DownloadGroup) {
+    await Promise.all(
+      group.jobs
+        .filter((job) => job.status === 'paused' || job.status === 'error')
+        .map((job) => resumeDownload(job)),
+    );
+  }
+
+  async function handleGroupCancel(group: DownloadGroup) {
+    await Promise.all(group.jobs.map((job) => cancelDownload(job)));
+  }
+
+  async function handleHistoryGroupRemove(group: HistoryGroup, deleteFile: boolean) {
+    for (const entry of group.entries) {
+      await removeDownload(entry, deleteFile);
+    }
+  }
+
+  function groupProgressPercent(group: DownloadGroup): number | null {
+    if (group.totalBytes === null || group.totalBytes <= 0) {
+      return null;
+    }
+    return Math.min(100, Math.round((group.downloadedBytes / group.totalBytes) * 100));
   }
 </script>
 
@@ -312,50 +420,66 @@
 
   <section class="modal-section">
     <h3>Активные загрузки</h3>
-    {#if $downloadsLoaded && !$activeDownloads.length}
+    {#if $downloadsLoaded && !groupedActiveDownloads.length}
       <p class="empty">Нет активных загрузок.</p>
     {:else if !$downloadsLoaded}
       <p class="empty">Загрузка данных…</p>
     {:else}
       <ul class="download-list">
-        {#each $activeDownloads as job (job.id)}
+        {#each groupedActiveDownloads as group (group.id)}
           <li class="download-item">
             <div class="item-header">
               <div>
-                <strong>{job.filename}</strong>
-                <div class="meta">{STATUS_LABELS[job.status]}</div>
+                <strong>{group.title}</strong>
+                <div class="meta">
+                  {STATUS_LABELS[group.status]}
+                  <span class="file-count">· {group.jobs.length} файл(ов)</span>
+                </div>
               </div>
               <div class="actions">
-                {#if job.status === 'downloading' || job.status === 'queued'}
-                  <button class="icon-button" title="Пауза" onclick={() => handlePause(job)}>
+                {#if group.jobs.some((job) => job.status === 'downloading' || job.status === 'queued')}
+                  <button class="icon-button" title="Пауза" onclick={() => handleGroupPause(group)}>
                     <Pause size={16} />
                   </button>
-                {:else if job.status === 'paused' || job.status === 'error'}
-                  <button class="icon-button" title="Возобновить" onclick={() => handleResume(job)}>
+                {/if}
+                {#if group.jobs.some((job) => job.status === 'paused' || job.status === 'error')}
+                  <button class="icon-button" title="Возобновить" onclick={() => handleGroupResume(group)}>
                     <Play size={16} />
                   </button>
                 {/if}
-                <button class="icon-button" title="Отменить" onclick={() => handleCancel(job)}>
+                <button class="icon-button" title="Отменить" onclick={() => handleGroupCancel(group)}>
                   <XCircle size={16} />
                 </button>
               </div>
             </div>
             <div class="progress">
-              {#if toPercent(job) !== null}
+              {#if groupProgressPercent(group) !== null}
                 <div class="progress-bar">
-                  <div class="progress-fill" style={`width: ${toPercent(job)}%`}></div>
+                  <div
+                    class="progress-fill"
+                    style={`width: ${groupProgressPercent(group)}%`}
+                  ></div>
+                </div>
+              {:else}
+                <div class="progress-bar indeterminate">
+                  <div class="progress-fill"></div>
                 </div>
               {/if}
               <div class="progress-meta">
-                <span
-                  >{formatBytes(job.downloaded_bytes)} из {formatBytes(
-                    job.total_bytes ?? null,
-                  )}</span
-                >
-                <span>Скорость: {formatSpeed(job.speed_bytes_per_sec)}</span>
-                <span>Осталось: {formatEta(job.eta_seconds)}</span>
+                <span>
+                  {formatBytes(group.downloadedBytes)}
+                  {group.totalBytes !== null ? ` из ${formatBytes(group.totalBytes)}` : ''}
+                </span>
               </div>
             </div>
+            <ul class="file-list">
+              {#each group.jobs as job, index (`${job.id}-${index}`)}
+                <li>
+                  <span>{job.filename}</span>
+                  <span class="file-status">{STATUS_LABELS[job.status]}</span>
+                </li>
+              {/each}
+            </ul>
           </li>
         {/each}
       </ul>
@@ -365,36 +489,41 @@
   <section class="modal-section">
     <div class="section-header">
       <h3>История загрузок</h3>
-      <button class="clear-button" onclick={handleClearHistory} disabled={!$downloadHistory.length}>
+      <button
+        class="clear-button"
+        onclick={handleClearHistory}
+        disabled={!groupedHistoryEntries.length}
+      >
         Очистить историю
       </button>
     </div>
-    {#if !$downloadHistory.length}
+    {#if !groupedHistoryEntries.length}
       <p class="empty">История пуста.</p>
     {:else}
       <ul class="history-list">
-        {#each $downloadHistory as entry (entry.id)}
+        {#each groupedHistoryEntries as group (group.id + '-' + (group.finishedAt ?? ''))}
           <li class="history-item">
             <div class="item-header">
               <div>
-                <strong>{entry.filename}</strong>
+                <strong>{group.title}</strong>
                 <div class="meta">
-                  {STATUS_LABELS[entry.status]} · {formatDate(entry.finished_at)}
+                  {STATUS_LABELS[group.status]} · {group.entries.length} файл(ов)
                 </div>
+                <div class="meta">{formatDate(group.finishedAt)}</div>
               </div>
               <div class="actions">
                 <button
                   class="icon-button"
                   title="Удалить запись"
-                  onclick={() => handleRemove(entry, false)}
+                  onclick={() => handleHistoryGroupRemove(group, false)}
                 >
                   <Trash size={16} />
                 </button>
-                {#if entry.status === 'completed'}
+                {#if group.status === 'completed'}
                   <button
                     class="icon-button"
                     title="Удалить запись и файл"
-                    onclick={() => handleRemove(entry, true)}
+                    onclick={() => handleHistoryGroupRemove(group, true)}
                   >
                     <Trash size={16} weight="fill" />
                   </button>
@@ -402,15 +531,30 @@
               </div>
             </div>
             <div class="history-meta">
-              <span>Размер: {formatBytes(entry.total_bytes ?? entry.downloaded_bytes)}</span>
-              <span>Скачано: {formatBytes(entry.downloaded_bytes)}</span>
-              {#if entry.error}
+              <span>
+                Размер:
+                {group.totalBytes !== null
+                  ? formatBytes(group.totalBytes)
+                  : formatBytes(group.downloadedBytes)}
+              </span>
+              <span>Скачано: {formatBytes(group.downloadedBytes)}</span>
+              {#if group.entries.some((entry) => entry.error)}
                 <span class="error">
                   <WarningCircle size={14} />
-                  {entry.error}
+                  {
+                    group.entries.find((entry) => entry.error)?.error
+                  }
                 </span>
               {/if}
             </div>
+            <ul class="file-list">
+              {#each group.entries as entry, index (`${entry.id}-${index}`)}
+                <li>
+                  <span>{entry.filename}</span>
+                  <span class="file-status">{STATUS_LABELS[entry.status]}</span>
+                </li>
+              {/each}
+            </ul>
           </li>
         {/each}
       </ul>
@@ -585,6 +729,49 @@
     gap: 12px;
     font-size: 13px;
     color: var(--muted, #6b7280);
+  }
+
+  .file-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+  }
+
+  .file-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--muted, #6b7280);
+  }
+
+  .file-status {
+    text-transform: lowercase;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .file-count {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  .progress-bar.indeterminate .progress-fill {
+    width: 40%;
+    animation: progress-indeterminate 1.2s linear infinite;
+  }
+
+  @keyframes progress-indeterminate {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
   }
 
   .history-meta .error {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
@@ -12,6 +13,11 @@
   import ArrowCircleDown from 'phosphor-svelte/lib/ArrowCircleDown';
 
   import DownloadManagerModal from './DownloadManagerModal.svelte';
+  import {
+    activeDownloads,
+    downloadsLoaded,
+    ensureDownloadManager,
+  } from '$lib/stores/download-manager';
 
   const baseNavigationItems = [
     {
@@ -20,6 +26,13 @@
       icon: ChatCircle,
       path: '/',
       description: 'Интерактивный чат с LLM',
+    },
+    {
+      id: 'models',
+      title: 'Менеджер моделей',
+      icon: Database,
+      path: '/models',
+      description: 'Управление загруженными моделями',
     },
     {
       id: 'settings',
@@ -37,13 +50,6 @@
       icon: Code,
       path: '/api',
       description: 'Работа с моделью через API',
-    },
-    {
-      id: 'models',
-      title: 'Менеджер моделей',
-      icon: Database,
-      path: '/models',
-      description: 'Управление загруженными моделями',
     },
     {
       id: 'performance',
@@ -68,6 +74,31 @@
   let showAbout = $state(false);
   let appVersion = $state('0.13.0');
   let showDownloadManager = $state(false);
+  let hasActiveDownloads = $derived($downloadsLoaded && $activeDownloads.length > 0);
+  let aggregateDownloadProgress = $derived(
+    !$downloadsLoaded || !$activeDownloads.length
+      ? null
+      : (() => {
+          let total = 0;
+          let downloaded = 0;
+          for (const job of $activeDownloads) {
+            if (typeof job.total_bytes === 'number' && job.total_bytes > 0) {
+              total += job.total_bytes;
+              downloaded += Math.min(job.downloaded_bytes, job.total_bytes);
+            } else {
+              return null;
+            }
+          }
+          if (total === 0) {
+            return null;
+          }
+          return Math.min(1, downloaded / total);
+        })(),
+  );
+
+  onMount(() => {
+    void ensureDownloadManager();
+  });
 
   function toggleAbout() {
     showAbout = !showAbout;
@@ -170,15 +201,26 @@
     {/each}
   </nav>
   <div class="sidebar-bottom">
-    {#if experimentalFeatures.enabled}
-      <button
-        class="nav-item"
-        title="Загрузки"
-        aria-label="Загрузки"
-        onclick={() => (showDownloadManager = true)}
-      >
-        <div class="nav-icon"><ArrowCircleDown size={20} weight="regular" /></div>
-      </button>
+    <button
+      class="nav-item"
+      title="Загрузки"
+      aria-label="Загрузки"
+      onclick={() => (showDownloadManager = true)}
+    >
+      <div class="nav-icon"><ArrowCircleDown size={20} weight="regular" /></div>
+    </button>
+    {#if !showDownloadManager && hasActiveDownloads}
+      <div class="download-indicator">
+        {#if aggregateDownloadProgress !== null}
+          <div class="indicator-bar">
+            <div class="indicator-fill" style={`width: ${aggregateDownloadProgress * 100}%`}></div>
+          </div>
+        {:else}
+          <div class="indicator-bar indeterminate">
+            <span></span>
+          </div>
+        {/if}
+      </div>
     {/if}
     <button class="nav-item" title="О программе" aria-label="О программе" onclick={toggleAbout}>
       <div class="nav-icon"><Info size={20} weight="regular" /></div>
@@ -310,6 +352,47 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .download-indicator {
+    width: 100%;
+    padding: 0 8px 4px;
+  }
+
+  .indicator-bar {
+    position: relative;
+    height: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent, #3498db) 18%, transparent 82%);
+    overflow: hidden;
+  }
+
+  .indicator-fill {
+    height: 100%;
+    background: var(--accent, #3498db);
+    border-radius: inherit;
+    transition: width 0.2s ease;
+  }
+
+  .indicator-bar.indeterminate span {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--accent, #3498db) 60%, transparent) 50%,
+      transparent 100%
+    );
+    animation: sidebar-progress 1.2s linear infinite;
+  }
+
+  @keyframes sidebar-progress {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
   }
 
   /* Modal */

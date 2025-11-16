@@ -37,7 +37,7 @@
   // Redirect to home if trying to access experimental pages when experimental features are disabled
   $effect(() => {
     if (experimentalFeatures.initialized && !experimentalFeatures.enabled) {
-      const experimentalPaths = ['/api', '/models', '/performance'];
+      const experimentalPaths = ['/api', '/performance'];
       if (experimentalPaths.includes($page.url.pathname)) {
         goto('/');
       }
@@ -196,13 +196,13 @@
           <div class="page-container" class:active={$page.url.pathname === '/api'}>
             <ApiPage />
           </div>
-          <div class="page-container" class:active={$page.url.pathname === '/models'}>
-            <ModelsPage />
-          </div>
           <div class="page-container" class:active={$page.url.pathname === '/performance'}>
             <PerformancePage />
           </div>
         {/if}
+        <div class="page-container" class:active={$page.url.pathname === '/models'}>
+          <ModelsPage />
+        </div>
         <div class="page-container" class:active={$page.url.pathname === '/settings'}>
           <SettingsPage />
         </div>

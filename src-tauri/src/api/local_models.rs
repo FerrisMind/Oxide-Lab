@@ -6,7 +6,9 @@
 //! * Hugging Face Hub search focused on GGUF artifacts with filtering
 //! * Download helper with progress events bridged to the Svelte frontend
 
-use crate::models::registry::{ArchKind, detect_arch};
+use crate::api::model_manager::manifest::load_manifest;
+use crate::core::weights::local_list_safetensors;
+use crate::models::registry::{ArchKind, detect_arch, detect_arch_from_config};
 use candle::quantized::gguf_file::{self, Content, Value as GgufValue, VersionedMagic};
 use chrono::{DateTime, Utc};
 use hf_hub::api::tokio::{ApiBuilder, Progress as HubProgress};
@@ -41,6 +43,14 @@ pub struct ValidationStatus {
     pub level: ValidationLevel,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub messages: Vec<String>,
+}
+
+/// Format of the local model.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ModelFormat {
+    Gguf,
+    Safetensors,
 }
 
 /// Key-value representation for additional GGUF metadata that is not mapped explicitly.
@@ -101,6 +111,7 @@ pub struct ModelInfo {
     pub name: String,
     pub path: PathBuf,
     pub file_size: u64,
+    pub format: ModelFormat,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub architecture: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -119,6 +130,12 @@ pub struct ModelInfo {
     pub tokenizer_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vocab_size: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_repo_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_repo_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_quantization: Option<String>,
     pub candle_compatible: bool,
     pub validation_status: ValidationStatus,
     pub created_at: DateTime<Utc>,
@@ -330,10 +347,16 @@ pub async fn delete_local_model(model_path: String) -> Result<(), String> {
         if !path.exists() {
             return Err(format!("File does not exist: {}", path.display()));
         }
-        if !path.is_file() {
-            return Err(format!("Path is not a file: {}", path.display()));
+        if path.is_file() {
+            fs::remove_file(&path).map_err(|e| format!("Failed to delete file: {e}"))
+        } else if path.is_dir() {
+            fs::remove_dir_all(&path).map_err(|e| format!("Failed to delete directory: {e}"))
+        } else {
+            Err(format!(
+                "Path is not a file or directory: {}",
+                path.display()
+            ))
         }
-        fs::remove_file(&path).map_err(|e| format!("Failed to delete file: {e}"))
     })
     .await
     .map_err(|e| e.to_string())?
@@ -653,7 +676,17 @@ fn scan_directory(dir: &Path) -> Result<Vec<ModelInfo>, String> {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                stack.push(path);
+                match build_safetensors_model_info(&path) {
+                    Ok(Some(info)) => models.push(info),
+                    Ok(None) => stack.push(path),
+                    Err(err) => {
+                        eprintln!(
+                            "Warning: failed to inspect safetensors directory {}: {err}",
+                            path.display()
+                        );
+                        stack.push(path);
+                    }
+                }
             } else if path
                 .extension()
                 .and_then(|ext| ext.to_str())
@@ -710,6 +743,7 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
         name: file_name,
         path: path.to_path_buf(),
         file_size: metadata_fs.len(),
+        format: ModelFormat::Gguf,
         architecture: envelope.metadata.architecture.clone(),
         detected_architecture,
         model_name: envelope.metadata.name.clone(),
@@ -719,11 +753,146 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
         quantization,
         tokenizer_type: envelope.metadata.tokenizer_model.clone(),
         vocab_size,
+        source_repo_id: None,
+        source_repo_name: None,
+        source_quantization: None,
         candle_compatible: envelope.detected_arch.is_some(),
         validation_status: envelope.validation,
         created_at,
         metadata: envelope.metadata,
     })
+}
+
+fn build_safetensors_model_info(dir: &Path) -> Result<Option<ModelInfo>, String> {
+    let config_path = dir.join("config.json");
+    if !config_path.exists() {
+        return Ok(None);
+    }
+
+    let safetensors = match local_list_safetensors(dir) {
+        Ok(files) => files,
+        Err(_) => return Ok(None),
+    };
+
+    if safetensors.is_empty() {
+        return Ok(None);
+    }
+
+    let config_json = fs::read_to_string(&config_path)
+        .ok()
+        .and_then(|content| serde_json::from_str::<JsonValue>(&content).ok());
+
+    let config_ref = config_json.as_ref().unwrap_or(&JsonValue::Null);
+    let folder_name = dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("model")
+        .to_string();
+    let model_name = config_ref
+        .get("model_name")
+        .or_else(|| config_ref.get("name"))
+        .and_then(|value| value.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| folder_name.clone());
+    let version = config_ref
+        .get("model_version")
+        .or_else(|| config_ref.get("version"))
+        .and_then(|value| value.as_str())
+        .map(|s| s.to_string());
+
+    let context_length = context_length_from_config(config_ref);
+    let parameter_count = parameter_count_from_config(config_ref);
+    let size_label = config_ref
+        .get("model_size")
+        .or_else(|| config_ref.get("size"))
+        .and_then(|value| value.as_str())
+        .map(|s| s.to_string());
+
+    let detected_arch = detect_arch_from_config(config_ref);
+    let architecture = detected_arch.as_ref().map(|kind| format!("{kind:?}"));
+    let candle_ready = detected_arch.is_some();
+
+    let mut total_bytes = 0u64;
+    for weight in &safetensors {
+        let metadata =
+            fs::metadata(weight).map_err(|e| format!("Failed to stat {}: {e}", weight))?;
+        total_bytes = total_bytes.saturating_add(metadata.len());
+    }
+
+    let dir_meta =
+        fs::metadata(dir).map_err(|e| format!("Failed to read directory metadata: {e}"))?;
+    let created = dir_meta
+        .created()
+        .or_else(|_| dir_meta.modified())
+        .map_err(|e| format!("Failed to read timestamp: {e}"))?;
+    let created_at = DateTime::<Utc>::from(created);
+
+    let manifest = load_manifest(dir);
+    let source_repo_id = manifest.as_ref().map(|m| m.repo_id.clone());
+    let source_repo_name = manifest.as_ref().map(|m| m.repo_name.clone());
+    let source_quantization = manifest.as_ref().and_then(|m| m.quantization.clone());
+    let publisher = manifest.as_ref().map(|m| m.publisher.clone());
+
+    let tokenizer_path = dir.join("tokenizer.json");
+    let metadata = GGUFMetadata {
+        format_version: 3,
+        architecture: architecture.clone(),
+        name: Some(model_name.clone()),
+        version: version.clone(),
+        author: publisher.clone(),
+        alignment: gguf_file::DEFAULT_ALIGNMENT,
+        tensor_count: safetensors.len(),
+        metadata_kv_count: config_ref
+            .as_object()
+            .map(|map| map.len())
+            .unwrap_or_default(),
+        parameter_count: None,
+        size_label,
+        context_length,
+        embedding_length: None,
+        block_count: None,
+        attention_head_count: None,
+        kv_head_count: None,
+        rope_dimension: None,
+        tokenizer_model: tokenizer_path
+            .exists()
+            .then(|| "tokenizer.json".to_string()),
+        bos_token_id: None,
+        eos_token_id: None,
+        tokenizer_tokens: None,
+        tokenizer_scores: None,
+        custom_metadata: Vec::new(),
+    };
+
+    Ok(Some(ModelInfo {
+        name: folder_name,
+        path: dir.to_path_buf(),
+        file_size: total_bytes,
+        format: ModelFormat::Safetensors,
+        architecture,
+        detected_architecture: detected_arch.map(|kind| format!("{kind:?}")),
+        model_name: Some(model_name),
+        version,
+        context_length,
+        parameter_count,
+        quantization: source_quantization.clone(),
+        tokenizer_type: tokenizer_path
+            .exists()
+            .then(|| "tokenizer.json".to_string()),
+        vocab_size: None,
+        source_repo_id,
+        source_repo_name,
+        source_quantization,
+        candle_compatible: candle_ready,
+        validation_status: ValidationStatus {
+            level: ValidationLevel::Warning,
+            messages: vec![
+                "Safetensors-модель. Автоматическая проверка GGUF недоступна.".to_string(),
+            ],
+        },
+        created_at,
+        metadata,
+    }))
 }
 
 pub(crate) fn build_http_client() -> Result<Client, String> {
@@ -1212,6 +1381,23 @@ fn extract_architectures(detail: &HFModelDetail) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn parameter_count_from_config(config: &JsonValue) -> Option<String> {
+    if let Some(value) = config.get("num_parameters").and_then(|v| v.as_u64()) {
+        return Some(format_parameter_count(value));
+    }
+    if let Some(value) = config.get("n_params").and_then(|v| v.as_u64()) {
+        return Some(format_parameter_count(value));
+    }
+    None
+}
+
+fn context_length_from_config(config: &JsonValue) -> Option<u64> {
+    config
+        .get("context_length")
+        .or_else(|| config.get("max_position_embeddings"))
+        .and_then(|val| val.as_u64())
 }
 
 fn extract_parameter_count_string(detail: &HFModelDetail) -> Option<String> {
