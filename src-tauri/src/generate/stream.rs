@@ -195,17 +195,16 @@ fn generate_stream_impl(
     // Начинаем prefill
     inference_tracker.start_prefill();
 
-    // Prefill: пошагово прогоняем весь контекст через kv_cache, без кастомной causal mask
     let mut next_token = {
-        let mut last_logits_opt: Option<Tensor> = None;
-        for (i, &tok) in effective_context_tokens.iter().enumerate() {
-            let input = Tensor::new(&[tok], &guard.device)
+        let do_batched = effective_context_tokens.len() > 8;
+        if do_batched {
+            let input = Tensor::new(effective_context_tokens.as_slice(), &guard.device)
                 .map_err(|e| e.to_string())?
                 .unsqueeze(0)
                 .map_err(|e| e.to_string())?;
             let logits = match guard.gguf_model.take() {
                 Some(mut model) => {
-                    let res = model.forward_layered(&input, i);
+                    let res = model.forward_layered(&input, 0);
                     match res {
                         Ok(v) => {
                             guard.gguf_model = Some(model);
@@ -221,14 +220,45 @@ fn generate_stream_impl(
                     return Err("Model is not loaded".into());
                 }
             };
-            last_logits_opt = Some(logits);
+            let logits = logits.squeeze(0).map_err(|e| e.to_string())?;
+            let logits = minp.apply(&logits)?;
+            logits_processor
+                .sample(&logits)
+                .map_err(|e| e.to_string())?
+        } else {
+            let mut last_logits_opt: Option<Tensor> = None;
+            for (i, &tok) in effective_context_tokens.iter().enumerate() {
+                let input = Tensor::new(&[tok], &guard.device)
+                    .map_err(|e| e.to_string())?
+                    .unsqueeze(0)
+                    .map_err(|e| e.to_string())?;
+                let logits = match guard.gguf_model.take() {
+                    Some(mut model) => {
+                        let res = model.forward_layered(&input, i);
+                        match res {
+                            Ok(v) => {
+                                guard.gguf_model = Some(model);
+                                v
+                            }
+                            Err(e) => {
+                                guard.gguf_model = Some(model);
+                                return Err(e.to_string());
+                            }
+                        }
+                    }
+                    _ => {
+                        return Err("Model is not loaded".into());
+                    }
+                };
+                last_logits_opt = Some(logits);
+            }
+            let logits = last_logits_opt.ok_or_else(|| "Empty context".to_string())?;
+            let logits = logits.squeeze(0).map_err(|e| e.to_string())?;
+            let logits = minp.apply(&logits)?;
+            logits_processor
+                .sample(&logits)
+                .map_err(|e| e.to_string())?
         }
-        let logits = last_logits_opt.ok_or_else(|| "Empty context".to_string())?;
-        let logits = logits.squeeze(0).map_err(|e| e.to_string())?;
-        let logits = minp.apply(&logits)?;
-        logits_processor
-            .sample(&logits)
-            .map_err(|e| e.to_string())?
     };
 
     // Начинаем generation
