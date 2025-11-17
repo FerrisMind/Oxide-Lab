@@ -44,6 +44,15 @@ export type ChatPersistedState = {
   cuda_available: boolean;
   cuda_build: boolean;
   current_device: string;
+  // CPU capability flags
+  avx: boolean;
+  neon: boolean;
+  simd128: boolean;
+  f16c: boolean;
+  // Prompt/control flags
+  split_prompt: boolean;
+  verbose_prompt: boolean;
+  tracing: boolean;
 };
 
 export function getDefaultChatState(): ChatPersistedState {
@@ -85,6 +94,13 @@ export function getDefaultChatState(): ChatPersistedState {
     cuda_available: false,
     cuda_build: false,
     current_device: 'CPU',
+    avx: false,
+    neon: false,
+    simd128: false,
+    f16c: false,
+    split_prompt: false,
+    verbose_prompt: false,
+    tracing: false,
   };
 }
 

@@ -68,6 +68,14 @@ export type ChatControllerCtx = {
   set cuda_build(v: boolean);
   get current_device(): string;
   set current_device(v: string);
+  get avx(): boolean;
+  set avx(v: boolean);
+  get neon(): boolean;
+  set neon(v: boolean);
+  get simd128(): boolean;
+  set simd128(v: boolean);
+  get f16c(): boolean;
+  set f16c(v: boolean);
   // Модальности
   get supports_text(): boolean;
   set supports_text(v: boolean);
@@ -78,4 +86,10 @@ export type ChatControllerCtx = {
   get supports_video(): boolean;
   set supports_video(v: boolean);
   // Offloading удалён
+  get split_prompt(): boolean;
+  set split_prompt(v: boolean);
+  get verbose_prompt(): boolean;
+  set verbose_prompt(v: boolean);
+  get tracing(): boolean;
+  set tracing(v: boolean);
 };

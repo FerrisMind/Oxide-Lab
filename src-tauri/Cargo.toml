@@ -61,12 +61,16 @@ tokio = { version = "1", features = ["sync", "time", "macros", "rt-multi-thread"
 # Для парсинга и валидации
 regex = "1"
 
+tracing = "0.1.37"
+tracing-subscriber = "0.3.7"
+tracing-chrome = "0.7.1"
+
 
 [features]
 # По умолчанию — включаем поддержку CUDA в сборке.
 # На системах без CUDA приложение продолжит работать, так как загрузка CUDA происходит динамически,
 # а наш код по умолчанию использует CPU и не обращается к CUDA без явного переключения.
-default = ["cuda"]
+default = ["cuda", "fast-cpu-mkl", "flash-attn", "cudnn"]
 
 # Объявление фичи `cuda` (нужно, иначе Cargo ругается, что default ссылается на несуществующую фичу)
 cuda = [
@@ -84,6 +88,22 @@ metal = [
     "candle-transformers/metal",
 ]
 
+fast-cpu-mkl = [
+  "candle/mkl",
+  "candle-nn/mkl",
+  "candle-transformers/mkl",
+]
+fast-cpu-accelerate = [
+  "candle/accelerate",
+  "candle-nn/accelerate",
+  "candle-transformers/accelerate",
+]
+
+flash-attn = ["candle-transformers/flash-attn"]
+
+cudnn = ["candle/cudnn", "candle-nn/cudnn", "candle-transformers/cudnn"]
+
+
 # Audio processing features
 ## no extra features
 
@@ -95,4 +115,3 @@ debug-assertions = true
 
 [profile.dev.package."*"]
 debug-assertions = false
-

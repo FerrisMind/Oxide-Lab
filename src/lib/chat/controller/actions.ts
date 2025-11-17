@@ -82,6 +82,10 @@ export function createActions(ctx: ChatControllerCtx) {
       ctx.cuda_build = !!info?.cuda_build;
       ctx.cuda_available = !!info?.cuda_available;
       ctx.current_device = String(info?.current ?? 'CPU');
+      ctx.avx = !!info?.avx;
+      ctx.neon = !!info?.neon;
+      ctx.simd128 = !!info?.simd128;
+      ctx.f16c = !!info?.f16c;
       // CPU по умолчанию; если включён тумблер и CUDA доступна — активируем GPU
       ctx.use_gpu = ctx.cuda_available && ctx.current_device === 'CUDA';
     } catch {}
@@ -328,6 +332,9 @@ export function createActions(ctx: ChatControllerCtx) {
           repeat_penalty:
             ctx.use_custom_params && ctx.repeat_penalty_enabled ? ctx.repeat_penalty_value : null,
           repeat_last_n: 64,
+          split_prompt: !!ctx.split_prompt,
+          verbose_prompt: !!ctx.verbose_prompt,
+          tracing: !!ctx.tracing,
         },
       });
     } catch (e) {

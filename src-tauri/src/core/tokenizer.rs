@@ -250,6 +250,7 @@ pub fn extract_eos_ids(tokenizer: &Tokenizer) -> Vec<u32> {
         "</s>",
         "<end_of_turn>",
         "<|end_of_turn|>",
+        "<｜end▁of▁sentence｜>",
         "<eos>",
     ] {
         if let Some(&id) = vocab.get(key)

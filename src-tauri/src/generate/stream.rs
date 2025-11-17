@@ -17,6 +17,7 @@ use crate::core::types::{ChatMessage, GenerateRequest};
 use crate::models::common::model::ModelBackend;
 use crate::{log_infer, log_template_error};
 use std::sync::atomic::Ordering;
+use tracing_subscriber::prelude::*;
 // Мультимодальные вложения отключены
 
 pub async fn generate_stream_cmd(
@@ -37,6 +38,14 @@ fn generate_stream_impl(
     state: SharedState<Box<dyn ModelBackend + Send>>,
     req: GenerateRequest,
 ) -> Result<(), String> {
+    let _trace_guard = if req.tracing.unwrap_or(false) {
+        let (chrome_layer, guard) = tracing_chrome::ChromeLayerBuilder::new().build();
+        let subscriber = tracing_subscriber::registry().with(chrome_layer);
+        let _ = tracing::subscriber::set_global_default(subscriber);
+        Some(guard)
+    } else {
+        None
+    };
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     let tokenizer = match (&guard.gguf_model, &guard.tokenizer) {
         (Some(_), Some(tk)) => tk.clone(),
@@ -133,6 +142,16 @@ fn generate_stream_impl(
         .encode(prompt, true)
         .map_err(|e| e.to_string())?;
     let full_context_tokens = tokens.get_ids().to_vec();
+    if req.verbose_prompt.unwrap_or(false) {
+        let toks = tokens.get_tokens();
+        let ids = tokens.get_ids();
+        let mut dump = String::new();
+        for (tok, id) in toks.iter().zip(ids.iter()) {
+            let t = tok.replace('▁', " ").replace("<0x0A>", "\n");
+            dump.push_str(&format!("{id:7} -> '{t}'\n"));
+        }
+        let _ = app.emit("prompt_tokens_dump", dump);
+    }
     {
         let mut sample: Vec<u32> = full_context_tokens.iter().copied().take(16).collect();
         if sample.len() < full_context_tokens.len() {
@@ -196,7 +215,8 @@ fn generate_stream_impl(
     inference_tracker.start_prefill();
 
     let mut next_token = {
-        let do_batched = effective_context_tokens.len() > 8;
+        let split_prompt = req.split_prompt.unwrap_or(false);
+        let do_batched = !split_prompt && effective_context_tokens.len() > 8;
         if do_batched {
             let input = Tensor::new(effective_context_tokens.as_slice(), &guard.device)
                 .map_err(|e| e.to_string())?
@@ -279,6 +299,7 @@ fn generate_stream_impl(
     let mut all_tokens: Vec<u32> = vec![next_token];
     let mut stop_text_buf = String::new();
     for index in 0..to_sample_soft_cap {
+        let _span = tracing::info_span!("decode", index).entered();
         if CANCEL_GENERATION.load(Ordering::SeqCst) {
             log_infer!("cancelled by user");
             break;

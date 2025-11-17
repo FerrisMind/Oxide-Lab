@@ -18,6 +18,10 @@ pub struct DeviceInfoDto {
     pub cuda_build: bool,
     pub cuda_available: bool,
     pub current: String,
+    pub avx: bool,
+    pub neon: bool,
+    pub simd128: bool,
+    pub f16c: bool,
 }
 
 #[tauri::command]
@@ -31,10 +35,18 @@ pub fn get_device_info(
     let cuda_available = candle::Device::cuda_if_available(0).is_ok();
     #[cfg(not(feature = "cuda"))]
     let cuda_available = false;
+    let avx = candle::utils::with_avx();
+    let neon = candle::utils::with_neon();
+    let simd128 = candle::utils::with_simd128();
+    let f16c = candle::utils::with_f16c();
     Ok(DeviceInfoDto {
         cuda_build,
         cuda_available,
         current,
+        avx,
+        neon,
+        simd128,
+        f16c,
     })
 }
 

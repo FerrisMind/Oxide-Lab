@@ -4,50 +4,57 @@
   import ContextLengthSelector from './loader/ContextLengthSelector.svelte';
   import HubModelForm from './loader/HubModelForm.svelte';
   import LoadingStatus from './loader/LoadingStatus.svelte';
+  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+  import { onMount, onDestroy } from 'svelte';
 
   const dispatch = createEventDispatcher();
 
-  export let format: 'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors' = 'gguf';
-  export let modelPath = '';
-  export let repoId = '';
-  export let revision = '';
-  export let hubGgufFilename = '';
-  // deprecated: токенизатор берётся из GGUF
-  // export let tokenizerPath = "";
-  // removed: enable_thinking toggle (no_think detection removed)
-  export let ctx_limit_value = 4096;
-  // Убран offloading: настройка слоёв на GPU удалена
-  export let isLoadingModel = false;
-  export let isUnloadingModel = false;
-  export let isCancelling = false;
-  export let loadingStage = '';
-  export let loadingProgress = 0;
-  export let unloadingProgress = 0;
-  export let errorText = '';
-  export let busy = false;
-  export let isLoaded = false;
-  // Устройство инференса
-  export let use_gpu = false; // CPU по умолчанию
-  export let cuda_available = false;
-  export let cuda_build = false;
-  // Поддержка модальностей (ранее использовалась для индикаторов)
-  // Эти значения только для внешней ссылки — экспортируем как const, чтобы
-  // избежать предупреждений Svelte о неиспользуемых `export let`.
-  export const supports_text: boolean = false;
-  export const supports_image: boolean = false;
-  export const supports_audio: boolean = false;
-  export const supports_video: boolean = false;
-
-  // Коллбеки, реализуются родителем
-  export let onMainAction: (() => void) | undefined = undefined;
-
-  // reference-only export (used by parent) — prevent Svelte warning by using const alias
-  const _modelPath_ref = modelPath;
-  const _isUnloadingModel_ref = isUnloadingModel;
-  const _unloadingProgress_ref = unloadingProgress;
-  const _busy_ref = busy;
-  const _isLoaded_ref = isLoaded;
-  const _onMainAction_ref = onMainAction;
+  let {
+    format = $bindable('gguf'),
+    modelPath = $bindable(''),
+    repoId = $bindable(''),
+    revision = $bindable(''),
+    hubGgufFilename = $bindable(''),
+    ctx_limit_value = $bindable(4096),
+    isLoadingModel = $bindable(false),
+    isUnloadingModel = $bindable(false),
+    isCancelling = $bindable(false),
+    loadingStage = $bindable(''),
+    loadingProgress = $bindable(0),
+    unloadingProgress = $bindable(0),
+    errorText = $bindable(''),
+    busy = $bindable(false),
+    isLoaded = $bindable(false),
+    use_gpu = $bindable(false),
+    cuda_available = $bindable(false),
+    cuda_build = $bindable(false),
+    avx = $bindable(false),
+    neon = $bindable(false),
+    simd128 = $bindable(false),
+    f16c = $bindable(false),
+    split_prompt = $bindable(false),
+    verbose_prompt = $bindable(false),
+    tracing = $bindable(false),
+    supports_text: _supports_text = false,
+    supports_image: _supports_image = false,
+    supports_audio: _supports_audio = false,
+    supports_video: _supports_video = false,
+    onMainAction: _onMainAction = undefined,
+    children,
+  } = $props();
+  let tokensDump = $state('');
+  let dumpUnlisten: UnlistenFn | null = null;
+  onMount(async () => {
+    try {
+      dumpUnlisten = await listen<string>('prompt_tokens_dump', (e) => {
+        tokensDump = String(e.payload || '');
+      });
+    } catch {}
+  });
+  onDestroy(() => {
+    if (dumpUnlisten) dumpUnlisten();
+    dumpUnlisten = null;
+  });
 </script>
 
 <section class="loader">
@@ -65,6 +72,37 @@
     <!-- thinking toggle removed -->
 
     <ContextLengthSelector bind:ctx_limit_value />
+
+    <div class="param">
+      <div class="row">
+        <input id="opt-split" type="checkbox" bind:checked={split_prompt} />
+        <label for="opt-split">Split prompt</label>
+      </div>
+    </div>
+
+    <div class="param">
+      <div class="row">
+        <input id="opt-verbose" type="checkbox" bind:checked={verbose_prompt} />
+        <label for="opt-verbose">Verbose prompt</label>
+      </div>
+    </div>
+
+    <div class="param">
+      <div class="row">
+        <input id="opt-tracing" type="checkbox" bind:checked={tracing} />
+        <label for="opt-tracing">Chrome tracing</label>
+      </div>
+    </div>
+
+    <div class="param">
+      <div class="row" style="gap:8px; flex-wrap: wrap;">
+        <span>CPU:</span>
+        <span class="chip" class:active={avx}>AVX</span>
+        <span class="chip" class:active={neon}>NEON</span>
+        <span class="chip" class:active={simd128}>SIMD128</span>
+        <span class="chip" class:active={f16c}>F16C</span>
+      </div>
+    </div>
 
     <LoadingStatus
       bind:isLoadingModel
@@ -85,6 +123,37 @@
 
     <ContextLengthSelector bind:ctx_limit_value />
 
+    <div class="param">
+      <div class="row">
+        <input id="opt-split" type="checkbox" bind:checked={split_prompt} />
+        <label for="opt-split">Split prompt</label>
+      </div>
+    </div>
+
+    <div class="param">
+      <div class="row">
+        <input id="opt-verbose" type="checkbox" bind:checked={verbose_prompt} />
+        <label for="opt-verbose">Verbose prompt</label>
+      </div>
+    </div>
+
+    <div class="param">
+      <div class="row">
+        <input id="opt-tracing" type="checkbox" bind:checked={tracing} />
+        <label for="opt-tracing">Chrome tracing</label>
+      </div>
+    </div>
+
+    <div class="param">
+      <div class="row" style="gap:8px; flex-wrap: wrap;">
+        <span>CPU:</span>
+        <span class="chip" class:active={avx}>AVX</span>
+        <span class="chip" class:active={neon}>NEON</span>
+        <span class="chip" class:active={simd128}>SIMD128</span>
+        <span class="chip" class:active={f16c}>F16C</span>
+      </div>
+    </div>
+
     <LoadingStatus
       bind:isLoadingModel
       bind:isCancelling
@@ -104,6 +173,37 @@
 
     <ContextLengthSelector bind:ctx_limit_value />
 
+    <div class="param">
+      <div class="row">
+        <input id="opt-split" type="checkbox" bind:checked={split_prompt} />
+        <label for="opt-split">Split prompt</label>
+      </div>
+    </div>
+
+    <div class="param">
+      <div class="row">
+        <input id="opt-verbose" type="checkbox" bind:checked={verbose_prompt} />
+        <label for="opt-verbose">Verbose prompt</label>
+      </div>
+    </div>
+
+    <div class="param">
+      <div class="row">
+        <input id="opt-tracing" type="checkbox" bind:checked={tracing} />
+        <label for="opt-tracing">Chrome tracing</label>
+      </div>
+    </div>
+
+    <div class="param">
+      <div class="row" style="gap:8px; flex-wrap: wrap;">
+        <span>CPU:</span>
+        <span class="chip" class:active={avx}>AVX</span>
+        <span class="chip" class:active={neon}>NEON</span>
+        <span class="chip" class:active={simd128}>SIMD128</span>
+        <span class="chip" class:active={f16c}>F16C</span>
+      </div>
+    </div>
+
     <LoadingStatus
       bind:isLoadingModel
       bind:isCancelling
@@ -112,5 +212,32 @@
       bind:errorText
     />
   {/if}
-  <slot />
+  {@render children?.default?.()}
+  {#if verbose_prompt && tokensDump}
+    <div class="param">
+      <div class="head">Prompt tokens</div>
+      <pre class="dump">{tokensDump}</pre>
+    </div>
+  {/if}
 </section>
+
+<style>
+  .chip {
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid #777;
+    color: #777;
+    font-size: 12px;
+  }
+  .chip.active {
+    border-color: #2a7;
+    color: #2a7;
+  }
+  .dump {
+    max-height: 160px;
+    overflow: auto;
+    background: #1114;
+    padding: 8px;
+    border-radius: 6px;
+  }
+</style>

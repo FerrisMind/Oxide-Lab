@@ -76,6 +76,13 @@ pub fn set_device(
         let kcfg = crate::core::precision::GpuKernelConfig::from_policy(&guard.precision_policy);
         kcfg.apply_for_device(&guard.device);
     }
+    log_device!(
+        "hw caps: avx={}, neon={}, simd128={}, f16c={}",
+        candle::utils::with_avx(),
+        candle::utils::with_neon(),
+        candle::utils::with_simd128(),
+        candle::utils::with_f16c()
+    );
     // Если модель загружена — перезагрузим её под выбранное устройство
     if guard.gguf_model.is_some() {
         // Перечитываем с диска по сохранённому пути

@@ -3,5 +3,9 @@
 cargo.excludeDirs = ["examples"]
 files.excludeDirs = ["examples", "target", ".cargo"]
 
+[build]
+rustflags = ["-C", "target-cpu=native"]
+
+
 
 

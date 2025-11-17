@@ -42,6 +42,10 @@
   let cuda_available = $state<boolean>(false);
   let cuda_build = $state<boolean>(false);
   let current_device = $state<string>('CPU');
+  let avx = $state<boolean>(false);
+  let neon = $state<boolean>(false);
+  let simd128 = $state<boolean>(false);
+  let f16c = $state<boolean>(false);
 
   // Поддержка модальностей (эвристика по имени модели)
   let supports_text = $state<boolean>(true);
@@ -124,6 +128,9 @@
   // removed: enable_thinking (no_think detection removed)
   // Режим использования пользовательских параметров
   let use_custom_params = $state<boolean>(false);
+  let split_prompt = $state<boolean>(false);
+  let verbose_prompt = $state<boolean>(false);
+  let tracing = $state<boolean>(false);
   // Убран offloading: слои на GPU больше не настраиваются
 
   const controller = createChatController({
@@ -324,6 +331,30 @@
     set current_device(v) {
       current_device = v;
     },
+    get avx() {
+      return avx;
+    },
+    set avx(v) {
+      avx = v;
+    },
+    get neon() {
+      return neon;
+    },
+    set neon(v) {
+      neon = v;
+    },
+    get simd128() {
+      return simd128;
+    },
+    set simd128(v) {
+      simd128 = v;
+    },
+    get f16c() {
+      return f16c;
+    },
+    set f16c(v) {
+      f16c = v;
+    },
     // Модальности
     get supports_text() {
       return supports_text;
@@ -348,6 +379,24 @@
     },
     set supports_video(v) {
       supports_video = v;
+    },
+    get split_prompt() {
+      return split_prompt;
+    },
+    set split_prompt(v) {
+      split_prompt = v;
+    },
+    get verbose_prompt() {
+      return verbose_prompt;
+    },
+    set verbose_prompt(v) {
+      verbose_prompt = v;
+    },
+    get tracing() {
+      return tracing;
+    },
+    set tracing(v) {
+      tracing = v;
     },
   });
 
@@ -422,6 +471,13 @@
       cuda_available,
       cuda_build,
       current_device,
+      avx,
+      neon,
+      simd128,
+      f16c,
+      split_prompt,
+      verbose_prompt,
+      tracing,
     });
     controller.destroy();
   });
@@ -493,6 +549,13 @@
       cuda_available = s.cuda_available;
       cuda_build = s.cuda_build;
       current_device = s.current_device;
+      avx = s.avx;
+      neon = s.neon;
+      simd128 = s.simd128;
+      f16c = s.f16c;
+      split_prompt = s.split_prompt;
+      verbose_prompt = s.verbose_prompt;
+      tracing = s.tracing;
     } catch {
       // ignore, fall back to defaults
     }
@@ -627,10 +690,17 @@
           bind:use_gpu
           bind:cuda_available
           bind:cuda_build
+          bind:avx
+          bind:neon
+          bind:simd128
+          bind:f16c
           {supports_text}
           {supports_image}
           {supports_audio}
           {supports_video}
+          bind:split_prompt
+          bind:verbose_prompt
+          bind:tracing
           onMainAction={mainAction}
           on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
         >

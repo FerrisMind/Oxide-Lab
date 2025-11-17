@@ -77,6 +77,12 @@ pub struct GenerateRequest {
     pub use_custom_params: bool,
     #[serde(default)]
     pub seed: Option<u64>,
+    #[serde(default)]
+    pub split_prompt: Option<bool>,
+    #[serde(default)]
+    pub verbose_prompt: Option<bool>,
+    #[serde(default)]
+    pub tracing: Option<bool>,
 }
 
 // Структура Attachment оставлена на будущее (компат), но можно удалить полностью при необходимости.

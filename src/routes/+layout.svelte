@@ -39,11 +39,11 @@
     }
   });
 
-  const appIcon = '/icon.svg';
+  const _appIcon = '/icon.svg';
   let isMaximized = $state(false);
   const appWindow = getCurrentWindow();
 
-  function goHome() {
+  function _goHome() {
     goto('/');
   }
 
