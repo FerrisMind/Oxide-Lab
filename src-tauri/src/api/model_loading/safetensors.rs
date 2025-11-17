@@ -37,6 +37,10 @@ pub fn load_local_safetensors_model(
     );
     let dev = select_device(device_pref);
     guard.device = dev.clone();
+    {
+        let kcfg = crate::core::precision::GpuKernelConfig::from_policy(&guard.precision_policy);
+        kcfg.apply_for_device(&guard.device);
+    }
     log_load!("device selected: {}", device_label(&guard.device));
     emit_load_progress(
         app,

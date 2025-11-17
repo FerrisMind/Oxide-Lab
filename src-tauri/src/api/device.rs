@@ -72,6 +72,10 @@ pub fn set_device(
     }
     let label = device_label(&guard.device);
     log_device!("switched -> {}", label);
+    {
+        let kcfg = crate::core::precision::GpuKernelConfig::from_policy(&guard.precision_policy);
+        kcfg.apply_for_device(&guard.device);
+    }
     // Если модель загружена — перезагрузим её под выбранное устройство
     if guard.gguf_model.is_some() {
         // Перечитываем с диска по сохранённому пути

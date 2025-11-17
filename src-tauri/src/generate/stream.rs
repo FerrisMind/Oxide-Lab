@@ -331,12 +331,14 @@ fn generate_stream_impl(
         all_tokens.push(next_token);
         inference_tracker.increment_generated_tokens();
 
+        if next_token == eos_token || stop_ids.contains(&next_token) {
+            break;
+        }
+
         if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
             emitter.push_maybe_emit(&t);
-            // textual stop patterns for models that emit plain tags instead of special ids
             stop_text_buf.push_str(&t);
             if stop_text_buf.len() > 128 {
-                // keep small window, ensure char boundary
                 let mut cut = stop_text_buf.len() - 128;
                 while cut < stop_text_buf.len() && !stop_text_buf.is_char_boundary(cut) {
                     cut += 1;
@@ -346,14 +348,12 @@ fn generate_stream_impl(
                 }
             }
             if stop_text_buf.contains("<end_of_turn>")
+                || stop_text_buf.contains("<|end_of_turn|>")
                 || stop_text_buf.contains("<|eot_id|>")
                 || stop_text_buf.contains("</s>")
             {
                 break;
             }
-        }
-        if next_token == eos_token || stop_ids.contains(&next_token) {
-            break;
         }
     }
 

@@ -154,6 +154,46 @@ pub fn select_dtype_by_policy(device: &Device, policy: &PrecisionPolicy) -> DTyp
     select_dtype(device, &config)
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GpuKernelConfig {
+    pub reduced_precision_f16: bool,
+    pub reduced_precision_bf16: bool,
+    pub force_dmmv: bool,
+}
+
+impl GpuKernelConfig {
+    pub fn from_policy(policy: &PrecisionPolicy) -> Self {
+        match policy {
+            PrecisionPolicy::Default => Self {
+                reduced_precision_f16: true,
+                reduced_precision_bf16: true,
+                force_dmmv: false,
+            },
+            PrecisionPolicy::MemoryEfficient => Self {
+                reduced_precision_f16: true,
+                reduced_precision_bf16: true,
+                force_dmmv: false,
+            },
+            PrecisionPolicy::MaximumPrecision => Self {
+                reduced_precision_f16: false,
+                reduced_precision_bf16: false,
+                force_dmmv: false,
+            },
+        }
+    }
+
+    pub fn apply_for_device(&self, device: &Device) {
+        if matches!(device, Device::Cuda(_)) {
+            #[cfg(feature = "cuda")]
+            {
+                candle::cuda::set_gemm_reduced_precision_f16(self.reduced_precision_f16);
+                candle::cuda::set_gemm_reduced_precision_bf16(self.reduced_precision_bf16);
+                candle::quantized::cuda::set_force_dmmv(self.force_dmmv);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
