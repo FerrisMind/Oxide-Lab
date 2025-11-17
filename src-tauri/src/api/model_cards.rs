@@ -14,6 +14,25 @@ use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 use tauri::{AppHandle, async_runtime};
 
+/// Проверяет, поддерживается ли данное квантование в текущей версии Candle.
+/// Список основан на candle-core/src/quantized/mod.rs
+fn is_quantization_supported(quant: &str) -> bool {
+    let normalized = quant.to_ascii_uppercase();
+    matches!(
+        normalized.as_str(),
+        // Поддерживаемые типы из Candle
+        "F32" | "F16" | "BF16" |
+        "Q4_0" | "Q4_1" | "Q5_0" | "Q5_1" | "Q8_0" | "Q8_1" |
+        "Q2_K" | "Q3_K" | "Q4_K" | "Q5_K" | "Q6_K" | "Q8_K" |
+        // Вариации K-квантований с суффиксами
+        "Q2_K_S" | "Q2_K_M" | "Q2_K_L" |
+        "Q3_K_S" | "Q3_K_M" | "Q3_K_L" |
+        "Q4_K_S" | "Q4_K_M" | "Q4_K_L" |
+        "Q5_K_S" | "Q5_K_M" | "Q5_K_L" |
+        "Q8_K_S" | "Q8_K_M" | "Q8_K_L"
+    )
+}
+
 static MODEL_CARDS: Lazy<RwLock<ModelCardsConfig>> =
     Lazy::new(|| RwLock::new(ModelCardsConfig::default()));
 
@@ -382,6 +401,11 @@ impl ModelCard {
         let mut options = Vec::new();
         for file in &gguf.files {
             if let Some(quant) = file.quantization.as_ref() {
+                // Проверяем, поддерживается ли квантование в Candle
+                if !is_quantization_supported(quant) {
+                    log::debug!("Skipping unsupported quantization: {}", quant);
+                    continue;
+                }
                 let key = quant.to_ascii_lowercase();
                 if seen.insert(key) {
                     options.push(quant.clone());
@@ -408,7 +432,14 @@ impl ModelCard {
                 let quant_files = gg
                     .files
                     .iter()
-                    .filter(|file| file.quantization.is_some())
+                    .filter(|file| {
+                        if let Some(quant) = file.quantization.as_ref() {
+                            // Фильтруем только поддерживаемые квантования
+                            is_quantization_supported(quant)
+                        } else {
+                            false
+                        }
+                    })
                     .cloned()
                     .collect::<Vec<_>>();
 

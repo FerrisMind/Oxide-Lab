@@ -119,16 +119,12 @@ pub fn load_gguf_model(
     })?;
 
     // Проверяем наличие неподдерживаемых типов данных в тензорах
-    if let Err(dtype_error) = check_supported_dtypes(&content) {
-        let warning_msg = format!("Warning: {}", dtype_error);
-        emit_load_progress(app, "dtype_check", 35, Some(&warning_msg), false, None);
-
-        // Покажем пользователю предупреждение, но продолжим загрузку
-        log::warn!(
-            "GGUF file contains potentially unsupported data types: {}",
-            dtype_error
-        );
-    }
+    check_supported_dtypes(&content).map_err(|dtype_error| {
+        let error_msg = format!("Unsupported quantization types: {}", dtype_error);
+        emit_load_progress(app, "dtype_check", 35, None, false, Some(&error_msg));
+        log::error!("Model loading blocked: {}", dtype_error);
+        error_msg
+    })?;
     emit_load_progress(
         app,
         "detect_arch",
@@ -313,21 +309,34 @@ pub fn load_gguf_model(
 /// Проверяет наличие поддерживаемых типов данных в GGUF файле
 /// Возвращает ошибку, если найдены неподдерживаемые типы данных
 fn check_supported_dtypes(content: &gguf_file::Content) -> Result<(), String> {
-    // Известные поддерживаемые типы данных в текущей версии Candle
+    // Поддерживаемые типы данных в текущей версии Candle (на основе candle-core/src/quantized/mod.rs)
     let supported_dtypes: HashSet<u32> = [
-        0, 1, 2, 3, 6, 7, 8,
-        9, // Старые типы (F32, F16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1)
-        10, 11, 12, 13, 14, 15, // Новые K-типы (Q2_K, Q3_K, Q4_K, Q5_K, Q6_K, Q8_K)
-        16, 17, 18, 19, 20, 21, 22, 23,
-        29, // IQ типы (могут быть поддержаны в новой версии)
-        24, 25, 26, 27, 28, // Целые типы (I8, I16, I32, I64, F64)
+        0,  // F32
+        1,  // F16
+        2,  // Q4_0
+        3,  // Q4_1
+        6,  // Q5_0
+        7,  // Q5_1
+        8,  // Q8_0
+        9,  // Q8_1
+        10, // Q2K
+        11, // Q3K
+        12, // Q4K
+        13, // Q5K
+        14, // Q6K
+        15, // Q8K
+        30, // BF16
     ]
     .into_iter()
     .collect();
 
-    // Известные неподдерживаемые типы данных (если они еще не поддержаны)
+    // Известные неподдерживаемые типы данных (на основе исходников GGML)
     let unsupported_dtypes: HashSet<u32> = [
-        // Пока оставляем пустым - в новой версии могут поддерживаться все известные типы
+        16, 17, 18, 19, 20, 21, 22,
+        23, // IQ типы: IQ2_XXS, IQ2_XS, IQ3_XXS, IQ3_S, IQ2_S, IQ4_NL, IQ4_XS, IQ3_M
+        29, // IQ1_M
+        24, 25, 26, 27,
+        28, // Целочисленные типы: I8, I16, I32, I64, F64 (не используются в моделях)
     ]
     .into_iter()
     .collect();
@@ -351,11 +360,13 @@ fn check_supported_dtypes(content: &gguf_file::Content) -> Result<(), String> {
 
         if !found_unsupported.is_empty() {
             error_msg.push_str(&format!(
-                "Found unsupported IQ quantization types: {:?}. ",
+                "Found unsupported quantization types: {:?}. ",
                 found_unsupported
             ));
-            error_msg
-                .push_str("These require a newer version of Candle with IQ quantization support. ");
+            error_msg.push_str("These IQ quantization types require a newer version of Candle. ");
+            error_msg.push_str(
+                "Currently supported: F32, F16, BF16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1, Q2K-Q8K. "
+            );
         }
 
         if !found_unknown.is_empty() {
@@ -364,7 +375,7 @@ fn check_supported_dtypes(content: &gguf_file::Content) -> Result<(), String> {
         }
 
         error_msg.push_str(
-            "Consider updating Candle to the latest version or using a different model file.",
+            "Model loading is blocked. Please use a model with supported quantizations (Q4_K_M, Q5_K_M, Q8_0, etc.).",
         );
 
         return Err(error_msg);

@@ -307,7 +307,7 @@
 <style>
   /* Sidebar core */
   .sidebar {
-    width: 48px; /* adjusted for 32px buttons */
+    width: 56px; /* adjusted for 32px buttons */
     height: 100%;
     background: var(--card);
     border-right: 1px solid var(--border-color, #e8e6e3);
@@ -324,7 +324,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 44px;
+    height: 56px;
     padding: 0 6px;
     border-bottom: 1px solid var(--border-color, #e8e6e3);
   }
@@ -379,7 +379,7 @@
 
   .sidebar-nav {
     flex: 1;
-    padding: 8px 6px;
+    padding: 12px 8px 8px 8px;
     display: flex;
     flex-direction: column;
     gap: 4px;

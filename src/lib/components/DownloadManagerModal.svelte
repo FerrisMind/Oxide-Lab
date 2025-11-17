@@ -5,6 +5,9 @@
   import Pause from 'phosphor-svelte/lib/Pause';
   import Play from 'phosphor-svelte/lib/Play';
   import X from 'phosphor-svelte/lib/X';
+  import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
+  import Speedometer from 'phosphor-svelte/lib/Speedometer';
+  import Timer from 'phosphor-svelte/lib/Timer';
 
   import {
     activeDownloads,
@@ -197,6 +200,48 @@
     return `${formatted} ${units[index]}`;
   }
 
+  function formatSpeed(bytesPerSec?: number | null): string {
+    if (!bytesPerSec || bytesPerSec <= 0) return '0 B/s';
+    const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+    let speed = bytesPerSec;
+    let index = 0;
+    while (speed >= 1024 && index < units.length - 1) {
+      speed /= 1024;
+      index += 1;
+    }
+    const formatted = index === 0 ? speed.toFixed(0) : speed.toFixed(1);
+    return `${formatted} ${units[index]}`;
+  }
+
+  function formatTime(seconds?: number | null): string {
+    if (!seconds || seconds <= 0) return '—';
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}:${remainingMinutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  function calculateGroupSpeed(group: DownloadGroup): number | null {
+    const activeJobs = group.jobs.filter(job => job.status === 'downloading');
+    if (activeJobs.length === 0) return null;
+    
+    const totalSpeed = activeJobs.reduce((sum, job) => sum + (job.speed_bytes_per_sec ?? 0), 0);
+    return totalSpeed > 0 ? totalSpeed : null;
+  }
+
+  function calculateGroupEta(group: DownloadGroup): number | null {
+    const speed = calculateGroupSpeed(group);
+    if (!speed || speed <= 0 || group.totalBytes === null) return null;
+    
+    const remainingBytes = group.totalBytes - group.downloadedBytes;
+    if (remainingBytes <= 0) return 0;
+    
+    return Math.ceil(remainingBytes / speed);
+  }
+
   type DownloadStatus = DownloadJob['status'];
 
   type DownloadGroup = {
@@ -371,10 +416,18 @@
                   </div>
                 </div>
                 <div class="progress-meta">
-                  <span>
+                  <span class="meta-item">
+                    <DownloadSimple size={14} weight="bold" />
                     {formatBytes(group.downloadedBytes)}
                     {group.totalBytes !== null ? ` из ${formatBytes(group.totalBytes)}` : ''}
-                    · 0 MB/s · 00:00
+                  </span>
+                  <span class="meta-item">
+                    <Speedometer size={14} weight="bold" />
+                    {formatSpeed(calculateGroupSpeed(group))}
+                  </span>
+                  <span class="meta-item">
+                    <Timer size={14} weight="bold" />
+                    {formatTime(calculateGroupEta(group))}
                   </span>
                 </div>
               </li>
@@ -523,7 +576,7 @@
 
   .icon-button:hover {
     background: rgba(59, 130, 246, 0.12);
-    transform: translateY(-1px);
+    transform: none;
   }
 
   .icon-button:focus-visible {
@@ -557,6 +610,17 @@
     gap: 12px;
     font-size: 13px;
     color: var(--muted, #6b7280);
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent, #3498db) 5%, transparent 95%);
+    white-space: nowrap;
   }
 
   .progress-bar.indeterminate .progress-fill {

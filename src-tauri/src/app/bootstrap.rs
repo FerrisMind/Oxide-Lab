@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use crate::api::commands::threads::apply_rayon_thread_limit;
 use crate::core::device::select_device;
 use crate::core::performance::StartupTracker;
 use crate::core::state::{ModelState, SharedState};
@@ -77,6 +78,8 @@ pub fn run() {
             crate::api::set_precision_policy,
             crate::api::get_precision,
             crate::api::set_precision,
+            crate::api::get_rayon_thread_limit,
+            crate::api::set_rayon_thread_limit,
             crate::api::gguf_list_metadata_keys_from_path,
             crate::api::gguf_list_metadata_keys,
             crate::api::get_experimental_features_enabled,
@@ -107,6 +110,18 @@ pub fn run() {
             crate::api::download_manager::clear_download_history,
         ])
         .setup(move |app| {
+            let handle = app.handle();
+            match ModelState::<Box<dyn ModelBackend + Send>>::load_thread_limit(handle) {
+                Ok(limit) => {
+                    apply_rayon_thread_limit(limit);
+                    if let Ok(mut guard) = shared.lock() {
+                        guard.rayon_thread_limit = limit;
+                    }
+                }
+                Err(err) => {
+                    eprintln!("Failed to load saved Rayon thread limit: {}", err);
+                }
+            }
             spawn_startup_tracker(app.handle().clone(), performance_monitor.clone());
             Ok(())
         })

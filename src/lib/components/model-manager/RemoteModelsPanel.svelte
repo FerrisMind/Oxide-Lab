@@ -10,7 +10,6 @@
     modelCardFilters,
     modelCardsError,
     modelCardsLoading,
-    modelCardsStatus,
     modelCardsVersion,
     resetModelCards,
     uniqueFamilies,
@@ -25,6 +24,23 @@
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
   import Heart from 'phosphor-svelte/lib/Heart';
   import Cube from 'phosphor-svelte/lib/Cube';
+  import Gemma from '@lobehub/icons-static-svg/icons/gemma-color.svg';
+  import Qwen from '@lobehub/icons-static-svg/icons/qwen-color.svg';
+
+  function getModelIcon(card: ModelCardSummary) {
+    const family = card.family?.toLowerCase() || '';
+    const name = card.name.toLowerCase();
+    
+    if (family.includes('gemma') || name.includes('gemma')) {
+      return Gemma;
+    }
+    if (family.includes('qwen') || name.includes('qwen')) {
+      return Qwen;
+    }
+    
+    // Default icon
+    return 'cube';
+  }
 
   let selectedCard: ModelCardSummary | null = null;
   let downloadErrors: Record<string, string> = {};
@@ -189,10 +205,6 @@
     </div>
   </section>
 
-  {#if $modelCardsStatus}
-    <div class="config-status">{$modelCardsStatus}</div>
-  {/if}
-
   {#if $modelCardsError}
     <div class="error-banner">
       <span>{$modelCardsError}</span>
@@ -241,7 +253,11 @@
               <header class="model-card__header">
                 <div class="model-card__title">
                   <span class="model-card__icon" aria-hidden="true">
-                    <Cube size={20} weight="fill" />
+                    {#if getModelIcon(selectedCard) === 'cube'}
+                      <Cube size={40} />
+                    {:else}
+                      <img src={getModelIcon(selectedCard)} alt="" width="40" height="40" />
+                    {/if}
                   </span>
                   <div>
                     <h3>
@@ -387,15 +403,6 @@
   .config-version {
     font-size: 0.8rem;
     color: var(--muted);
-  }
-
-  .config-status {
-    padding: 0.65rem 0.85rem;
-    border-radius: 10px;
-    border: 1px solid var(--border-color, #d8dee5);
-    background: color-mix(in srgb, var(--accent, #3498db) 12%, transparent 88%);
-    font-size: 0.85rem;
-    color: var(--text);
   }
 
   .results {

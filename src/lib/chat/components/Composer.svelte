@@ -650,10 +650,8 @@
   }
 
   .composer__button:not(:disabled):active {
-    transform: translateY(-1px);
-    box-shadow:
-      0 4px 15px rgba(0, 0, 0, 0.2),
-      0 2px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(0);
+    box-shadow: none;
   }
 
   .composer__button:disabled {
@@ -711,7 +709,7 @@
 
   .composer__button--primary:not(:disabled):active {
     transform: none;
-    scale: 1.02;
+    scale: none;
     box-shadow:
       0 4px 15px rgba(102, 126, 234, 0.5),
       0 2px 8px rgba(0, 0, 0, 0.2);
@@ -742,7 +740,7 @@
 
   .composer__button--icon:not(:disabled):active {
     transform: none;
-    scale: 1.05;
+    scale: none;
   }
 
   /* Стили для кнопки настроек в зависимости от состояния панели */

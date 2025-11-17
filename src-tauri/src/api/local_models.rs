@@ -433,6 +433,8 @@ pub async fn download_hf_model_file(
     filename: String,
     destination_dir: String,
 ) -> Result<DownloadedFileInfo, String> {
+    use crate::api::model_manager::manifest::{DownloadManifest, infer_quantization_from_label};
+
     let download_id = format!("{}::{}", repo_id, filename);
     let api = ApiBuilder::new()
         .with_progress(false)
@@ -467,6 +469,34 @@ pub async fn download_hf_model_file(
     let size = fs::metadata(&dest_file)
         .map_err(|e| format!("Failed to inspect downloaded file: {e}"))?
         .len();
+
+    // Create and save manifest with source information
+    let publisher = repo_id.split('/').next().unwrap_or(&repo_id).to_string();
+    let repo_name = repo_id
+        .split('/')
+        .next_back()
+        .unwrap_or(&repo_id)
+        .to_string();
+    let quantization = extract_quantization_from_filename(&filename);
+
+    let manifest = DownloadManifest {
+        version: 1,
+        repo_id: repo_id.clone(),
+        repo_name: repo_name.clone(),
+        publisher: publisher.clone(),
+        format: "gguf".to_string(),
+        quantization: quantization.or_else(|| infer_quantization_from_label(&filename)),
+        card_id: None,
+        card_name: None,
+        downloaded_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    // Save manifest next to the file
+    let manifest_path = dest_dir.join(format!("{}.oxide-manifest.json", filename));
+    let manifest_json = serde_json::to_string_pretty(&manifest)
+        .map_err(|e| format!("Failed to serialize manifest: {e}"))?;
+    fs::write(&manifest_path, manifest_json)
+        .map_err(|e| format!("Failed to save manifest: {e}"))?;
 
     progress.emit(DownloadStage::Finished);
 
@@ -572,8 +602,19 @@ fn read_gguf_metadata(path: &Path, include_tokens: bool) -> Result<MetadataEnvel
 
     let file = fs::File::open(path).map_err(|e| format!("Failed to open GGUF file: {e}"))?;
     let mut reader = BufReader::new(file);
-    let content =
-        Content::read(&mut reader).map_err(|e| format!("Failed to parse GGUF file: {e}"))?;
+    let content = Content::read(&mut reader).map_err(|e| {
+        let err_str = e.to_string();
+        // Проверяем, не ошибка ли это из-за неподдерживаемого типа данных
+        if err_str.contains("unknown dtype") {
+            format!(
+                "Failed to parse GGUF file: {}. This file may use unsupported quantization types (IQ1_S, IQ1_M, etc.). \
+                Only standard quantizations are supported: F32, F16, BF16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1, Q2K-Q8K.",
+                err_str
+            )
+        } else {
+            format!("Failed to parse GGUF file: {}", err_str)
+        }
+    })?;
 
     let version = match content.magic {
         VersionedMagic::GgufV3 => 3,
@@ -709,6 +750,8 @@ fn scan_directory(dir: &Path) -> Result<Vec<ModelInfo>, String> {
 }
 
 fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
+    use crate::api::model_manager::manifest::load_manifest;
+
     let envelope = read_gguf_metadata(path, false)?;
     let file_name = path
         .file_stem()
@@ -739,6 +782,47 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
             .map(format_parameter_count)
     });
 
+    // Try to load manifest for GGUF files downloaded through our system
+    let manifest_path = if let Some(parent) = path.parent() {
+        parent.join(format!(
+            "{}.oxide-manifest.json",
+            path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown")
+        ))
+    } else {
+        PathBuf::new()
+    };
+
+    let manifest = if manifest_path.exists() {
+        load_manifest(
+            manifest_path
+                .parent()
+                .unwrap_or(path.parent().unwrap_or(Path::new("."))),
+        )
+    } else {
+        None
+    };
+
+    // Try to extract source repo ID from manifest or GGUF metadata
+    let source_repo_id = manifest
+        .as_ref()
+        .map(|m| m.repo_id.clone())
+        .or_else(|| {
+            custom_metadata_get_string(&envelope.metadata.custom_metadata, "general.source_hf_repo")
+        })
+        .or_else(|| custom_metadata_get_string(&envelope.metadata.custom_metadata, "hf.repo_id"));
+
+    let source_repo_name = manifest.as_ref().map(|m| m.repo_name.clone()).or_else(|| {
+        source_repo_id.as_ref().map(|repo_id| {
+            repo_id
+                .split('/')
+                .next_back()
+                .unwrap_or(repo_id)
+                .to_string()
+        })
+    });
+
     Ok(ModelInfo {
         name: file_name,
         path: path.to_path_buf(),
@@ -753,8 +837,8 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
         quantization,
         tokenizer_type: envelope.metadata.tokenizer_model.clone(),
         vocab_size,
-        source_repo_id: None,
-        source_repo_name: None,
+        source_repo_id,
+        source_repo_name,
         source_quantization: None,
         candle_compatible: envelope.detected_arch.is_some(),
         validation_status: envelope.validation,
@@ -1175,6 +1259,14 @@ fn metadata_get_string(metadata: &HashMap<String, GgufValue>, key: &str) -> Opti
         GgufValue::String(s) => Some(s.clone()),
         _ => None,
     })
+}
+
+fn custom_metadata_get_string(custom: &[GGUFKeyValue], key: &str) -> Option<String> {
+    custom
+        .iter()
+        .find(|kv| kv.key == key)
+        .and_then(|kv| kv.value.as_str())
+        .map(|s| s.to_string())
 }
 
 fn metadata_get_u32(metadata: &HashMap<String, GgufValue>, key: &str) -> Option<u32> {

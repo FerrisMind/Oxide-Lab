@@ -184,7 +184,15 @@
             >
               <td>{model.architecture ?? '—'}</td>
               <td>{model.parameter_count ?? '—'}</td>
-              <td>{model.metadata?.author ?? '—'}</td>
+              <td>
+                {#if model.format === 'safetensors'}
+                  {model.metadata?.author ?? '—'}
+                {:else if model.source_repo_id}
+                  {model.source_repo_id.split('/')[0]}
+                {:else}
+                  {model.metadata?.author ?? '—'}
+                {/if}
+              </td>
               <td>
                 <div class="model-title">
                   <strong title={model.name}>
@@ -194,11 +202,6 @@
                       {model.name}
                     {/if}
                   </strong>
-                  {#if model.format === 'safetensors'}
-                    <span class="muted">{model.name}</span>
-                  {:else if model.model_name && model.model_name !== model.name}
-                    <span class="muted">{model.model_name}</span>
-                  {/if}
                 </div>
               </td>
               <td>
@@ -221,9 +224,9 @@
         <header>
           <h3>{$selectedModel.name}</h3>
           <div class="actions">
-            <button class="btn danger" on:click={() => handleDelete($selectedModel!)}
-              >Удалить</button
-            >
+            <button class="btn danger" on:click={() => handleDelete($selectedModel!)}>
+              Удалить
+            </button>
             <button class="btn primary" on:click={loadSelectedModel}>
               <DownloadSimple size={16} />
               Загрузить в чат
@@ -552,11 +555,6 @@
   .model-title {
     display: flex;
     flex-direction: column;
-  }
-
-  .model-title .muted {
-    font-size: 0.8rem;
-    color: var(--muted);
   }
 
   .badge {

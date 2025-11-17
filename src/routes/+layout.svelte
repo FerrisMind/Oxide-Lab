@@ -12,6 +12,7 @@
   import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
   import ArrowsOut from 'phosphor-svelte/lib/ArrowsOut';
   import X from 'phosphor-svelte/lib/X';
+  import CaretDown from 'phosphor-svelte/lib/CaretDown';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import ChatHistory from '$lib/components/ChatHistory.svelte';
   import { ensureGlobalChatStream } from '$lib/chat/global-stream';
@@ -20,6 +21,7 @@
 
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   import { pageTabsList, activePageTab } from '$lib/stores/page-tabs.svelte';
+  import { models } from '$lib/stores/local-models';
 
   // Импортируем все страницы для постоянного монтирования
   import ApiPage from './api/+page.svelte';
@@ -42,6 +44,7 @@
   const _appIcon = '/icon.svg';
   let isMaximized = $state(false);
   const appWindow = getCurrentWindow();
+  let isModelDropdownOpen = $state(false);
 
   function _goHome() {
     goto('/');
@@ -125,10 +128,20 @@
     // initial sync
     setTimeout(syncHeights, 120);
 
+    // Close dropdown when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.model-dropdown')) {
+        isModelDropdownOpen = false;
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+
     return () => {
       if (unlistenHolder.fn) unlistenHolder.fn();
       window.removeEventListener('resize', debounced);
       ro.disconnect();
+      document.removeEventListener('click', handleClickOutside);
     };
   });
 </script>
@@ -137,6 +150,46 @@
   <div class="app-header-wrapper" onmousedown={startDragging} role="toolbar" tabindex="0">
     <header class="app-header">
       <div class="header-center">
+        <!-- Model dropdown -->
+        {#if $page.url.pathname === '/' || $page.url.pathname === '/api'}
+          <div class="model-dropdown">
+            <button
+              class="model-dropdown-btn"
+              onclick={() => isModelDropdownOpen = !isModelDropdownOpen}
+              aria-expanded={isModelDropdownOpen}
+              aria-haspopup="listbox"
+            >
+              Модели ({$models.length}) <CaretDown size={12} />
+            </button>
+            {#if isModelDropdownOpen}
+              <div class="model-dropdown-menu">
+                {#each $models as model}
+                  <button
+                    class="model-dropdown-item"
+                    onclick={() => {
+                      goto('/models');
+                      isModelDropdownOpen = false;
+                    }}
+                    onkeydown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        goto('/models');
+                        isModelDropdownOpen = false;
+                      }
+                    }}
+                  >
+                    {model.name}
+                  </button>
+                {/each}
+                {#if $models.length === 0}
+                  <button class="model-dropdown-item disabled" disabled>
+                    Нет моделей
+                  </button>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        {/if}
         <!-- Page tabs -->
         {#if $page.url.pathname === '/models'}
           {#if $pageTabsList.length > 0}
@@ -230,9 +283,9 @@
   .app-header-wrapper {
     position: absolute;
     top: 0;
-    left: 40px;
+    left: 56px;
     right: 0;
-    height: 32px;
+    height: 64px;
     box-sizing: border-box;
     -webkit-app-region: drag; /* Enable window dragging */
     z-index: 200;
@@ -248,7 +301,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 12px;
-    height: 44px;
+    height: 56px;
     background: #1a1a1a;
     border-bottom: 1px solid var(--border-color);
     position: relative;
@@ -257,11 +310,80 @@
   .header-center {
     flex: 1;
     display: flex;
-    justify-content: center;
     align-items: center;
     gap: 1rem;
-    max-width: 600px;
-    margin: 0 auto;
+    position: relative;
+  }
+
+  .model-dropdown {
+    position: relative;
+    margin-left: 8px;
+  }
+
+  .model-dropdown-btn {
+    background: transparent;
+    border: 0px solid transparent;
+    color: #ffffff;
+    padding: 4px 8px;
+    text-align: left;
+    border-radius: 6px;
+    font-size: 18px;
+    cursor: default;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .model-dropdown-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .model-dropdown-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: none;
+  }
+
+  .model-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 4px;
+    margin: 4px 0 0 0;
+    min-width: 200px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .model-dropdown-item {
+    width: 100%;
+    background: none;
+    border: none;
+    color: #ffffff;
+    padding: 8px 12px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s ease;
+  }
+
+  .model-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: none;
+  }
+
+  .model-dropdown-item:active {
+    background: rgba(255, 255, 255, 0.15);
+    transform: none;
+  }
+
+  .model-dropdown-item:disabled {
+    color: rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
   }
 
   .page-tabs {
@@ -271,6 +393,9 @@
     list-style: none;
     padding: 0;
     margin: 0;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .page-tab {
@@ -302,7 +427,7 @@
     overflow: hidden;
     position: absolute;
     top: 0;
-    left: 40px;
+    left: 56px;
     right: 0;
     bottom: 0;
   }
@@ -312,7 +437,7 @@
     display: flex;
     overflow: hidden;
     padding: var(--content-gap);
-    padding-top: calc(var(--content-gap-top) + 44px);
+    padding-top: calc(var(--content-gap-top) + 64px);
   }
 
   /* Переключение страниц через CSS - все смонтированы одновременно */

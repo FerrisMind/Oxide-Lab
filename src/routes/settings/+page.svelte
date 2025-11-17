@@ -8,12 +8,24 @@
   let currentPolicy: PrecisionPolicy = { Default: null };
   let isLoading = $state(true);
   let error: string | null = $state(null);
+  const hardwareConcurrency = (() => {
+    if (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) {
+      return Math.max(1, navigator.hardwareConcurrency);
+    }
+    return 4;
+  })();
+
+  let threadLimit = $state<number | null>(null);
+  let threadSliderValue = $state(hardwareConcurrency);
+  let threadLimitLoading = $state(true);
+  let threadLimitError = $state<string | null>(null);
 
   // Local reactive variable for experimental features checkbox
   let experimentalFeaturesEnabled = $state(false);
 
   onMount(async () => {
     await loadPrecisionPolicy();
+    await loadThreadLimit();
   });
 
   // Sync local variable with store when experimental features are initialized
@@ -61,6 +73,37 @@
       console.error('Failed to save experimental features state:', err);
       // Revert local variable on error
       experimentalFeaturesEnabled = experimentalFeatures.enabled;
+    }
+  }
+
+
+  async function loadThreadLimit() {
+    threadLimitLoading = true;
+    threadLimitError = null;
+    try {
+      const saved = await invoke<number | null>('get_rayon_thread_limit');
+      threadLimit = saved;
+      threadSliderValue = saved ?? hardwareConcurrency;
+    } catch (err) {
+      threadLimitError = `Failed to load thread limit: ${err}`;
+      console.error(err);
+    } finally {
+      threadLimitLoading = false;
+    }
+  }
+
+  async function applyCustomThreadLimit(limit: number | null) {
+    threadLimitLoading = true;
+    threadLimitError = null;
+    try {
+      await invoke('set_rayon_thread_limit', { limit });
+      threadLimit = limit;
+      threadSliderValue = limit ?? hardwareConcurrency;
+    } catch (err) {
+      threadLimitError = `Failed to save thread limit: ${err}`;
+      console.error(err);
+    } finally {
+      threadLimitLoading = false;
     }
   }
 
@@ -221,6 +264,51 @@
     {/if}
   </div>
 
+  <div class="settings-section">
+    <h2>Ручной лимит CPU-потоков</h2>
+    <p class="settings-description">
+      Если нужно ограничить количество потоков, которые candle может использовать через rayon,
+      включите ручной лимит. Слайдер позволяет выбрать число потоков, после чего приложение
+      применит переменную окружения `RAYON_NUM_THREADS`.
+    </p>
+
+    {#if threadLimitLoading}
+      <div class="loading">Загрузка предустановленного лимита...</div>
+    {:else}
+      <div class="thread-control">
+        <label class="slider-label">
+          <span>Максимум потоков: {threadSliderValue}</span>
+          <input
+            class="thread-slider"
+            type="range"
+            min="1"
+            max={hardwareConcurrency}
+            bind:value={threadSliderValue}
+            onchange={(event) => applyCustomThreadLimit(Number((event.currentTarget as HTMLInputElement).value))}
+          />
+        </label>
+        <div class="thread-actions">
+          <button
+            class="thread-reset"
+            onclick={() => applyCustomThreadLimit(null)}
+            disabled={threadLimit === null}
+          >
+            Использовать системное значение ({hardwareConcurrency} потоков)
+          </button>
+          <p class="thread-status">
+            Текущий режим: {threadLimit === null ? 'автоматический' : 'ручной'} ({threadLimit ?? hardwareConcurrency} потоков)
+          </p>
+        </div>
+      </div>
+    {/if}
+
+    {#if threadLimitError}
+      <div class="error-message">
+        {threadLimitError}
+      </div>
+    {/if}
+  </div>
+
   <div class="settings-section experimental-section" class:enabled={experimentalFeatures.enabled}>
     <h2>Экспериментальные функции</h2>
     <p class="settings-description">
@@ -339,7 +427,7 @@
 
   .option-card:hover {
     border-color: var(--accent);
-    transform: translateY(-2px);
+    transform: none;
   }
 
   .option-card.selected {
@@ -367,6 +455,51 @@
     font-size: 0.95rem;
     margin-top: 12px !important;
     word-wrap: break-word;
+  }
+
+  .thread-control {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .thread-slider {
+    width: 100%;
+  }
+
+  .thread-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .thread-reset {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--panel-bg);
+    padding: 8px 14px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .thread-reset:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .thread-reset:not(:disabled):hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .thread-status {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
   }
 
   .error-message {
