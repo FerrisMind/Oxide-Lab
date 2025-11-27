@@ -9,6 +9,13 @@
   import ClockCounterClockwise from 'phosphor-svelte/lib/ClockCounterClockwise';
   import File from 'phosphor-svelte/lib/File';
   import X from 'phosphor-svelte/lib/X';
+  import Button from '$lib/components/ui/button/button.svelte';
+  import * as InputGroup from '$lib/components/ui/input-group';
+  import Badge from '$lib/components/ui/badge/badge.svelte';
+  import Alert from '$lib/components/ui/alert/alert.svelte';
+  import AlertDescription from '$lib/components/ui/alert/alert-description.svelte';
+  import AlertTitle from '$lib/components/ui/alert/alert-title.svelte';
+  import { cn } from '$lib/utils.js';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
 
   type AttachDetail = {
@@ -60,6 +67,12 @@
   let errorTimer: ReturnType<typeof setTimeout> | null = null;
   let accept = DEFAULT_TEXT_ACCEPT;
   let attachedFiles: AttachDetail[] = [];
+  $: experimentalReady = experimentalFeatures.initialized && experimentalFeatures.enabled;
+  $: experimentalStatusMessage = experimentalFeatures.initialized
+    ? experimentalFeatures.enabled
+      ? null
+      : 'Экспериментальные функции выключены'
+    : 'Экспериментальные функции загружаются...';
 
   // Переменные для автоматического изменения высоты
   let textareaHeight = 34; // Стандартная высота однострочного поля
@@ -256,575 +269,163 @@
   }
 </script>
 
-<div class="composer-wrapper">
-  <div class="composer">
-    {#if attachedFiles.length > 0}
-      <div class="composer__row composer__row--attachments">
-        {#each attachedFiles as attachment, index}
-          <div class="composer__attachment">
-            <div class="composer__attachment-icon">
-              <File size={16} weight="bold" />
-            </div>
-            <span class="composer__attachment-name">{attachment.filename}</span>
-            <button
-              type="button"
-              class="composer__attachment-remove"
-              on:click={() => removeAttachment(index)}
-              aria-label="Удалить файл"
-            >
-              <X size={12} weight="bold" />
-            </button>
-          </div>
-        {/each}
-      </div>
-    {/if}
-    <div class="composer__row composer__row--input">
-      <textarea
-        class="composer__input"
-        bind:value={prompt}
-        bind:this={textareaElement}
-        placeholder="Напишите сообщение..."
-        rows="1"
-        on:keydown={handleKeydown}
-        on:input={handleTextareaInput}
-        style="height: {textareaHeight}px; overflow-y: {textareaHeight >= MAX_HEIGHT
-          ? 'auto'
-          : 'hidden'};"
-      ></textarea>
-    </div>
-    <div class="composer__row composer__row--controls">
-      <div class="composer__controls composer__controls--left">
-        {#if experimentalFeatures.initialized && experimentalFeatures.enabled}
-          <button
+<div class="flex w-full flex-col gap-3">
+  {#if attachedFiles.length > 0}
+    <div class="flex flex-wrap gap-2">
+      {#each attachedFiles as attachment, index}
+        <Badge
+          variant="secondary"
+          class="bg-secondary/40 text-foreground/90 flex items-center gap-2 rounded-lg px-3 py-1 text-xs shadow-sm backdrop-blur"
+        >
+          <span class="flex items-center gap-1 text-muted-foreground">
+            <File size={14} weight="bold" />
+            <span class="max-w-[140px] truncate font-medium">{attachment.filename}</span>
+          </span>
+          <Button
             type="button"
-            class="composer__button composer__button--icon"
-            class:composer__button--settings-active={isChatHistoryVisible}
-            on:click={triggerChatHistory}
-            disabled={false}
+            variant="ghost"
+            size="icon-sm"
+            class="text-muted-foreground hover:text-foreground"
+            onclick={() => removeAttachment(index)}
+            aria-label={`Удалить файл ${attachment.filename}`}
+          >
+            <X size={14} weight="bold" />
+            <span class="sr-only">Удалить файл {attachment.filename}</span>
+          </Button>
+        </Badge>
+      {/each}
+    </div>
+  {/if}
+
+  <InputGroup.Root
+    class={cn(
+      '[--radius:1rem] border border-border/60 bg-card/90 shadow-lg shadow-black/5 backdrop-blur',
+      'flex-col'
+    )}
+  >
+    <InputGroup.Textarea
+      bind:value={prompt}
+      bind:ref={textareaElement}
+      placeholder="Напишите сообщение..."
+      rows={1}
+      data-slot="input-group-control"
+      class="min-h-[34px] resize-none bg-transparent text-base text-foreground"
+      style={`height: ${textareaHeight}px; overflow-y: ${textareaHeight >= MAX_HEIGHT ? 'auto' : 'hidden'};`}
+      onkeydown={handleKeydown}
+      oninput={handleTextareaInput}
+    />
+
+    <InputGroup.Addon
+      align="block-end"
+      class="w-full flex-col gap-2 border-t border-border/40 pt-2 text-sm text-muted-foreground"
+    >
+      <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+        <div class="flex flex-1 flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            class={cn(
+              'transition-colors',
+              isChatHistoryVisible && 'bg-primary/15 text-primary hover:bg-primary/20'
+            )}
+            onclick={triggerChatHistory}
             aria-label={isChatHistoryVisible ? 'Скрыть историю чатов' : 'Показать историю чатов'}
-            draggable="false"
+            disabled={!experimentalReady}
+            title={experimentalStatusMessage ?? undefined}
           >
             <ClockCounterClockwise size={16} weight="bold" />
-          </button>
-        {:else}
-          <!-- Debug info for history button -->
-          <div
-            style="position: absolute; top: -30px; left: 0; font-size: 10px; color: red; background: rgba(255,255,255,0.9); padding: 2px;"
-          >
-            Hist: {experimentalFeatures.enabled ? 'ON' : 'OFF'} | Init: {experimentalFeatures.initialized
-              ? 'YES'
-              : 'NO'}
-          </div>
-        {/if}
-        <button
-          type="button"
-          class="composer__button composer__button--icon"
-          class:composer__button--settings-active={isLoaderPanelVisible}
-          on:click={triggerSettings}
-          disabled={false}
-          aria-label="Настройки лоадер панели"
-          draggable="false"
-        >
-          <SlidersHorizontal size={16} weight="bold" />
-        </button>
-        {#if prompt || attachError}
-          <button
+          </Button>
+
+          <Button
             type="button"
-            class="composer__button composer__button--icon"
-            on:click={triggerClear}
-            disabled={busy || !isLoaded}
-            aria-label="Очистить"
-            draggable="false"
+            variant="ghost"
+            size="icon-sm"
+            class={cn(
+              'transition-colors',
+              isLoaderPanelVisible && 'bg-primary/15 text-primary hover:bg-primary/20'
+            )}
+            onclick={triggerSettings}
+            aria-label="Настройки панели загрузки"
           >
-            <Broom size={16} weight="bold" />
-          </button>
-        {/if}
-      </div>
-      <div class="composer__controls composer__controls--right">
-        {#if experimentalFeatures.initialized && experimentalFeatures.enabled}
-          <button
+            <SlidersHorizontal size={16} weight="bold" />
+          </Button>
+
+          {#if prompt || attachError}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onclick={triggerClear}
+              disabled={busy}
+              aria-label="Очистить ввод"
+            >
+              <Broom size={16} weight="bold" />
+            </Button>
+          {/if}
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+          <Button
             type="button"
-            class="composer__button composer__button--icon"
-            on:click={triggerAttach}
-            disabled={busy || !isLoaded}
+            variant="ghost"
+            size="icon-sm"
+            onclick={triggerAttach}
+            disabled={busy || !isLoaded || !experimentalReady}
             aria-label="Прикрепить файл"
-            draggable="false"
+            title={experimentalStatusMessage ?? undefined}
           >
             <Paperclip size={16} weight="bold" />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            class="composer__button composer__button--icon"
-            on:click={triggerVoiceInput}
-            disabled={busy || !isLoaded}
+            variant="ghost"
+            size="icon-sm"
+            onclick={triggerVoiceInput}
+            disabled={busy || !isLoaded || !experimentalReady}
             aria-label={isRecording ? 'Остановить запись' : 'Начать запись голоса'}
-            draggable="false"
+            aria-pressed={isRecording}
+            title={experimentalStatusMessage ?? undefined}
           >
             {#if isRecording}
               <Stop size={16} weight="bold" />
             {:else}
               <Microphone size={16} weight="bold" />
             {/if}
-          </button>
-        {:else}
-          <!-- Debug info for experimental buttons -->
-          <div
-            style="position: absolute; top: -50px; right: 0; font-size: 10px; color: red; background: rgba(255,255,255,0.9); padding: 2px;"
+          </Button>
+
+          <Button
+            type="button"
+            variant="default"
+            size="icon"
+            class="shadow-sm"
+            onclick={busy ? triggerStop : triggerSend}
+            disabled={!isLoaded || (!busy && !prompt.trim())}
+            aria-label={busy ? 'Стоп' : 'Отправить'}
           >
-            Exp: {experimentalFeatures.enabled ? 'ON' : 'OFF'} | Init: {experimentalFeatures.initialized
-              ? 'YES'
-              : 'NO'}
-          </div>
-        {/if}
-        <button
-          type="button"
-          class="composer__button composer__button--primary"
-          on:click={busy ? triggerStop : triggerSend}
-          disabled={!isLoaded || (!busy && !prompt.trim())}
-          aria-label={busy ? 'Стоп' : 'Отправить'}
-          draggable="false"
-        >
-          {#if busy}
-            <Stop size={16} weight="bold" />
-          {:else}
-            <ArrowUp size={16} weight="bold" />
-          {/if}
-        </button>
+            {#if busy}
+              <Stop size={16} weight="bold" />
+            {:else}
+              <ArrowUp size={16} weight="bold" />
+            {/if}
+          </Button>
+        </div>
       </div>
-    </div>
-    <input
-      class="composer__file-input"
-      type="file"
-      {accept}
-      bind:this={fileInput}
-      on:change={handleFileChange}
-    />
-  </div>
+    </InputGroup.Addon>
+  </InputGroup.Root>
+
+  <input
+    class="sr-only"
+    type="file"
+    {accept}
+    bind:this={fileInput}
+    onchange={handleFileChange}
+  />
 
   {#if attachError}
-    <div class="composer__error">{attachError}</div>
+    <Alert variant="destructive" class="text-sm">
+      <AlertTitle>Ошибка вложения</AlertTitle>
+      <AlertDescription>{attachError}</AlertDescription>
+    </Alert>
   {/if}
 </div>
-
-<style>
-  .composer-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-    flex-shrink: 0;
-  }
-
-  .composer {
-    --composer-row-height: 34px;
-    --composer-border: rgba(0, 0, 0, 0.08);
-    --composer-bg: var(--card, #fcfbfa);
-    --composer-text: var(--text, #2b2a29);
-    --composer-muted: var(--muted, #6d6a6a);
-    --composer-control-bg: rgba(255, 255, 255, 0.7);
-    --composer-control-hover-bg: rgba(255, 255, 255, 0.95);
-    --composer-control-border: rgba(0, 0, 0, 0.12);
-    --composer-control-radius: 12px;
-    --composer-primary: var(--accent-2, #e2c6ff);
-    --composer-primary-strong: rgba(43, 42, 41, 0.92);
-    --composer-primary-strong-hover: rgba(43, 42, 41, 0.82);
-    --composer-primary-text: #fdfbf8;
-
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    background: var(--card);
-    border: 2px solid transparent;
-    border-radius: 16px;
-    padding: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-    flex-shrink: 0;
-    width: 100%;
-    max-width: 768px;
-    margin: 0 auto;
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-
-  .composer:focus-within {
-    border-color: rgba(226, 198, 255, 0.35);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-  }
-
-  .composer__row {
-    display: flex;
-    align-items: stretch;
-    width: 100%;
-  }
-
-  .composer__row--input {
-    overflow: hidden;
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  /* Make input field wider */
-
-  .composer__row--controls {
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .composer__controls {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .composer__controls--left {
-    flex-shrink: 0;
-  }
-
-  .composer__controls--right {
-    margin-left: auto;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-
-  .composer__row--attachments {
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: flex-start;
-  }
-
-  .composer__attachment {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--composer-control-radius);
-    padding: 0 8px;
-    width: auto;
-    height: var(--composer-row-height);
-    font-size: 11px;
-    color: var(--composer-text);
-    position: relative;
-    transition: background 0.2s ease;
-    box-sizing: border-box;
-    min-width: 120px;
-    max-width: 200px;
-  }
-
-  .composer__attachment:hover {
-    background: rgba(255, 255, 255, 0.15);
-  }
-
-  .composer__attachment-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(255, 255, 255, 0.7);
-    flex-shrink: 0;
-  }
-
-  .composer__attachment-name {
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-align: left;
-    line-height: 1.2;
-    flex-grow: 1;
-  }
-
-  .composer__attachment-remove {
-    display: flex;
-    background: none;
-    border: none;
-    color: var(--composer-muted);
-    cursor: default;
-    padding: 4px;
-    border-radius: 50%;
-    transition:
-      color 0.2s ease,
-      background 0.2s ease;
-    width: 20px;
-    height: 20px;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .composer__attachment-remove:hover {
-    color: var(--composer-text);
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  .composer__input {
-    width: 100%;
-    min-width: 0;
-    min-height: var(--composer-row-height);
-    max-height: calc(var(--composer-row-height) * 3);
-    resize: none;
-    border: none; /* Remove border */
-    border-radius: var(--composer-control-radius);
-    padding: 8px 16px 8px 8px;
-    font-size: 14px;
-    line-height: 1.2;
-    color: var(--text);
-    background: var(--card);
-    outline: none;
-    box-shadow: none; /* Remove box shadow */
-    transition:
-      height 0.2s ease,
-      background-color 0.2s ease; /* Remove border-color and box-shadow transitions */
-    overflow-y: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    box-sizing: border-box;
-    display: block;
-    text-align: left;
-  }
-
-  .composer__input:focus {
-    border-color: transparent; /* Remove focus border */
-    background: var(--card);
-    box-shadow: none; /* Remove focus shadow */
-  }
-
-  .composer__input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
-    font-style: italic;
-  }
-
-  .composer__button {
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-    border-radius: var(--composer-control-radius);
-    padding: 10px 16px;
-    height: var(--composer-row-height);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: default;
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease,
-      background 0.2s ease,
-      border-color 0.2s ease,
-      color 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    min-width: 0;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .composer__button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transition: left 0.5s ease;
-  }
-
-  .composer__button:not(:disabled) {
-    cursor: default;
-    color: #ffffff;
-  }
-
-  .composer__button:not(:disabled):hover {
-    transform: none;
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: none;
-  }
-
-  .composer__button:not(:disabled):hover::before {
-    left: 100%;
-  }
-
-  .composer__button:not(:disabled):active {
-    transform: translateY(0);
-    box-shadow: none;
-  }
-
-  .composer__button:disabled {
-    opacity: 0.4;
-    color: rgba(255, 255, 255, 0.3);
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .composer__button--primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: 2px solid transparent;
-    color: #ffffff;
-    font-weight: 600;
-    box-shadow:
-      0 4px 15px rgba(102, 126, 234, 0.3),
-      0 2px 8px rgba(0, 0, 0, 0.1);
-    width: var(--composer-row-height);
-    height: var(--composer-row-height);
-    padding: 0;
-    border-radius: var(--composer-control-radius);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .composer__button--primary::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.2) 0%,
-      transparent 50%,
-      rgba(255, 255, 255, 0.1) 100%
-    );
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .composer__button--primary:not(:disabled):hover {
-    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-    box-shadow: none;
-    transform: none;
-  }
-
-  .composer__button--primary:not(:disabled):hover::before {
-    opacity: 1;
-  }
-
-  .composer__button--primary:not(:disabled):active {
-    transform: none;
-    scale: none;
-    box-shadow:
-      0 4px 15px rgba(102, 126, 234, 0.5),
-      0 2px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  .composer__button--primary:disabled {
-    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-    border-color: transparent;
-    color: rgba(255, 255, 255, 0.4);
-    box-shadow: none;
-    transform: none;
-  }
-
-  .composer__button--icon {
-    width: var(--composer-row-height);
-    height: var(--composer-row-height);
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--composer-control-radius);
-    position: relative;
-  }
-
-  .composer__button--icon:not(:disabled):hover {
-    transform: none;
-  }
-
-  .composer__button--icon:not(:disabled):active {
-    transform: none;
-    scale: none;
-  }
-
-  /* Стили для кнопки настроек в зависимости от состояния панели */
-  .composer__button--icon.composer__button--settings-active {
-    background: rgba(102, 126, 234, 0.15);
-    border-color: rgba(102, 126, 234, 0.3);
-  }
-
-  .composer__button--icon.composer__button--settings-active:not(:disabled):hover {
-    transform: none;
-    background: rgba(102, 126, 234, 0.25);
-    border-color: rgba(102, 126, 234, 0.5);
-    box-shadow: none;
-  }
-
-  .composer__button--icon.composer__button--settings-active:not(:disabled):active {
-    transform: none;
-    background: rgba(102, 126, 234, 0.35);
-    border-color: rgba(102, 126, 234, 0.6);
-  }
-
-  /* Отключаем ховер для кнопки настроек когда панель неактивна */
-  .composer__button--icon:not(.composer__button--settings-active):not(:disabled):hover {
-    transform: none;
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: none;
-  }
-
-  .composer__file-input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
-  }
-
-  @media (max-width: 720px) {
-    .composer {
-      gap: 16px;
-    }
-
-    .composer__row--controls {
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .composer__controls--left {
-      flex-shrink: 1;
-    }
-
-    .composer__controls--right {
-      margin-left: 0;
-      width: 100%;
-      justify-content: center;
-      flex-shrink: 1;
-    }
-
-    .composer__attachment {
-      min-width: 100px;
-      max-width: 150px;
-      padding: 0 6px;
-    }
-
-    .composer__attachment-icon {
-      margin-bottom: 0;
-    }
-
-    .composer__attachment-name {
-      font-size: 10px;
-    }
-
-    .composer__row--input {
-      flex: 1;
-    }
-  }
-
-  .composer__error {
-    margin-top: 8px;
-    font-size: 13px;
-    color: var(--danger, #c45555);
-    width: 100%;
-  }
-</style>

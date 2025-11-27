@@ -19,40 +19,32 @@ export const modelCardFilters = writable<FilterState>({
 export const modelCardsVersion = writable<number | null>(null);
 export const modelCardsStatus = writable<string | null>(null);
 
-export const filteredModelCards = derived(
-  [modelCards, modelCardFilters],
-  ([$cards, $filters]) => {
-    const query = $filters.searchText.trim().toLowerCase();
-    return $cards.filter((card) => {
-      if ($filters.family && card.family !== $filters.family) {
+export const filteredModelCards = derived([modelCards, modelCardFilters], ([$cards, $filters]) => {
+  const query = $filters.searchText.trim().toLowerCase();
+  return $cards.filter((card) => {
+    if ($filters.family && card.family !== $filters.family) {
+      return false;
+    }
+    if ($filters.format) {
+      const hasFormat = card.supported_formats.some(
+        (format) => format.toLowerCase() === $filters.format,
+      );
+      if (!hasFormat) {
         return false;
       }
-      if ($filters.format) {
-        const hasFormat = card.supported_formats.some(
-          (format) => format.toLowerCase() === $filters.format,
-        );
-        if (!hasFormat) {
-          return false;
-        }
-      }
+    }
 
-      if (query) {
-        const haystack = [
-          card.name,
-          card.description,
-          card.hf_repo_id,
-          card.tags.join(' '),
-        ]
-          .join(' ')
-          .toLowerCase();
-        if (!haystack.includes(query)) {
-          return false;
-        }
+    if (query) {
+      const haystack = [card.name, card.description, card.hf_repo_id, card.tags.join(' ')]
+        .join(' ')
+        .toLowerCase();
+      if (!haystack.includes(query)) {
+        return false;
       }
-      return true;
-    });
-  },
-);
+    }
+    return true;
+  });
+});
 
 export const uniqueFamilies = derived(modelCards, ($cards) => {
   return Array.from(
@@ -89,7 +81,9 @@ export async function importModelCards(path: string): Promise<void> {
     modelCardsVersion.set(response.version);
     modelCardsStatus.set(`Импортован конфиг версии ${response.version}`);
   } catch (error) {
-    modelCardsStatus.set(`Ошибка импорта: ${error instanceof Error ? error.message : String(error)}`);
+    modelCardsStatus.set(
+      `Ошибка импорта: ${error instanceof Error ? error.message : String(error)}`,
+    );
   } finally {
     modelCardsLoading.set(false);
   }
@@ -105,9 +99,10 @@ export async function resetModelCards(): Promise<void> {
     modelCardsVersion.set(response.version);
     modelCardsStatus.set(`Сброшено до версии ${response.version}`);
   } catch (error) {
-    modelCardsStatus.set(`Ошибка сброса: ${error instanceof Error ? error.message : String(error)}`);
+    modelCardsStatus.set(
+      `Ошибка сброса: ${error instanceof Error ? error.message : String(error)}`,
+    );
   } finally {
     modelCardsLoading.set(false);
   }
 }
-

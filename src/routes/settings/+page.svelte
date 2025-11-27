@@ -2,8 +2,9 @@
   import { onMount, tick } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import type { PrecisionPolicy } from '$lib/types';
-  import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
-  import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
+import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+import { modelSelectorSearchEnabled } from '$lib/stores/ui-preferences';
 
   let currentPolicy: PrecisionPolicy = { Default: null };
   let isLoading = $state(true);
@@ -22,6 +23,7 @@
 
   // Local reactive variable for experimental features checkbox
   let experimentalFeaturesEnabled = $state(false);
+let modelSearchEnabled = $state(true);
 
   onMount(async () => {
     await loadPrecisionPolicy();
@@ -34,6 +36,13 @@
       experimentalFeaturesEnabled = experimentalFeatures.enabled;
     }
   });
+
+$effect(() => {
+  const unsubscribe = modelSelectorSearchEnabled.subscribe((value) => {
+    modelSearchEnabled = value;
+  });
+  return unsubscribe;
+});
 
   async function loadPrecisionPolicy() {
     try {
@@ -75,6 +84,10 @@
       experimentalFeaturesEnabled = experimentalFeatures.enabled;
     }
   }
+
+function handleModelSearchToggle(enabled: boolean) {
+  modelSelectorSearchEnabled.set(enabled);
+}
 
 
   async function loadThreadLimit() {
@@ -336,6 +349,29 @@
         </span>
       </p>
     </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>Выпадающий список моделей</h2>
+    <p class="settings-description">
+      Настройте поиск внутри основного дропдауна моделей. Если отключить опцию, список будет
+      отображаться без строки фильтрации.
+    </p>
+    <label class="toggle-label">
+      <input
+        type="checkbox"
+        bind:checked={modelSearchEnabled}
+        onchange={(event) =>
+          handleModelSearchToggle((event.currentTarget as HTMLInputElement)?.checked ?? true)}
+      />
+      <span class="toggle-slider"></span>
+      <span class="toggle-text">Включить поиск по моделям</span>
+    </label>
+    <p class="toggle-description">
+      {modelSearchEnabled
+        ? 'Поиск поможет быстро находить нужные модели.'
+        : 'Поиск скрыт — список показывает все модели как есть.'}
+    </p>
   </div>
 
   <div class="settings-section">

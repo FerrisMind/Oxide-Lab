@@ -15,11 +15,15 @@
 
 .messages {
   margin-top: 0;
+  margin-left: auto;
+  margin-right: auto;
   background: #1a1a1a;
   border: none;
   border-radius: 10px;
   padding: 12px;
   flex: 1 1 auto;
+  max-width: 772px;
+  width: 100%;
 
   /* Only vertical scroll; prevent horizontal scrollbar */
   overflow: hidden auto;

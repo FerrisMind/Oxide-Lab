@@ -6,7 +6,7 @@ use crate::core::performance::StartupTracker;
 use crate::core::state::{ModelState, SharedState};
 use crate::core::types::DevicePreference;
 use crate::models::common::model::ModelBackend;
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 
 #[tauri::command]
 fn get_app_info() -> serde_json::Value {
@@ -97,6 +97,7 @@ pub fn run() {
             crate::api::local_models::download_hf_model_file,
             crate::api::local_models::get_model_readme,
             crate::api::local_models::delete_local_model,
+            crate::api::local_models::update_model_manifest,
             crate::api::model_cards::get_model_cards,
             crate::api::model_cards::import_model_cards,
             crate::api::model_cards::reset_model_cards,
@@ -123,6 +124,10 @@ pub fn run() {
                 }
             }
             spawn_startup_tracker(app.handle().clone(), performance_monitor.clone());
+            #[cfg(debug_assertions)]
+            if let Some(main_window) = app.get_webview_window("main") {
+                main_window.open_devtools();
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -1,14 +1,9 @@
-@import url('./styles/variables.css');
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
-@import url('./styles/scrollbar.css');
+@custom-variant dark (&:is(.dark *));
 
-@import url('./styles/base.css');
-
-@import url('./styles/components.css');
-
-@import url('./styles/animations.css');
-
-/* Глобальные CSS переменные */
+/* Глобальные CSS переменные (src/styles/variables.css) */
 
 :root {
   --bg: #f7f5f2;
@@ -19,26 +14,56 @@
   --border-color: #e8e6e3;
   --accent: #3b82f6;
   --accent-2: #1d4ed8;
-  --danger: #e74c3c;
   --panel-alt-bg: #f8f9fa;
   --shadow: 0 4px 20px rgb(0 0 0 / 0.06);
   --shadow-hover: 0 8px 30px rgb(0 0 0 / 0.12);
-  --content-gap: 8px; /* default gap between left/right/bottom and content */
-  --content-gap-top: 8px; /* larger gap from header */
+  --content-gap: 8px;
+  /* default gap between left/right/bottom and content */
+  --content-gap-top: 8px;
+  /* larger gap from header */
+  --radius: 0.625rem;
 
   /* ↓ Добавляем переменные цветовой схемы для кода/hljs, согласованные с UI */
   --code-bg: var(--panel-bg);
   --code-fg: var(--text);
   --code-keyword: var(--accent-2);
-  --code-string: #0e814a; /* зелёный для строк */
-  --code-title: #950; /* заголовки/имена */
-  --code-number: #b45309; /* числа/символы */
-  --code-variable: #6d28d9; /* переменные */
-  --code-tag: #2563eb; /* теги/мета */
-  --code-comment: var(--muted); /* комментарии */
+  --code-string: #0e814a;
+  /* зелёный для строк */
+  --code-title: #950;
+  /* заголовки/имена */
+  --code-number: #b45309;
+  /* числа/символы */
+  --code-variable: #6d28d9;
+  /* переменные */
+  --code-tag: #2563eb;
+  /* теги/мета */
+  --code-comment: var(--muted);
+  /* комментарии */
+
+  /* ↓ Специализированные токены для shadcn-svelte Sidebar */
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--text);
+  --sidebar-primary: var(--accent-2);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--panel-alt-bg);
+  --sidebar-accent-foreground: var(--text);
+  --sidebar-border: var(--border-color);
+  --sidebar-ring: var(--accent);
+  --sidebar-width: 16rem;
+  /* ~256px */
+  --sidebar-width-icon: 562px;
+  /* 56px */
+  --sidebar-width-mobile: 17.5rem;
+  /* ~280px overlay */
+  --sidebar-collapsed-bg: #1a1a1a;
+
+  /* Tooltip styling */
+  --tooltip-bg: #f4f4f4;
+  --tooltip-fg: #1a1a1a;
+  --tooltip-border: rgb(0 0 0 / 0.15);
+  --tooltip-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
 }
 
-/* Темная тема */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #1a1a1a;
@@ -47,21 +72,106 @@
     --text: #fff;
     --muted: #a0a0a0;
     --border-color: #404040;
-    --danger: #ff6b6b;
     --panel-alt-bg: #252525;
 
     /* ↓ Темные значения для подсветки синтаксиса */
     --code-bg: var(--panel-bg);
     --code-fg: var(--text);
-    --code-keyword: #93c5fd; /* светло-синий */
-    --code-string: #86efac; /* светло-зелёный */
-    --code-title: #fcd34d; /* жёлтый для заголовков/имён */
-    --code-number: #fdba74; /* персиковый для чисел */
-    --code-variable: #c4b5fd; /* сиреневый для переменных */
-    --code-tag: #93c5fd; /* голубой для тегов/мета */
-    --code-comment: #9ca3af; /* серый для комментариев */
-  }
+    --code-keyword: #93c5fd;
+    /* светло-синий */
+    --code-string: #86efac;
+    /* светло-зелёный */
+    --code-title: #fcd34d;
+    /* жёлтый для заголовков/имён */
+    --code-number: #fdba74;
+    /* персиковый для чисел */
+    --code-variable: #c4b5fd;
+    /* сиреневый для переменных */
+    --code-tag: #93c5fd;
+    /* голубой для тегов/мета */
+    --code-comment: #9ca3af;
+    /* серый для комментариев */
 
+    --sidebar: #2c2c2c;
+    --sidebar-foreground: #f8f8f8;
+    --sidebar-primary: #60a5fa;
+    --sidebar-primary-foreground: #0f172a;
+    --sidebar-accent: #2a2a2a;
+    --sidebar-accent-foreground: #f8f8f8;
+    --sidebar-border: #333;
+    --sidebar-ring: var(--accent);
+    --sidebar-collapsed-bg: #1a1a1a;
+
+    --tooltip-bg: #f4f4f4;
+    --tooltip-fg: #0f1115;
+    --tooltip-border: rgb(0 0 0 / 0.35);
+    --tooltip-shadow: 0 10px 24px rgb(0 0 0 / 0.45);
+  }
+}
+
+/* Улучшенные стили для скроллбаров (src/styles/scrollbar.css) */
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 6px;
+  margin: 2px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(179 205 224 / 0.8);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(179 205 224 / 1);
+  background-clip: content-box;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgb(179 205 224 / 1);
+  background-clip: content-box;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.2);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(179 205 224 / 0.8) transparent;
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar:horizontal {
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(90deg, rgb(179 205 224 / 0.8), rgb(179 205 224 / 0.6));
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:horizontal:hover {
+  background: linear-gradient(90deg, rgb(179 205 224 / 1), rgb(179 205 224 / 0.8));
+  background-clip: content-box;
+}
+
+@media (prefers-color-scheme: dark) {
   ::-webkit-scrollbar-thumb {
     background: rgb(91 124 153 / 0.8);
     background-clip: content-box;
@@ -95,8 +205,7 @@
   }
 }
 
-/* Мобильные устройства */
-@media (width <= 768px) {
+@media (width <=768px) {
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -107,8 +216,8 @@
   }
 }
 
-/* Высокие DPI дисплеи */
-@media (min-device-pixel-ratio: 2), (resolution >= 192dpi) {
+@media (min-device-pixel-ratio: 2),
+(resolution >=192dpi) {
   ::-webkit-scrollbar {
     width: 14px;
     height: 14px;
@@ -119,11 +228,234 @@
   }
 }
 
-/* Анимации */
+/* Базовые стили (src/styles/base.css) */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  min-height: 100%;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+.wrap {
+  padding: 16px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+h2 {
+  font-size: 1.75rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+h4 {
+  font-size: 1.25rem;
+}
+
+h5 {
+  font-size: 1.125rem;
+}
+
+h6 {
+  font-size: 1rem;
+}
+
+p {
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+@media (width <=768px) {
+  .wrap {
+    padding: 12px;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+}
+
+/* Компонентные стили (src/styles/components.css) */
+
+button {
+  cursor: default;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  background: var(--accent);
+  color: white;
+}
+
+button:hover {
+  background: var(--accent-2);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent-2);
+  text-decoration: underline;
+}
+
+input,
+textarea,
+select {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  background: var(--card);
+  color: var(--text);
+  transition: border-color 0.2s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+@media (width <=768px) {
+  .card {
+    padding: 16px;
+  }
+}
+
+.checkbox-input {
+  display: none;
+}
+
+.checkbox-label {
+  position: relative;
+  padding-left: 30px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  font-size: 14px;
+  color: var(--text);
+  transition: color 0.2s ease;
+}
+
+.checkbox-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--card);
+  transition: all 0.2s ease;
+}
+
+.checkbox-input:checked+.checkbox-label::before {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgb(59 130 246 / 0.1);
+  content: '✓';
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkbox-label:hover::before {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 1px rgb(59 130 246 / 0.2);
+}
+
+@media (width <=768px) {
+  .checkbox-label {
+    padding-left: 32px;
+    font-size: 16px;
+  }
+
+  .checkbox-label::before {
+    width: 20px;
+    height: 20px;
+  }
+
+  .checkbox-input:checked+.checkbox-label::before {
+    font-size: 16px;
+  }
+}
+
+/* Анимации и утилиты (src/styles/animations.css) */
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -142,16 +474,16 @@
 }
 
 @keyframes scrollbarPulse {
+
   0%,
   100% {
     opacity: 0.6;
   }
+
   50% {
     opacity: 1;
   }
 }
-
-/* Применяем анимации */
 
 ::-webkit-scrollbar-thumb {
   animation: scrollbarFadeIn 0.3s ease-out;
@@ -160,8 +492,6 @@
 ::-webkit-scrollbar-thumb:active {
   animation: scrollbarPulse 1s ease-in-out infinite;
 }
-
-/* Утилитарные классы */
 
 .spinning {
   animation: spin 1s linear infinite;
@@ -177,69 +507,56 @@
   white-space: nowrap;
 }
 
-/* Базовые стили для компонентов */
+/* Tailwind theme bridge */
 
-.wrap {
-  padding: 16px;
-  width: 100%;
-
-  /* fill parent's height rather than forcing min-height:100% which can exceed viewport */
-  height: 100%;
-  min-height: 0;
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--card);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--panel-bg);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--panel-bg);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--accent-2);
+  --color-accent-foreground: #ffffff;
+  --color-destructive: var(--danger);
+  --color-border: var(--border-color);
+  --color-input: var(--border-color);
+  --color-ring: var(--accent);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* Стили для заголовков */
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: var(--text);
-  font-weight: 600;
-  line-height: 1.2;
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-h1 {
-  font-size: 2rem;
-}
-h2 {
-  font-size: 1.75rem;
-}
-h3 {
-  font-size: 1.5rem;
-}
-h4 {
-  font-size: 1.25rem;
-}
-h5 {
-  font-size: 1.125rem;
-}
-h6 {
-  font-size: 1rem;
+/* Override collapsed sidebar width */
+[data-state="collapsed"] [data-slot="sidebar-container"] {
+  width: 56px !important;
 }
 
-/* Стили для параграфов */
-
-p {
-  color: var(--text);
-  line-height: 1.6;
-  margin-bottom: 1rem;
+[data-state="collapsed"] [data-slot="sidebar-gap"] {
+  width: 56px !important;
 }
-
-/* Стили для кнопок */
-
-button {
-  cursor: default;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  background: var(--accent);
-  color: white;
-}
-
-/* Добавляем недостающие закрывающие скобки */

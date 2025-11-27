@@ -1,7 +1,8 @@
 import { configDefaults, defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
-const isVitest = !!(globalThis as { process?: { env?: Record<string, unknown> } }).process?.env?.VITEST;
+const isVitest = !!(globalThis as { process?: { env?: Record<string, unknown> } }).process?.env
+  ?.VITEST;
 
 export default defineConfig({
   plugins: [svelte({ hot: !isVitest })],

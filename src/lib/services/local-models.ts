@@ -53,6 +53,23 @@ export class LocalModelsService {
     }
   }
 
+  static async updateModelMetadata(
+    modelPath: string,
+    repoName: string | null,
+    publisher: string | null,
+  ): Promise<void> {
+    try {
+      await invoke('update_model_manifest', {
+        modelPath,
+        repoName,
+        publisher,
+      });
+    } catch (error) {
+      console.error('Failed to update model metadata:', error);
+      throw new Error(`Failed to update model metadata: ${error}`);
+    }
+  }
+
   /**
    * Search Hugging Face Hub for GGUF models.
    */
@@ -205,7 +222,9 @@ export class LocalModelsService {
       unitIndex++;
     }
 
-    return unitIndex === 0 ? `${size} ${units[unitIndex]}` : `${size.toFixed(2)} ${units[unitIndex]}`;
+    return unitIndex === 0
+      ? `${size} ${units[unitIndex]}`
+      : `${size.toFixed(2)} ${units[unitIndex]}`;
   }
 
   /**

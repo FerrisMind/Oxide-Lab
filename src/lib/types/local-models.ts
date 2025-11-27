@@ -88,12 +88,7 @@ export interface LocalModelsCache {
 /**
  * Sort options for local models list.
  */
-export type SortField =
-  | 'name'
-  | 'file_size'
-  | 'created_at'
-  | 'parameter_count'
-  | 'architecture';
+export type SortField = 'name' | 'file_size' | 'created_at' | 'parameter_count' | 'architecture';
 export type SortOrder = 'asc' | 'desc';
 
 export interface SortOptions {

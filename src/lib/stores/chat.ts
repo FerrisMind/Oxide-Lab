@@ -8,6 +8,8 @@ export type ChatPersistedState = {
   revision: string;
   hubGgufFilename: string;
   format: 'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors';
+  pendingModelPath: string;
+  pendingFormat: 'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors';
 
   // Chat state
   prompt: string;
@@ -62,6 +64,8 @@ export function getDefaultChatState(): ChatPersistedState {
     revision: '',
     hubGgufFilename: '',
     format: 'gguf',
+    pendingModelPath: '',
+    pendingFormat: 'gguf',
 
     prompt: '',
     messages: [],

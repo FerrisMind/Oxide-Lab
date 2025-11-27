@@ -47,7 +47,6 @@
 
       if (systemUsageData.status === 'fulfilled') {
         systemUsage = systemUsageData.value;
-        console.log('System usage loaded:', systemUsage);
       } else {
         console.error('Failed to load system usage:', systemUsageData.reason);
         systemUsage = null;

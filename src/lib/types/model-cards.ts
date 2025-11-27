@@ -34,4 +34,3 @@ export interface ModelCardDownloadResult {
   downloaded_files: string[];
   total_bytes: number;
 }
-

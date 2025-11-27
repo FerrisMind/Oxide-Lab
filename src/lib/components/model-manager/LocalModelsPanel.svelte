@@ -13,12 +13,14 @@
     error,
   } from '$lib/stores/local-models';
   import { LocalModelsService } from '$lib/services/local-models';
-  import { chatState } from '$lib/stores/chat';
-  import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local-models';
+import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local-models';
   import Checkbox from '$lib/components/ui/Checkbox.svelte';
   import Dropdown from '$lib/components/ui/Dropdown.svelte';
   import { open } from '@tauri-apps/plugin-dialog';
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
+  import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+  import Check from 'phosphor-svelte/lib/Check';
+  import X from 'phosphor-svelte/lib/X';
 
   const validationLabels: Record<ValidationLevel, string> = {
     ok: 'Валидно',
@@ -33,6 +35,54 @@
   };
 
   let metadataExpanded = false;
+  let editingModelPath: string | null = null;
+  let editPublisher = '';
+  let editName = '';
+
+  function startEditing(model: ModelInfo) {
+    editingModelPath = model.path;
+    editPublisher =
+      model.metadata?.author ??
+      model.source_repo_id?.split('/')[0] ??
+      'local';
+    editName = model.format === 'safetensors'
+      ? model.source_repo_name ?? model.name
+      : model.name;
+  }
+
+  function cancelEditing() {
+    editingModelPath = null;
+  }
+
+  async function saveEditing(model: ModelInfo) {
+    try {
+      await LocalModelsService.updateModelMetadata(
+        model.path,
+        editName || null,
+        editPublisher || null,
+      );
+      models.update(($models) =>
+        $models.map((entry) => {
+          if (entry.path !== model.path) return entry;
+          const updated = { ...entry };
+          updated.metadata = {
+            ...entry.metadata,
+            author: editPublisher || entry.metadata.author,
+          };
+          if (entry.format === 'safetensors') {
+            updated.source_repo_name = editName || entry.source_repo_name;
+          } else {
+            updated.name = editName || entry.name;
+          }
+          return updated;
+        }),
+      );
+    } catch (err) {
+      console.error('Failed to save metadata', err);
+    } finally {
+      editingModelPath = null;
+    }
+  }
 
   onMount(async () => {
     if ($folderPath) {
@@ -75,13 +125,11 @@
     const model = get(selectedModel);
     if (!model) return;
     const ox = (window as any).__oxide;
-    if (!ox?.loadGGUF) return;
-    chatState.update((state) => ({
-      ...state,
-      modelPath: model.path,
+    if (!ox?.loadModelFromManager) return;
+    ox.loadModelFromManager({
+      path: model.path,
       format: model.format === 'gguf' ? 'gguf' : 'local_safetensors',
-    }));
-    ox.loadGGUF();
+    });
   }
 
   function toggleModelSelection(model: ModelInfo) {
@@ -169,7 +217,7 @@
         <tr>
           <th>Архитектура</th>
           <th>Параметры</th>
-          <th>Публишер</th>
+          <th>Издатель</th>
           <th>Название модели</th>
           <th>Квант</th>
           <th>Размер</th>
@@ -184,26 +232,44 @@
             >
               <td>{model.architecture ?? '—'}</td>
               <td>{model.parameter_count ?? '—'}</td>
-              <td>
-                {#if model.format === 'safetensors'}
-                  {model.metadata?.author ?? '—'}
-                {:else if model.source_repo_id}
-                  {model.source_repo_id.split('/')[0]}
-                {:else}
-                  {model.metadata?.author ?? '—'}
-                {/if}
-              </td>
-              <td>
-                <div class="model-title">
-                  <strong title={model.name}>
-                    {#if model.format === 'safetensors'}
-                      {model.source_repo_name ?? '—'}
-                    {:else}
-                      {model.name}
-                    {/if}
-                  </strong>
-                </div>
-              </td>
+               <td class="publisher-cell">
+                 <button
+                   type="button"
+                   class="icon-btn"
+                   on:click={() => startEditing(model)}
+                   aria-label="Редактировать название и авторство модели"
+                 >
+                   <PencilSimple size={16} />
+                 </button>
+                 <span>
+                   {#if model.format === 'safetensors'}
+                     {model.metadata?.author ?? '—'}
+                   {:else if model.source_repo_id}
+                     {model.source_repo_id.split('/')[0]}
+                   {:else}
+                     {model.metadata?.author ?? '—'}
+                   {/if}
+                 </span>
+               </td>
+               <td class="title-cell">
+                 <button
+                   type="button"
+                   class="icon-btn"
+                   on:click={() => startEditing(model)}
+                   aria-label="Редактировать название и авторство модели"
+                 >
+                   <PencilSimple size={16} />
+                 </button>
+                 <div class="model-title">
+                   <strong title={model.name}>
+                     {#if model.format === 'safetensors'}
+                       {model.source_repo_name ?? '—'}
+                     {:else}
+                       {model.name}
+                     {/if}
+                   </strong>
+                 </div>
+               </td>
               <td>
                 {#if model.format === 'safetensors'}
                   {model.source_quantization ?? '—'}
@@ -214,6 +280,38 @@
               <td>{LocalModelsService.formatFileSize(model.file_size)}</td>
               <td class="format-cell">{model.format.toUpperCase()}</td>
             </tr>
+            {#if editingModelPath === model.path}
+              <tr class="edit-row">
+                <td colspan="7">
+                  <div class="edit-grid">
+                    <label>
+                      Паблишер
+                      <input
+                        type="text"
+                        placeholder="publisher"
+                        bind:value={editPublisher}
+                      />
+                    </label>
+                    <label>
+                      Название
+                      <input
+                        type="text"
+                        placeholder="publisher/name"
+                        bind:value={editName}
+                      />
+                    </label>
+                    <div class="edit-actions">
+                      <button type="button" class="btn" on:click={() => saveEditing(model)}>
+                        <Check size={16} /> Сохранить
+                      </button>
+                      <button type="button" class="btn secondary" on:click={cancelEditing}>
+                        <X size={16} /> Отменить
+                      </button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            {/if}
           {/each}
         </tbody>
       </table>
@@ -734,6 +832,64 @@
   .btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+
+  .icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.35rem;
+    cursor: pointer;
+    opacity: 0.7;
+  }
+
+  .icon-btn:hover {
+    opacity: 1;
+  }
+
+  .publisher-cell,
+  .title-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .edit-row {
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .edit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+    align-items: end;
+  }
+
+  .edit-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .edit-grid input {
+    border: 1px solid var(--border-color, #4a4a4a);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    background: var(--bg-secondary, #1f1f1f);
+    color: var(--text);
+  }
+
+  .edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: flex-end;
   }
 
   @media (max-width: 1024px) {

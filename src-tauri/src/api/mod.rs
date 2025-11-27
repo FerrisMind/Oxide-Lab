@@ -11,7 +11,7 @@ pub mod template;
 pub use commands::*;
 pub use local_models::{
     delete_local_model, download_hf_model_file, get_model_readme, parse_gguf_metadata,
-    scan_local_models_folder, scan_models_folder, search_huggingface_gguf,
+    scan_local_models_folder, scan_models_folder, search_huggingface_gguf, update_model_manifest,
 };
 pub use model_cards::{download_model_card_format, get_model_cards};
 pub use performance_api::{

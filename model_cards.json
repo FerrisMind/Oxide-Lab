@@ -1,196 +1,183 @@
 {
   "version": 2,
   "cards": [
-  {
-    "id": "qwen3-4b",
-    "name": "Llama 3 8B Instruct",
-    "description": "Современный Llama 3, оптимизированный для инструкций и совместимый с Candle.",
-    "family": "llama",
-    "tags": ["instruct", "qwen3-3", "candle"],
-    "hf_repo_id": "meta-llama/Llama-3-8B-Instruct",
-    "revision": "main",
-    "supported_formats": ["gguf", "safetensors"],
-    "gguf": {
-      "files": [
-        {
-          "filename": "Llama-3-8B-Instruct.gguf",
-          "purpose": "gguf"
-        },
-        {
-          "filename": "tokenizer.json",
-          "purpose": "tokenizer"
-        }
-      ]
+    {
+      "id": "qwen3-4b",
+      "name": "Llama 3 8B Instruct",
+      "description": "Современный Llama 3, оптимизированный для инструкций и совместимый с Candle.",
+      "family": "llama",
+      "tags": ["instruct", "qwen3-3", "candle"],
+      "hf_repo_id": "meta-llama/Llama-3-8B-Instruct",
+      "revision": "main",
+      "supported_formats": ["gguf", "safetensors"],
+      "gguf": {
+        "files": [
+          {
+            "filename": "Llama-3-8B-Instruct.gguf",
+            "purpose": "gguf"
+          },
+          {
+            "filename": "tokenizer.json",
+            "purpose": "tokenizer"
+          }
+        ]
+      },
+      "safetensors": {
+        "weight_files": ["pytorch_model.safetensors"],
+        "tokenizer_file": "tokenizer.json",
+        "config_file": "config.json"
+      }
     },
-    "safetensors": {
-      "weight_files": [
-        "pytorch_model.safetensors"
-      ],
-      "tokenizer_file": "tokenizer.json",
-      "config_file": "config.json"
-    }
-  },
-  {
-    "id": "mistral-7b",
-    "name": "Mistral 7B Instruct",
-    "description": "Сильная модель из семейства Mistral, тоже есть подготовленный gguf и safetensors.",
-    "family": "mistral",
-    "tags": ["mistral", "instruct", "ggml"],
-    "hf_repo_id": "mistralai/Mistral-7B-Instruct-v0.1",
-    "supported_formats": ["gguf", "safetensors"],
-    "gguf": {
-      "files": [
-        {
-          "filename": "Mistral-7B-Instruct-v0.1.gguf",
-          "purpose": "gguf"
-        },
-        {
-          "filename": "tokenizer.json",
-          "purpose": "tokenizer"
-        }
-      ]
+    {
+      "id": "mistral-7b",
+      "name": "Mistral 7B Instruct",
+      "description": "Сильная модель из семейства Mistral, тоже есть подготовленный gguf и safetensors.",
+      "family": "mistral",
+      "tags": ["mistral", "instruct", "ggml"],
+      "hf_repo_id": "mistralai/Mistral-7B-Instruct-v0.1",
+      "supported_formats": ["gguf", "safetensors"],
+      "gguf": {
+        "files": [
+          {
+            "filename": "Mistral-7B-Instruct-v0.1.gguf",
+            "purpose": "gguf"
+          },
+          {
+            "filename": "tokenizer.json",
+            "purpose": "tokenizer"
+          }
+        ]
+      },
+      "safetensors": {
+        "weight_files": ["Mistral-7B-Instruct-v0.1.safetensors"],
+        "tokenizer_file": "tokenizer.json",
+        "config_file": "config.json"
+      }
     },
-    "safetensors": {
-      "weight_files": [
-        "Mistral-7B-Instruct-v0.1.safetensors"
-      ],
-      "tokenizer_file": "tokenizer.json",
-      "config_file": "config.json"
-    }
-  },
-  {
-    "id": "mixtral-8x7b",
-    "name": "Mixtral 8x7B",
-    "description": "Гибрид Mixtral, испытываемый на приятном балансе качества и производительности.",
-    "family": "mixtral",
-    "tags": ["mixtral", "multimodal", "candle"],
-    "hf_repo_id": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-    "supported_formats": ["gguf", "safetensors"],
-    "gguf": {
-      "files": [
-        {
-          "filename": "Mixtral-8x7B-Instruct-v0.1.gguf",
-          "purpose": "gguf"
-        },
-        {
-          "filename": "tokenizer.json",
-          "purpose": "tokenizer"
-        }
-      ]
+    {
+      "id": "mixtral-8x7b",
+      "name": "Mixtral 8x7B",
+      "description": "Гибрид Mixtral, испытываемый на приятном балансе качества и производительности.",
+      "family": "mixtral",
+      "tags": ["mixtral", "multimodal", "candle"],
+      "hf_repo_id": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+      "supported_formats": ["gguf", "safetensors"],
+      "gguf": {
+        "files": [
+          {
+            "filename": "Mixtral-8x7B-Instruct-v0.1.gguf",
+            "purpose": "gguf"
+          },
+          {
+            "filename": "tokenizer.json",
+            "purpose": "tokenizer"
+          }
+        ]
+      },
+      "safetensors": {
+        "weight_files": ["Mixtral-8x7B-Instruct-v0.1.safetensors"],
+        "tokenizer_file": "tokenizer.json",
+        "config_file": "config.json"
+      }
     },
-    "safetensors": {
-      "weight_files": [
-        "Mixtral-8x7B-Instruct-v0.1.safetensors"
-      ],
-      "tokenizer_file": "tokenizer.json",
-      "config_file": "config.json"
-    }
-  },
-  {
-    "id": "gemma-2",
-    "name": "Gemma 2 7B",
-    "description": "Gemma 2 — качественная модель с хорошей поддержкой Candle.",
-    "family": "gemma",
-    "tags": ["gemma", "open-source", "candle"],
-    "hf_repo_id": "gemma2/Gemma-2",
-    "supported_formats": ["gguf", "safetensors"],
-    "gguf": {
-      "files": [
-        {
-          "filename": "Gemma-2-7B.gguf",
-          "purpose": "gguf"
-        },
-        {
-          "filename": "tokenizer.json",
-          "purpose": "tokenizer"
-        }
-      ]
+    {
+      "id": "gemma-2",
+      "name": "Gemma 2 7B",
+      "description": "Gemma 2 — качественная модель с хорошей поддержкой Candle.",
+      "family": "gemma",
+      "tags": ["gemma", "open-source", "candle"],
+      "hf_repo_id": "gemma2/Gemma-2",
+      "supported_formats": ["gguf", "safetensors"],
+      "gguf": {
+        "files": [
+          {
+            "filename": "Gemma-2-7B.gguf",
+            "purpose": "gguf"
+          },
+          {
+            "filename": "tokenizer.json",
+            "purpose": "tokenizer"
+          }
+        ]
+      },
+      "safetensors": {
+        "weight_files": ["Gemma-2-7B.safetensors"],
+        "tokenizer_file": "tokenizer.json",
+        "config_file": "config.json"
+      }
     },
-    "safetensors": {
-      "weight_files": [
-        "Gemma-2-7B.safetensors"
-      ],
-      "tokenizer_file": "tokenizer.json",
-      "config_file": "config.json"
-    }
-  },
-  {
-    "id": "qwen-3-5",
-    "name": "Qwen 3.5 64B",
-    "description": "Большая семейная модель Qwen для генерации с высокой точностью.",
-    "family": "qwen",
-    "tags": ["qwen", "long-context"],
-    "hf_repo_id": "Qwen/Qwen-3.5-64-Instruct",
-    "supported_formats": ["gguf", "safetensors"],
-    "gguf": {
-      "files": [
-        {
-          "filename": "Qwen-3.5-64-Instruct.gguf",
-          "purpose": "gguf"
-        },
-        {
-          "filename": "tokenizer.json",
-          "purpose": "tokenizer"
-        }
-      ]
+    {
+      "id": "qwen-3-5",
+      "name": "Qwen 3.5 64B",
+      "description": "Большая семейная модель Qwen для генерации с высокой точностью.",
+      "family": "qwen",
+      "tags": ["qwen", "long-context"],
+      "hf_repo_id": "Qwen/Qwen-3.5-64-Instruct",
+      "supported_formats": ["gguf", "safetensors"],
+      "gguf": {
+        "files": [
+          {
+            "filename": "Qwen-3.5-64-Instruct.gguf",
+            "purpose": "gguf"
+          },
+          {
+            "filename": "tokenizer.json",
+            "purpose": "tokenizer"
+          }
+        ]
+      },
+      "safetensors": {
+        "weight_files": ["Qwen-3.5-64-Instruct.safetensors"],
+        "tokenizer_file": "tokenizer.json",
+        "config_file": "config.json"
+      }
     },
-    "safetensors": {
-      "weight_files": [
-        "Qwen-3.5-64-Instruct.safetensors"
-      ],
-      "tokenizer_file": "tokenizer.json",
-      "config_file": "config.json"
-    }
-  },
-  {
-    "id": "phi-3",
-    "name": "Phi 3",
-    "description": "Архитектура Phi, часто используемая в сборках Candle и хорошо подходит для диалога.",
-    "family": "phi",
-    "tags": ["phi", "code", "candle"],
-    "hf_repo_id": "TheBloke/phi-3-1.5b",
-    "supported_formats": ["gguf", "safetensors"],
-    "gguf": {
-      "files": [
-        {
-          "filename": "Phi-3-1.5B.gguf",
-          "purpose": "gguf"
-        },
-        {
-          "filename": "tokenizer.json",
-          "purpose": "tokenizer"
-        }
-      ]
+    {
+      "id": "phi-3",
+      "name": "Phi 3",
+      "description": "Архитектура Phi, часто используемая в сборках Candle и хорошо подходит для диалога.",
+      "family": "phi",
+      "tags": ["phi", "code", "candle"],
+      "hf_repo_id": "TheBloke/phi-3-1.5b",
+      "supported_formats": ["gguf", "safetensors"],
+      "gguf": {
+        "files": [
+          {
+            "filename": "Phi-3-1.5B.gguf",
+            "purpose": "gguf"
+          },
+          {
+            "filename": "tokenizer.json",
+            "purpose": "tokenizer"
+          }
+        ]
+      },
+      "safetensors": {
+        "weight_files": ["Phi-3-1.5B.safetensors"],
+        "tokenizer_file": "tokenizer.json",
+        "config_file": "config.json"
+      }
     },
-    "safetensors": {
-      "weight_files": [
-        "Phi-3-1.5B.safetensors"
-      ],
-      "tokenizer_file": "tokenizer.json",
-      "config_file": "config.json"
+    {
+      "id": "ymir-2",
+      "name": "Yi (Ymir) 2",
+      "description": "Yi 2 — ассиметричная модель, применимая там, где требуется ускоренная латентность.",
+      "family": "yi",
+      "tags": ["yi", "optimized"],
+      "hf_repo_id": "Yi-Model/Yi-2",
+      "supported_formats": ["gguf"],
+      "gguf": {
+        "files": [
+          {
+            "filename": "Yi-2.gguf",
+            "purpose": "gguf"
+          },
+          {
+            "filename": "tokenizer.json",
+            "purpose": "tokenizer"
+          }
+        ]
+      }
     }
-  },
-  {
-    "id": "ymir-2",
-    "name": "Yi (Ymir) 2",
-    "description": "Yi 2 — ассиметричная модель, применимая там, где требуется ускоренная латентность.",
-    "family": "yi",
-    "tags": ["yi", "optimized"],
-    "hf_repo_id": "Yi-Model/Yi-2",
-    "supported_formats": ["gguf"],
-    "gguf": {
-      "files": [
-        {
-          "filename": "Yi-2.gguf",
-          "purpose": "gguf"
-        },
-        {
-          "filename": "tokenizer.json",
-          "purpose": "tokenizer"
-        }
-      ]
-    }
-  }
   ]
 }
-

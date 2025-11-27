@@ -35,6 +35,8 @@
   let messagesEl = $state<HTMLDivElement | null>(null);
   let busy = $state(false);
   let format = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>('gguf');
+  let pendingModelPath = $state('');
+  let pendingFormat = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>('gguf');
   let isLoaded = $state(false);
   let errorText = $state('');
   // Устройство
@@ -430,6 +432,42 @@
     }
   }
 
+  function loadModelFromManager(args: { path: string; format: 'gguf' | 'local_safetensors' }) {
+    if (!args?.path) return;
+    pendingModelPath = args.path;
+    pendingFormat = args.format;
+
+    if (isLoaded || isLoadingModel) {
+      return;
+    }
+
+    format = args.format;
+    modelPath = args.path;
+    repoId = '';
+    revision = '';
+    hubGgufFilename = '';
+    pendingModelPath = '';
+    pendingFormat = 'gguf';
+    void loadGGUF?.();
+  }
+
+  async function reloadSelectedModel() {
+    if (!pendingModelPath || pendingModelPath === modelPath) return;
+    try {
+      await stopGenerate();
+    } catch {}
+
+    await unloadGGUF();
+    format = pendingFormat;
+    modelPath = pendingModelPath;
+    repoId = '';
+    revision = '';
+    hubGgufFilename = '';
+    pendingModelPath = '';
+    pendingFormat = 'gguf';
+    void loadGGUF?.();
+  }
+
   onDestroy(() => {
     chatUiMounted.set(false);
     // Persist chat/model state across navigation
@@ -439,6 +477,8 @@
       revision,
       hubGgufFilename,
       format,
+      pendingModelPath,
+      pendingFormat,
 
       prompt,
       messages,
@@ -488,11 +528,16 @@
     // @ts-ignore
     window.__oxide = {
       pickModel: controller.pickModel,
+      loadModelFromManager,
+      reloadSelectedModel,
       loadGGUF: controller.loadGGUF,
       unloadGGUF: controller.unloadGGUF,
       cancelLoading: controller.cancelLoading,
       getState: () => ({
+        currentModelPath: modelPath,
+        currentFormat: format,
         modelPath,
+        format,
         isLoaded,
         isLoadingModel,
         isUnloadingModel,
@@ -501,6 +546,8 @@
         loadingProgress,
         unloadingProgress,
         busy,
+        pendingModelPath,
+        pendingFormat,
       }),
     };
   }
@@ -632,6 +679,8 @@
       revision,
       hubGgufFilename,
       format,
+      pendingModelPath,
+      pendingFormat,
       busy,
       isLoaded,
       isLoadingModel,

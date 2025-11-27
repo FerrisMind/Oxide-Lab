@@ -1,5 +1,10 @@
 import { get, writable } from 'svelte/store';
-import type { DownloadJob, RemoteGGUFFile, RemoteModelFilters, RemoteModelInfo } from '$lib/types/local-models';
+import type {
+  DownloadJob,
+  RemoteGGUFFile,
+  RemoteModelFilters,
+  RemoteModelInfo,
+} from '$lib/types/local-models';
 import { LocalModelsService } from '$lib/services/local-models';
 
 const DEFAULT_LIMIT = 25;

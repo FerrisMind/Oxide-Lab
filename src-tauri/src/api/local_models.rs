@@ -6,7 +6,9 @@
 //! * Hugging Face Hub search focused on GGUF artifacts with filtering
 //! * Download helper with progress events bridged to the Svelte frontend
 
-use crate::api::model_manager::manifest::load_manifest;
+use crate::api::model_manager::manifest::{
+    DownloadManifest, infer_quantization_from_label, load_manifest, save_manifest,
+};
 use crate::core::weights::local_list_safetensors;
 use crate::models::registry::{ArchKind, detect_arch, detect_arch_from_config};
 use candle::quantized::gguf_file::{self, Content, Value as GgufValue, VersionedMagic};
@@ -136,6 +138,9 @@ pub struct ModelInfo {
     pub source_repo_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_quantization: Option<String>,
+    /// Indicates that Candle can instantiate the detected architecture and that
+    /// validation did not fail. Use this flag together with `validation_status`
+    /// to determine whether the registry can support the model.
     pub candle_compatible: bool,
     pub validation_status: ValidationStatus,
     pub created_at: DateTime<Utc>,
@@ -783,26 +788,18 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
     });
 
     // Try to load manifest for GGUF files downloaded through our system
-    let manifest_path = if let Some(parent) = path.parent() {
-        parent.join(format!(
-            "{}.oxide-manifest.json",
-            path.file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("unknown")
-        ))
-    } else {
-        PathBuf::new()
-    };
-
-    let manifest = if manifest_path.exists() {
-        load_manifest(
-            manifest_path
-                .parent()
-                .unwrap_or(path.parent().unwrap_or(Path::new("."))),
-        )
-    } else {
-        None
-    };
+    let manifest_dir = path.parent().unwrap_or(Path::new("."));
+    let mut manifest = load_manifest(manifest_dir);
+    if manifest.is_none() {
+        let inferred = infer_manifest_from_gguf(path, &envelope.metadata);
+        if let Err(err) = save_manifest(manifest_dir, &inferred) {
+            eprintln!(
+                "Warning: failed to save manifest for {}: {err}",
+                manifest_dir.display()
+            );
+        }
+        manifest = Some(inferred);
+    }
 
     // Try to extract source repo ID from manifest or GGUF metadata
     let source_repo_id = manifest
@@ -822,6 +819,7 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
                 .to_string()
         })
     });
+    let source_quantization = manifest.as_ref().and_then(|m| m.quantization.clone());
 
     Ok(ModelInfo {
         name: file_name,
@@ -839,7 +837,7 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
         vocab_size,
         source_repo_id,
         source_repo_name,
-        source_quantization: None,
+        source_quantization,
         candle_compatible: envelope.detected_arch.is_some(),
         validation_status: envelope.validation,
         created_at,
@@ -911,7 +909,17 @@ fn build_safetensors_model_info(dir: &Path) -> Result<Option<ModelInfo>, String>
         .map_err(|e| format!("Failed to read timestamp: {e}"))?;
     let created_at = DateTime::<Utc>::from(created);
 
-    let manifest = load_manifest(dir);
+    let mut manifest = load_manifest(dir);
+    if manifest.is_none() {
+        let inferred = infer_manifest_from_safetensors(dir, &folder_name, config_ref);
+        if let Err(err) = save_manifest(dir, &inferred) {
+            eprintln!(
+                "Warning: failed to save safetensors manifest for {}: {err}",
+                dir.display()
+            );
+        }
+        manifest = Some(inferred);
+    }
     let source_repo_id = manifest.as_ref().map(|m| m.repo_id.clone());
     let source_repo_name = manifest.as_ref().map(|m| m.repo_name.clone());
     let source_quantization = manifest.as_ref().and_then(|m| m.quantization.clone());
@@ -1246,6 +1254,134 @@ fn canonicalize_quantization(raw: &str) -> String {
         upper.insert(idx, '_');
     }
     upper
+}
+
+fn infer_manifest_from_gguf(path: &Path, metadata: &GGUFMetadata) -> DownloadManifest {
+    let file_name = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("model")
+        .to_string();
+    let file_stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("model")
+        .to_string();
+    let repo_id = custom_metadata_get_string(&metadata.custom_metadata, "general.source_hf_repo")
+        .or_else(|| custom_metadata_get_string(&metadata.custom_metadata, "hf.repo_id"))
+        .unwrap_or_else(|| format!("local/{}", file_stem));
+    let repo_name = metadata
+        .name
+        .clone()
+        .or_else(|| repo_id.split('/').next_back().map(|s| s.to_string()))
+        .unwrap_or_else(|| file_stem.clone());
+    let publisher = metadata
+        .author
+        .clone()
+        .unwrap_or_else(|| "local".to_string());
+    let quantization = infer_quantization_from_label(&file_name);
+
+    DownloadManifest {
+        version: 1,
+        repo_id,
+        repo_name,
+        publisher,
+        format: "gguf".to_string(),
+        quantization,
+        card_id: None,
+        card_name: None,
+        downloaded_at: Utc::now().to_rfc3339(),
+    }
+}
+
+fn infer_manifest_from_safetensors(
+    _dir: &Path,
+    folder_name: &str,
+    config: &JsonValue,
+) -> DownloadManifest {
+    let repo_id = config
+        .get("source_hf_repo")
+        .or_else(|| config.get("repo_id"))
+        .or_else(|| config.get("hf_repo_id"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| format!("local/{}", folder_name));
+    let repo_name = config
+        .get("model_name")
+        .or_else(|| config.get("name"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| folder_name.to_string());
+    let publisher = config
+        .get("publisher")
+        .or_else(|| config.get("author"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "local".to_string());
+    let quantization = config
+        .get("quantization")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .or_else(|| infer_quantization_from_label(folder_name));
+
+    DownloadManifest {
+        version: 1,
+        repo_id,
+        repo_name,
+        publisher,
+        format: "safetensors".to_string(),
+        quantization,
+        card_id: None,
+        card_name: None,
+        downloaded_at: Utc::now().to_rfc3339(),
+    }
+}
+
+#[tauri::command]
+pub fn update_model_manifest(
+    model_path: String,
+    repo_name: Option<String>,
+    publisher: Option<String>,
+) -> Result<(), String> {
+    let path = PathBuf::from(model_path);
+    let manifest_dir = if path.is_dir() {
+        path
+    } else {
+        path.parent()
+            .ok_or_else(|| "Invalid model path".to_string())?
+            .to_path_buf()
+    };
+
+    let mut manifest = load_manifest(&manifest_dir).unwrap_or_else(|| DownloadManifest {
+        version: 1,
+        repo_id: manifest_dir
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| format!("local/{s}"))
+            .unwrap_or_else(|| "local/model".to_string()),
+        repo_name: repo_name.clone().unwrap_or_else(|| {
+            manifest_dir
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string()
+        }),
+        publisher: publisher.clone().unwrap_or_else(|| "local".to_string()),
+        format: "gguf".to_string(),
+        quantization: None,
+        card_id: None,
+        card_name: None,
+        downloaded_at: Utc::now().to_rfc3339(),
+    });
+
+    if let Some(name) = repo_name.filter(|v| !v.trim().is_empty()) {
+        manifest.repo_name = name;
+    }
+    if let Some(pubish) = publisher.filter(|v| !v.trim().is_empty()) {
+        manifest.publisher = pubish;
+    }
+
+    save_manifest(&manifest_dir, &manifest)
 }
 
 fn is_allowed_quantization(value: &str) -> bool {

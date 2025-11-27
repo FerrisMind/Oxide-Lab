@@ -3,7 +3,9 @@
 
 use candle::DType;
 use candle::Device;
+use candle::Tensor;
 use candle_nn::VarBuilder;
+use candle_transformers::models::gemma3::{Config as Gemma3Config, Model as Gemma3VarModel};
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
@@ -50,8 +52,11 @@ impl Gemma3ModelBuilder {
         _device: &Device,
         _dtype: DType,
     ) -> Result<Box<dyn ModelBackend>, String> {
-        let _ = (vb, config);
-        Err("from_varbuilder for Gemma is disabled (no adapters)".into())
+        let cfg: Gemma3Config = serde_json::from_value(config.clone())
+            .map_err(|e| format!("Failed to deserialize Gemma config: {e}"))?;
+        let model = Gemma3VarModel::new(false, &cfg, vb)
+            .map_err(|e| format!("Failed to build Gemma from VarBuilder: {}", e))?;
+        Ok(Box::new(Gemma3VarBackend(model)))
     }
 
     /// Detect architecture from GGUF metadata
@@ -123,6 +128,14 @@ impl Gemma3ModelBuilder {
 impl Default for Gemma3ModelBuilder {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+struct Gemma3VarBackend(Gemma3VarModel);
+
+impl ModelBackend for Gemma3VarBackend {
+    fn forward_layered(&mut self, input: &Tensor, position: usize) -> Result<Tensor, String> {
+        self.0.forward(input, position).map_err(|e| e.to_string())
     }
 }
 
