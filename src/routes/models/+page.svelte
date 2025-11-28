@@ -45,7 +45,7 @@
     flex-direction: column;
     width: 100%;
     height: 100%;
-    padding: 0;
+    padding: 0 1rem 1rem;
     box-sizing: border-box;
     background: transparent;
   }
@@ -57,7 +57,7 @@
     flex: 1;
     min-height: 0;
     width: 100%;
-    padding: 1rem;
+    padding: 0;
     box-sizing: border-box;
   }
 

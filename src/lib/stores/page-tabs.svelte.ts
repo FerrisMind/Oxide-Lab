@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-export type TabId = 'local' | 'remote' | '';
+export type TabId = string;
 
 interface PageTab {
   id: TabId;

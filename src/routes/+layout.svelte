@@ -24,8 +24,9 @@
   import { openUrl } from '@tauri-apps/plugin-opener';
   import GithubLogo from 'phosphor-svelte/lib/GithubLogo';
 
-  import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
-  import { pageTabsList, activePageTab } from '$lib/stores/page-tabs.svelte';
+import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+import { pageTabsList, activePageTab } from '$lib/stores/page-tabs.svelte';
+import type { TabId } from '$lib/stores/page-tabs.svelte';
   import { chatState } from '$lib/stores/chat';
   import { folderPath, models, scanFolder } from '$lib/stores/local-models';
   import type { ModelInfo } from '$lib/types/local-models';
@@ -35,6 +36,7 @@
   import { Button } from '$lib/components/ui/button';
   import * as Popover from '$lib/components/ui/popover';
   import * as Command from '$lib/components/ui/command';
+import * as Tabs from '$lib/components/ui/tabs';
   import { cn } from '$lib/utils';
 
   // Импортируем все страницы для постоянного монтирования
@@ -85,6 +87,17 @@
     Boolean($pending && $pending !== $current),
   );
   const modelSearchEnabled = derived(modelSelectorSearchEnabled, ($value) => $value);
+
+  function currentHeaderTabValue(): TabId | '' {
+    return $activePageTab || $pageTabsList[0]?.id || '';
+  }
+
+  function handleHeaderTabsChange(nextValue: string) {
+    if (!nextValue || nextValue === $activePageTab) {
+      return;
+    }
+    activePageTab.set(nextValue as TabId);
+  }
 
   function formatModelLabel(model: ModelInfo | null | undefined) {
     if (!model) return 'Выберите модель';
@@ -376,21 +389,22 @@
             {/if}
           {/if}
           <!-- Page tabs -->
-          {#if $page.url.pathname === '/models'}
-            {#if $pageTabsList.length > 0}
-              <nav class="page-tabs" aria-label="Вкладки страницы">
-                {#each $pageTabsList as tab}
-                  <button
-                    class="page-tab"
-                    class:active={$activePageTab === tab.id}
-                    onclick={() => activePageTab.set(tab.id)}
-                    aria-current={$activePageTab === tab.id ? 'page' : undefined}
-                  >
-                    {tab.label}
-                  </button>
-                {/each}
-              </nav>
-            {/if}
+          {#if $page.url.pathname === '/models' && $pageTabsList.length > 0}
+            <div class="page-tabs" data-no-drag>
+              <Tabs.Root
+                value={currentHeaderTabValue()}
+                class="page-tabs-root"
+                onValueChange={handleHeaderTabsChange}
+              >
+                <Tabs.List class="page-tabs-list" aria-label="Вкладки страницы">
+                  {#each $pageTabsList as tab}
+                    <Tabs.Trigger class="page-tab" value={tab.id}>
+                      {tab.label}
+                    </Tabs.Trigger>
+                  {/each}
+                </Tabs.List>
+              </Tabs.Root>
+            </div>
           {/if}
         </div>
         <div class="window-controls">
@@ -431,7 +445,7 @@
           <ChatHistory />
         </div>
       {/if}
-      <main class="app-main">
+      <main class="app-main" class:models-compact={$page.url.pathname === '/models'}>
         <div class="view-switch">
           <!-- Все страницы постоянно смонтированы, переключение через CSS -->
           <div class="page-container" class:active={$page.url.pathname === '/'}>
@@ -723,18 +737,34 @@
   }
 
   .page-tabs {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    list-style: none;
-    padding: 0;
-    margin: 0;
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-app-region: no-drag;
   }
 
-  .page-tab {
+  :global(.page-tabs-root) {
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+  }
+
+  :global(.page-tabs-list) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :global(.page-tabs .page-tab) {
+    flex: 0 0 auto;
+    height: auto;
     padding: 0.4rem 0.9rem;
     border: none;
     background: transparent;
@@ -746,15 +776,13 @@
     -webkit-app-region: no-drag;
   }
 
-  .page-tab:hover {
+  :global(.page-tabs .page-tab:hover) {
     background: rgba(255, 255, 255, 0.1);
-    transform: none;
   }
 
-  .page-tab.active {
+  :global(.page-tabs .page-tab[data-state='active']) {
     background: rgba(255, 255, 255, 0.2);
     font-weight: 600;
-    transform: none;
   }
   .app-body {
     flex: 1 1 auto;
@@ -784,6 +812,10 @@
     overflow: hidden;
     padding: var(--content-gap);
     padding-top: calc(var(--content-gap-top) + 64px);
+  }
+
+  .app-main.models-compact {
+    padding-top: 56px;
   }
 
   /* Переключение страниц через CSS - все смонтированы одновременно */
