@@ -1,0 +1,17 @@
+{
+  "navigation": {
+    "chat": "Chat com Modelo",
+    "models": "Gerenciador de Modelos",
+    "settings": "Configurações",
+    "api": "Trabalho com API",
+    "performance": "Desempenho"
+  },
+  "footer": {
+    "downloads": "Downloads",
+    "about": "Sobre"
+  },
+  "brand": {
+    "home": "Início"
+  }
+}
+

@@ -21,12 +21,13 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
   import Check from 'phosphor-svelte/lib/Check';
   import X from 'phosphor-svelte/lib/X';
+  import { t } from '$lib/i18n';
 
-  const validationLabels: Record<ValidationLevel, string> = {
-    ok: 'Валидно',
-    warning: 'Предупреждение',
-    error: 'Ошибка',
-  };
+  const validationLabels = $derived({
+    ok: $t('models.local.details.valid'),
+    warning: $t('models.local.details.warning'),
+    error: $t('models.local.details.error'),
+  } as Record<ValidationLevel, string>);
 
   const validationColors: Record<ValidationLevel, string> = {
     ok: 'badge-success',
@@ -34,10 +35,10 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     error: 'badge-error',
   };
 
-  let metadataExpanded = false;
-  let editingModelPath: string | null = null;
-  let editPublisher = '';
-  let editName = '';
+  let metadataExpanded = $state(false);
+  let editingModelPath = $state<string | null>(null);
+  let editPublisher = $state('');
+  let editName = $state('');
 
   function startEditing(model: ModelInfo) {
     editingModelPath = model.path;
@@ -115,7 +116,9 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   }
 
   async function handleDelete(model: ModelInfo) {
-    const confirmed = confirm(`Удалить модель "${model.name}"?\nФайл будет перемещен в корзину.`);
+    // Используем простую интерполяцию для confirm сообщения
+    const confirmMessage = $t('models.local.details.deleteConfirm').replace('{name}', model.name);
+    const confirmed = confirm(confirmMessage);
     if (!confirmed) return;
 
     await deleteModel(model.path);
@@ -142,27 +145,27 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     }
   }
 
-  $: menuItems = [
+  const menuItems = $derived([
     {
-      label: 'Выбрать папку',
+      label: $t('models.local.menu.selectFolder'),
       onclick: handleSelectFolder,
     },
     {
-      label: 'Пересканировать',
+      label: $t('models.local.menu.rescan'),
       onclick: () => $folderPath && scanFolder($folderPath, true),
       disabled: !$folderPath,
     },
-  ];
+  ]);
 </script>
 
 <div class="local-models-panel">
   <section class="controls">
     <div class="controls-left">
       <div class="path-group">
-        <span class="label">Папка с моделями</span>
+        <span class="label">{$t('models.local.folderLabel')}</span>
         <div class="path-display">
-          <span title={$folderPath || 'Папка не выбрана'}>
-            {$folderPath || 'Не выбрано'}
+          <span title={$folderPath || $t('models.local.folderNotSelected')}>
+            {$folderPath || $t('models.local.notSelected')}
           </span>
         </div>
       </div>
@@ -172,12 +175,12 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     <div class="controls-right">
       <div class="filter-group">
         <label>
-          Поиск
+          {$t('models.local.search')}
           <input
             type="search"
-            placeholder="Название, архитектура, квантизация..."
+            placeholder={$t('models.local.searchPlaceholder')}
             value={$filterOptions.searchText ?? ''}
-            on:input={(event) => updateFilter({ searchText: event.currentTarget.value })}
+            oninput={(event) => updateFilter({ searchText: event.currentTarget.value })}
           />
         </label>
       </div>
@@ -186,7 +189,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     <div class="checkbox-wrapper">
       <Checkbox
         id="candle-only"
-        label="Только совместимые с Candle"
+        label={$t('models.local.candleOnly')}
         bind:checked={$filterOptions.candleOnly}
       />
     </div>
@@ -195,8 +198,8 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   {#if $error}
     <div class="error-banner">
       <span>{$error}</span>
-      <button class="btn secondary" on:click={() => $folderPath && scanFolder($folderPath, true)}>
-        Повторить
+      <button class="btn secondary" onclick={() => $folderPath && scanFolder($folderPath, true)}>
+        {$t('models.local.errors.retry')}
       </button>
     </div>
   {/if}
@@ -205,9 +208,9 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     <div class="list">
       {#if !$filteredModels.length && !$isLoading}
         <div class="empty-state">
-          <p>Нет моделей, подходящих под выбранные условия.</p>
+          <p>{$t('models.local.noModels')}</p>
           {#if !$models.length}
-            <p>Выберите папку с моделями, чтобы начать.</p>
+            <p>{$t('models.local.selectFolder')}</p>
           {/if}
         </div>
       {/if}
@@ -215,20 +218,20 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
       <table>
         <thead>
         <tr>
-          <th>Архитектура</th>
-          <th>Параметры</th>
-          <th>Издатель</th>
-          <th>Название модели</th>
-          <th>Квант</th>
-          <th>Размер</th>
-          <th>Формат</th>
+          <th>{$t('models.local.table.architecture')}</th>
+          <th>{$t('models.local.table.parameters')}</th>
+          <th>{$t('models.local.table.publisher')}</th>
+          <th>{$t('models.local.table.modelName')}</th>
+          <th>{$t('models.local.table.quant')}</th>
+          <th>{$t('models.local.table.size')}</th>
+          <th>{$t('models.local.table.format')}</th>
         </tr>
         </thead>
         <tbody>
           {#each $filteredModels as model (model.path)}
             <tr
               class:selected={$selectedModel?.path === model.path}
-              on:click={() => toggleModelSelection(model)}
+              onclick={() => toggleModelSelection(model)}
             >
               <td>{model.architecture ?? '—'}</td>
               <td>{model.parameter_count ?? '—'}</td>
@@ -236,8 +239,8 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
                  <button
                    type="button"
                    class="icon-btn"
-                   on:click={() => startEditing(model)}
-                   aria-label="Редактировать название и авторство модели"
+                   onclick={() => startEditing(model)}
+                   aria-label={$t('models.local.details.edit.ariaLabel')}
                  >
                    <PencilSimple size={16} />
                  </button>
@@ -255,8 +258,8 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
                  <button
                    type="button"
                    class="icon-btn"
-                   on:click={() => startEditing(model)}
-                   aria-label="Редактировать название и авторство модели"
+                   onclick={() => startEditing(model)}
+                   aria-label={$t('models.local.details.edit.ariaLabel')}
                  >
                    <PencilSimple size={16} />
                  </button>
@@ -285,27 +288,27 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
                 <td colspan="7">
                   <div class="edit-grid">
                     <label>
-                      Паблишер
+                      {$t('models.local.details.edit.publisher')}
                       <input
                         type="text"
-                        placeholder="publisher"
+                        placeholder={$t('models.local.details.edit.publisherPlaceholder')}
                         bind:value={editPublisher}
                       />
                     </label>
                     <label>
-                      Название
+                      {$t('models.local.details.edit.name')}
                       <input
                         type="text"
-                        placeholder="publisher/name"
+                        placeholder={$t('models.local.details.edit.namePlaceholder')}
                         bind:value={editName}
                       />
                     </label>
                     <div class="edit-actions">
-                      <button type="button" class="btn" on:click={() => saveEditing(model)}>
-                        <Check size={16} /> Сохранить
+                      <button type="button" class="btn" onclick={() => saveEditing(model)}>
+                        <Check size={16} /> {$t('models.local.details.edit.save')}
                       </button>
-                      <button type="button" class="btn secondary" on:click={cancelEditing}>
-                        <X size={16} /> Отменить
+                      <button type="button" class="btn secondary" onclick={cancelEditing}>
+                        <X size={16} /> {$t('models.local.details.edit.cancel')}
                       </button>
                     </div>
                   </div>
@@ -322,51 +325,51 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
         <header>
           <h3>{$selectedModel.name}</h3>
           <div class="actions">
-            <button class="btn danger" on:click={() => handleDelete($selectedModel!)}>
-              Удалить
+            <button class="btn danger" onclick={() => handleDelete($selectedModel!)}>
+              {$t('models.local.details.delete')}
             </button>
-            <button class="btn primary" on:click={loadSelectedModel}>
+            <button class="btn primary" onclick={loadSelectedModel}>
               <DownloadSimple size={16} />
-              Загрузить в чат
+              {$t('models.local.details.loadToChat')}
             </button>
           </div>
         </header>
 
         <dl class="properties">
           <div>
-            <dt>Путь</dt>
+            <dt>{$t('models.local.details.path')}</dt>
             <dd class="path">{$selectedModel.path}</dd>
           </div>
           <div>
-            <dt>Размер</dt>
+            <dt>{$t('models.local.details.size')}</dt>
             <dd>{LocalModelsService.formatFileSize($selectedModel.file_size)}</dd>
           </div>
           <div>
-            <dt>Дата</dt>
+            <dt>{$t('models.local.details.date')}</dt>
             <dd>{LocalModelsService.formatDate($selectedModel.created_at)}</dd>
           </div>
           <div>
-            <dt>Архитектура</dt>
+            <dt>{$t('models.local.details.architecture')}</dt>
             <dd>{$selectedModel.architecture ?? '—'}</dd>
           </div>
           <div>
-            <dt>Формат</dt>
+            <dt>{$t('models.local.details.format')}</dt>
             <dd class="format-cell">{$selectedModel.format.toUpperCase()}</dd>
           </div>
           <div>
-            <dt>Детектировано</dt>
+            <dt>{$t('models.local.details.detected')}</dt>
             <dd>{$selectedModel.detected_architecture ?? '—'}</dd>
           </div>
           <div>
-            <dt>Контекст</dt>
+            <dt>{$t('models.local.details.context')}</dt>
             <dd>{$selectedModel.context_length ?? '—'}</dd>
           </div>
         </dl>
 
         <section class="validation">
-          <h4>Статус проверки</h4>
+          <h4>{$t('models.local.details.validation')}</h4>
           <span class={`badge ${validationColors[$selectedModel.validation_status.level]}`}>
-            {validationLabels[$selectedModel.validation_status.level]}
+            {$t(`models.local.details.${$selectedModel.validation_status.level === 'ok' ? 'valid' : $selectedModel.validation_status.level}`)}
           </span>
           {#if $selectedModel.validation_status.messages.length}
             <ul>
@@ -380,7 +383,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
         <section class="metadata">
           <header>
             <h4>GGUF метаданные</h4>
-            <button class="btn secondary" on:click={() => (metadataExpanded = !metadataExpanded)}>
+            <button class="btn secondary" onclick={() => (metadataExpanded = !metadataExpanded)}>
               {metadataExpanded ? 'Скрыть' : 'Показать все'}
             </button>
           </header>

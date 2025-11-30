@@ -18,42 +18,44 @@
   } from '$lib/stores/download-manager';
   import { useSidebar } from '$lib/components/ui/sidebar/context.svelte.js';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+  import { t } from '$lib/i18n';
 
-  const baseNavigationItems = [
+  // Navigation items с переводами
+  const baseNavigationItems = $derived([
     {
       id: 'chat',
-      title: 'Чат с моделью',
+      title: $t('sidebar.navigation.chat'),
       icon: ChatCircle,
       path: '/',
     },
     {
       id: 'models',
-      title: 'Менеджер моделей',
+      title: $t('sidebar.navigation.models'),
       icon: Database,
       path: '/models',
     },
     {
       id: 'settings',
-      title: 'Настройки',
+      title: $t('sidebar.navigation.settings'),
       icon: Gear,
       path: '/settings',
     },
-  ] as const;
+  ] as const);
 
-  const experimentalNavigationItems = [
+  const experimentalNavigationItems = $derived([
     {
       id: 'api',
-      title: 'API работа',
+      title: $t('sidebar.navigation.api'),
       icon: Code,
       path: '/api',
     },
     {
       id: 'performance',
-      title: 'Производительность',
+      title: $t('sidebar.navigation.performance'),
       icon: ChartLine,
       path: '/performance',
     },
-  ] as const;
+  ] as const);
 
   const navigationItems = $derived(
     experimentalFeatures.enabled
@@ -129,7 +131,7 @@
       class:brand-button--collapsed={sidebar.state === 'collapsed'}
       type="button"
       onclick={handleBrandClick}
-      title="Домой"
+      title={$t('sidebar.brand.home')}
     >
       <img src="/icon.svg" alt="Oxide Lab" class="brand-icon brand-icon-default" />
       {#if sidebar.state === 'collapsed'}
@@ -177,14 +179,14 @@
       <Sidebar.Menu>
         <Sidebar.MenuItem>
           <Sidebar.MenuButton
-            tooltipContent="Загрузки"
-            aria-label="Загрузки"
+            tooltipContent={$t('sidebar.footer.downloads')}
+            aria-label={$t('sidebar.footer.downloads')}
             isActive={hasActiveDownloads}
           >
             {#snippet child({ props })}
               <button type="button" {...props} onclick={handleDownloadsClick}>
                 <ArrowCircleDown size={20} weight="regular" />
-                <span>Загрузки</span>
+                <span>{$t('sidebar.footer.downloads')}</span>
               </button>
             {/snippet}
           </Sidebar.MenuButton>
@@ -206,11 +208,11 @@
           {/if}
         </Sidebar.MenuItem>
         <Sidebar.MenuItem>
-          <Sidebar.MenuButton tooltipContent="О программе" aria-label="О программе">
+          <Sidebar.MenuButton tooltipContent={$t('sidebar.footer.about')} aria-label={$t('sidebar.footer.about')}>
             {#snippet child({ props })}
               <button type="button" {...props} onclick={handleAboutClick}>
                 <Info size={20} weight="regular" />
-                <span>О программе</span>
+                <span>{$t('sidebar.footer.about')}</span>
               </button>
             {/snippet}
           </Sidebar.MenuButton>

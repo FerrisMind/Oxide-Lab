@@ -38,6 +38,7 @@ import type { TabId } from '$lib/stores/page-tabs.svelte';
   import * as Command from '$lib/components/ui/command';
 import * as Tabs from '$lib/components/ui/tabs';
   import { cn } from '$lib/utils';
+  import { t } from '$lib/i18n';
 
   // Импортируем все страницы для постоянного монтирования
   import ApiPage from './api/+page.svelte';
@@ -100,7 +101,7 @@ import * as Tabs from '$lib/components/ui/tabs';
   }
 
   function formatModelLabel(model: ModelInfo | null | undefined) {
-    if (!model) return 'Выберите модель';
+    if (!model) return $t('common.model.selectModel');
     const publisher = model.metadata?.author ?? model.source_repo_id?.split('/')[0] ?? 'local';
     const title = model.name ?? model.source_repo_name ?? 'Без имени';
     return `${publisher}/${title}`;
@@ -335,13 +336,13 @@ import * as Tabs from '$lib/components/ui/tabs';
                   {#if $modelSearchEnabled}
                     <Command.Input
                       class="model-combobox-input"
-                      placeholder="Поиск модели..."
+                      placeholder={$t('common.model.selectModel') + '...'}
                       autofocus
                     />
                   {/if}
                   <Command.List class="model-combobox-list">
                     <Command.Empty class="model-combobox-empty">
-                      Нет доступных моделей
+                      {$t('common.model.selectModel')}
                     </Command.Empty>
                     <Command.Group>
                       {#each $quickModels as model (model.path)}
@@ -363,11 +364,11 @@ import * as Tabs from '$lib/components/ui/tabs';
                               {formatModelLabel(model)}
                             </span>
                             <span class="model-combobox-item-meta">
-                              {model.architecture ?? 'Неизвестная архитектура'}
+                              {model.architecture ?? $t('common.model.unknownArchitecture')}
                             </span>
                           </div>
                           {#if model.path === $currentModelPath}
-                            <span class="model-combobox-item-badge">Текущая</span>
+                            <span class="model-combobox-item-badge">{$t('common.model.current')}</span>
                           {/if}
                         </Command.Item>
                       {/each}
@@ -381,10 +382,10 @@ import * as Tabs from '$lib/components/ui/tabs';
                 type="button"
                 class="model-reload-btn"
                 onclick={handleReloadModel}
-                aria-label="Перезагрузить модель"
+                aria-label={$t('common.model.reloadModel')}
               >
                 <ArrowClockwise size={16} weight="bold" />
-                Перезагрузить модель
+                {$t('common.model.reloadModel')}
               </button>
             {/if}
           {/if}
@@ -411,7 +412,7 @@ import * as Tabs from '$lib/components/ui/tabs';
           <button
             type="button"
             class="win-btn"
-            title="Свернуть"
+            title={$t('common.windowControls.minimize')}
             onclick={() => appWindow.minimize()}
           >
             <Minus size={16} weight="bold" />
@@ -419,7 +420,7 @@ import * as Tabs from '$lib/components/ui/tabs';
           <button
             type="button"
             class="win-btn"
-            title={isMaximized ? 'Восстановить' : 'Развернуть'}
+            title={isMaximized ? $t('common.windowControls.restore') : $t('common.windowControls.maximize')}
             onclick={toggleMaximize}
           >
             {#if isMaximized}
@@ -431,7 +432,7 @@ import * as Tabs from '$lib/components/ui/tabs';
           <button
             type="button"
             class="win-btn close"
-            title="Закрыть"
+            title={$t('common.windowControls.close')}
             onclick={() => appWindow.close()}
           >
             <X size={16} weight="bold" />
@@ -485,28 +486,27 @@ import * as Tabs from '$lib/components/ui/tabs';
       onkeydown={handleBackdropKeydown}
     >
       <div class="about-content" role="document">
-        <h2 id="about-title">О программе</h2>
+        <h2 id="about-title">{$t('about.title')}</h2>
         <div class="about-info">
           <p>
-            <strong>Oxide Lab</strong> — настольное приложение для локального инференса LLM на базе современных
-            технологий.
+            <strong>Oxide Lab</strong> — {$t('about.description')}
           </p>
-          <p><strong>Технологии:</strong> Tauri 2 + Svelte 5 + Rust + Candle ML</p>
-          <p><strong>Версия:</strong> {appVersion}</p>
+          <p><strong>{$t('about.technologies')}:</strong> {$t('about.techStack')}</p>
+          <p><strong>{$t('about.version')}:</strong> {appVersion}</p>
         </div>
         <div class="about-actions">
           <button
             class="github-btn"
             onclick={() => openUrl('https://github.com/FerrisMind/Oxide-Lab')}
-            aria-label="Открыть GitHub репозиторий"
+            aria-label={$t('about.aria.github')}
           >
             <GithubLogo size={16} />
-            GitHub
+            {$t('about.actions.github')}
           </button>
           <button
             class="gitverse-btn"
             onclick={() => openUrl('https://gitverse.ru/FerrisMind/Oxide-Lab')}
-            aria-label="Открыть GitVerse репозиторий"
+            aria-label={$t('about.aria.gitverse')}
           >
             <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
               <path
@@ -521,7 +521,7 @@ import * as Tabs from '$lib/components/ui/tabs';
                 d="m240.76,134.06c-.42-12.37-2.9-24.04-7-35.1v-.1c-1.39-3.72-2.97-7.36-4.73-10.89v.05l-1.17,12.24v.02c-.38,3.63-.77,7.2-1.18,10.67-1.16,9.92-.5,20.26.16,30.56.55,8.51,1.09,17,.6,25.2-.36,6.21-1.33,12.24-3.33,18.02-17.31,35.67-53.86,60.26-96.18,60.26-18.79,0-36.45-4.86-51.79-13.38,12.8-5.51,20.79-12.16,28.48-18.56,10.03-8.35,19.54-16.27,38.58-20.69,5.74-1.33,11.16-2.22,16.25-2.76,11.17-1.18,20.69-.66,28.37.55-8.92-4.07-18.65-5.8-28.53-6.29-11.35-.57-22.88.48-33.51,1.45-12.15,1.12-23.13,2.12-31.35.46-14.47-2.92-26.98-10.32-35.49-16.6-3.51-2.58-6.33-4.98-8.36-6.79-1.97-1.78-3.18-3-3.47-3.3-.02-.02-.03-.03-.05-.05l-.02-.02c-.69-.47-.08-1.47.61-1.16,0,0,.03.02.11.06.07.03.16.08.28.14.66.33,2.12,1.04,4.17,1.97,2.46,1.13,5.76,2.6,9.54,4.12,9.77,3.95,22.75,8.36,32.67,8.65,8.72.26,14.75-.32,20.33-2.05,5.36-1.66,10.33-4.4,16.88-8.46.68-.42,1.38-.87,2.1-1.31h.02c.18-.11.36-.23.55-.35,0,0-.47-.55-.77-.47-.62.17-1.41.48-2.39.87-3.3,1.3-8.78,3.45-17.49,4.08-5.19.38-11.52.22-19.22-.99-17.76-2.78-34.36-10.88-42.11-15.11-2.9-1.58-4.65-4.61-4.74-7.93l-.15-5.04c0-.23.08-.39.23-.55l10.86-9.05c2.87-2.38,4.9-5.63,5.78-9.25l1.09-4.43c.66-2.66-.83-5.24-3.2-6.15-.63-.24-1.31-.36-2.03-.35l-.84.02c-7.3.18-14.51-1.57-20.91-5.08l54.6-.74c2.12-.03,4.16-.8,5.77-2.16l29.13-24.7c6.26-5.32,14.21-8.23,22.42-8.23h14.71c2.44-3.46,5.15-7.62,8.04-12.06,1.89-2.92,3.87-5.96,5.92-9.01.89-1.32,2.02-3,3.02-4.45.11-.17.24-.34.35-.51-1.7-.93-3.42-1.83-5.17-2.69-1.84-.9-3.71-1.74-5.6-2.54-.05-.02-.1-.05-.15-.06-.85-.35-1.71-.71-2.57-1.04-.25-.1-.51-.19-.76-.28-.66-.25-1.33-.5-1.99-.74-.33-.12-.67-.24-1-.35-.59-.2-1.18-.41-1.78-.6-.39-.13-.76-.25-1.15-.38-.55-.17-1.1-.34-1.65-.51-.42-.13-.83-.25-1.25-.38-.52-.15-1.06-.3-1.58-.44-.44-.13-.89-.24-1.33-.36-.51-.14-1.04-.26-1.55-.39-.46-.11-.92-.23-1.38-.34-.5-.11-.99-.22-1.49-.33-.99-.22-1.98-.42-2.97-.6-.41-.08-.81-.16-1.22-.23-.57-.1-1.14-.19-1.71-.28-.42-.07-.84-.14-1.26-.2-.57-.08-1.13-.16-1.7-.24-.43-.06-.87-.11-1.31-.17-.56-.07-1.13-.14-1.68-.19-.46-.05-.91-.09-1.36-.14-.55-.06-1.1-.1-1.65-.15-.48-.03-.97-.07-1.45-.1-.52-.03-1.06-.07-1.59-.1-.55-.03-1.09-.05-1.65-.07-.47-.02-.93-.05-1.41-.06-.89-.02-1.79-.03-2.68-.03h-.39c-.69,0-1.38.02-2.06.03h0c-2.16.02-4.3.12-6.43.27л3.21,5.8c3.55,6.88,6.8,14.63,9.38,21.6.74,1.98,1.41,3.91,2.04,5.73h-7.21c-8.53,0-16.83,2.79-23.63,7.95л-13.03,9.88c-.39.31-1.01,0-1.01-.47.02-.24.03-.49.05-.73v-.06c.09-1.43.18-2.88.25-4.33.02-.38.05-.74.06-1.12.16-3.02.28-6.08.42-9.13.34-7.99.68-15.95,1.46-23.05.05-.35.58-4.33.91-6.66v-.02c-2.06.68-4.11,1.42-6.12,2.22v.06C44.6,49.9,15.17,90.56,15.17,138.12c0,38.09,18.88,71.77,47.79,92.2լ6.1,4.02c17.15,10.52,37.33,16.6,58.93,16.6,57.96,0,105.71-43.72,112.09-99.97.07-.3.14-.6.2-.91.4-3.88.62-7.82.62-11.81,0-1.42-.03-2.84-.09-4.25լ-.05.06Zm-132.15-63.44c3.13-2.43,6.73-4.15,10.53-5.07.69-.17,1.39-.31,2.1-.42.72-.11,1.43-.21,2.16-.26h.03c.84-.07,1.69-.1,2.54-.09.59,0,1.84,1,0,2.65,0,0-.01.01-.02.02-.09.08-.18.16-.3.25л-32.08,25.68c-.92.74-2.07,1.14-3.26,1.14h-12.53լ30.81-23.88v-.02Zm-68.31,77.91c-2.85-3.76-4.66-8.19-5.27-12.82-.11-.84-.18-1.69-.22-2.53-.01-.34-.02-.69-.02-1.04v-6.17լ5.51,7.21v15.36h0Zm5.73,2.79c.25.26.52.52.8.77-.27.02-.54.07-.8.14v-.9h0Z"
               />
             </svg>
-            GitVerse
+            {$t('about.actions.gitverse')}
           </button>
           <button
             class="close-btn"
@@ -529,9 +529,9 @@ import * as Tabs from '$lib/components/ui/tabs';
               e.stopPropagation();
               toggleAbout();
             }}
-            aria-label="Закрыть окно о программе"
+            aria-label={$t('about.aria.close')}
           >
-            Закрыть
+            {$t('about.actions.close')}
           </button>
         </div>
       </div>

@@ -17,6 +17,7 @@
   import AlertTitle from '$lib/components/ui/alert/alert-title.svelte';
   import { cn } from '$lib/utils.js';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+  import { t } from '$lib/i18n';
 
   type AttachDetail = {
     filename: string;
@@ -71,8 +72,8 @@
   $: experimentalStatusMessage = experimentalFeatures.initialized
     ? experimentalFeatures.enabled
       ? null
-      : 'Экспериментальные функции выключены'
-    : 'Экспериментальные функции загружаются...';
+      : $t('chat.composer.experimental.disabled')
+    : $t('chat.composer.experimental.loading');
 
   // Переменные для автоматического изменения высоты
   let textareaHeight = 34; // Стандартная высота однострочного поля
@@ -160,7 +161,7 @@
 
     try {
       if (file.size > MAX_FILE_SIZE) {
-        setError('Файл слишком большой. Максимальный размер — 20 МБ.');
+        setError($t('errors.file.tooLarge'));
         return;
       }
 
@@ -176,15 +177,15 @@
       const isVideo = topLevel === 'video' || VIDEO_EXTENSIONS.includes(ext);
 
       if (isImage && !supports_image) {
-        setError('Модель не поддерживает изображения');
+        setError($t('chat.composer.errors.imageNotSupported'));
         return;
       }
       if (isAudio && !supports_audio) {
-        setError('Модель не поддерживает аудио');
+        setError($t('chat.composer.errors.audioNotSupported'));
         return;
       }
       if (isVideo && !supports_video) {
-        setError('Модель не поддерживает видео');
+        setError($t('chat.composer.errors.videoNotSupported'));
         return;
       }
 
@@ -217,11 +218,11 @@
         attachError = null;
         clearErrorTimer();
       } else {
-        setError('Неподдерживаемый тип файла');
+        setError($t('chat.composer.errors.unsupportedFileType'));
       }
     } catch (err) {
       console.error('Failed to read attachment', err);
-      setError('Не удалось прочитать файл');
+      setError($t('chat.composer.errors.fileReadFailed'));
     } finally {
       if (input) input.value = '';
     }
@@ -287,10 +288,10 @@
             size="icon-sm"
             class="text-muted-foreground hover:text-foreground"
             onclick={() => removeAttachment(index)}
-            aria-label={`Удалить файл ${attachment.filename}`}
+            aria-label={$t('errors.file.removeFile') + ' ' + attachment.filename}
           >
             <X size={14} weight="bold" />
-            <span class="sr-only">Удалить файл {attachment.filename}</span>
+            <span class="sr-only">{$t('errors.file.removeFile')} {attachment.filename}</span>
           </Button>
         </Badge>
       {/each}
@@ -306,7 +307,7 @@
     <InputGroup.Textarea
       bind:value={prompt}
       bind:ref={textareaElement}
-      placeholder="Напишите сообщение..."
+      placeholder={$t('chat.composer.placeholder')}
       rows={1}
       data-slot="input-group-control"
       class="min-h-[34px] resize-none bg-transparent text-base text-foreground"
@@ -330,7 +331,7 @@
               isChatHistoryVisible && 'bg-primary/15 text-primary hover:bg-primary/20'
             )}
             onclick={triggerChatHistory}
-            aria-label={isChatHistoryVisible ? 'Скрыть историю чатов' : 'Показать историю чатов'}
+            aria-label={isChatHistoryVisible ? $t('chat.composer.hideHistory') : $t('chat.composer.showHistory')}
             disabled={!experimentalReady}
             title={experimentalStatusMessage ?? undefined}
           >
@@ -346,7 +347,7 @@
               isLoaderPanelVisible && 'bg-primary/15 text-primary hover:bg-primary/20'
             )}
             onclick={triggerSettings}
-            aria-label="Настройки панели загрузки"
+            aria-label={$t('chat.composer.loaderSettings')}
           >
             <SlidersHorizontal size={16} weight="bold" />
           </Button>
@@ -358,7 +359,7 @@
               size="icon-sm"
               onclick={triggerClear}
               disabled={busy}
-              aria-label="Очистить ввод"
+              aria-label={$t('chat.composer.clear')}
             >
               <Broom size={16} weight="bold" />
             </Button>
@@ -372,7 +373,7 @@
             size="icon-sm"
             onclick={triggerAttach}
             disabled={busy || !isLoaded || !experimentalReady}
-            aria-label="Прикрепить файл"
+            aria-label={$t('chat.composer.attach')}
             title={experimentalStatusMessage ?? undefined}
           >
             <Paperclip size={16} weight="bold" />
@@ -383,7 +384,7 @@
             size="icon-sm"
             onclick={triggerVoiceInput}
             disabled={busy || !isLoaded || !experimentalReady}
-            aria-label={isRecording ? 'Остановить запись' : 'Начать запись голоса'}
+            aria-label={isRecording ? $t('chat.composer.voice.stopRecording') : $t('chat.composer.voice.startRecording')}
             aria-pressed={isRecording}
             title={experimentalStatusMessage ?? undefined}
           >
@@ -401,7 +402,7 @@
             class="shadow-sm"
             onclick={busy ? triggerStop : triggerSend}
             disabled={!isLoaded || (!busy && !prompt.trim())}
-            aria-label={busy ? 'Стоп' : 'Отправить'}
+            aria-label={busy ? $t('chat.composer.stop') : $t('chat.composer.send')}
           >
             {#if busy}
               <Stop size={16} weight="bold" />
@@ -424,7 +425,7 @@
 
   {#if attachError}
     <Alert variant="destructive" class="text-sm">
-      <AlertTitle>Ошибка вложения</AlertTitle>
+      <AlertTitle>{$t('chat.composer.errors.attachmentError')}</AlertTitle>
       <AlertDescription>{attachError}</AlertDescription>
     </Alert>
   {/if}

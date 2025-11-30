@@ -1,0 +1,61 @@
+{
+  "title": "Application Settings",
+  "precisionPolicy": {
+    "title": "Precision Policy",
+    "description": "Select the precision policy for loading and executing models. This affects memory usage and performance.",
+    "warning": "Note: the precision parameter only affects non-quantized models (float32/float16). For quantized models (4-bit/8-bit), the weight precision is fixed, the setting only affects intermediate computations.",
+    "loading": "Loading settings...",
+    "options": {
+      "default": {
+        "title": "Standard",
+        "specs": "CPU: F32, GPU: BF16",
+        "description": "Optimal balance between performance and precision"
+      },
+      "memoryEfficient": {
+        "title": "Memory Efficient",
+        "specs": "CPU: F32, GPU: F16",
+        "description": "Less memory usage, slightly lower precision"
+      },
+      "maximumPrecision": {
+        "title": "Maximum Precision",
+        "specs": "CPU: F32, GPU: F32",
+        "description": "Highest precision, more memory usage"
+      }
+    }
+  },
+  "threadLimit": {
+    "title": "Manual CPU Thread Limit",
+    "description": "If you need to limit the number of threads that candle can use through rayon, enable manual limit. The slider allows you to select the number of threads, after which the application will apply the RAYON_NUM_THREADS environment variable.",
+    "loading": "Loading preset limit...",
+    "maxThreads": "Max threads: {count}",
+    "useSystem": "Use system value ({count} threads)",
+    "currentMode": "Current mode: {mode} ({count} threads)",
+    "modes": {
+      "automatic": "automatic",
+      "manual": "manual"
+    }
+  },
+  "experimental": {
+    "title": "Experimental Features",
+    "description": "Enable experimental features to test new capabilities. These features may be unstable and contain bugs.",
+    "enable": "Enable experimental features",
+    "enabled": "✓ Experimental features enabled",
+    "disabled": "✗ Experimental features disabled"
+  },
+  "modelSelector": {
+    "title": "Model Dropdown",
+    "description": "Configure search within the main model dropdown. If you disable the option, the list will be displayed without a filter line.",
+    "enableSearch": "Enable model search",
+    "enabledDescription": "Search will help you quickly find the models you need.",
+    "disabledDescription": "Search is hidden — the list shows all models as is."
+  },
+  "performance": {
+    "title": "Performance Monitoring",
+    "description": "Tracking application performance, including startup time, memory usage, and model speed."
+  },
+  "language": {
+    "title": "Language",
+    "description": "Select the interface language. Changes will be applied immediately."
+  }
+}
+

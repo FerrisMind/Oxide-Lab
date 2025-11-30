@@ -1,0 +1,82 @@
+{
+  "buttons": {
+    "close": "Закрыть",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "delete": "Удалить",
+    "reload": "Перезагрузить",
+    "refresh": "Обновить",
+    "open": "Открыть",
+    "download": "Скачать",
+    "upload": "Загрузить",
+    "search": "Поиск",
+    "filter": "Фильтр",
+    "reset": "Сбросить",
+    "apply": "Применить",
+    "confirm": "Подтвердить",
+    "back": "Назад",
+    "next": "Далее",
+    "previous": "Предыдущий",
+    "submit": "Отправить"
+  },
+  "status": {
+    "loading": "Загрузка...",
+    "saving": "Сохранение...",
+    "error": "Ошибка",
+    "success": "Успешно",
+    "warning": "Предупреждение",
+    "info": "Информация",
+    "pending": "Ожидание",
+    "completed": "Завершено",
+    "failed": "Не удалось",
+    "cancelled": "Отменено"
+  },
+  "windowControls": {
+    "minimize": "Свернуть",
+    "maximize": "Развернуть",
+    "restore": "Восстановить",
+    "close": "Закрыть"
+  },
+  "model": {
+    "selectModel": "Выберите модель",
+    "current": "Текущая",
+    "reloadModel": "Перезагрузить модель",
+    "unknownArchitecture": "Неизвестная архитектура"
+  },
+  "common": {
+    "yes": "Да",
+    "no": "Нет",
+    "ok": "ОК",
+    "name": "Название",
+    "description": "Описание",
+    "version": "Версия",
+    "author": "Автор",
+    "date": "Дата",
+    "size": "Размер",
+    "type": "Тип",
+    "status": "Статус",
+    "actions": "Действия"
+  },
+  "downloads": {
+    "title": "Загрузки",
+    "close": "Закрыть",
+    "noActiveDownloads": "Нет активных загрузок",
+    "loading": "Загрузка данных…",
+    "pause": "Пауза",
+    "resume": "Возобновить",
+    "cancel": "Отменить",
+    "of": "из",
+    "units": {
+      "bytes": "Б",
+      "kilobytes": "КБ",
+      "megabytes": "МБ",
+      "gigabytes": "ГБ",
+      "terabytes": "ТБ",
+      "bytesPerSec": "Б/с",
+      "kilobytesPerSec": "КБ/с",
+      "megabytesPerSec": "МБ/с",
+      "gigabytesPerSec": "ГБ/с"
+    }
+  }
+}
+

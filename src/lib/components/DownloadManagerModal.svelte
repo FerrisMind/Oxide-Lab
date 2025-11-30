@@ -18,6 +18,7 @@
     ensureDownloadManager,
   } from '$lib/stores/download-manager';
   import type { DownloadJob } from '$lib/types/local-models';
+  import { t } from '$lib/i18n';
 
   const dispatch = createEventDispatcher<{ close: void }>();
 
@@ -189,7 +190,13 @@
 
   function formatBytes(value?: number | null): string {
     if (!value || value <= 0) return '—';
-    const units = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'];
+    const units = [
+      $t('common.downloads.units.bytes'),
+      $t('common.downloads.units.kilobytes'),
+      $t('common.downloads.units.megabytes'),
+      $t('common.downloads.units.gigabytes'),
+      $t('common.downloads.units.terabytes'),
+    ];
     let size = value;
     let index = 0;
     while (size >= 1024 && index < units.length - 1) {
@@ -201,8 +208,13 @@
   }
 
   function formatSpeed(bytesPerSec?: number | null): string {
-    if (!bytesPerSec || bytesPerSec <= 0) return '0 B/s';
-    const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+    if (!bytesPerSec || bytesPerSec <= 0) return `0 ${$t('common.downloads.units.bytesPerSec')}`;
+    const units = [
+      $t('common.downloads.units.bytesPerSec'),
+      $t('common.downloads.units.kilobytesPerSec'),
+      $t('common.downloads.units.megabytesPerSec'),
+      $t('common.downloads.units.gigabytesPerSec'),
+    ];
     let speed = bytesPerSec;
     let index = 0;
     while (speed >= 1024 && index < units.length - 1) {
@@ -364,8 +376,8 @@
   onkeydown={handleKeydown}
 >
   <header class="modal-header">
-    <h2 id="download-manager-title">Загрузки</h2>
-    <button class="icon-button" aria-label="Закрыть" onclick={handleClose}>
+    <h2 id="download-manager-title">{$t('common.downloads.title')}</h2>
+    <button class="icon-button" aria-label={$t('common.downloads.close')} onclick={handleClose}>
       <X size={18} weight="bold" />
     </button>
   </header>
@@ -374,9 +386,9 @@
     <div class="downloads-content">
       <div class="active-section">
         {#if $downloadsLoaded && !groupedActiveDownloads.length}
-          <p class="empty">Нет активных загрузок</p>
+          <p class="empty">{$t('common.downloads.noActiveDownloads')}</p>
         {:else if !$downloadsLoaded}
-          <p class="empty">Загрузка данных…</p>
+          <p class="empty">{$t('common.downloads.loading')}</p>
         {:else}
           <ul class="download-list">
             {#each groupedActiveDownloads as group (group.id)}
@@ -401,16 +413,16 @@
                   </div>
                   <div class="actions">
                     {#if group.jobs.some((job) => job.status === 'downloading' || job.status === 'queued')}
-                      <button class="icon-button" title="Пауза" onclick={() => handleGroupPause(group)}>
+                      <button class="icon-button" title={$t('common.downloads.pause')} onclick={() => handleGroupPause(group)}>
                         <Pause size={16} />
                       </button>
                     {/if}
                     {#if group.jobs.some((job) => job.status === 'paused' || job.status === 'error')}
-                      <button class="icon-button" title="Возобновить" onclick={() => handleGroupResume(group)}>
+                      <button class="icon-button" title={$t('common.downloads.resume')} onclick={() => handleGroupResume(group)}>
                         <Play size={16} />
                       </button>
                     {/if}
-                    <button class="icon-button" title="Отменить" onclick={() => handleGroupCancel(group)}>
+                    <button class="icon-button" title={$t('common.downloads.cancel')} onclick={() => handleGroupCancel(group)}>
                       <XCircle size={16} />
                     </button>
                   </div>
@@ -419,7 +431,7 @@
                   <span class="meta-item">
                     <DownloadSimple size={14} weight="bold" />
                     {formatBytes(group.downloadedBytes)}
-                    {group.totalBytes !== null ? ` из ${formatBytes(group.totalBytes)}` : ''}
+                    {group.totalBytes !== null ? ` ${$t('common.downloads.of')} ${formatBytes(group.totalBytes)}` : ''}
                   </span>
                   <span class="meta-item">
                     <Speedometer size={14} weight="bold" />

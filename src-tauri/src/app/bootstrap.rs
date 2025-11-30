@@ -5,6 +5,7 @@ use crate::core::device::select_device;
 use crate::core::performance::StartupTracker;
 use crate::core::state::{ModelState, SharedState};
 use crate::core::types::DevicePreference;
+use crate::i18n;
 use crate::models::common::model::ModelBackend;
 use tauri::{Emitter, Manager};
 
@@ -49,6 +50,9 @@ fn spawn_startup_tracker(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Инициализируем i18n
+    i18n::init();
+
     let shared = build_shared_state();
     let performance_monitor = {
         let guard = shared.lock().expect("Failed to lock shared state");
@@ -109,6 +113,8 @@ pub fn run() {
             crate::api::download_manager::cancel_download,
             crate::api::download_manager::remove_download_entry,
             crate::api::download_manager::clear_download_history,
+            crate::api::get_locale,
+            crate::api::set_locale,
         ])
         .setup(move |app| {
             let handle = app.handle();

@@ -4,6 +4,7 @@
   import _TextT from "phosphor-svelte/lib/TextT";
   import CheckCircle from "phosphor-svelte/lib/CheckCircle";
   import Lightbulb from "phosphor-svelte/lib/Lightbulb";
+  import { t } from '$lib/i18n';
   
   export let isLoadingModel = false;
   export let isCancelling = false;
@@ -11,34 +12,18 @@
   export let loadingProgress = 0;
   export let errorText = "";
 
-  function stageText(stage: string): string {
-    switch (stage) {
-      case 'start': return 'Инициализация загрузки...';
-      case 'device': return 'Выбор устройства...';
-      case 'open_file': return 'Открытие файла модели...';
-      case 'read_header': return 'Чтение метаданных GGUF...';
-      case 'tokenizer': return 'Инициализация токенизатора...';
-      case 'detect_arch': return 'Определение архитектуры...';
-      case 'build_model': return 'Создание модели...';
-      case 'build_model_done': return 'Модель создана';
-      case 'hub_get': return 'Загрузка из HF Hub...';
-      case 'hub_list': return 'Чтение списка весов...';
-      case 'hub_cache': return 'Кэширование весов...';
-      case 'scan_weights': return 'Проверка весов...';
-      case 'config': return 'Чтение config.json...';
-      case 'finalize': return 'Завершение...';
-      case 'complete': return 'Готово';
-      case 'model': return 'Загрузка модели...';
-      case 'cancelling': return 'Отмена загрузки...';
-      case 'cancel': return 'Загрузка отменена';
-      case 'error': return 'Ошибка при загрузке';
-      case 'unload_start': return 'Начало выгрузки...';
-      case 'unload_model': return 'Освобождение модели...';
-      case 'unload_tokenizer': return 'Освобождение токенизатора...';
-      case 'unload_complete': return 'Выгружено';
-      default:
-        return stage ? `Этап: ${stage}` : '';
+  $: stageTextValue = (stage: string) => {
+    const key = `chat.loading.stages.${stage}`;
+    const translated = $t(key);
+    // Если перевод не найден (вернулся ключ), используем дефолтный
+    if (translated === key) {
+      return stage ? $t('chat.loading.stages.default', { stage }) : '';
     }
+    return translated;
+  };
+  
+  function stageText(stage: string): string {
+    return stageTextValue(stage);
   }
 </script>
 
@@ -46,9 +31,9 @@
   <div class="loading-status" class:success={loadingStage === "complete"} class:cancelling={isCancelling}>
     <div class="loading-stage">
       {#if isCancelling}
-        <span class="stage-icon"><Stop size={16} weight="bold" /></span> Отмена загрузки...
+        <span class="stage-icon"><Stop size={16} weight="bold" /></span> {$t('chat.loading.cancelling')}
       {:else if loadingStage === "complete"}
-        <span class="stage-icon"><CheckCircle size={16} weight="bold" /></span> Модель и токенизатор готовы к работе!
+        <span class="stage-icon"><CheckCircle size={16} weight="bold" /></span> {$t('chat.loading.complete')}
       {:else}
         <span class="stage-icon"><Package size={16} weight="bold" /></span> {stageText(loadingStage)}
       {/if}
@@ -58,7 +43,7 @@
         <div class="progress-fill" style="width: {loadingProgress}%"></div>
       </div>
       <div class="loading-hint">
-        <Lightbulb size={14} weight="duotone" style="vertical-align: -2px;" /> Нажмите кнопку еще раз для отмены загрузки
+        <Lightbulb size={14} weight="duotone" style="vertical-align: -2px;" /> {$t('chat.loading.cancelHint')}
       </div>
     {/if}
   </div>

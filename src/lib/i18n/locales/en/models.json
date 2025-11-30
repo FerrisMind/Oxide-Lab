@@ -1,0 +1,92 @@
+{
+  "tabs": {
+    "local": "My Models",
+    "remote": "Search Models"
+  },
+  "local": {
+    "folderLabel": "Models folder",
+    "folderNotSelected": "Folder not selected",
+    "notSelected": "Not selected",
+    "search": "Search",
+    "searchPlaceholder": "Name, architecture, quantization...",
+    "candleOnly": "Candle compatible only",
+    "noModels": "No models matching the selected conditions.",
+    "selectFolder": "Select a models folder to get started.",
+    "menu": {
+      "selectFolder": "Select folder",
+      "rescan": "Rescan"
+    },
+    "table": {
+      "architecture": "Architecture",
+      "parameters": "Parameters",
+      "publisher": "Publisher",
+      "modelName": "Model name",
+      "quant": "Quant",
+      "size": "Size",
+      "format": "Format"
+    },
+    "details": {
+      "delete": "Delete",
+      "loadToChat": "Load to chat",
+      "path": "Path",
+      "size": "Size",
+      "date": "Date",
+      "architecture": "Architecture",
+      "format": "Format",
+      "detected": "Detected",
+      "context": "Context",
+      "validation": "Validation",
+      "valid": "Valid",
+      "warning": "Warning",
+      "error": "Error",
+      "deleteConfirm": "Delete model \"{name}\"?\nFile will be moved to trash.",
+      "edit": {
+        "ariaLabel": "Edit model name and publisher",
+        "publisher": "Publisher",
+        "publisherPlaceholder": "publisher",
+        "name": "Name",
+        "namePlaceholder": "publisher/name",
+        "save": "Save",
+        "cancel": "Cancel"
+      },
+      "metadata": {
+        "title": "GGUF Metadata",
+        "showAll": "Show all",
+        "hide": "Hide",
+        "formatVersion": "Format version",
+        "tensorCount": "Tensor count",
+        "alignment": "Alignment",
+        "tokenCount": "Token count"
+      }
+    },
+    "errors": {
+      "retry": "Retry"
+    }
+  },
+  "remote": {
+    "searchPlaceholder": "Name or keywords",
+    "searchPlaceholderFull": "Search models on Hugging Face...",
+    "allFamilies": "All families",
+    "allFormats": "All formats",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing...",
+    "importConfig": "Import configuration",
+    "resetConfig": "Reset configuration",
+    "version": "Version:",
+    "retry": "Retry",
+    "loading": "Loading cards...",
+    "noResults": "No cards found. Try changing filters.",
+    "downloading": "Downloading...",
+    "noDescription": "No description available.",
+    "sources": {
+      "gguf": "GGUF sources:",
+      "safetensors": "safetensors sources:"
+    },
+    "quantization": "Quantization",
+    "modelsFolder": "Models folder:",
+    "folderNotSelected": "Folder not selected — go to the \"My Models\" tab and specify the path.",
+    "selectCard": "Select a card to see details and download the desired format.",
+    "selectFolderAlert": "Select a folder in the \"My Models\" section to download a model."
+  }
+}
+

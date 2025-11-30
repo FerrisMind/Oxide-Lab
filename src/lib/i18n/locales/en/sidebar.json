@@ -1,0 +1,17 @@
+{
+  "navigation": {
+    "chat": "Chat with Model",
+    "models": "Model Manager",
+    "settings": "Settings",
+    "api": "API Work",
+    "performance": "Performance"
+  },
+  "footer": {
+    "downloads": "Downloads",
+    "about": "About"
+  },
+  "brand": {
+    "home": "Home"
+  }
+}
+

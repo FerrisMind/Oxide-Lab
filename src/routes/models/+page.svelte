@@ -4,14 +4,15 @@
   import RemoteModelsPanel from '$lib/components/model-manager/RemoteModelsPanel.svelte';
   import { folderPath, scanFolder } from '$lib/stores/local-models';
   import { setPageTabs, clearPageTabs, activePageTab } from '$lib/stores/page-tabs.svelte';
+  import { t } from '$lib/i18n';
 
   type TabId = 'local' | 'remote';
 
   let activeTab = $state<TabId>('local');
-  const tabs: { id: TabId; label: string }[] = [
-    { id: 'local', label: 'Мои модели' },
-    { id: 'remote', label: 'Поиск моделей' },
-  ];
+  const tabs = $derived([
+    { id: 'local' as TabId, label: $t('models.tabs.local') },
+    { id: 'remote' as TabId, label: $t('models.tabs.remote') },
+  ]);
 
   onMount(() => {
     setPageTabs(tabs, 'local');

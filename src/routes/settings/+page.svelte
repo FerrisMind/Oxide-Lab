@@ -3,8 +3,10 @@
   import { invoke } from '@tauri-apps/api/core';
   import type { PrecisionPolicy } from '$lib/types';
 import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
-import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
-import { modelSelectorSearchEnabled } from '$lib/stores/ui-preferences';
+  import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+  import { modelSelectorSearchEnabled } from '$lib/stores/ui-preferences';
+  import { t } from '$lib/i18n';
+  import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 
   let currentPolicy: PrecisionPolicy = { Default: null };
   let isLoading = $state(true);
@@ -198,23 +200,20 @@ function handleModelSearchToggle(enabled: boolean) {
 
 <div class="settings-page">
   <div class="settings-header">
-    <h1>Настройки приложения</h1>
+    <h1>{$t('settings.title')}</h1>
   </div>
 
   <div class="settings-section">
-    <h2>Политика точности (Precision Policy)</h2>
+    <h2>{$t('settings.precisionPolicy.title')}</h2>
     <p class="settings-description">
-      Выберите политику точности для загрузки и выполнения моделей. Это влияет на использование
-      памяти и производительность.<br />
+      {$t('settings.precisionPolicy.description')}<br />
       <span class="warning-text">
-        <b>Внимание:</b> параметр precision влияет только на <b>не квантизованные</b> модели (float32/float16).
-        Для квантизованных моделей (4-bit/8-bit) точность весов фиксирована, настройка влияет только
-        на промежуточные вычисления.
+        <b>{$t('settings.precisionPolicy.warning')}</b>
       </span>
     </p>
 
     {#if isLoading}
-      <div class="loading">Загрузка настроек...</div>
+      <div class="loading">{$t('settings.precisionPolicy.loading')}</div>
     {:else}
       <div class="precision-options">
         <div
@@ -229,9 +228,9 @@ function handleModelSearchToggle(enabled: boolean) {
             }
           }}
         >
-          <h3>Стандартная</h3>
-          <p>CPU: F32, GPU: BF16</p>
-          <p class="option-description">Оптимальный баланс между производительностью и точностью</p>
+          <h3>{$t('settings.precisionPolicy.options.default.title')}</h3>
+          <p>{$t('settings.precisionPolicy.options.default.specs')}</p>
+          <p class="option-description">{$t('settings.precisionPolicy.options.default.description')}</p>
         </div>
 
         <div
@@ -246,9 +245,9 @@ function handleModelSearchToggle(enabled: boolean) {
             }
           }}
         >
-          <h3>Экономия памяти</h3>
-          <p>CPU: F32, GPU: F16</p>
-          <p class="option-description">Меньше использование памяти, немного ниже точность</p>
+          <h3>{$t('settings.precisionPolicy.options.memoryEfficient.title')}</h3>
+          <p>{$t('settings.precisionPolicy.options.memoryEfficient.specs')}</p>
+          <p class="option-description">{$t('settings.precisionPolicy.options.memoryEfficient.description')}</p>
         </div>
 
         <div
@@ -263,9 +262,9 @@ function handleModelSearchToggle(enabled: boolean) {
             }
           }}
         >
-          <h3>Максимальная точность</h3>
-          <p>CPU: F32, GPU: F32</p>
-          <p class="option-description">Наивысшая точность, больше использование памяти</p>
+          <h3>{$t('settings.precisionPolicy.options.maximumPrecision.title')}</h3>
+          <p>{$t('settings.precisionPolicy.options.maximumPrecision.specs')}</p>
+          <p class="option-description">{$t('settings.precisionPolicy.options.maximumPrecision.description')}</p>
         </div>
       </div>
     {/if}
@@ -278,19 +277,17 @@ function handleModelSearchToggle(enabled: boolean) {
   </div>
 
   <div class="settings-section">
-    <h2>Ручной лимит CPU-потоков</h2>
+    <h2>{$t('settings.threadLimit.title')}</h2>
     <p class="settings-description">
-      Если нужно ограничить количество потоков, которые candle может использовать через rayon,
-      включите ручной лимит. Слайдер позволяет выбрать число потоков, после чего приложение
-      применит переменную окружения `RAYON_NUM_THREADS`.
+      {$t('settings.threadLimit.description')}
     </p>
 
     {#if threadLimitLoading}
-      <div class="loading">Загрузка предустановленного лимита...</div>
+      <div class="loading">{$t('settings.threadLimit.loading')}</div>
     {:else}
       <div class="thread-control">
         <label class="slider-label">
-          <span>Максимум потоков: {threadSliderValue}</span>
+          <span>{$t('settings.threadLimit.maxThreads', { count: threadSliderValue })}</span>
           <input
             class="thread-slider"
             type="range"
@@ -306,10 +303,13 @@ function handleModelSearchToggle(enabled: boolean) {
             onclick={() => applyCustomThreadLimit(null)}
             disabled={threadLimit === null}
           >
-            Использовать системное значение ({hardwareConcurrency} потоков)
+            {$t('settings.threadLimit.useSystem', { count: hardwareConcurrency })}
           </button>
           <p class="thread-status">
-            Текущий режим: {threadLimit === null ? 'автоматический' : 'ручной'} ({threadLimit ?? hardwareConcurrency} потоков)
+            {$t('settings.threadLimit.currentMode', { 
+                mode: $t(`settings.threadLimit.modes.${threadLimit === null ? 'automatic' : 'manual'}`),
+                count: threadLimit ?? hardwareConcurrency 
+            })}
           </p>
         </div>
       </div>
@@ -323,10 +323,9 @@ function handleModelSearchToggle(enabled: boolean) {
   </div>
 
   <div class="settings-section experimental-section" class:enabled={experimentalFeatures.enabled}>
-    <h2>Экспериментальные функции</h2>
+    <h2>{$t('settings.experimental.title')}</h2>
     <p class="settings-description">
-      Включите экспериментальные функции для тестирования новых возможностей. Эти функции могут быть
-      нестабильными и содержать ошибки.
+      {$t('settings.experimental.description')}
     </p>
 
     <div class="experimental-features-toggle">
@@ -340,22 +339,21 @@ function handleModelSearchToggle(enabled: boolean) {
             )}
         />
         <span class="toggle-slider"></span>
-        <span class="toggle-text">Включить экспериментальные функции</span>
+        <span class="toggle-text">{$t('settings.experimental.enable')}</span>
       </label>
       <p class="toggle-description">
         <span class="status-text" class:enabled={experimentalFeatures.enabled}>
-          <span class="status-enabled">✓ Экспериментальные функции включены</span>
-          <span class="status-disabled">✗ Экспериментальные функции отключены</span>
+          <span class="status-enabled">{$t('settings.experimental.enabled')}</span>
+          <span class="status-disabled">{$t('settings.experimental.disabled')}</span>
         </span>
       </p>
     </div>
   </div>
 
   <div class="settings-section">
-    <h2>Выпадающий список моделей</h2>
+    <h2>{$t('settings.modelSelector.title')}</h2>
     <p class="settings-description">
-      Настройте поиск внутри основного дропдауна моделей. Если отключить опцию, список будет
-      отображаться без строки фильтрации.
+      {$t('settings.modelSelector.description')}
     </p>
     <label class="toggle-label">
       <input
@@ -365,23 +363,30 @@ function handleModelSearchToggle(enabled: boolean) {
           handleModelSearchToggle((event.currentTarget as HTMLInputElement)?.checked ?? true)}
       />
       <span class="toggle-slider"></span>
-      <span class="toggle-text">Включить поиск по моделям</span>
+      <span class="toggle-text">{$t('settings.modelSelector.enableSearch')}</span>
     </label>
     <p class="toggle-description">
       {modelSearchEnabled
-        ? 'Поиск поможет быстро находить нужные модели.'
-        : 'Поиск скрыт — список показывает все модели как есть.'}
+        ? $t('settings.modelSelector.enabledDescription')
+        : $t('settings.modelSelector.disabledDescription')}
     </p>
   </div>
 
   <div class="settings-section">
-    <h2>Мониторинг производительности</h2>
+    <h2>{$t('settings.performance.title')}</h2>
     <p class="settings-description">
-      Отслеживание производительности приложения, включая время запуска, использование памяти и
-      скорость работы моделей.
+      {$t('settings.performance.description')}
     </p>
 
     <PerformanceMonitor />
+  </div>
+
+  <div class="settings-section">
+    <h2>{$t('settings.language.title')}</h2>
+    <p class="settings-description">
+      {$t('settings.language.description')}
+    </p>
+    <LanguageSwitcher />
   </div>
 </div>
 

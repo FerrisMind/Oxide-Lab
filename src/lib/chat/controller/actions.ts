@@ -10,6 +10,8 @@ import type { ChatControllerCtx } from './types';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { createStreamListener } from './listener';
 import { buildPromptWithChatTemplate } from '$lib/chat/prompts';
+import { get } from 'svelte/store';
+import { t } from '$lib/i18n';
 
 export function createActions(ctx: ChatControllerCtx) {
   const stream = createStreamListener(ctx);
@@ -207,7 +209,7 @@ export function createActions(ctx: ChatControllerCtx) {
       const err = String(e ?? 'Unknown error');
       ctx.errorText = err;
       try {
-        await message(err, { title: 'Ошибка загрузки модели', kind: 'error' });
+        await message(err, { title: get(t)('chat.errors.loadFailed'), kind: 'error' });
       } catch {}
     } finally {
       // Управление состоянием происходит через события load_progress
@@ -230,9 +232,10 @@ export function createActions(ctx: ChatControllerCtx) {
       await new Promise((r) => setTimeout(r, 300));
       ctx.isLoaded = false;
       ctx.messages = [];
-      ctx.errorText = 'Модель и токенизатор успешно выгружены из памяти';
+      ctx.errorText = get(t)('chat.loading.unloadSuccess');
+      const unloadSuccessText = get(t)('chat.loading.unloadSuccess');
       setTimeout(() => {
-        if (ctx.errorText === 'Модель и токенизатор успешно выгружены из памяти')
+        if (ctx.errorText === unloadSuccessText)
           ctx.errorText = '';
       }, 3000);
     } catch (e) {
@@ -249,8 +252,8 @@ export function createActions(ctx: ChatControllerCtx) {
     const text = ctx.prompt.trim();
     if (!text || ctx.busy) return;
     if (!ctx.isLoaded) {
-      await message('Сначала загрузите модель и токенизатор', {
-        title: 'Модель не загружена',
+      await message(get(t)('chat.errors.loadModelFirst'), {
+        title: get(t)('chat.errors.modelNotLoaded'),
         kind: 'warning',
       });
       return;
@@ -342,11 +345,11 @@ export function createActions(ctx: ChatControllerCtx) {
       const msgs = ctx.messages;
       const last = msgs[msgs.length - 1];
       if (last && last.role === 'assistant' && last.content === '') {
-        last.content = `Ошибка: ${err}`;
+        last.content = `${get(t)('chat.errors.generationFailed')}: ${err}`;
         ctx.messages = msgs;
       }
       try {
-        await message(err, { title: 'Ошибка генерации', kind: 'error' });
+        await message(err, { title: get(t)('chat.errors.generationFailed'), kind: 'error' });
       } catch {}
     } finally {
       ctx.busy = false;

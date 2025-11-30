@@ -1,0 +1,82 @@
+{
+  "buttons": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "reload": "Reload",
+    "refresh": "Refresh",
+    "open": "Open",
+    "download": "Download",
+    "upload": "Upload",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset",
+    "apply": "Apply",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit"
+  },
+  "status": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information",
+    "pending": "Pending",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "windowControls": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "close": "Close"
+  },
+  "model": {
+    "selectModel": "Select a model",
+    "current": "Current",
+    "reloadModel": "Reload model",
+    "unknownArchitecture": "Unknown architecture"
+  },
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "name": "Name",
+    "description": "Description",
+    "version": "Version",
+    "author": "Author",
+    "date": "Date",
+    "size": "Size",
+    "type": "Type",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "downloads": {
+    "title": "Downloads",
+    "close": "Close",
+    "noActiveDownloads": "No active downloads",
+    "loading": "Loading data…",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "of": "of",
+    "units": {
+      "bytes": "B",
+      "kilobytes": "KB",
+      "megabytes": "MB",
+      "gigabytes": "GB",
+      "terabytes": "TB",
+      "bytesPerSec": "B/s",
+      "kilobytesPerSec": "KB/s",
+      "megabytesPerSec": "MB/s",
+      "gigabytesPerSec": "GB/s"
+    }
+  }
+}
+

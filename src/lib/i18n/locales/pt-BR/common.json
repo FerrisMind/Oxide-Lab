@@ -1,0 +1,82 @@
+{
+  "buttons": {
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "reload": "Recarregar",
+    "refresh": "Atualizar",
+    "open": "Abrir",
+    "download": "Baixar",
+    "upload": "Enviar",
+    "search": "Pesquisar",
+    "filter": "Filtrar",
+    "reset": "Redefinir",
+    "apply": "Aplicar",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "submit": "Enviar"
+  },
+  "status": {
+    "loading": "Carregando...",
+    "saving": "Salvando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "warning": "Aviso",
+    "info": "Informação",
+    "pending": "Pendente",
+    "completed": "Concluído",
+    "failed": "Falhou",
+    "cancelled": "Cancelado"
+  },
+  "windowControls": {
+    "minimize": "Minimizar",
+    "maximize": "Maximizar",
+    "restore": "Restaurar",
+    "close": "Fechar"
+  },
+  "model": {
+    "selectModel": "Selecione um modelo",
+    "current": "Atual",
+    "reloadModel": "Recarregar modelo",
+    "unknownArchitecture": "Arquitetura desconhecida"
+  },
+  "common": {
+    "yes": "Sim",
+    "no": "Não",
+    "ok": "OK",
+    "name": "Nome",
+    "description": "Descrição",
+    "version": "Versão",
+    "author": "Autor",
+    "date": "Data",
+    "size": "Tamanho",
+    "type": "Tipo",
+    "status": "Status",
+    "actions": "Ações"
+  },
+  "downloads": {
+    "title": "Downloads",
+    "close": "Fechar",
+    "noActiveDownloads": "Nenhum download ativo",
+    "loading": "Carregando dados…",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "cancel": "Cancelar",
+    "of": "de",
+    "units": {
+      "bytes": "B",
+      "kilobytes": "KB",
+      "megabytes": "MB",
+      "gigabytes": "GB",
+      "terabytes": "TB",
+      "bytesPerSec": "B/s",
+      "kilobytesPerSec": "KB/s",
+      "megabytesPerSec": "MB/s",
+      "gigabytesPerSec": "GB/s"
+    }
+  }
+}
+

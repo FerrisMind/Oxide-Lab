@@ -1,9 +1,11 @@
 import type { BubbleCtx } from './bubble_ctx';
 import { THINK_OPEN_TOKEN, THINK_CLOSE_TOKEN } from '../parser/constants';
+import { get } from 'svelte/store';
+import { t } from '$lib/i18n';
 
 const thinkState = new Map<string, boolean>();
-const THINK_LOADING_LABEL = 'Рассуждения…';
-const THINK_READY_LABEL = 'Размышления';
+const THINK_LOADING_LABEL = () => get(t)('chat.thinking.loading');
+const THINK_READY_LABEL = () => get(t)('chat.thinking.ready');
 const THINKING_KEY_PREFIX = 'thinking-block-';
 
 function ensureThinkKey(ctx: BubbleCtx) {
@@ -40,7 +42,7 @@ function setLoading(ctx: BubbleCtx, loading: boolean) {
     ctx.thinkCardEl.classList.toggle('is-loading', loading);
   }
   if (ctx.thinkLabelEl) {
-    ctx.thinkLabelEl.textContent = loading ? THINK_LOADING_LABEL : THINK_READY_LABEL;
+    ctx.thinkLabelEl.textContent = loading ? THINK_LOADING_LABEL() : THINK_READY_LABEL();
   }
 }
 

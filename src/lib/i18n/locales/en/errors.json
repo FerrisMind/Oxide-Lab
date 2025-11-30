@@ -1,0 +1,32 @@
+{
+  "common": {
+    "unknown": "An unknown error occurred",
+    "network": "Network error",
+    "timeout": "Request timeout",
+    "notFound": "Resource not found",
+    "unauthorized": "Unauthorized access",
+    "forbidden": "Access forbidden",
+    "serverError": "Server error"
+  },
+  "model": {
+    "loadFailed": "Failed to load model",
+    "unloadFailed": "Failed to unload model",
+    "notLoaded": "Model is not loaded",
+    "invalidPath": "Invalid model path",
+    "unsupportedFormat": "Unsupported model format"
+  },
+  "settings": {
+    "loadFailed": "Failed to load settings",
+    "saveFailed": "Failed to save settings"
+  },
+  "download": {
+    "failed": "Download failed",
+    "cancelled": "Download cancelled",
+    "networkError": "Network error during download"
+  },
+  "file": {
+    "tooLarge": "File is too large. Maximum size is 20 MB.",
+    "removeFile": "Remove file"
+  }
+}
+

@@ -26,6 +26,7 @@
   import Cube from 'phosphor-svelte/lib/Cube';
   import Gemma from '@lobehub/icons-static-svg/icons/gemma-color.svg';
   import Qwen from '@lobehub/icons-static-svg/icons/qwen-color.svg';
+  import { t } from '$lib/i18n';
 
   function getModelIcon(card: ModelCardSummary) {
     const family = card.family?.toLowerCase() || '';
@@ -105,7 +106,7 @@
 
   async function handleDownload(card: ModelCardSummary, format: 'gguf' | 'safetensors') {
     if (!$folderPath) {
-      alert('Выберите папку в разделе «Мои модели», чтобы скачать модель.');
+      alert($t('models.remote.selectFolderAlert'));
       return;
     }
     const downloadId = getDownloadId(card, format);
@@ -168,39 +169,39 @@
   <section class="search-bar">
     <input
       type="search"
-      placeholder="Название или ключевые слова"
+      placeholder={$t('models.remote.searchPlaceholder')}
       value={$modelCardFilters.searchText}
-      on:input={(event) => updateFilter({ searchText: (event.currentTarget as HTMLInputElement).value })}
+      oninput={(event) => updateFilter({ searchText: (event.currentTarget as HTMLInputElement).value })}
     />
     <select
       value={$modelCardFilters.family}
-      on:change={(event) => updateFilter({ family: (event.currentTarget as HTMLSelectElement).value })}
+      onchange={(event) => updateFilter({ family: (event.currentTarget as HTMLSelectElement).value })}
     >
-      <option value="">Все семейства</option>
+      <option value="">{$t('models.remote.allFamilies')}</option>
       {#each $uniqueFamilies as family}
         <option value={family}>{family}</option>
       {/each}
     </select>
     <select
       value={$modelCardFilters.format}
-      on:change={(event) => updateFilter({ format: (event.currentTarget as HTMLSelectElement).value as 'gguf' | 'safetensors' | '' })}
+      onchange={(event) => updateFilter({ format: (event.currentTarget as HTMLSelectElement).value as 'gguf' | 'safetensors' | '' })}
     >
-      <option value="">Все форматы</option>
+      <option value="">{$t('models.remote.allFormats')}</option>
       <option value="gguf">GGUF</option>
       <option value="safetensors">safetensors</option>
     </select>
-    <button class="btn primary" on:click={refreshCards} disabled={$modelCardsLoading}>
-      {$modelCardsLoading ? 'Обновление...' : 'Обновить'}
+    <button class="btn primary" onclick={refreshCards} disabled={$modelCardsLoading}>
+      {$modelCardsLoading ? $t('models.remote.refreshing') : $t('models.remote.refresh')}
     </button>
     <div class="config-actions">
-      <button class="btn secondary" on:click={handleImportConfig} disabled={$modelCardsLoading}>
-        Импорт конфигурации
+      <button class="btn secondary" onclick={handleImportConfig} disabled={$modelCardsLoading}>
+        {$t('models.remote.importConfig')}
       </button>
-      <button class="btn secondary" on:click={handleResetConfig} disabled={$modelCardsLoading}>
-        Сбросить конфигурацию
+      <button class="btn secondary" onclick={handleResetConfig} disabled={$modelCardsLoading}>
+        {$t('models.remote.resetConfig')}
       </button>
       <span class="config-version">
-        Версия: {$modelCardsVersion ?? '—'}
+        {$t('models.remote.version')} {$modelCardsVersion ?? '—'}
       </span>
     </div>
   </section>
@@ -208,16 +209,16 @@
   {#if $modelCardsError}
     <div class="error-banner">
       <span>{$modelCardsError}</span>
-      <button class="btn secondary" on:click={refreshCards}>Повторить</button>
+      <button class="btn secondary" onclick={refreshCards}>{$t('models.remote.retry')}</button>
     </div>
   {/if}
 
   <section class="results">
     {#if $modelCardsLoading}
-      <div class="loading-state">Загрузка карточек...</div>
+      <div class="loading-state">{$t('models.remote.loading')}</div>
     {:else if !$filteredModelCards.length}
       <div class="empty-state">
-        <p>Карточки не найдены. Попробуйте изменить фильтры.</p>
+        <p>{$t('models.remote.noResults')}</p>
       </div>
     {:else}
       <div class="results-layout">
@@ -227,7 +228,7 @@
               type="button"
               class="results-item"
               class:selected={selectedCard?.id === card.id}
-              on:click={() => (selectedCard = card)}
+              onclick={() => (selectedCard = card)}
             >
               <div>
                 <strong>{card.name}</strong>
@@ -240,7 +241,7 @@
               </div>
               {#if isDownloading(card, 'gguf') || isDownloading(card, 'safetensors')}
                 <div class="card-progress">
-                  <span>Загрузка...</span>
+                  <span>{$t('models.remote.downloading')}</span>
                 </div>
               {/if}
             </button>
@@ -276,15 +277,15 @@
                 </div>
               </header>
 
-              <p class="description">{selectedCard.description ?? 'Описание отсутствует.'}</p>
+              <p class="description">{selectedCard.description ?? $t('models.remote.noDescription')}</p>
 
               {#if selectedCard.sources}
                 <div class="source-row">
                   {#if selectedCard.sources.gguf}
-                    <span>GGUF источники: {selectedCard.sources.gguf.repo_id}</span>
+                    <span>{$t('models.remote.sources.gguf')} {selectedCard.sources.gguf.repo_id}</span>
                   {/if}
                   {#if selectedCard.sources.safetensors}
-                    <span>safetensors источники: {selectedCard.sources.safetensors.repo_id}</span>
+                    <span>{$t('models.remote.sources.safetensors')} {selectedCard.sources.safetensors.repo_id}</span>
                   {/if}
                 </div>
               {/if}
@@ -298,11 +299,11 @@
               <div class="formats">
                 {#if selectedCardQuantizations.length}
                   <div class="quantization-row">
-                    <label for={`quant-${selectedCard.id}`}>Квантизация</label>
+                    <label for={`quant-${selectedCard.id}`}>{$t('models.remote.quantization')}</label>
                     <select
                       id={`quant-${selectedCard.id}`}
                       value={selectedQuantizations[selectedCard.id] ?? selectedCardQuantizations[0]}
-                    on:change={(event) => {
+                    onchange={(event) => {
                       if (!selectedCard) return;
                       setQuantization(
                         selectedCard.id,
@@ -319,7 +320,7 @@
                 {#if selectedCard.has_gguf}
                   <button
                     class="btn primary"
-                    on:click={() => handleDownload(selectedCard!, 'gguf')}
+                    onclick={() => handleDownload(selectedCard!, 'gguf')}
                     disabled={isDownloading(selectedCard!, 'gguf')}
                   >
                     <DownloadSimple size={16} />
@@ -332,7 +333,7 @@
                 {#if selectedCard.has_safetensors}
                   <button
                     class="btn primary"
-                    on:click={() => handleDownload(selectedCard!, 'safetensors')}
+                    onclick={() => handleDownload(selectedCard!, 'safetensors')}
                     disabled={isDownloading(selectedCard!, 'safetensors')}
                   >
                     <DownloadSimple size={16} />
@@ -346,15 +347,15 @@
 
               <p class="destination">
                 {#if $folderPath}
-                  Папка моделей: <code>{$folderPath}</code>
+                  {$t('models.remote.modelsFolder')} <code>{$folderPath}</code>
                 {:else}
-                  Папка не выбрана — перейдите во вкладку «Мои модели» и укажите путь.
+                  {$t('models.remote.folderNotSelected')}
                 {/if}
               </p>
             </article>
           {:else}
             <div class="detail-placeholder">
-              Выберите карточку, чтобы увидеть подробности и скачать нужный формат.
+              {$t('models.remote.selectCard')}
             </div>
           {/if}
         </div>

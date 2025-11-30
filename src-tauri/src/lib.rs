@@ -5,6 +5,7 @@ pub mod api;
 pub mod app;
 pub mod core;
 pub mod generate;
+pub mod i18n;
 pub mod models;
 
 pub use app::run;
