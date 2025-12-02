@@ -79,7 +79,6 @@
 
 Oxide Lab has been recognized by the community for its quality and innovation:
 
-- ⭐ **100+ GitHub stars** in the first 3-4 months of solo development
 - 🏆 **Featured in [Awesome Tauri](https://github.com/tauri-apps/awesome-tauri)** — curated list of quality Tauri applications
 - 🏆 **Featured in [Awesome Svelte](https://github.com/TheComputerM/awesome-svelte)** — curated list of quality Svelte projects
 
