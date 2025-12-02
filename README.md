@@ -1,4 +1,4 @@
-[Русский](README-RU.md) | [Português (BR)](README-PT-BR.md)
+[![English](https://img.shields.io/badge/English-Active-success?style=flat-square)](README.md) [![Русский](https://img.shields.io/badge/Русский-Inactive-lightgrey?style=flat-square)](README-RU.md) [![Português](https://img.shields.io/badge/Português-Inactive-lightgrey?style=flat-square)](README-PT-BR.md)
 
 <!-- Project Logo -->
 <p align="center">
