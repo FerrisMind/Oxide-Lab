@@ -1,13 +1,17 @@
-[![English](https://img.shields.io/badge/English-Inactive-lightgrey?style=flat-square)](README.md) [![Русский](https://img.shields.io/badge/Русский-Inactive-lightgrey?style=flat-square)](README-RU.md) [![Português](https://img.shields.io/badge/Português-Active-success?style=flat-square)](README-PT-BR.md)
+[![English](https://img.shields.io/badge/English-Inactive-lightgrey)](README.md) [![Русский](https://img.shields.io/badge/Русский-Inactive-lightgrey)](README-RU.md) [![Português](https://img.shields.io/badge/Português-Active-success)](README-PT-BR.md)
+
+<br />
 
 <!-- Logo do Projeto -->
 <p align="center">
   <img src=".github/assets/logo.svg" alt="Logo Oxide Lab" width="512" />
 </p>
 
+<br />
+
 > **Chat de IA privado, poderoso e fácil de usar diretamente no seu computador**
 
-![Oxide Lab](https://img.shields.io/badge/Status-Active-brightgreen) ![Platform](https://img.shields.io/badge/Platform-Windows-blue) ![License](https://img.shields.io/badge/License-MIT-yellow) ![Legal](https://img.shields.io/badge/Legal-Compliant-green)
+![Oxide Lab](https://img.shields.io/badge/Status-Active-brightgreen) ![Platform](https://img.shields.io/badge/Platform-Windows-blue) ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ![GitHub Stars](https://img.shields.io/github/stars/FerrisMind/Oxide-Lab?style=social) [![Awesome Tauri](https://awesome.re/mentioned-badge.svg)](https://github.com/tauri-apps/awesome-tauri) [![Awesome Svelte](https://awesome.re/mentioned-badge.svg)](https://github.com/TheComputerM/awesome-svelte)
 
