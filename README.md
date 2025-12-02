@@ -1,4 +1,4 @@
-[Русский](README-RU.md)
+[Русский](README-RU.md) | [Português (BR)](README-PT-BR.md)
 
 <!-- Project Logo -->
 <p align="center">

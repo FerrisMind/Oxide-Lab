@@ -1,4 +1,4 @@
-[English](README.md)
+[English](README.md) | [Português (BR)](README-PT-BR.md)
 
 <!-- Логотип проекта -->
 <p align="center">

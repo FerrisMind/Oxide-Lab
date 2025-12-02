@@ -23,6 +23,7 @@
   import * as SidebarUI from '$lib/components/ui/sidebar/index';
   import { openUrl } from '@tauri-apps/plugin-opener';
   import GithubLogo from 'phosphor-svelte/lib/GithubLogo';
+  import { locale } from '$lib/i18n';
 
 import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
 import { pageTabsList, activePageTab } from '$lib/stores/page-tabs.svelte';
@@ -493,6 +494,9 @@ import * as Tabs from '$lib/components/ui/tabs';
           </p>
           <p><strong>{$t('about.technologies')}:</strong> {$t('about.techStack')}</p>
           <p><strong>{$t('about.version')}:</strong> {appVersion}</p>
+          {#if locale.get() === 'pt-BR'}
+            <p class="translation-credit">{$t('about.translation')}</p>
+          {/if}
         </div>
         <div class="about-actions">
           <button
@@ -969,6 +973,15 @@ import * as Tabs from '$lib/components/ui/tabs';
   .about-info p {
     margin: 6px 0;
     line-height: 1.4;
+  }
+
+  .translation-credit {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
   }
 
   .about-actions {
