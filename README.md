@@ -9,6 +9,8 @@
 
 ![Oxide Lab](https://img.shields.io/badge/Status-Active-brightgreen) ![Platform](https://img.shields.io/badge/Platform-Windows-blue) ![License](https://img.shields.io/badge/License-MIT-yellow) ![Legal](https://img.shields.io/badge/Legal-Compliant-green)
 
+![GitHub Stars](https://img.shields.io/github/stars/FerrisMind/Oxide-Lab?style=social) [![Awesome Tauri](https://awesome.re/mentioned-badge.svg)](https://github.com/tauri-apps/awesome-tauri) [![Awesome Svelte](https://awesome.re/mentioned-badge.svg)](https://github.com/TheComputerM/awesome-svelte)
+
 ---
 
 ## 📚 Table of Contents
@@ -16,6 +18,7 @@
 - [What is this?](#-what-is-this)
 - [Who is this app for?](#-who-is-this-app-for)
 - [Key Features](#-key-features)
+- [Recognition](#️-recognition)
 - [Installation & Setup](#️-installation--setup)
 - [How to Start Using](#-how-to-start-using)
 - [Interface Features](#-interface-features)
@@ -65,6 +68,16 @@
 
 - Support for local Qwen3 models in GGUF format (other models — in plans)
 - Intelligent memory management
+
+---
+
+## 🎖️ Recognition
+
+Oxide Lab has been recognized by the community for its quality and innovation:
+
+- ⭐ **100+ GitHub stars** in the first 3-4 months of solo development
+- 🏆 **Featured in [Awesome Tauri](https://github.com/tauri-apps/awesome-tauri)** — curated list of quality Tauri applications
+- 🏆 **Featured in [Awesome Svelte](https://github.com/TheComputerM/awesome-svelte)** — curated list of quality Svelte projects
 
 ---
 
