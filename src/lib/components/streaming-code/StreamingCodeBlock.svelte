@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { stopPropagation } from 'svelte/legacy';
 
   import { onMount, onDestroy } from 'svelte';
   import CopySimple from 'phosphor-svelte/lib/CopySimple';
@@ -68,7 +67,8 @@
   let _spinnerHost: HTMLSpanElement | null = null;
 
   // Header actions (outside of the editor)
-  function copyCurrentCode() {
+  function copyCurrentCode(e: Event) {
+    e.stopPropagation();
     try {
       const text = renderedCode || code || '';
       if (text != null) navigator.clipboard.writeText(text);
@@ -439,7 +439,7 @@
         type="button"
         aria-label="Копировать"
         title="Копировать"
-        onclick={stopPropagation(copyCurrentCode)}
+        onclick={copyCurrentCode}
       >
         <CopySimple size={16} />
       </button>

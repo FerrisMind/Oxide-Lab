@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { stopPropagation } from 'svelte/legacy';
-
   import CircleNotch from 'phosphor-svelte/lib/CircleNotch';
   import Code from 'phosphor-svelte/lib/Code';
   import CaretDown from 'phosphor-svelte/lib/CaretDown';
@@ -91,7 +89,7 @@
           class="copy-btn"
           role="button"
           tabindex="0"
-          onclick={stopPropagation(handleCopyClick)}
+          onclick={handleCopyClick}
           onkeydown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               handleCopyClick(e);
