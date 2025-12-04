@@ -4,8 +4,7 @@
   import ChatPlaceholder from "./ChatPlaceholder.svelte";
   import InferenceMetricsDisplay from "./InferenceMetricsDisplay.svelte";
   import UserMessageActions from "./UserMessageActions.svelte";
-  import { inferenceMetricsStore } from "$lib/stores/inference-metrics";
-  import { t } from '$lib/i18n';
+import { inferenceMetricsStore } from "$lib/stores/inference-metrics";
 
   // Используем Svelte 5 руны для props
   let { 
@@ -68,9 +67,6 @@
 >
   {#if showModelNotice}
     <ChatPlaceholder variant="inline" />
-  {/if}
-  {#if messages.length === 0 && !showModelNotice}
-    <div class="empty">{$t('chat.messages.empty')}</div>
   {/if}
   {#each messages as m, i}
     <div class="message {m.role}">

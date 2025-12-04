@@ -216,8 +216,7 @@
   }
 }
 
-@media (min-device-pixel-ratio: 2),
-(resolution >=192dpi) {
+@media (min-device-pixel-ratio: 2), (resolution >=192dpi) {
   ::-webkit-scrollbar {
     width: 14px;
     height: 14px;
@@ -415,7 +414,7 @@ select:focus {
   transition: all 0.2s ease;
 }
 
-.checkbox-input:checked+.checkbox-label::before {
+.checkbox-input:checked + .checkbox-label::before {
   background-color: var(--accent);
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgb(59 130 246 / 0.1);
@@ -444,7 +443,7 @@ select:focus {
     height: 20px;
   }
 
-  .checkbox-input:checked+.checkbox-label::before {
+  .checkbox-input:checked + .checkbox-label::before {
     font-size: 16px;
   }
 }
@@ -474,7 +473,6 @@ select:focus {
 }
 
 @keyframes scrollbarPulse {
-
   0%,
   100% {
     opacity: 0.6;
@@ -553,10 +551,10 @@ select:focus {
 }
 
 /* Override collapsed sidebar width */
-[data-state="collapsed"] [data-slot="sidebar-container"] {
+[data-state='collapsed'] [data-slot='sidebar-container'] {
   width: 56px !important;
 }
 
-[data-state="collapsed"] [data-slot="sidebar-gap"] {
+[data-state='collapsed'] [data-slot='sidebar-gap'] {
   width: 56px !important;
 }

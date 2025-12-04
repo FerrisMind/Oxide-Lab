@@ -235,8 +235,7 @@ export function createActions(ctx: ChatControllerCtx) {
       ctx.errorText = get(t)('chat.loading.unloadSuccess');
       const unloadSuccessText = get(t)('chat.loading.unloadSuccess');
       setTimeout(() => {
-        if (ctx.errorText === unloadSuccessText)
-          ctx.errorText = '';
+        if (ctx.errorText === unloadSuccessText) ctx.errorText = '';
       }, 3000);
     } catch (e) {
       const err = String(e ?? 'Unknown error');

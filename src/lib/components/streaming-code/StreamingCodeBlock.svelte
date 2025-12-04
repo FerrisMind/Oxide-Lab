@@ -32,8 +32,8 @@
     theme = 'auto',
     spinnerStartSignal = '[CODE]',
     spinnerEndSignal = '[CODE_END]',
-    showLineNumbers = false,
-    readonly = true,
+    showLineNumbers: _showLineNumbers = false,
+    readonly: _readonly = true,
     onCopied,
     onToggle,
     onStreamingTimeout

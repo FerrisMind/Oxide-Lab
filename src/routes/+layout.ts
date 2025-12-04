@@ -11,18 +11,18 @@ import { getSavedLocale } from '$lib/i18n';
 export const load = async ({ url }) => {
   // Получаем сохраненную локаль из Store или backend (не определяем системную)
   const savedLocale = await getSavedLocale();
-  
+
   // Используем сохраненную локаль или текущую из store, если она уже установлена
   const currentLocaleValue = locale.get();
   const localeToUse = savedLocale || currentLocaleValue || 'en';
-  
+
   // Устанавливаем локаль, если она отличается от текущей
   if (currentLocaleValue !== localeToUse) {
     locale.set(localeToUse);
   }
-  
+
   // Загружаем переводы для текущего пути с сохраненной локалью
   await loadTranslations(localeToUse, url.pathname);
-  
+
   return {};
 };

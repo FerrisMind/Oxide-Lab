@@ -23,12 +23,6 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   import X from 'phosphor-svelte/lib/X';
   import { t } from '$lib/i18n';
 
-  const validationLabels = $derived({
-    ok: $t('models.local.details.valid'),
-    warning: $t('models.local.details.warning'),
-    error: $t('models.local.details.error'),
-  } as Record<ValidationLevel, string>);
-
   const validationColors: Record<ValidationLevel, string> = {
     ok: 'badge-success',
     warning: 'badge-warning',

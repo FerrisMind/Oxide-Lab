@@ -813,4 +813,9 @@
     flex-direction: column;
     min-height: 100%;
   }
+
+	/* Не затемнять хедер/сайдбар при открытии LoaderPanel */
+	:global([data-slot="sheet-overlay"]) {
+		background: transparent !important;
+	}
 </style>

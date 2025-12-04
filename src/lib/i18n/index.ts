@@ -1,6 +1,6 @@
 /**
  * i18n Initialization and Storage Module
- * 
+ *
  * Модуль инициализации i18n и управления сохранением выбранной локали.
  * Использует Tauri Store для персистентного хранения предпочтений пользователя.
  */
@@ -38,7 +38,7 @@ function detectSystemLocale(): SupportedLocale {
   }
 
   const systemLang = navigator.language || navigator.languages?.[0] || 'en';
-  
+
   // Проверяем точное совпадение
   if (SUPPORTED_LOCALES.includes(systemLang as SupportedLocale)) {
     return systemLang as SupportedLocale;
@@ -84,7 +84,7 @@ export async function getSavedLocale(): Promise<SupportedLocale | null> {
   try {
     const storeInstance = await initStore();
     const savedLocale = await storeInstance.get<SupportedLocale>(LOCALE_STORE_KEY);
-    
+
     if (savedLocale && SUPPORTED_LOCALES.includes(savedLocale)) {
       if (import.meta.env.DEV) {
         console.log(`[i18n] Using locale from store: ${savedLocale}`);
@@ -139,10 +139,7 @@ export async function saveLocale(locale: SupportedLocale): Promise<void> {
  * @param newLocale - Новая локаль
  * @param pathname - Текущий путь (для загрузки route-specific переводов)
  */
-export async function setLocale(
-  newLocale: SupportedLocale,
-  pathname: string = '/',
-): Promise<void> {
+export async function setLocale(newLocale: SupportedLocale, pathname: string = '/'): Promise<void> {
   if (!SUPPORTED_LOCALES.includes(newLocale)) {
     console.warn(`[i18n] Unsupported locale: ${newLocale}, falling back to 'en'`);
     newLocale = 'en';
@@ -163,7 +160,10 @@ export async function setLocale(
       console.log(`[i18n] Translations loaded successfully for locale: ${newLocale}`);
     }
   } catch (error) {
-    console.error(`[i18n] Failed to load translations for locale ${newLocale} and path ${pathname}:`, error);
+    console.error(
+      `[i18n] Failed to load translations for locale ${newLocale} and path ${pathname}:`,
+      error,
+    );
     // Пробуем загрузить с fallback локалью
     if (newLocale !== 'en') {
       console.warn(`[i18n] Falling back to English translations`);
@@ -199,4 +199,3 @@ export async function syncLocaleWithBackend(locale: SupportedLocale): Promise<vo
 
 // Экспортируем функции из config для удобства
 export { t, locale, locales, loading, loadTranslations } from './config';
-

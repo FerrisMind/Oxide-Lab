@@ -1,6 +1,6 @@
 /**
  * i18n Configuration for Oxide Lab
- * 
+ *
  * Настройка sveltekit-i18n с поддержкой ICU MessageFormat для плюрализации
  * и форматирования сообщений. Использует асинхронные loaders для загрузки
  * переводов по требованию.
@@ -159,4 +159,3 @@ const config: Config = {
 };
 
 export const { t, locale, locales, loading, loadTranslations } = new i18n(config);
-
