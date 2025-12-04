@@ -601,7 +601,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     overflow: hidden;
   }
 
-  .content:has(:global(.details)) {
+  .content:has(.details) {
     grid-template-columns: 1fr minmax(320px, 360px);
   }
 
