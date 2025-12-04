@@ -88,7 +88,7 @@
   const MAX_FILE_SIZE = 20 * 1024 * 1024;
   let attachError: string | null = $state(null);
   let errorTimer: ReturnType<typeof setTimeout> | null = null;
-  let accept = $state(DEFAULT_TEXT_ACCEPT);
+  let accept = $derived(buildAccept());
   let attachedFiles: AttachDetail[] = $state([]);
 
   // Переменные для автоматического изменения высоты
@@ -282,9 +282,6 @@
       ? null
       : $t('chat.composer.experimental.disabled')
     : $t('chat.composer.experimental.loading'));
-  $effect(() => {
-    accept = buildAccept();
-  });
   // Реактивное обновление высоты при изменении prompt
   $effect(() => {
     if (prompt !== undefined) {

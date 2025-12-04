@@ -39,6 +39,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   let editingModelPath = $state<string | null>(null);
   let editPublisher = $state('');
   let editName = $state('');
+  let candleOnlyFilter = $state($filterOptions.candleOnly ?? false);
 
   function startEditing(model: ModelInfo) {
     editingModelPath = model.path;
@@ -115,6 +116,22 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     }));
   }
 
+  // Синхронизация: обновляем локальное состояние из store при изменении store
+  $effect(() => {
+    const storeValue = $filterOptions.candleOnly ?? false;
+    if (candleOnlyFilter !== storeValue) {
+      candleOnlyFilter = storeValue;
+    }
+  });
+
+  // Синхронизация: обновляем store при изменении локального состояния (только если отличается)
+  $effect(() => {
+    const storeValue = $filterOptions.candleOnly ?? false;
+    if (candleOnlyFilter !== storeValue) {
+      updateFilter({ candleOnly: candleOnlyFilter });
+    }
+  });
+
   async function handleDelete(model: ModelInfo) {
     // Используем простую интерполяцию для confirm сообщения
     const confirmMessage = $t('models.local.details.deleteConfirm').replace('{name}', model.name);
@@ -190,8 +207,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
       <Checkbox
         id="candle-only"
         label={$t('models.local.candleOnly')}
-        checked={$filterOptions.candleOnly ?? false}
-        onchange={(checked: boolean) => updateFilter({ candleOnly: checked })}
+        bind:checked={candleOnlyFilter}
       />
     </div>
   </section>
