@@ -788,7 +788,7 @@
 </main>
 
 <style>
-  /* Контейнер для чата и лоадера — управляет расположением справа */
+  /* Контейнер для чата; панель настроек рендерится через Sheet поверх */
   .chat-container {
     display: flex;
     flex-direction: row;
@@ -808,21 +808,9 @@
     position: relative;
   }
 
-  /* Правая колонка под лоадер-панель фиксированной ширины */
-  .loader-host {
-    flex: 0 0 360px;
-    min-width: 320px;
-    max-width: 500px;
+  .loader-sheet-body :global(.loader) {
     display: flex;
     flex-direction: column;
-    height: 100%;
-  }
-
-  /* Заставляем внутренний LoaderPanel (root: section.loader) тянуться по высоте */
-  .loader-host :global(.loader) {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
+    min-height: 100%;
   }
 </style>
