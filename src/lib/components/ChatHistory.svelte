@@ -1,7 +1,4 @@
 <script lang="ts">
-  import { createBubbler } from 'svelte/legacy';
-
-  const bubble = createBubbler();
   import { chatHistory, sortedSessions, currentSession } from '$lib/stores/chat-history';
   import { onMount } from 'svelte';
   import type { ChatSession } from '$lib/stores/chat-history';
@@ -329,7 +326,6 @@
                 }}
                 onclick={(e) => {
                   e.stopPropagation();
-                  bubble('click')(e);
                 }}
                 aria-label="Новое название чата"
               />
@@ -347,7 +343,6 @@
               class="session-actions"
               onclick={(e) => {
                 e.stopPropagation();
-                bubble('click')(e);
               }}
               onkeydown={(e) => e.stopPropagation()}
               role="toolbar"
@@ -386,7 +381,6 @@
               class="delete-confirm"
               onclick={(e) => {
                 e.stopPropagation();
-                bubble('click')(e);
               }}
               onkeydown={(e) => e.stopPropagation()}
               role="alertdialog"
@@ -426,7 +420,6 @@
       class="modal"
       onclick={(e) => {
         e.stopPropagation();
-        bubble('click')(e);
       }}
       onkeydown={(e) => {
         e.stopPropagation();
@@ -494,7 +487,6 @@
       class="modal"
       onclick={(e) => {
         e.stopPropagation();
-        bubble('click')(e);
       }}
       onkeydown={(e) => {
         e.stopPropagation();
