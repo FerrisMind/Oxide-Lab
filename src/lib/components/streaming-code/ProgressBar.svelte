@@ -94,8 +94,8 @@
             handleCopyClick(event);
           }}
           onkeydown={(event: KeyboardEvent) => {
-            event.stopPropagation();
             if (event.key === 'Enter' || event.key === ' ') {
+              event.stopPropagation();
               handleCopyClick(event);
             }
           }}
