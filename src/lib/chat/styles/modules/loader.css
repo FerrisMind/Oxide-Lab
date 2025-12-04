@@ -38,7 +38,7 @@
 
 .loader .field {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   margin: 8px 0;
 }
 
@@ -107,7 +107,7 @@
   border: 1px solid var(--border-color);
 
   /* make checkbox slightly more rounded to avoid sharp rectangle */
-  border-radius: 6px;
+  border-radius: 12px;
   background: var(--panel-bg);
   display: inline-block;
   position: relative;
@@ -129,7 +129,7 @@
   /* center the checkmark inside the 16x16 box */
   left: 50%;
   top: 36%;
-  width: 6px;
+  width: 8px;
   height: 10px;
   border: solid #1b1b1b;
   border-width: 0 2px 2px 0;

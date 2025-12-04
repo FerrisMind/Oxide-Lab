@@ -339,7 +339,7 @@
   .metrics-alerts {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1rem;
   }
 
@@ -385,7 +385,7 @@
   .btn {
     padding: 0.375rem 0.75rem;
     border: none;
-    border-radius: 4px;
+    border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 500;
     cursor: default;
@@ -443,7 +443,7 @@
 
   .alert {
     padding: 0.75rem;
-    border-radius: 6px;
+    border-radius: 12px;
     border: 2px solid;
     transition: all 0.3s ease;
   }
@@ -502,7 +502,7 @@
     color: var(--text);
     font-size: 1.25rem;
     line-height: 1;
-    border-radius: 4px;
+    border-radius: 12px;
   }
 
   .btn-dismiss:hover {
@@ -543,7 +543,7 @@
 
   /* Скроллбар */
   .alerts-list::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
   }
 
   .alerts-list::-webkit-scrollbar-track {

@@ -123,7 +123,7 @@
   .btn {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding: 8px 16px;
     border: none;
     border-radius: 10px;

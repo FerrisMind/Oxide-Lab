@@ -40,7 +40,7 @@
     display: block;
     font-size: 0.875rem;
     color: var(--muted);
-    margin-bottom: 4px;
+    margin-bottom: 8px;
   }
 
   .stat-value {

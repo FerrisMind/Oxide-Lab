@@ -419,7 +419,7 @@
   .streaming-code-block {
     width: 100%;
     margin: 8px 0;
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
     transition: all 0.3s ease;
   }
@@ -511,7 +511,7 @@
     border: 1px solid var(--border-color);
     background: var(--panel-bg);
     color: var(--text);
-    border-radius: 4px;
+    border-radius: 12px;
   }
 
   /* Collapse styles */
@@ -520,7 +520,7 @@
   }
   .streaming-code-block.collapsed .streaming-code-header {
     border-bottom: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
   }
 
   /* Reduce motion for accessibility */

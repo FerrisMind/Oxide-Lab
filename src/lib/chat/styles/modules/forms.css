@@ -18,7 +18,7 @@
 
 .field {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   margin: 10px 0;
 }
 .field label {
@@ -63,7 +63,7 @@
 
 .inside-btn {
   position: absolute;
-  right: 4px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   width: 28px;
@@ -74,7 +74,7 @@
   border: 1px solid var(--border-color);
   background: var(--panel-bg);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: default;
 }
 .inside-btn svg {
@@ -95,7 +95,7 @@
   cursor: default;
   color: #3a2f4f;
   font-weight: 600;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .primary.danger {
   background: #ffb3b3;
@@ -124,7 +124,7 @@
 }
 .param {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 .param label {
   font-size: 12px;

@@ -575,7 +575,7 @@
 
   .quantization-row select {
     padding: 0.5rem;
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid var(--border-color, #d8dee5);
     background: var(--panel-bg);
     font-size: 0.9rem;

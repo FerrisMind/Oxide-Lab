@@ -11,7 +11,7 @@
 </script>
 
 <div class="param">
-  <div class="row" style="align-items:center; gap: 12px; margin-bottom: 6px;">
+  <div class="row" style="align-items:center; gap: 12px; margin-bottom: 8px;">
     <label for="device-toggle">Устройство инференса</label>
     <div class="segmented-toggle" title={!cuda_build ? 'Сборка без CUDA' : ''}>
       <button

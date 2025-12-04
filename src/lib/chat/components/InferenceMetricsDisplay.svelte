@@ -129,7 +129,7 @@
     background: none;
     border: none;
     cursor: default;
-    padding: 4px;
+    padding: 8px;
     border-radius: 5px;
     display: flex;
     align-items: center;
@@ -152,7 +152,7 @@
     background: none;
     border: none;
     cursor: default;
-    padding: 4px;
+    padding: 8px;
     border-radius: 5px;
     display: flex;
     align-items: center;

@@ -646,7 +646,7 @@ import * as Tabs from '$lib/components/ui/tabs';
   :global(.model-combobox-input) {
     width: 100%;
     margin-bottom: 0.5rem;
-    border-radius: 8px;
+    border-radius: 12px;
     border: none;
     background: var(--model-combobox-bg);
     color: var(--text);
@@ -671,7 +671,7 @@ import * as Tabs from '$lib/components/ui/tabs';
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 0.5rem;
-    border-radius: 8px;
+    border-radius: 12px;
     transition: background 0.15s ease;
   }
 
@@ -722,9 +722,9 @@ import * as Tabs from '$lib/components/ui/tabs';
   .model-reload-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding: 4px 10px;
-    border-radius: 6px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.4);
     background: rgba(255, 255, 255, 0.05);
     color: inherit;
@@ -775,7 +775,7 @@ import * as Tabs from '$lib/components/ui/tabs';
     color: var(--text);
     cursor: default;
     font-size: 0.9rem;
-    border-radius: 8px;
+    border-radius: 12px;
     transition: background 0.2s ease;
     -webkit-app-region: no-drag;
   }
@@ -918,7 +918,7 @@ import * as Tabs from '$lib/components/ui/tabs';
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: 12px;
     transition: all 0.2s ease;
   }
   .win-btn:hover {
@@ -994,7 +994,7 @@ import * as Tabs from '$lib/components/ui/tabs';
     background: var(--accent);
     color: #fff;
     border: none;
-    border-radius: 6px;
+    border-radius: 12px;
     padding: 8px 16px;
     cursor: pointer;
     font-size: 14px;
@@ -1017,7 +1017,7 @@ import * as Tabs from '$lib/components/ui/tabs';
     background: transparent;
     color: var(--text);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 12px;
     padding: 8px 16px;
     cursor: pointer;
     font-size: 14px;

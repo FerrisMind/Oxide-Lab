@@ -2,7 +2,7 @@
 
 .codemirror-container {
   margin: 12px 0;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--code-bg);
   border: 1px solid var(--border-color);
@@ -31,7 +31,7 @@
   border: none;
   cursor: default;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 12px;
   transition: background-color 0.2s ease;
   color: var(--muted);
   display: flex;
@@ -172,7 +172,7 @@
   }
 
   .codemirror-copy-btn {
-    padding: 3px 6px;
+    padding: 3px 8px;
   }
 
   .codemirror-copy-icon :global(svg) {

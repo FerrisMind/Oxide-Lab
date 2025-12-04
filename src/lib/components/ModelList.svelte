@@ -54,12 +54,12 @@
 
   .model-list::-webkit-scrollbar-track {
     background: transparent;
-    border-radius: 6px;
+    border-radius: 12px;
   }
 
   .model-list::-webkit-scrollbar-thumb {
     background: rgba(179, 205, 224, 0.8);
-    border-radius: 6px;
+    border-radius: 12px;
     border: 2px solid transparent;
     background-clip: content-box;
     transition: all 0.3s ease;

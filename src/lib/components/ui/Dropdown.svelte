@@ -73,7 +73,7 @@
     width: 34px;
     height: 34px;
     padding: 0;
-    border-radius: 6px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
@@ -128,7 +128,7 @@
     left: 0;
     background: var(--card);
     border: 1px solid var(--border-color, #d8dee5);
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 100;
     min-width: 200px;
@@ -149,7 +149,7 @@
     transition: background-color 0.2s ease;
     box-sizing: border-box;
     margin: 2px;
-    border-radius: 6px;
+    border-radius: 12px;
   }
 
   .dropdown-item:hover:not(:disabled) {

@@ -172,7 +172,7 @@ const user = createUser("John Doe", "john@example.com");`,
     margin-bottom: 30px;
     padding: 20px;
     background: var(--panel-bg, #f5f5f5);
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid var(--border-color, #ddd);
   }
 
@@ -192,7 +192,7 @@ const user = createUser("John Doe", "john@example.com");`,
   .control-group button {
     padding: 8px 12px;
     border: 1px solid var(--border-color, #ddd);
-    border-radius: 4px;
+    border-radius: 12px;
     background: var(--input-bg, white);
     color: var(--text-primary, #333);
     font-size: 14px;
@@ -227,7 +227,7 @@ const user = createUser("John Doe", "john@example.com");`,
   .info-section {
     padding: 20px;
     background: var(--panel-alt-bg, #f9f9f9);
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid var(--border-color, #ddd);
   }
 

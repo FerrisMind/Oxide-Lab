@@ -166,7 +166,7 @@
   .stat {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     font-size: 14px;
     color: var(--muted);
   }
@@ -204,7 +204,7 @@
     background: var(--accent);
     color: white;
     padding: 4px 8px;
-    border-radius: 6px;
+    border-radius: 12px;
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
@@ -223,7 +223,7 @@
 
   .format-badge {
     padding: 4px 8px;
-    border-radius: 6px;
+    border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
@@ -258,7 +258,7 @@
     color: white;
     border: none;
     padding: 8px 16px;
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 14px;
     font-weight: 600;
      cursor: default;

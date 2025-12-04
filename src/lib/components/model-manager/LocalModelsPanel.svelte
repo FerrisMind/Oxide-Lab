@@ -507,7 +507,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     min-width: 0;
     flex: 1;
     border: 1px solid var(--border-color, #d8dee5);
-    border-radius: 6px;
+    border-radius: 12px;
     padding: 0.35rem 0.5rem;
     background: #1a1a1a;
   }
@@ -567,7 +567,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
 
   .filter-group input {
     padding: 0.35rem 0.5rem;
-    border-radius: 6px;
+    border-radius: 12px;
     border: 1px solid var(--border-color, #d8dee5);
     background: #1a1a1a;
     font-size: 0.8rem;
@@ -768,7 +768,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     flex-direction: column;
     padding: 0.6rem;
     border: 1px dashed var(--border-color, #d8dee5);
-    border-radius: 8px;
+    border-radius: 12px;
     background: rgba(248, 249, 251, 0.6);
   }
 
@@ -810,7 +810,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
 
   .btn {
     padding: 0.35rem 0.7rem;
-    border-radius: 6px;
+    border-radius: 12px;
     border: none;
     background: var(--accent, #3498db);
     color: #fff;
@@ -882,7 +882,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
 
   .edit-grid input {
     border: 1px solid var(--border-color, #4a4a4a);
-    border-radius: 6px;
+    border-radius: 12px;
     padding: 0.4rem 0.6rem;
     background: var(--bg-secondary, #1f1f1f);
     color: var(--text);

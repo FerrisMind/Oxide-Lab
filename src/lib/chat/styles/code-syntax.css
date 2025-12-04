@@ -5,7 +5,7 @@ pre.code {
   padding: 10px;
   background: var(--code-bg);
   color: var(--code-fg);
-  border-radius: 8px;
+  border-radius: 12px;
 
   /* Vertical-only scroll inside code blocks */
   overflow: auto hidden;
@@ -80,7 +80,7 @@ pre.code code {
   background: var(--code-bg);
   color: var(--code-fg);
   padding: 0.15em 0.35em;
-  border-radius: 6px;
+  border-radius: 12px;
 }
 
 .md-stream pre {
@@ -88,7 +88,7 @@ pre.code code {
   padding: 10px;
   background: var(--code-bg);
   color: var(--code-fg);
-  border-radius: 8px;
+  border-radius: 12px;
 
   /* Vertical-only scroll inside markdown code blocks */
   overflow: auto hidden;

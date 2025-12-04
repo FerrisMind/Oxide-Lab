@@ -14,7 +14,7 @@
 .md-stream .callout {
   margin: 1em 0;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 12px;
   border-left: 4px solid;
   background-color: var(--panel-alt-bg);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);

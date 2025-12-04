@@ -136,7 +136,7 @@
   .info-card {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1.5rem;
   }
 
@@ -181,7 +181,7 @@
     padding: 0.5rem 0.75rem;
     background: rgba(52, 152, 219, 0.1);
     border-left: 3px solid var(--info, #3498db);
-    border-radius: 4px;
+    border-radius: 12px;
     font-size: 0.75rem;
     color: var(--text);
   }
@@ -225,12 +225,12 @@
 
   .info-panel::-webkit-scrollbar-track {
     background: transparent;
-    border-radius: 4px;
+    border-radius: 12px;
   }
 
   .info-panel::-webkit-scrollbar-thumb {
     background: rgba(179, 205, 224, 0.6);
-    border-radius: 4px;
+    border-radius: 12px;
     transition: background 0.3s ease;
   }
 

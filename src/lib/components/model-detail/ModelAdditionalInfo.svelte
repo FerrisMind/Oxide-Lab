@@ -61,11 +61,11 @@
   .info-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     padding: 12px;
     background: var(--panel-alt-bg);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     transition: all 0.2s ease;
   }
 

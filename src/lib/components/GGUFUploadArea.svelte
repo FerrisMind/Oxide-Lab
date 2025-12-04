@@ -67,14 +67,14 @@
   .gguf-input { width:280px; padding:6px 8px; padding-right:44px; border-radius:6px; border:1px solid var(--border-color); background:var(--card); color:var(--text); height:36px; line-height:24px; }
   .inside-btn {
     position: absolute;
-    right: 4px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%) !important; /* override global button hover transform */
     width: 24px !important;
     height: 24px !important;
     padding: 0 !important; /* remove extra internal padding */
     box-sizing: border-box;
-    border-radius: 4px;
+    border-radius: 12px;
     border: none;
     background: transparent;
     cursor: default;

@@ -49,7 +49,7 @@ print(quick_sort(numbers))
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 12px;
   color: white;
   font-weight: 600;
    cursor: default;
@@ -157,7 +157,7 @@ Regular text continues to render normally with **bold** and *italic* formatting.
     background: var(--code-bg);
     color: var(--code-fg);
     padding: 0.2em 0.4em;
-    border-radius: 4px;
+    border-radius: 12px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 0.9em;
   }

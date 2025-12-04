@@ -322,7 +322,7 @@
   .performance-monitor {
     padding: 1rem;
     background: var(--bg-secondary, #1e1e1e);
-    border-radius: 8px;
+    border-radius: 12px;
     color: var(--text-primary, #e0e0e0);
   }
 
@@ -351,7 +351,7 @@
     border: 1px solid var(--border-color, #444);
     background: var(--bg-tertiary, #2a2a2a);
     color: var(--text-primary, #e0e0e0);
-    border-radius: 4px;
+    border-radius: 12px;
     cursor: default;
     font-size: 0.85rem;
     transition: all 0.2s;
@@ -381,7 +381,7 @@
     padding: 0.4rem 0.8rem;
     background: var(--bg-tertiary, #252525);
     border: 1px solid var(--border-color, #333);
-    border-radius: 4px;
+    border-radius: 12px;
     color: var(--text-secondary, #888);
     font-size: 0.85rem;
     font-weight: 500;
@@ -421,7 +421,7 @@
     padding: 0.75rem;
     background: rgba(255, 68, 68, 0.1);
     border: 1px solid rgba(255, 68, 68, 0.3);
-    border-radius: 4px;
+    border-radius: 12px;
     color: #ff6b6b;
     margin-bottom: 1rem;
   }
@@ -442,7 +442,7 @@
   .metric-card {
     background: var(--bg-tertiary, #252525);
     border: 1px solid var(--border-color, #333);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1rem;
     display: flex;
     gap: 1rem;
@@ -506,7 +506,7 @@
     justify-content: space-between;
     padding: 0.5rem;
     background: var(--bg-secondary, #1e1e1e);
-    border-radius: 4px;
+    border-radius: 12px;
   }
 
   .stage-name {

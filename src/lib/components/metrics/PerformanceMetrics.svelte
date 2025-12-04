@@ -324,7 +324,7 @@
   .performance-metrics {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1.5rem;
   }
 
@@ -346,7 +346,7 @@
     padding: 0.5rem 0.75rem;
     background: transparent;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--text);
@@ -378,7 +378,7 @@
   .target-card {
     padding: 1rem;
     border: 2px solid transparent;
-    border-radius: 6px;
+    border-radius: 12px;
     background: rgba(149, 165, 166, 0.05);
     transition: all 0.2s ease;
   }
@@ -430,7 +430,7 @@
     font-size: 0.75rem;
     font-weight: 500;
     padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    border-radius: 12px;
     display: inline-block;
   }
 
@@ -480,7 +480,7 @@
     align-items: center;
     padding: 0.5rem;
     background: rgba(149, 165, 166, 0.05);
-    border-radius: 4px;
+    border-radius: 12px;
     font-size: 0.875rem;
   }
 
@@ -524,7 +524,7 @@
     margin-top: 2rem;
     padding: 1rem;
     background: rgba(52, 152, 219, 0.05);
-    border-radius: 6px;
+    border-radius: 12px;
   }
 
   .stat {

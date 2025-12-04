@@ -164,7 +164,7 @@
   .dialog-content {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
     max-width: 500px;
     width: 100%;
@@ -215,7 +215,7 @@
   .btn {
     padding: 0.625rem 1.25rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 12px;
     font-size: 0.9375rem;
     font-weight: 500;
     cursor: default;

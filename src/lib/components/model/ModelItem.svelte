@@ -180,20 +180,20 @@
     white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
   }
 
   .formats {
     display: flex;
-    gap: 4px;
+    gap: 8px;
     flex-shrink: 0;
   }
 
   .format-badge {
     font-size: 0.75rem;
     color: white;
-    padding: 2px 6px;
-    border-radius: 6px;
+    padding: 2px 8px;
+    border-radius: 12px;
     font-weight: 500;
     white-space: nowrap;
   }

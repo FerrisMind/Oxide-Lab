@@ -250,7 +250,7 @@
     height: 40px;
     margin-left: 8px;
     flex-shrink: 0;
-    border-radius: 8px;
+    border-radius: 12px;
     background: transparent;
     border: 1px solid transparent;
     transition:
@@ -346,7 +346,7 @@
 
   .indicator-bar {
     position: relative;
-    height: 4px;
+    height: 8px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--sidebar-ring) 18%, transparent 82%);
     overflow: hidden;

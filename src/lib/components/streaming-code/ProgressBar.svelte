@@ -135,7 +135,7 @@
     flex-direction: column;
     background: var(--panel-bg);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
     transition: all 0.3s ease;
     position: relative;

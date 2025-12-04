@@ -9,8 +9,8 @@
   import ClockCounterClockwise from 'phosphor-svelte/lib/ClockCounterClockwise';
   import File from 'phosphor-svelte/lib/File';
   import X from 'phosphor-svelte/lib/X';
+  import Textarea from '$lib/components/ui/textarea/textarea.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import * as InputGroup from '$lib/components/ui/input-group';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import Alert from '$lib/components/ui/alert/alert.svelte';
   import AlertDescription from '$lib/components/ui/alert/alert-description.svelte';
@@ -60,6 +60,7 @@
   export let supports_video: boolean = false;
   export let isLoaderPanelVisible: boolean = false;
   export let isChatHistoryVisible: boolean = false;
+  export let hasMessages: boolean = false;
 
   let fileInput: HTMLInputElement | null = null;
   let textareaElement: HTMLTextAreaElement | null = null;
@@ -270,7 +271,8 @@
   }
 </script>
 
-<div class="flex w-full flex-col gap-3">
+{#if isLoaded}
+<div class="composer-wrapper flex max-w-[760px] flex-col gap-3 px-4 sm:px-0" class:centered={!hasMessages}>
   {#if attachedFiles.length > 0}
     <div class="flex flex-wrap gap-2">
       {#each attachedFiles as attachment, index}
@@ -280,14 +282,14 @@
         >
           <span class="flex items-center gap-1 text-muted-foreground">
             <File size={14} weight="bold" />
-            <span class="max-w-[140px] truncate font-medium">{attachment.filename}</span>
+            <span class="max-w-[640px] truncate font-medium">{attachment.filename}</span>
           </span>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            class="text-muted-foreground hover:text-foreground"
-            onclick={() => removeAttachment(index)}
+            class="text-muted-foreground transition hover:text-foreground"
+            on:click={() => removeAttachment(index)}
             aria-label={$t('errors.file.removeFile') + ' ' + attachment.filename}
           >
             <X size={14} weight="bold" />
@@ -298,39 +300,37 @@
     </div>
   {/if}
 
-  <InputGroup.Root
-    class={cn(
-      '[--radius:1rem] border border-border/60 bg-card/90 shadow-lg shadow-black/5 backdrop-blur',
-      'flex-col'
-    )}
-  >
-    <InputGroup.Textarea
-      bind:value={prompt}
-      bind:ref={textareaElement}
-      placeholder={$t('chat.composer.placeholder')}
-      rows={1}
-      data-slot="input-group-control"
-      class="min-h-[34px] resize-none bg-transparent text-base text-foreground"
-      style={`height: ${textareaHeight}px; overflow-y: ${textareaHeight >= MAX_HEIGHT ? 'auto' : 'hidden'};`}
-      onkeydown={handleKeydown}
-      oninput={handleTextareaInput}
-    />
+  <div class="composer-surface rounded-2xl border bg-background/80 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-background/70">
+    <div class="flex flex-col gap-3 p-3">
+      <Textarea
+        bind:value={prompt}
+        bind:ref={textareaElement}
+        placeholder={$t('chat.composer.placeholder')}
+        class="composer-textarea resize-none border-none bg-transparent px-0 pb-1 pt-0 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
+        style={`height:${textareaHeight}px`}
+        on:keydown={handleKeydown}
+        on:input={handleTextareaInput}
+      />
 
-    <InputGroup.Addon
-      align="block-end"
-      class="w-full flex-col gap-2 border-t border-border/40 pt-2 text-sm text-muted-foreground"
-    >
-      <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
-        <div class="flex flex-1 flex-wrap items-center gap-2">
+      <div class="composer-controls flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-1.5">
           <Button
-            type="button"
             variant="ghost"
             size="icon-sm"
-            class={cn(
-              'transition-colors',
-              isChatHistoryVisible && 'bg-primary/15 text-primary hover:bg-primary/20'
-            )}
-            onclick={triggerChatHistory}
+            class="icon-button"
+            on:click={triggerAttach}
+            disabled={busy || !isLoaded || !experimentalReady}
+            aria-label={$t('chat.composer.attach')}
+            title={experimentalStatusMessage ?? undefined}
+          >
+            <Paperclip size={16} weight="bold" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            class={cn('icon-button', isChatHistoryVisible && 'is-active')}
+            on:click={triggerChatHistory}
             aria-label={isChatHistoryVisible ? $t('chat.composer.hideHistory') : $t('chat.composer.showHistory')}
             disabled={!experimentalReady}
             title={experimentalStatusMessage ?? undefined}
@@ -339,50 +339,35 @@
           </Button>
 
           <Button
-            type="button"
             variant="ghost"
             size="icon-sm"
-            class={cn(
-              'transition-colors',
-              isLoaderPanelVisible && 'bg-primary/15 text-primary hover:bg-primary/20'
-            )}
-            onclick={triggerSettings}
+            class={cn('icon-button', isLoaderPanelVisible && 'is-active')}
+            on:click={triggerSettings}
             aria-label={$t('chat.composer.loaderSettings')}
           >
             <SlidersHorizontal size={16} weight="bold" />
           </Button>
+        </div>
 
+        <div class="ml-auto flex items-center gap-1.5">
           {#if prompt || attachError}
             <Button
-              type="button"
               variant="ghost"
               size="icon-sm"
-              onclick={triggerClear}
+              class="icon-button"
+              on:click={triggerClear}
               disabled={busy}
               aria-label={$t('chat.composer.clear')}
             >
               <Broom size={16} weight="bold" />
             </Button>
           {/if}
-        </div>
 
-        <div class="flex flex-wrap items-center gap-2 sm:justify-end">
           <Button
-            type="button"
             variant="ghost"
             size="icon-sm"
-            onclick={triggerAttach}
-            disabled={busy || !isLoaded || !experimentalReady}
-            aria-label={$t('chat.composer.attach')}
-            title={experimentalStatusMessage ?? undefined}
-          >
-            <Paperclip size={16} weight="bold" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onclick={triggerVoiceInput}
+            class="icon-button"
+            on:click={triggerVoiceInput}
             disabled={busy || !isLoaded || !experimentalReady}
             aria-label={isRecording ? $t('chat.composer.voice.stopRecording') : $t('chat.composer.voice.startRecording')}
             aria-pressed={isRecording}
@@ -396,11 +381,10 @@
           </Button>
 
           <Button
-            type="button"
             variant="default"
-            size="icon"
-            class="shadow-sm"
-            onclick={busy ? triggerStop : triggerSend}
+            size="icon-sm"
+            class="send-button"
+            on:click={busy ? triggerStop : triggerSend}
             disabled={!isLoaded || (!busy && !prompt.trim())}
             aria-label={busy ? $t('chat.composer.stop') : $t('chat.composer.send')}
           >
@@ -409,18 +393,19 @@
             {:else}
               <ArrowUp size={16} weight="bold" />
             {/if}
+            <span class="sr-only">{busy ? $t('chat.composer.stop') : $t('chat.composer.send')}</span>
           </Button>
         </div>
       </div>
-    </InputGroup.Addon>
-  </InputGroup.Root>
+    </div>
+  </div>
 
   <input
     class="sr-only"
     type="file"
     {accept}
     bind:this={fileInput}
-    onchange={handleFileChange}
+    on:change={handleFileChange}
   />
 
   {#if attachError}
@@ -430,3 +415,39 @@
     </Alert>
   {/if}
 </div>
+{/if}
+
+<style>
+  .composer-wrapper {
+    position: fixed;
+    left: 50%;
+    bottom: 84px;
+    transform: translateX(-50%);
+    z-index: 100;
+    width: 100%;
+    transition: top 0.3s ease, bottom 0.3s ease, transform 0.3s ease;
+  }
+
+  .composer-wrapper.centered {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+  }
+
+  .composer-textarea {
+    min-height: 34px;
+  }
+
+  .icon-button {
+    border-radius: 9999px;
+  }
+
+  .icon-button.is-active {
+    background-color: hsl(var(--primary) / 0.12);
+    color: hsl(var(--primary));
+  }
+
+  .send-button {
+    border-radius: 9999px;
+  }
+</style>

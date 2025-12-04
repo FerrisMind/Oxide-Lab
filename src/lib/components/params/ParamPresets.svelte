@@ -316,7 +316,7 @@
   .param-presets {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1rem;
   }
 
@@ -339,7 +339,7 @@
     background: var(--accent, #3498db);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 500;
     cursor: default;
@@ -367,7 +367,7 @@
     padding: 0.75rem;
     background: rgba(149, 165, 166, 0.05);
     border: 2px solid transparent;
-    border-radius: 6px;
+    border-radius: 12px;
     transition: all 0.2s ease;
   }
 
@@ -425,7 +425,7 @@
     padding: 0.25rem 0.5rem;
     background: rgba(52, 152, 219, 0.1);
     border: 1px solid rgba(52, 152, 219, 0.2);
-    border-radius: 4px;
+    border-radius: 12px;
     font-size: 0.625rem;
     font-family: monospace;
     color: var(--info, #3498db);
@@ -439,7 +439,7 @@
   .btn {
     padding: 0.5rem 0.75rem;
     border: none;
-    border-radius: 4px;
+    border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 500;
     cursor: default;
@@ -498,7 +498,7 @@
   .dialog {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1.5rem;
     max-width: 500px;
     width: 90%;
@@ -529,7 +529,7 @@
     padding: 0.5rem;
     background: var(--bg);
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: 12px;
     font-size: 0.875rem;
     color: var(--text);
     font-family: inherit;
@@ -572,7 +572,7 @@
 
   /* Скроллбар */
   .presets-list::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
   }
 
   .presets-list::-webkit-scrollbar-track {

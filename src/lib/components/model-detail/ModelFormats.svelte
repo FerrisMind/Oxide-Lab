@@ -39,7 +39,7 @@
     padding: 6px 12px;
     background: var(--panel-alt-bg);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--text);

@@ -577,7 +577,7 @@
     border: none;
     background: none;
     padding: 8px;
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: default;
     color: var(--text);
     transition: all 0.2s ease;
@@ -627,10 +627,10 @@
   .meta-item {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding: 6px 12px;
     border: 1px solid var(--border-color, #e2e8f0);
-    border-radius: 6px;
+    border-radius: 12px;
     background: color-mix(in srgb, var(--accent, #3498db) 5%, transparent 95%);
     white-space: nowrap;
   }
@@ -656,7 +656,7 @@
     text-align: center;
     padding: 20px;
     background: var(--card);
-    border-radius: 8px;
+    border-radius: 12px;
   }
 
   /* Resize handles - курсоры меняются автоматически при наведении на края */
@@ -687,7 +687,7 @@
     .download-modal {
       width: calc(100vw - 16px);
       max-height: calc(100vh - 16px);
-      border-radius: 8px;
+      border-radius: 12px;
     }
   }
 </style>

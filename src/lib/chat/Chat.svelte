@@ -4,6 +4,7 @@
   import LoaderPanel from '$lib/chat/components/LoaderPanel.svelte';
   import MessageList from '$lib/chat/components/MessageList.svelte';
   import Composer from '$lib/chat/components/Composer.svelte';
+  import * as Sheet from '$lib/components/ui/sheet/index.js';
   // Chat styles are loaded globally from layout to avoid UI changes when navigating between pages
   // Убрали переключатель «сырого» Markdown
   import type { ChatMessage } from '$lib/chat/types';
@@ -17,11 +18,6 @@
   import { performanceService } from '$lib/services/performance-service';
   import { inferenceMetricsStore } from '$lib/stores/inference-metrics';
   import type { InferenceMetrics } from '$lib/types/performance';
-
-  type ComposerAttachment = {
-    filename: string;
-    content: string;
-  };
 
   // Добавляем состояние видимости лоадер панели
   let isLoaderPanelVisible = $state(false);
@@ -468,6 +464,14 @@
     void loadGGUF?.();
   }
 
+  function toggleLoaderPanelVisibility() {
+    isLoaderPanelVisible = !isLoaderPanelVisible;
+  }
+
+  function toggleChatHistoryVisibility() {
+    showChatHistory.update((value) => !value);
+  }
+
   onDestroy(() => {
     chatUiMounted.set(false);
     // Persist chat/model state across navigation
@@ -663,6 +667,8 @@
 
   let _canRegenerate = false;
 
+  let isChatHistoryVisible = $derived(!!$showChatHistory);
+  let hasMessages = $derived((messages?.length ?? 0) > 0);
   let canStopGeneration = $derived(busy && isLoaded);
 
   // Очищаем слушатели событий при размонтировании
@@ -698,80 +704,86 @@
     <!-- удалено дублирование заголовка -->
     <section class="chat">
       <MessageList bind:messages bind:messagesEl showModelNotice={!isLoaded} />
-
       <Composer
         bind:prompt
         {busy}
         {isLoaded}
+        canStop={canStopGeneration}
         {supports_text}
         {supports_image}
         {supports_audio}
         {supports_video}
         {isLoaderPanelVisible}
-        isChatHistoryVisible={$showChatHistory}
-        canStop={canStopGeneration}
-        on:send={() => void sendMessage()}
-        on:stop={() => void stopGenerate()}
-        on:attach={(e: CustomEvent<ComposerAttachment>) => void attachFileToPrompt(e.detail)}
-        on:toggle-loader-panel={() => (isLoaderPanelVisible = !isLoaderPanelVisible)}
-        on:toggle-chat-history={() => showChatHistory.update((v) => !v)}
+        {isChatHistoryVisible}
+        hasMessages={hasMessages}
+        on:send={sendMessage}
+        on:stop={stopGenerate}
+        on:attach={(event) => attachFileToPrompt(event.detail)}
+        on:toggle-loader-panel={toggleLoaderPanelVisibility}
+        on:toggle-chat-history={toggleChatHistoryVisibility}
       />
     </section>
 
-    {#if isLoaderPanelVisible}
-      <div class="loader-host">
-        <LoaderPanel
-          bind:format
-          bind:modelPath
-          bind:repoId
-          bind:revision
-          bind:hubGgufFilename
-          bind:ctx_limit_value
-          bind:isLoadingModel
-          bind:isUnloadingModel
-          bind:isCancelling
-          bind:loadingStage
-          bind:loadingProgress
-          bind:unloadingProgress
-          bind:errorText
-          bind:busy
-          bind:isLoaded
-          bind:use_gpu
-          bind:cuda_available
-          bind:cuda_build
-          bind:avx
-          bind:neon
-          bind:simd128
-          bind:f16c
-          {supports_text}
-          {supports_image}
-          {supports_audio}
-          {supports_video}
-          bind:split_prompt
-          bind:verbose_prompt
-          bind:tracing
-          onMainAction={mainAction}
-          on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
-        >
-          <!-- Параметры инференса -->
-          {#if isLoaded}
-            <InferenceParams
-              bind:use_custom_params
-              bind:temperature_enabled
-              bind:temperature
-              bind:top_k_enabled
-              bind:top_k_value
-              bind:top_p_enabled
-              bind:top_p_value
-              bind:min_p_enabled
-              bind:min_p_value
-              bind:repeat_penalty_enabled
-              bind:repeat_penalty_value
-            />
-          {/if}
-        </LoaderPanel>
-      </div>
-    {/if}
+    <Sheet.Root bind:open={isLoaderPanelVisible}>
+      <Sheet.Content side="right" class="w-full sm:max-w-[450px] p-0">
+        <Sheet.Header class="pb-2">
+          <Sheet.Title>Loader panel</Sheet.Title>
+        </Sheet.Header>
+        <div class="loader-sheet-body flex-1 overflow-y-auto p-4 pt-0">
+          <LoaderPanel
+            class="h-full"
+            bind:format
+            bind:modelPath
+            bind:repoId
+            bind:revision
+            bind:hubGgufFilename
+            bind:ctx_limit_value
+            bind:isLoadingModel
+            bind:isUnloadingModel
+            bind:isCancelling
+            bind:loadingStage
+            bind:loadingProgress
+            bind:unloadingProgress
+            bind:errorText
+            bind:busy
+            bind:isLoaded
+            bind:use_gpu
+            bind:cuda_available
+            bind:cuda_build
+            bind:avx
+            bind:neon
+            bind:simd128
+            bind:f16c
+            {supports_text}
+            {supports_image}
+            {supports_audio}
+            {supports_video}
+            bind:split_prompt
+            bind:verbose_prompt
+            bind:tracing
+            onMainAction={mainAction}
+            on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
+          >
+            <!-- Параметры инференса -->
+            {#if isLoaded}
+              <InferenceParams
+                bind:use_custom_params
+                bind:temperature_enabled
+                bind:temperature
+                bind:top_k_enabled
+                bind:top_k_value
+                bind:top_p_enabled
+                bind:top_p_value
+                bind:min_p_enabled
+                bind:min_p_value
+                bind:repeat_penalty_enabled
+                bind:repeat_penalty_value
+              />
+            {/if}
+          </LoaderPanel>
+        </div>
+      </Sheet.Content>
+    </Sheet.Root>
   </div>
 </main>
 
@@ -790,6 +802,10 @@
   .chat {
     flex: 1 1 auto;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
   }
 
   /* Правая колонка под лоадер-панель фиксированной ширины */

@@ -3,7 +3,7 @@
 button {
   cursor: default;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 500;
@@ -42,7 +42,7 @@ input,
 textarea,
 select {
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 12px;
   padding: 8px 12px;
   font-size: 14px;
   background: var(--card);
@@ -104,7 +104,7 @@ select:focus {
   width: 18px;
   height: 18px;
   border: 2px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 12px;
   background-color: var(--card);
   transition: all 0.2s ease;
 }

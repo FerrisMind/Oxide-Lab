@@ -54,8 +54,8 @@
     background: none;
     border: none;
      cursor: default;
-    padding: 4px;
-    border-radius: 4px;
+    padding: 8px;
+    border-radius: 12px;
     transition: all 0.2s ease;
     color: var(--muted);
     display: inline-flex;

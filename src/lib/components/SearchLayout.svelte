@@ -105,7 +105,7 @@
     height: 100%;
     background: var(--panel-bg);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
   }
   
@@ -144,7 +144,7 @@
     background: var(--accent);
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 14px;
     font-weight: 600;
      cursor: default;

@@ -17,7 +17,7 @@
   display: flex;
   justify-content: flex-end;
   margin: 8px 0 0;
-  padding: 0 4px;
+  padding: 0 8px;
   opacity: 0;
   transition: opacity 0.2s ease;
   width: 100%;
@@ -37,8 +37,8 @@
   border: 1px solid var(--border-color);
   background: var(--panel-bg);
   color: var(--text);
-  border-radius: 8px;
-  padding: 4px 6px;
+  border-radius: 12px;
+  padding: 4px 8px;
   cursor: default;
   transition: background-color 0.2s ease;
 }
@@ -70,7 +70,7 @@
   background: var(--panel-bg);
   color: var(--text);
   border: 1px dashed var(--border-color);
-  border-radius: 8px;
+  border-radius: 12px;
 
   /* Allow vertical scroll in raw view without causing horizontal scrollbars */
   overflow: hidden auto;

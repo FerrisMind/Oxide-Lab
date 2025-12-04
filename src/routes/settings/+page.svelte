@@ -517,7 +517,7 @@ function handleModelSearchToggle(enabled: boolean) {
   }
 
   .thread-reset {
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
     background: var(--panel-bg);
     padding: 8px 14px;
@@ -548,7 +548,7 @@ function handleModelSearchToggle(enabled: boolean) {
     padding: 12px;
     background: #fee;
     border: 1px solid #fcc;
-    border-radius: 6px;
+    border-radius: 12px;
     color: #c33;
     word-wrap: break-word;
   }

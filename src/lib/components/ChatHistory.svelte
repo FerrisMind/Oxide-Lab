@@ -745,7 +745,7 @@
     border: 2px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 10px 16px;
     height: var(--composer-row-height);
     font-size: 14px;
@@ -814,7 +814,7 @@
     border: 2px solid transparent;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #ffffff;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 10px 16px;
     height: var(--composer-row-height);
     font-size: 14px;
@@ -953,7 +953,7 @@
     font-size: 14px;
     font-weight: 500;
     color: var(--text);
-    margin-bottom: 4px;
+    margin-bottom: 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -976,7 +976,7 @@
 
   .session-actions {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     opacity: 0;
     visibility: hidden;
     transition:
@@ -1208,7 +1208,7 @@
     width: 32px;
     height: 32px;
     border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
     cursor: default;
@@ -1340,7 +1340,7 @@
       background: rgba(0, 0, 0, 0.05);
       border-color: rgba(0, 0, 0, 0.1);
       color: #1a1a1a;
-      border-radius: 8px;
+      border-radius: 12px;
     }
 
     .btn-close:hover {
@@ -1352,7 +1352,7 @@
       background: rgba(0, 0, 0, 0.05);
       border-color: rgba(0, 0, 0, 0.1);
       color: #1a1a1a;
-      border-radius: 8px;
+      border-radius: 12px;
     }
 
     .secondary:disabled {
@@ -1373,7 +1373,7 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       border-color: transparent;
       color: #ffffff;
-      border-radius: 8px;
+      border-radius: 12px;
     }
 
     .primary:hover {
@@ -1482,7 +1482,7 @@
       background: rgba(255, 255, 255, 0.08);
       border-color: rgba(255, 255, 255, 0.1);
       color: #ffffff;
-      border-radius: 8px;
+      border-radius: 12px;
     }
 
     .btn-close:hover {
@@ -1494,7 +1494,7 @@
       background: rgba(255, 255, 255, 0.08);
       border-color: rgba(255, 255, 255, 0.1);
       color: #ffffff;
-      border-radius: 8px;
+      border-radius: 12px;
     }
 
     .secondary:disabled {
@@ -1515,7 +1515,7 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       border-color: transparent;
       color: #ffffff;
-      border-radius: 8px;
+      border-radius: 12px;
     }
 
     .primary:hover {

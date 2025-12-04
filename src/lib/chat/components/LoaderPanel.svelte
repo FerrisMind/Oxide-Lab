@@ -238,6 +238,6 @@
     overflow: auto;
     background: #1114;
     padding: 8px;
-    border-radius: 6px;
+    border-radius: 12px;
   }
 </style>
