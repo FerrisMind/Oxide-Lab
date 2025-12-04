@@ -296,8 +296,7 @@
   });
 </script>
 
-{#if isLoaded}
-<div class="composer-wrapper flex max-w-[760px] flex-col gap-3 px-4 sm:px-0" class:centered={!hasMessages}>
+<div class="composer-wrapper flex max-w-[640px] flex-col gap-3 px-4 sm:px-0" class:centered={!hasMessages} class:hidden={!isLoaded}>
   {#if attachedFiles.length > 0}
     <div class="flex flex-wrap gap-2">
       {#each attachedFiles as attachment, index}
@@ -330,11 +329,12 @@
       <Textarea
         bind:value={prompt}
         bind:ref={textareaElement}
-        placeholder={$t('chat.composer.placeholder')}
+        placeholder={isLoaded ? $t('chat.composer.placeholder') : $t('chat.composer.placeholderNotLoaded') || $t('chat.composer.placeholder')}
         class="composer-textarea resize-none border-none bg-transparent px-0 pb-1 pt-0 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
         style={`height:${textareaHeight}px`}
         onkeydown={handleKeydown}
         oninput={handleTextareaInput}
+        disabled={!isLoaded}
       />
 
       <div class="composer-controls flex flex-wrap items-center gap-2">
@@ -440,7 +440,6 @@
     </Alert>
   {/if}
 </div>
-{/if}
 
 <style>
   .composer-wrapper {
@@ -457,6 +456,10 @@
     top: 50%;
     bottom: auto;
     transform: translate(-50%, -50%);
+  }
+
+  .composer-wrapper.hidden {
+    display: none;
   }
 
   :global(.composer-textarea) {

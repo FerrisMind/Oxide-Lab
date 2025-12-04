@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createBubbler, stopPropagation } from 'svelte/legacy';
+  import { createBubbler } from 'svelte/legacy';
 
   const bubble = createBubbler();
   import { chatHistory, sortedSessions, currentSession } from '$lib/stores/chat-history';
@@ -327,7 +327,10 @@
                   if (e.key === 'Enter') saveEdit();
                   if (e.key === 'Escape') cancelEdit();
                 }}
-                onclick={stopPropagation(bubble('click'))}
+                onclick={(e) => {
+                  e.stopPropagation();
+                  bubble('click')(e);
+                }}
                 aria-label="Новое название чата"
               />
             {:else}
@@ -342,7 +345,10 @@
 
             <div
               class="session-actions"
-              onclick={stopPropagation(bubble('click'))}
+              onclick={(e) => {
+                e.stopPropagation();
+                bubble('click')(e);
+              }}
               onkeydown={(e) => e.stopPropagation()}
               role="toolbar"
               aria-label="Действия с чатом"
@@ -378,7 +384,10 @@
           {#if showDeleteConfirm === session.id}
             <div
               class="delete-confirm"
-              onclick={stopPropagation(bubble('click'))}
+              onclick={(e) => {
+                e.stopPropagation();
+                bubble('click')(e);
+              }}
               onkeydown={(e) => e.stopPropagation()}
               role="alertdialog"
               aria-labelledby="delete-confirm-title"
@@ -415,7 +424,10 @@
   >
     <div
       class="modal"
-      onclick={stopPropagation(bubble('click'))}
+      onclick={(e) => {
+        e.stopPropagation();
+        bubble('click')(e);
+      }}
       onkeydown={(e) => {
         e.stopPropagation();
         if (e.key === 'Escape') {
@@ -480,7 +492,10 @@
   >
     <div
       class="modal"
-      onclick={stopPropagation(bubble('click'))}
+      onclick={(e) => {
+        e.stopPropagation();
+        bubble('click')(e);
+      }}
       onkeydown={(e) => {
         e.stopPropagation();
         if (e.key === 'Escape') {
