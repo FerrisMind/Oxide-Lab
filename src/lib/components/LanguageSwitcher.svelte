@@ -8,7 +8,7 @@
 
   import { onMount } from 'svelte';
   import { locale, setLocale, syncLocaleWithBackend, SUPPORTED_LOCALES } from '$lib/i18n';
-  import { page } from '$app/state';
+  import { page } from '$app/stores';
   import { invoke } from '@tauri-apps/api/core';
   import Globe from 'phosphor-svelte/lib/Globe';
   import Check from 'phosphor-svelte/lib/Check';
@@ -24,6 +24,7 @@
   };
 
   let currentLocale = $state<string>('en');
+  let currentPath = $derived($page.url.pathname);
   let isOpen = $state(false);
 
   // Синхронизация с store
@@ -36,7 +37,7 @@
     try {
       const savedLocale = await invoke<string>('get_locale');
       if (savedLocale && SUPPORTED_LOCALES.includes(savedLocale as any)) {
-        await setLocale(savedLocale as any, page.url.pathname);
+        await setLocale(savedLocale as any, currentPath);
         await syncLocaleWithBackend(savedLocale as any);
       }
     } catch (error) {
@@ -52,7 +53,7 @@
 
     isOpen = false;
     // Устанавливаем локаль и загружаем переводы
-    await setLocale(newLocale as any, page.url.pathname);
+    await setLocale(newLocale as any, currentPath);
     // Синхронизируем с backend
     await syncLocaleWithBackend(newLocale as any);
     

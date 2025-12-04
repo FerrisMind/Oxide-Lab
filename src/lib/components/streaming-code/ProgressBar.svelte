@@ -89,10 +89,14 @@
           class="copy-btn"
           role="button"
           tabindex="0"
-          onclick={handleCopyClick}
-          onkeydown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              handleCopyClick(e);
+          onclick={(event) => {
+            event.stopPropagation();
+            handleCopyClick(event);
+          }}
+          onkeydown={(event: KeyboardEvent) => {
+            event.stopPropagation();
+            if (event.key === 'Enter' || event.key === ' ') {
+              handleCopyClick(event);
             }
           }}
           aria-label="Copy code"

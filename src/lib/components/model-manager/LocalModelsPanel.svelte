@@ -124,13 +124,12 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     }
   });
 
-  // Синхронизация: обновляем store при изменении локального состояния (только если отличается)
-  $effect(() => {
-    const storeValue = $filterOptions.candleOnly ?? false;
-    if (candleOnlyFilter !== storeValue) {
-      updateFilter({ candleOnly: candleOnlyFilter });
+  // Обновление store только по пользовательскому вводу, чтобы исключить циклы эффектов
+  function handleCandleOnlyChange(newValue: boolean) {
+    if (newValue !== ($filterOptions.candleOnly ?? false)) {
+      updateFilter({ candleOnly: newValue });
     }
-  });
+  }
 
   async function handleDelete(model: ModelInfo) {
     // Используем простую интерполяцию для confirm сообщения
@@ -208,6 +207,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
         id="candle-only"
         label={$t('models.local.candleOnly')}
         bind:checked={candleOnlyFilter}
+        onchange={handleCandleOnlyChange}
       />
     </div>
   </section>

@@ -44,11 +44,13 @@
     return 'cube';
   }
 
-  let selectedCard: ModelCardSummary | null = $state(null);
+  let selectedCard = $state<ModelCardSummary | null>(null);
   let downloadErrors: Record<string, string> = $state({});
   let downloadQueued: Record<string, boolean> = $state({});
   let selectedQuantizations: Record<string, string> = $state({});
-  let selectedCardQuantizations: string[] = $state([]);
+  let selectedCardQuantizations = $derived<string[]>(
+    ((selectedCard as ModelCardSummary | null)?.gguf_quantizations ?? []) as string[],
+  );
   let lastProcessedHistoryId: string | null = $state(null);
 
   onMount(() => {
@@ -142,9 +144,6 @@
     ) {
       selectedCard = $filteredModelCards[0] ?? null;
     }
-  });
-  $effect(() => {
-    selectedCardQuantizations = selectedCard?.gguf_quantizations ?? [];
   });
   $effect(() => {
     if (selectedCard && selectedCardQuantizations.length) {
