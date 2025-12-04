@@ -3,25 +3,43 @@
   import UploadSimple from "phosphor-svelte/lib/UploadSimple";
   import CircleNotch from "phosphor-svelte/lib/CircleNotch";
   
-  export let isLoadingModel = false;
-  export let isUnloadingModel = false;
-  export let isCancelling = false;
-  export let isLoaded = false;
-  export let busy = false;
-  export let loadingStage = "";
-  export let loadingProgress = 0;
-  export let unloadingProgress = 0;
-  export let repoId = "";
-  export let hubGgufFilename = "";
-  export let format: "gguf" | "hub_gguf" | "hub_safetensors" = "gguf";
   
-  // Callback
-  export let onMainAction: () => void;
+  
+  interface Props {
+    isLoadingModel?: boolean;
+    isUnloadingModel?: boolean;
+    isCancelling?: boolean;
+    isLoaded?: boolean;
+    busy?: boolean;
+    loadingStage?: string;
+    loadingProgress?: number;
+    unloadingProgress?: number;
+    repoId?: string;
+    hubGgufFilename?: string;
+    format?: "gguf" | "hub_gguf" | "hub_safetensors";
+    // Callback
+    onMainAction: () => void;
+  }
+
+  let {
+    isLoadingModel = false,
+    isUnloadingModel = false,
+    isCancelling = false,
+    isLoaded = false,
+    busy = false,
+    loadingStage = "",
+    loadingProgress = 0,
+    unloadingProgress = 0,
+    repoId = "",
+    hubGgufFilename = "",
+    format = "gguf",
+    onMainAction
+  }: Props = $props();
 </script>
 
 <button 
   class="primary"
-  on:click={onMainAction}
+  onclick={onMainAction}
   disabled={busy || (!isLoaded && (
     (format === "gguf") || 
     (format === "hub_gguf" && (!repoId || !hubGgufFilename)) || 

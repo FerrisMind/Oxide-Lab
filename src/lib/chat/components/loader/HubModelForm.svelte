@@ -1,8 +1,17 @@
 <script lang="ts">
-  export let repoId = "";
-  export let revision = "";
-  export let hubGgufFilename = "";
-  export let isSafetensors = false;
+  interface Props {
+    repoId?: string;
+    revision?: string;
+    hubGgufFilename?: string;
+    isSafetensors?: boolean;
+  }
+
+  let {
+    repoId = $bindable(""),
+    revision = $bindable(""),
+    hubGgufFilename = $bindable(""),
+    isSafetensors = false
+  }: Props = $props();
 </script>
 
 <div class="field">

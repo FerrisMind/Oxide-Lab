@@ -2,9 +2,9 @@
   import { onMount } from 'svelte';
   import StreamingCodeBlock from './StreamingCodeBlock.svelte';
 
-  let isStreaming = false;
-  let code = '';
-  let language = 'javascript';
+  let isStreaming = $state(false);
+  let code = $state('');
+  let language = $state('javascript');
   let streamingInterval: number | null = null;
 
   const sampleCodes = {
@@ -92,8 +92,8 @@ const user = createUser("John Doe", "john@example.com");`,
     resetDemo();
   }
 
-  function handleToggle(event: CustomEvent) {
-    console.log('Code block toggled:', event.detail);
+  function handleToggle(detail: { expanded: boolean }) {
+    console.log('Code block toggled:', detail);
   }
 
   function handleStreamingTimeout() {
@@ -116,7 +116,7 @@ const user = createUser("John Doe", "john@example.com");`,
   <div class="controls">
     <div class="control-group">
       <label for="language-select">Language:</label>
-      <select id="language-select" value={language} on:change={handleLanguageChange}>
+      <select id="language-select" value={language} onchange={handleLanguageChange}>
         <option value="javascript">JavaScript</option>
         <option value="python">Python</option>
         <option value="typescript">TypeScript</option>
@@ -125,9 +125,9 @@ const user = createUser("John Doe", "john@example.com");`,
     </div>
 
     <div class="control-group">
-      <button on:click={startStreaming} disabled={isStreaming}> Start Streaming </button>
-      <button on:click={stopStreaming} disabled={!isStreaming}> Stop Streaming </button>
-      <button on:click={resetDemo}> Reset </button>
+      <button onclick={startStreaming} disabled={isStreaming}> Start Streaming </button>
+      <button onclick={stopStreaming} disabled={!isStreaming}> Stop Streaming </button>
+      <button onclick={resetDemo}> Reset </button>
     </div>
   </div>
 
@@ -139,8 +139,8 @@ const user = createUser("John Doe", "john@example.com");`,
       {isStreaming}
       readonly={true}
       showLineNumbers={true}
-      on:toggle={handleToggle}
-      on:streamingTimeout={handleStreamingTimeout}
+      onToggle={handleToggle}
+      onStreamingTimeout={handleStreamingTimeout}
     />
   </div>
 

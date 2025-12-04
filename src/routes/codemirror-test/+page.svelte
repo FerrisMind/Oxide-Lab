@@ -1,21 +1,24 @@
 <script lang="ts">
+
   import CodeMirrorDemo from '$lib/components/CodeMirrorDemo.svelte';
   import { mount, unmount } from 'svelte';
   import TestTube from 'phosphor-svelte/lib/TestTube';
   import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
   
-  let testIconEl: HTMLElement;
-  let testIcon: any;
+  let testIconEl: HTMLElement | undefined = $state();
+  let testIcon: any = $state();
   
-  $: if (testIconEl) {
-    if (testIcon) {
-      try { unmount(testIcon); } catch {}
+  $effect(() => {
+    if (testIconEl) {
+      if (testIcon) {
+        try { unmount(testIcon); } catch {}
+      }
+      testIcon = mount(TestTube, {
+        target: testIconEl,
+        props: { size: 32, weight: 'regular' }
+      });
     }
-    testIcon = mount(TestTube, {
-      target: testIconEl,
-      props: { size: 32, weight: 'regular' }
-    });
-  }
+  });
 </script>
 
 <svelte:head>

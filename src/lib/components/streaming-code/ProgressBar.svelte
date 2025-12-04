@@ -1,22 +1,33 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { stopPropagation } from 'svelte/legacy';
+
   import CircleNotch from 'phosphor-svelte/lib/CircleNotch';
   import Code from 'phosphor-svelte/lib/Code';
   import CaretDown from 'phosphor-svelte/lib/CaretDown';
   import CaretUp from 'phosphor-svelte/lib/CaretUp';
 
-  export let language: string = '';
-  export let isStreaming: boolean = false;
-  export let isExpanded: boolean = false;
+  interface Props {
+    language?: string;
+    isStreaming?: boolean;
+    isExpanded?: boolean;
+    onClick?: () => void;
+    onCopy?: () => void;
+  }
 
-  const dispatch = createEventDispatcher();
+  let { 
+    language = '', 
+    isStreaming = false, 
+    isExpanded = false,
+    onClick,
+    onCopy
+  }: Props = $props();
 
   function handleClick() {
-    dispatch('click');
+    onClick?.();
   }
   function handleCopyClick(e: Event) {
     e.stopPropagation();
-    dispatch('copy');
+    onCopy?.();
   }
 
   function getLanguageDisplayName(lang: string): string {
@@ -39,9 +50,9 @@
     return langMap[lang.toLowerCase()] || lang.toUpperCase();
   }
 
-  $: displayLanguage = getLanguageDisplayName(language);
-  $: statusText = isStreaming ? 'Выполняется' : 'Готово';
-  $: isInteractive = !isStreaming;
+  let displayLanguage = $derived(getLanguageDisplayName(language));
+  let statusText = $derived(isStreaming ? 'Выполняется' : 'Готово');
+  let isInteractive = $derived(!isStreaming);
 </script>
 
 {#if isInteractive}
@@ -49,7 +60,7 @@
     class="progress-bar interactive"
     class:streaming={isStreaming}
     class:expanded={isExpanded}
-    on:click={handleClick}
+    onclick={handleClick}
     aria-label={`${isExpanded ? 'Свернуть' : 'Развернуть'} код ${displayLanguage}`}
     aria-expanded={isExpanded}
   >
@@ -80,8 +91,8 @@
           class="copy-btn"
           role="button"
           tabindex="0"
-          on:click|stopPropagation={handleCopyClick}
-          on:keydown={(e) => {
+          onclick={stopPropagation(handleCopyClick)}
+          onkeydown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               handleCopyClick(e);
             }

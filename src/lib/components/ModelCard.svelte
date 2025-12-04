@@ -1,7 +1,11 @@
 <script lang="ts">
+  import { createBubbler } from 'svelte/legacy';
+
+  const bubble = createBubbler();
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
   import Heart from 'phosphor-svelte/lib/Heart';
-  export let model: {
+  interface Props {
+    model: {
     id: string;
     name: string;
     description: string;
@@ -13,6 +17,9 @@
     modelType: string;
     formats: string[];
   };
+  }
+
+  let { model }: Props = $props();
 
   // Форматирование числа загрузок
   function formatDownloads(downloads: number): string {
@@ -50,8 +57,8 @@
 
 <div 
   class="model-card" 
-  on:click
-  on:keydown={(e) => e.key === 'Enter' && e.currentTarget.click()}
+  onclick={bubble('click')}
+  onkeydown={(e) => e.key === 'Enter' && e.currentTarget.click()}
   role="button"
   tabindex="0"
 >

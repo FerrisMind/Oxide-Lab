@@ -2,7 +2,11 @@
   import type { HFModel } from '$lib/services/huggingface';
   import { formatNumber, formatDate } from './formatters';
 
-  export let model: HFModel;
+  interface Props {
+    model: HFModel;
+  }
+
+  let { model }: Props = $props();
 </script>
 
 <div class="model-stats">

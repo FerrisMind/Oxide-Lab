@@ -1,4 +1,5 @@
 <script lang="ts">
+
   import type { HFModel } from '$lib/services/huggingface';
   import { huggingFaceService } from '$lib/services/huggingface';
   import EmptyState from './model-detail/EmptyState.svelte';
@@ -10,14 +11,17 @@
   import ModelAdditionalInfo from './model-detail/ModelAdditionalInfo.svelte';
   import ModelDescription from './model-detail/ModelDescription.svelte';
 
-  export let model: HFModel | null = null;
-  export let loading = false;
+  interface Props {
+    model?: HFModel | null;
+    loading?: boolean;
+  }
 
-  let detailedModel: HFModel | null = null;
-  let detailsLoading = false;
+  let { model = null, loading = false }: Props = $props();
+
+  let detailedModel: HFModel | null = $state(null);
+  let detailsLoading = $state(false);
   let currentModelId: string | null = null;
 
-  $: handleModelChange(model);
   
   function handleModelChange(newModel: HFModel | null) {
     const newModelId = newModel?.id || null;
@@ -62,6 +66,9 @@
       }
     }
   }
+  $effect(() => {
+    handleModelChange(model);
+  });
 </script>
 
 <div class="model-detail">

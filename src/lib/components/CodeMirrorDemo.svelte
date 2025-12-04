@@ -5,7 +5,7 @@
   import { enableExternalLinks } from '$lib/chat/external-links';
   import { onMount, onDestroy } from 'svelte';
 
-  let contentEl: HTMLDivElement;
+  let contentEl: HTMLDivElement | undefined = $state();
   let renderer: any;
 
   const sampleMarkdown = `# CodeMirror Integration Demo

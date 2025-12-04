@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { createBubbler, stopPropagation } from 'svelte/legacy';
+
+  const bubble = createBubbler();
   import { chatHistory, sortedSessions, currentSession } from '$lib/stores/chat-history';
   import { onMount } from 'svelte';
   import type { ChatSession } from '$lib/stores/chat-history';
@@ -17,16 +20,16 @@
   // Инициализация highlight.js
   hljs.registerLanguage('json', json);
 
-  let editingSessionId: string | null = null;
-  let editingTitle = '';
-  let showDeleteConfirm: string | null = null;
-  let showClearAllConfirm = false;
-  let showExportModal = false;
-  let exportData = '';
-  let importInput: HTMLInputElement;
-  let exportCodeElement: HTMLElement;
-  let isDownloading = false;
-  let isCopying = false;
+  let editingSessionId: string | null = $state(null);
+  let editingTitle = $state('');
+  let showDeleteConfirm: string | null = $state(null);
+  let showClearAllConfirm = $state(false);
+  let showExportModal = $state(false);
+  let exportData = $state('');
+  let importInput: HTMLInputElement | undefined = $state();
+  let exportCodeElement: HTMLElement | undefined = $state();
+  let isDownloading = $state(false);
+  let isCopying = $state(false);
 
   function handleNewChat() {
     const sessionId = chatHistory.createSession();
@@ -206,7 +209,7 @@
   }
 
   function handleImport() {
-    importInput.click();
+    importInput?.click();
   }
 
   function onImportFile(event: Event) {
@@ -258,27 +261,27 @@
     <div class="header-actions">
       <button
         class="btn-icon"
-        on:click={handleNewChat}
+        onclick={handleNewChat}
         title="Новый чат"
         aria-label="Создать новый чат"
       >
-        <svelte:component this={Plus} size={16} weight="bold" />
+        <Plus size={16} weight="bold" />
       </button>
       <button
         class="btn-icon"
-        on:click={handleImport}
+        onclick={handleImport}
         title="Импорт"
         aria-label="Импортировать чат из файла"
       >
-        <svelte:component this={DownloadSimple} size={16} weight="bold" />
+        <DownloadSimple size={16} weight="bold" />
       </button>
       <button
         class="btn-icon danger"
-        on:click={handleClearAll}
+        onclick={handleClearAll}
         title="Удалить все чаты"
         aria-label="Удалить все чаты"
       >
-        <svelte:component this={StackMinus} size={16} weight="bold" />
+        <StackMinus size={16} weight="bold" />
       </button>
     </div>
   </div>
@@ -287,7 +290,7 @@
     type="file"
     accept=".json"
     bind:this={importInput}
-    on:change={onImportFile}
+    onchange={onImportFile}
     style="display: none;"
   />
 
@@ -295,15 +298,15 @@
     {#if $sortedSessions.length === 0}
       <div class="empty-state">
         <p>Нет сохраненных чатов</p>
-        <button class="btn-new-chat" on:click={handleNewChat}>Начать новый чат</button>
+        <button class="btn-new-chat" onclick={handleNewChat}>Начать новый чат</button>
       </div>
     {:else}
       {#each $sortedSessions as session (session.id)}
         <div
           class="session-item"
           class:active={$currentSession?.id === session.id}
-          on:click={() => handleLoadSession(session.id)}
-          on:keydown={(e) => {
+          onclick={() => handleLoadSession(session.id)}
+          onkeydown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               handleLoadSession(session.id);
@@ -319,12 +322,12 @@
                 type="text"
                 class="edit-input"
                 bind:value={editingTitle}
-                on:blur={saveEdit}
-                on:keydown={(e) => {
+                onblur={saveEdit}
+                onkeydown={(e) => {
                   if (e.key === 'Enter') saveEdit();
                   if (e.key === 'Escape') cancelEdit();
                 }}
-                on:click|stopPropagation
+                onclick={stopPropagation(bubble('click'))}
                 aria-label="Новое название чата"
               />
             {:else}
@@ -339,15 +342,15 @@
 
             <div
               class="session-actions"
-              on:click|stopPropagation
-              on:keydown={(e) => e.stopPropagation()}
+              onclick={stopPropagation(bubble('click'))}
+              onkeydown={(e) => e.stopPropagation()}
               role="toolbar"
               aria-label="Действия с чатом"
               tabindex="-1"
             >
               <button
                 class="btn-icon-small"
-                on:click={() => startEditing(session)}
+                onclick={() => startEditing(session)}
                 title="Переименовать"
                 aria-label={`Переименовать чат "${session.title}"`}
               >
@@ -355,7 +358,7 @@
               </button>
               <button
                 class="btn-icon-small"
-                on:click={() => handleExport(session.id)}
+                onclick={() => handleExport(session.id)}
                 title="Экспорт"
                 aria-label={`Экспортировать чат "${session.title}"`}
               >
@@ -363,7 +366,7 @@
               </button>
               <button
                 class="btn-icon-small danger"
-                on:click={() => confirmDelete(session.id)}
+                onclick={() => confirmDelete(session.id)}
                 title="Удалить"
                 aria-label={`Удалить чат "${session.title}"`}
               >
@@ -375,8 +378,8 @@
           {#if showDeleteConfirm === session.id}
             <div
               class="delete-confirm"
-              on:click|stopPropagation
-              on:keydown={(e) => e.stopPropagation()}
+              onclick={stopPropagation(bubble('click'))}
+              onkeydown={(e) => e.stopPropagation()}
               role="alertdialog"
               aria-labelledby="delete-confirm-title"
               aria-describedby="delete-confirm-desc"
@@ -384,10 +387,10 @@
             >
               <p id="delete-confirm-desc">Удалить этот чат?</p>
               <div class="confirm-actions">
-                <button class="secondary" on:click={() => (showDeleteConfirm = null)}>
+                <button class="secondary" onclick={() => (showDeleteConfirm = null)}>
                   Отмена
                 </button>
-                <button class="primary danger" on:click={() => handleDelete(session.id)}>
+                <button class="primary danger" onclick={() => handleDelete(session.id)}>
                   Удалить
                 </button>
               </div>
@@ -402,8 +405,8 @@
 {#if showExportModal}
   <div
     class="modal-overlay"
-    on:click={() => (showExportModal = false)}
-    on:keydown={(e) => {
+    onclick={() => (showExportModal = false)}
+    onkeydown={(e) => {
       if (e.key === 'Escape') {
         showExportModal = false;
       }
@@ -412,8 +415,8 @@
   >
     <div
       class="modal"
-      on:click|stopPropagation
-      on:keydown={(e) => {
+      onclick={stopPropagation(bubble('click'))}
+      onkeydown={(e) => {
         e.stopPropagation();
         if (e.key === 'Escape') {
           showExportModal = false;
@@ -428,7 +431,7 @@
         <h3 id="export-modal-title">Экспорт чата</h3>
         <button
           class="btn-close"
-          on:click={() => (showExportModal = false)}
+          onclick={() => (showExportModal = false)}
           aria-label="Закрыть окно экспорта"
         >
           ×
@@ -444,12 +447,12 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="secondary" on:click={copyExportData} disabled={isCopying}>
+        <button class="secondary" onclick={copyExportData} disabled={isCopying}>
           {isCopying ? 'Копирование...' : 'Копировать'}
         </button>
         <button
           class="primary"
-          on:click={(e) => {
+          onclick={(e) => {
             console.log('Кнопка скачать нажата', e);
             downloadExportData();
           }}
@@ -467,8 +470,8 @@
 {#if showClearAllConfirm}
   <div
     class="modal-overlay"
-    on:click={cancelClearAll}
-    on:keydown={(e) => {
+    onclick={cancelClearAll}
+    onkeydown={(e) => {
       if (e.key === 'Escape') {
         cancelClearAll();
       }
@@ -477,8 +480,8 @@
   >
     <div
       class="modal"
-      on:click|stopPropagation
-      on:keydown={(e) => {
+      onclick={stopPropagation(bubble('click'))}
+      onkeydown={(e) => {
         e.stopPropagation();
         if (e.key === 'Escape') {
           cancelClearAll();
@@ -491,7 +494,7 @@
     >
       <div class="modal-header">
         <h3 id="clear-all-modal-title">Удалить все чаты</h3>
-        <button class="btn-close" on:click={cancelClearAll} aria-label="Закрыть окно подтверждения">
+        <button class="btn-close" onclick={cancelClearAll} aria-label="Закрыть окно подтверждения">
           ×
         </button>
       </div>
@@ -499,8 +502,8 @@
         <p>Вы уверены, что хотите удалить все чаты? Это действие нельзя отменить.</p>
       </div>
       <div class="modal-footer">
-        <button class="secondary" on:click={cancelClearAll}>Отмена</button>
-        <button class="primary danger" on:click={confirmClearAll}>Удалить все</button>
+        <button class="secondary" onclick={cancelClearAll}>Отмена</button>
+        <button class="primary danger" onclick={confirmClearAll}>Удалить все</button>
       </div>
     </div>
   </div>

@@ -6,13 +6,23 @@
   import Lightbulb from "phosphor-svelte/lib/Lightbulb";
   import { t } from '$lib/i18n';
   
-  export let isLoadingModel = false;
-  export let isCancelling = false;
-  export let loadingStage = "";
-  export let loadingProgress = 0;
-  export let errorText = "";
+  interface Props {
+    isLoadingModel?: boolean;
+    isCancelling?: boolean;
+    loadingStage?: string;
+    loadingProgress?: number;
+    errorText?: string;
+  }
 
-  $: stageTextValue = (stage: string) => {
+  let {
+    isLoadingModel = $bindable(false),
+    isCancelling = $bindable(false),
+    loadingStage = $bindable(""),
+    loadingProgress = $bindable(0),
+    errorText = $bindable("")
+  }: Props = $props();
+
+  let stageTextValue = $derived((stage: string) => {
     const key = `chat.loading.stages.${stage}`;
     const translated = $t(key);
     // Если перевод не найден (вернулся ключ), используем дефолтный
@@ -20,7 +30,7 @@
       return stage ? $t('chat.loading.stages.default', { stage }) : '';
     }
     return translated;
-  };
+  });
   
   function stageText(stage: string): string {
     return stageTextValue(stage);

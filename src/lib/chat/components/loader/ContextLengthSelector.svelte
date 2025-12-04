@@ -1,5 +1,9 @@
 <script lang="ts">
-  export let ctx_limit_value = 4096;
+  interface Props {
+    ctx_limit_value?: number;
+  }
+
+  let { ctx_limit_value = $bindable(4096) }: Props = $props();
 </script>
 
 <div class="param">

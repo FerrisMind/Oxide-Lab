@@ -2,7 +2,11 @@
   import Sparkle from "phosphor-svelte/lib/Sparkle";
   import { t } from '$lib/i18n';
 
-  export let variant: 'full' | 'inline' = 'full';
+  interface Props {
+    variant?: 'full' | 'inline';
+  }
+
+  let { variant = 'full' }: Props = $props();
 </script>
 
 <section class="chat-placeholder" class:compact={variant === 'inline'}>

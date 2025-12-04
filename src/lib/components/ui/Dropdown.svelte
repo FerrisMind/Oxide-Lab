@@ -7,11 +7,15 @@
     disabled?: boolean;
   }
 
-  export let items: MenuItem[] = [];
-  export let label = '⋯';
+  interface Props {
+    items?: MenuItem[];
+    label?: string;
+  }
 
-  let isOpen = false;
-  let dropdownElement: HTMLDivElement;
+  let { items = [], label = '⋯' }: Props = $props();
+
+  let isOpen = $state(false);
+  let dropdownElement: HTMLDivElement | undefined = $state();
 
   function toggleMenu() {
     isOpen = !isOpen;
@@ -44,7 +48,7 @@
 </script>
 
 <div class="dropdown" bind:this={dropdownElement}>
-  <button class="dropdown-trigger" on:click={toggleMenu}>
+  <button class="dropdown-trigger" onclick={toggleMenu}>
     {label}
   </button>
 
@@ -54,7 +58,7 @@
         <button
           class="dropdown-item"
           disabled={item.disabled}
-          on:click={() => handleItemClick(item)}
+          onclick={() => handleItemClick(item)}
         >
           {item.label}
         </button>

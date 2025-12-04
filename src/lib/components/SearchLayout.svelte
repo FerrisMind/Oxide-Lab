@@ -1,40 +1,56 @@
 <script lang="ts">
+
   import type { HFModel } from '$lib/services/huggingface';
   
-  export let models: HFModel[] = [];
-  export let selectedModel: HFModel | null = null;
-  export let isLoading: boolean = false;
-  export let hasMore: boolean = false;
   export const error: string | null = null;
-  export let totalCount: number = 0;
   
-  import { createEventDispatcher, mount, unmount, onMount as _onMount } from 'svelte';
+  import { mount, unmount, onMount as _onMount } from 'svelte';
   import ModelList from './ModelList.svelte';
   import ModelDetail from './ModelDetail.svelte';
   import Robot from 'phosphor-svelte/lib/Robot';
+  interface Props {
+    models?: HFModel[];
+    selectedModel?: HFModel | null;
+    isLoading?: boolean;
+    hasMore?: boolean;
+    totalCount?: number;
+    onSelectModel?: (detail: any) => void;
+    onLoadMore?: () => void;
+  }
+
+  let {
+    models = [],
+    selectedModel = null,
+    isLoading = false,
+    hasMore = false,
+    totalCount = 0,
+    onSelectModel,
+    onLoadMore
+  }: Props = $props();
   
-  const dispatch = createEventDispatcher();
-  let noSelectionIconEl: HTMLElement;
-  let robotIcon: any;
+  let noSelectionIconEl: HTMLElement | undefined = $state();
+  let robotIcon: any = $state();
   
-  function handleModelSelect(event: CustomEvent) {
-    dispatch('selectModel', event.detail);
+  function handleModelSelect(detail: { model: HFModel }) {
+    onSelectModel?.(detail);
   }
   
   function handleLoadMore() {
-    dispatch('loadMore');
+    onLoadMore?.();
   }
   
   // Mount robot icon when no model is selected
-  $: if (noSelectionIconEl && !selectedModel) {
-    if (robotIcon) {
-      try { unmount(robotIcon); } catch {}
+  $effect(() => {
+    if (noSelectionIconEl && !selectedModel) {
+      if (robotIcon) {
+        try { unmount(robotIcon); } catch {}
+      }
+      robotIcon = mount(Robot, {
+        target: noSelectionIconEl,
+        props: { size: 64, weight: 'regular' }
+      });
     }
-    robotIcon = mount(Robot, {
-      target: noSelectionIconEl,
-      props: { size: 64, weight: 'regular' }
-    });
-  }
+  });
 </script>
 
 <div class="search-layout">
@@ -48,14 +64,14 @@
         {models} 
         selectedModelId={selectedModel?.id}
         loading={isLoading}
-        on:selectModel={handleModelSelect}
+        onSelectModel={handleModelSelect}
       />
       
       {#if hasMore}
         <div class="load-more-container">
           <button 
             class="load-more-btn" 
-            on:click={handleLoadMore}
+            onclick={handleLoadMore}
             disabled={isLoading}
           >
             {isLoading ? 'Загрузка...' : 'Загрузить ещё'}

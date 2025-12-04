@@ -1,4 +1,5 @@
 <script lang="ts">
+
   import { onMount } from 'svelte';
   import { folderPath, scanFolder } from '$lib/stores/local-models';
   import { ModelCardsService } from '$lib/services/model-cards';
@@ -43,36 +44,20 @@
     return 'cube';
   }
 
-  let selectedCard: ModelCardSummary | null = null;
-  let downloadErrors: Record<string, string> = {};
-  let downloadQueued: Record<string, boolean> = {};
-  let selectedQuantizations: Record<string, string> = {};
-  let selectedCardQuantizations: string[] = [];
-  let lastProcessedHistoryId: string | null = null;
+  let selectedCard: ModelCardSummary | null = $state(null);
+  let downloadErrors: Record<string, string> = $state({});
+  let downloadQueued: Record<string, boolean> = $state({});
+  let selectedQuantizations: Record<string, string> = $state({});
+  let selectedCardQuantizations: string[] = $state([]);
+  let lastProcessedHistoryId: string | null = $state(null);
 
   onMount(() => {
     void loadModelCards();
     void ensureDownloadManager();
   });
 
-  $: if ($filteredModelCards.length && !selectedCard) {
-    selectedCard = $filteredModelCards[0];
-  }
 
-  $: if (
-    selectedCard &&
-    !$filteredModelCards.find((card) => card.id === selectedCard?.id)
-  ) {
-    selectedCard = $filteredModelCards[0] ?? null;
-  }
 
-  $: selectedCardQuantizations = selectedCard?.gguf_quantizations ?? [];
-  $: if (selectedCard && selectedCardQuantizations.length) {
-    const current = selectedQuantizations[selectedCard.id];
-    if (!current || !selectedCardQuantizations.includes(current)) {
-      setQuantization(selectedCard.id, selectedCardQuantizations[0]);
-    }
-  }
 
   function getDownloadId(card: ModelCardSummary, format: 'gguf' | 'safetensors') {
     return `model-card::${card.id}::${format}`;
@@ -82,24 +67,6 @@
     return job.group_id ?? `${job.repo_id}::${job.filename}`;
   }
 
-  $: if ($downloadHistory.length) {
-    const latest = $downloadHistory[0];
-    if (latest?.group_id && downloadQueued[latest.group_id]) {
-      const next = { ...downloadQueued };
-      delete next[latest.group_id];
-      downloadQueued = next;
-    }
-    if (
-      latest &&
-      $folderPath &&
-      latest.id !== lastProcessedHistoryId &&
-      latest.status === 'completed' &&
-      latest.destination_path?.startsWith($folderPath)
-    ) {
-      lastProcessedHistoryId = latest.id;
-      scanFolder($folderPath, true);
-    }
-  }
   function setQuantization(cardId: string, quant: string) {
     selectedQuantizations = { ...selectedQuantizations, [cardId]: quant };
   }
@@ -163,6 +130,50 @@
   async function handleResetConfig() {
     await resetModelCards();
   }
+  $effect(() => {
+    if ($filteredModelCards.length && !selectedCard) {
+      selectedCard = $filteredModelCards[0];
+    }
+  });
+  $effect(() => {
+    if (
+      selectedCard &&
+      !$filteredModelCards.find((card) => card.id === selectedCard?.id)
+    ) {
+      selectedCard = $filteredModelCards[0] ?? null;
+    }
+  });
+  $effect(() => {
+    selectedCardQuantizations = selectedCard?.gguf_quantizations ?? [];
+  });
+  $effect(() => {
+    if (selectedCard && selectedCardQuantizations.length) {
+      const current = selectedQuantizations[selectedCard.id];
+      if (!current || !selectedCardQuantizations.includes(current)) {
+        setQuantization(selectedCard.id, selectedCardQuantizations[0]);
+      }
+    }
+  });
+  $effect(() => {
+    if ($downloadHistory.length) {
+      const latest = $downloadHistory[0];
+      if (latest?.group_id && downloadQueued[latest.group_id]) {
+        const next = { ...downloadQueued };
+        delete next[latest.group_id];
+        downloadQueued = next;
+      }
+      if (
+        latest &&
+        $folderPath &&
+        latest.id !== lastProcessedHistoryId &&
+        latest.status === 'completed' &&
+        latest.destination_path?.startsWith($folderPath)
+      ) {
+        lastProcessedHistoryId = latest.id;
+        scanFolder($folderPath, true);
+      }
+    }
+  });
 </script>
 
 <div class="remote-models-panel">

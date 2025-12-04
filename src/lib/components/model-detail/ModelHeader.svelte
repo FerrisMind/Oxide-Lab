@@ -1,21 +1,28 @@
 <script lang="ts">
+
   import type { HFModel } from '$lib/services/huggingface';
   import { formatNumber } from './formatters';
   import { createIconManager } from './icon-manager';
   import { onMount as _onMount, onDestroy } from 'svelte';
 
-  export let model: HFModel;
+  interface Props {
+    model: HFModel;
+  }
 
-  let downloadIconEl: HTMLElement;
-  let heartIconEl: HTMLElement;
-  let huggingFaceIconEl: HTMLElement;
+  let { model }: Props = $props();
+
+  let downloadIconEl: HTMLElement | undefined = $state();
+  let heartIconEl: HTMLElement | undefined = $state();
+  let huggingFaceIconEl: HTMLElement | undefined = $state();
 
   const iconManager = createIconManager();
 
   // Mount action button icons when elements are ready
-  $: if (downloadIconEl && heartIconEl && huggingFaceIconEl && model) {
-    iconManager.mountActionIcons(downloadIconEl, heartIconEl, huggingFaceIconEl);
-  }
+  $effect(() => {
+    if (downloadIconEl && heartIconEl && huggingFaceIconEl && model) {
+      iconManager.mountActionIcons(downloadIconEl, heartIconEl, huggingFaceIconEl);
+    }
+  });
 
   onDestroy(() => {
     iconManager.cleanup();
@@ -51,7 +58,7 @@
         {formatNumber(model.likes)}
       </button>
     </div>
-    <button class="btn btn-secondary btn-hf" on:click={openHuggingFaceCard} title="Открыть на Hugging Face">
+    <button class="btn btn-secondary btn-hf" onclick={openHuggingFaceCard} title="Открыть на Hugging Face">
       <span class="btn-icon" bind:this={huggingFaceIconEl}></span>
       Hugging Face
     </button>

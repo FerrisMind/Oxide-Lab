@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { createEventDispatcher } from 'svelte';
   import XCircle from 'phosphor-svelte/lib/XCircle';
   import Pause from 'phosphor-svelte/lib/Pause';
   import Play from 'phosphor-svelte/lib/Play';
@@ -20,7 +19,11 @@
   import type { DownloadJob } from '$lib/types/local-models';
   import { t } from '$lib/i18n';
 
-  const dispatch = createEventDispatcher<{ close: void }>();
+  interface Props {
+    onClose?: () => void;
+  }
+
+  let { onClose }: Props = $props();
 
   let modalElement: HTMLDivElement | undefined;
   let isDragging = false;
@@ -181,7 +184,7 @@
   });
 
   function handleClose() {
-    dispatch('close');
+    onClose?.();
   }
 
   function stopPropagation(event: MouseEvent) {

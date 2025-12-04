@@ -190,7 +190,8 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
       <Checkbox
         id="candle-only"
         label={$t('models.local.candleOnly')}
-        bind:checked={$filterOptions.candleOnly}
+        checked={$filterOptions.candleOnly ?? false}
+        onchange={(checked: boolean) => updateFilter({ candleOnly: checked })}
       />
     </div>
   </section>
@@ -600,7 +601,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     overflow: hidden;
   }
 
-  .content:has(.details) {
+  .content:has(:global(.details)) {
     grid-template-columns: 1fr minmax(320px, 360px);
   }
 

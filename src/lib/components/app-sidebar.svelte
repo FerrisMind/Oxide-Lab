@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import * as Sidebar from '$lib/components/ui/sidebar/index';
   import SidebarSimple from 'phosphor-svelte/lib/SidebarSimple';
   import ChatCircle from 'phosphor-svelte/lib/ChatCircle';
@@ -68,12 +68,14 @@
       : baseNavigationItems,
   );
 
-  const dispatch = createEventDispatcher<{
-    openDownloads: void;
-    openAbout: void;
-  }>();
+  interface Props {
+    onOpenDownloads?: () => void;
+    onOpenAbout?: () => void;
+  }
 
-  let currentPath = $derived($page.url.pathname);
+  let { onOpenDownloads, onOpenAbout }: Props = $props();
+
+  let currentPath = $derived(page.url.pathname);
   let hasActiveDownloads = $derived($downloadsLoaded && $activeDownloads.length > 0);
   let aggregateDownloadProgress = $derived(
     !$downloadsLoaded || !$activeDownloads.length
@@ -116,11 +118,11 @@
   }
 
   function handleDownloadsClick() {
-    dispatch('openDownloads');
+    onOpenDownloads?.();
   }
 
   function handleAboutClick() {
-    dispatch('openAbout');
+    onOpenAbout?.();
   }
 </script>
 

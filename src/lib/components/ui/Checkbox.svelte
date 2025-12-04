@@ -1,13 +1,27 @@
 <script lang="ts">
-  export let checked = false;
-  export let disabled = false;
-  export let label = '';
-  export let id = '';
-  export let name = '';
+  interface Props {
+    checked?: boolean;
+    disabled?: boolean;
+    label?: string;
+    id?: string;
+    name?: string;
+    onchange?: (checked: boolean) => void;
+  }
+
+  let {
+    checked = false,
+    disabled = false,
+    label = '',
+    id = '',
+    name = '',
+    onchange
+  }: Props = $props();
 
   function handleChange(event: Event) {
     const target = event.target as HTMLInputElement;
-    checked = target.checked;
+    const newChecked = target.checked;
+    checked = newChecked;
+    onchange?.(newChecked);
   }
 </script>
 
@@ -19,7 +33,7 @@
     {name}
     {disabled}
     bind:checked
-    on:change={handleChange}
+    onchange={handleChange}
   />
   <label for={id} class="checkbox-label">
     {label}

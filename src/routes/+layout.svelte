@@ -305,7 +305,7 @@ import * as Tabs from '$lib/components/ui/tabs';
 </script>
 
 <SidebarUI.Provider bind:open={isSidebarOpen}>
-  <AppSidebar on:openDownloads={() => (showDownloadManager = true)} on:openAbout={toggleAbout} />
+  <AppSidebar onOpenDownloads={() => (showDownloadManager = true)} onOpenAbout={toggleAbout} />
   <SidebarUI.Inset class="app-shell">
     <div class="app-header-wrapper" onmousedown={startDragging} role="toolbar" tabindex="0">
       <header class="app-header">
@@ -542,7 +542,7 @@ import * as Tabs from '$lib/components/ui/tabs';
     </div>
   {/if}
   {#if showDownloadManager}
-    <DownloadManagerModal on:close={() => (showDownloadManager = false)} />
+    <DownloadManagerModal onClose={() => (showDownloadManager = false)} />
   {/if}
 
   <!-- SvelteKit layout must expose a slot; hide it to avoid duplicate rendering -->

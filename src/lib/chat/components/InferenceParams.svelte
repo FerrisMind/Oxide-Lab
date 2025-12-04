@@ -1,15 +1,31 @@
 <script lang="ts">
-  export let use_custom_params: boolean;
-  export let temperature_enabled: boolean;
-  export let temperature: number;
-  export let top_k_enabled: boolean;
-  export let top_k_value: number;
-  export let top_p_enabled: boolean;
-  export let top_p_value: number;
-  export let min_p_enabled: boolean;
-  export let min_p_value: number;
-  export let repeat_penalty_enabled: boolean;
-  export let repeat_penalty_value: number;
+  interface Props {
+    use_custom_params: boolean;
+    temperature_enabled: boolean;
+    temperature: number;
+    top_k_enabled: boolean;
+    top_k_value: number;
+    top_p_enabled: boolean;
+    top_p_value: number;
+    min_p_enabled: boolean;
+    min_p_value: number;
+    repeat_penalty_enabled: boolean;
+    repeat_penalty_value: number;
+  }
+
+  let {
+    use_custom_params = $bindable(),
+    temperature_enabled = $bindable(),
+    temperature = $bindable(),
+    top_k_enabled = $bindable(),
+    top_k_value = $bindable(),
+    top_p_enabled = $bindable(),
+    top_p_value = $bindable(),
+    min_p_enabled = $bindable(),
+    min_p_value = $bindable(),
+    repeat_penalty_enabled = $bindable(),
+    repeat_penalty_value = $bindable()
+  }: Props = $props();
 </script>
 
 <div class="params">

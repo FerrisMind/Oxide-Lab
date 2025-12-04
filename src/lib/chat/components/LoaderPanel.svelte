@@ -1,13 +1,10 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import DeviceSelector from './loader/DeviceSelector.svelte';
   import ContextLengthSelector from './loader/ContextLengthSelector.svelte';
   import HubModelForm from './loader/HubModelForm.svelte';
   import LoadingStatus from './loader/LoadingStatus.svelte';
   import { listen, type UnlistenFn } from '@tauri-apps/api/event';
   import { onMount, onDestroy } from 'svelte';
-
-  const dispatch = createEventDispatcher();
 
   let {
     format = $bindable('gguf'),
@@ -40,6 +37,8 @@
     supports_audio: _supports_audio = false,
     supports_video: _supports_video = false,
     onMainAction: _onMainAction = undefined,
+    onDeviceToggle,
+    class: className = '',
     children,
   } = $props();
   let tokensDump = $state('');
@@ -57,7 +56,7 @@
   });
 </script>
 
-<section class="loader">
+<section class={`loader ${className}`}>
   <!-- format selection buttons removed (GGUF / HF Hub) — upload controls moved to header -->
   <!-- Панель индикаторов модальностей удалена по требованию -->
 
@@ -66,7 +65,7 @@
       bind:use_gpu
       bind:cuda_available
       bind:cuda_build
-      on:device-toggle={(e) => dispatch('device-toggle', e.detail)}
+      onDeviceToggle={onDeviceToggle}
     />
 
     <!-- thinking toggle removed -->
@@ -116,7 +115,7 @@
       bind:use_gpu
       bind:cuda_available
       bind:cuda_build
-      on:device-toggle={(e) => dispatch('device-toggle', e.detail)}
+      onDeviceToggle={onDeviceToggle}
     />
 
     <HubModelForm bind:repoId bind:revision bind:hubGgufFilename />
@@ -166,7 +165,7 @@
       bind:use_gpu
       bind:cuda_available
       bind:cuda_build
-      on:device-toggle={(e) => dispatch('device-toggle', e.detail)}
+      onDeviceToggle={onDeviceToggle}
     />
 
     <HubModelForm bind:repoId bind:revision isSafetensors={true} />

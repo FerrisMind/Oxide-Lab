@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+
+  import { onMount, onDestroy } from 'svelte';
   import { EditorView, keymap, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
   import { EditorState, StateEffect, Compartment } from '@codemirror/state';
   import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
@@ -8,19 +9,30 @@
   import { foldGutter, bracketMatching, foldKeymap, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
   import { lineNumbers, highlightSpecialChars, drawSelection, dropCursor, rectangularSelection, crosshairCursor } from '@codemirror/view';
   // Theme kept as optional lazy import; loaded on demand
-  let oneDark: any = null;
+  let oneDark: any = $state(null);
 
-  export let code: string = '';
-  export let language: string = '';
-  export let readonly: boolean = true;
-  export let theme: 'light' | 'dark' | 'auto' = 'auto';
-  export let showLineNumbers: boolean = false;
-  export const wrap: boolean = true;
+  interface Props {
+    code?: string;
+    language?: string;
+    readonly?: boolean;
+    theme?: 'light' | 'dark' | 'auto';
+    showLineNumbers?: boolean;
+    wrap?: boolean;
+    onChange?: (detail: { code: string }) => void;
+  }
 
-  const dispatch = createEventDispatcher();
+  let {
+    code = '',
+    language = '',
+    readonly = true,
+    theme = 'auto',
+    showLineNumbers = false,
+    wrap = true,
+    onChange
+  }: Props = $props();
   
-  let container: HTMLElement;
-  let editorView: EditorView | null = null;
+  let container: HTMLElement | undefined = $state();
+  let editorView: EditorView | null = $state(null);
 
   // Compartments for dynamic reconfiguration
   const compTheme = new Compartment();
@@ -185,7 +197,7 @@
       const updateListener = EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           const newCode = update.state.doc.toString();
-          dispatch('change', { code: newCode });
+          onChange?.({ code: newCode });
         }
       });
       editorView.dispatch({
@@ -228,40 +240,48 @@
   });
 
   // React to prop changes
-  $: if (editorView && code !== undefined) {
-    updateEditor();
-  }
+  $effect(() => {
+    if (editorView && code !== undefined) {
+      updateEditor();
+    }
+  });
 
   // Dynamic theme changes via Compartment
-  $: if (editorView) {
-    const currentTheme = getTheme();
-    (async () => {
-      if (currentTheme === 'dark') {
-        if (!oneDark) {
-          try { oneDark = (await import('@codemirror/theme-one-dark')).oneDark; } catch {}
+  $effect(() => {
+    if (editorView) {
+      const currentTheme = getTheme();
+      (async () => {
+        if (currentTheme === 'dark') {
+          if (!oneDark) {
+            try { oneDark = (await import('@codemirror/theme-one-dark')).oneDark; } catch {}
+          }
+          if (oneDark) editorView && editorView.dispatch({ effects: compDark.reconfigure(oneDark) });
+        } else {
+          editorView && editorView.dispatch({ effects: compDark.reconfigure([]) });
         }
-        if (oneDark) editorView && editorView.dispatch({ effects: compDark.reconfigure(oneDark) });
-      } else {
-        editorView && editorView.dispatch({ effects: compDark.reconfigure([]) });
-      }
-    })();
-  }
+      })();
+    }
+  });
 
   // Dynamic language change
-  $: if (editorView && language !== undefined) {
-    applyLanguage();
-  }
+  $effect(() => {
+    if (editorView && language !== undefined) {
+      applyLanguage();
+    }
+  });
 
   // Dynamic toggles
-  $: if (editorView) {
-    editorView.dispatch({ effects: [
-      compReadonly.reconfigure(readonly ? EditorState.readOnly.of(true) : []),
-      compLineNumbers.reconfigure(
-        showLineNumbers ? lineNumbers() : EditorView.theme({ '.cm-gutters': { display: 'none' } })
-      ),
-      compWrapping.reconfigure(wrap ? EditorView.lineWrapping : [])
-    ]});
-  }
+  $effect(() => {
+    if (editorView) {
+      editorView.dispatch({ effects: [
+        compReadonly.reconfigure(readonly ? EditorState.readOnly.of(true) : []),
+        compLineNumbers.reconfigure(
+          showLineNumbers ? lineNumbers() : EditorView.theme({ '.cm-gutters': { display: 'none' } })
+        ),
+        compWrapping.reconfigure(wrap ? EditorView.lineWrapping : [])
+      ]});
+    }
+  });
 
   // Listen for theme changes
   let mediaQuery: MediaQueryList;

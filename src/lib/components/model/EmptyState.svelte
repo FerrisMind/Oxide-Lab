@@ -1,6 +1,10 @@
 <script lang="ts">
-  export let models: any[] = [];
-  export let loading = false;
+  interface Props {
+    models?: any[];
+    loading?: boolean;
+  }
+
+  let { models = [], loading = false }: Props = $props();
 </script>
 
 {#if !loading && models.length === 0}

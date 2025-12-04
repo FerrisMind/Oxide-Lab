@@ -1,14 +1,17 @@
 <script lang="ts">
+
   import { createIconManager } from './icon-manager';
   import { onDestroy } from 'svelte';
 
-  let emptyIconEl: HTMLElement;
+  let emptyIconEl: HTMLElement | undefined = $state();
   const iconManager = createIconManager();
 
   // Mount robot icon when component is ready
-  $: if (emptyIconEl) {
-    iconManager.mountEmptyIcon(emptyIconEl);
-  }
+  $effect(() => {
+    if (emptyIconEl) {
+      iconManager.mountEmptyIcon(emptyIconEl);
+    }
+  });
 
   onDestroy(() => {
     iconManager.cleanup();

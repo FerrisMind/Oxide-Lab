@@ -1,76 +1,69 @@
 <script lang="ts">
-  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import { stopPropagation } from 'svelte/legacy';
+
+  import { onMount, onDestroy } from 'svelte';
   import CopySimple from 'phosphor-svelte/lib/CopySimple';
   import CircleNotch from 'phosphor-svelte/lib/CircleNotch';
   import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
   import hljs from 'highlight.js/lib/common';
 
-  export let code: string = '';
-  export let language: string = '';
-  export let isStreaming: boolean = false;
-  export let isComplete: boolean = false;
-  export let theme: 'light' | 'dark' | 'auto' = 'auto';
-  // Spinner control props
-  export let spinnerStartSignal: string = '[CODE]';
-  export let spinnerEndSignal: string = '[CODE_END]';
-  // Props kept for API совместимости; подсветка highlight.js их не использует
-  export const showLineNumbers: boolean = false;
-  export const readonly: boolean = true;
+  
+  interface Props {
+    code?: string;
+    language?: string;
+    isStreaming?: boolean;
+    isComplete?: boolean;
+    theme?: 'light' | 'dark' | 'auto';
+    // Spinner control props
+    spinnerStartSignal?: string;
+    spinnerEndSignal?: string;
+    // Props kept for API совместимости; подсветка highlight.js их не использует
+    showLineNumbers?: boolean;
+    readonly?: boolean;
+    onCopied?: () => void;
+    onToggle?: (detail: { expanded: boolean }) => void;
+    onStreamingTimeout?: () => void;
+  }
 
-  const dispatch = createEventDispatcher();
+  let {
+    code = '',
+    language = '',
+    isStreaming = false,
+    isComplete = false,
+    theme = 'auto',
+    spinnerStartSignal = '[CODE]',
+    spinnerEndSignal = '[CODE_END]',
+    showLineNumbers = false,
+    readonly = true,
+    onCopied,
+    onToggle,
+    onStreamingTimeout
+  }: Props = $props();
 
-  let container: HTMLElement;
+  let container: HTMLElement | undefined = $state();
   let preEl: HTMLPreElement | null = null;
   let codeEl: HTMLElement | null = null;
-  let lastCodeLength: number = 0;
+  let lastCodeLength: number = $state(0);
   let renderedCode: string = '';
   // Buffering state for streaming updates to coalesce rapid incoming chunks
   let pendingStreamingCode: string | null = null;
   let pendingAnimationFrame: number | null = null;
   // Local UI state for header/progress interactions
   // By default code blocks should be collapsed per UX requirement
-  let isExpanded: boolean = false;
+  let isExpanded: boolean = $state(false);
   // Timer handle for streaming inactivity timeout
-  let streamingTimeout: ReturnType<typeof setTimeout> | null = null;
+  let streamingTimeout: ReturnType<typeof setTimeout> | null = $state(null);
   // Track transition from streaming -> idle to auto-collapse only once
-  let wasStreaming: boolean = false;
-  let prevIsStreaming: boolean = false;
-  let collapseTimer: ReturnType<typeof setTimeout> | null = null;
+  let wasStreaming: boolean = $state(false);
+  let prevIsStreaming: boolean = $state(false);
+  let collapseTimer: ReturnType<typeof setTimeout> | null = $state(null);
   // Icon transition state: 'spinner' | 'check' | 'hidden'
-  let headerIconState: 'spinner' | 'check' | 'hidden' = 'hidden';
-  let isSpinnerActive: boolean = false;
+  let headerIconState: 'spinner' | 'check' | 'hidden' = $state('hidden');
+  let isSpinnerActive: boolean = $state(false);
 
-  // Detect spinner signals in code
-  $: {
-    const codeStr = code || '';
-    const hasCodeStart = spinnerStartSignal && codeStr.includes(spinnerStartSignal);
-    const hasCodeEnd = spinnerEndSignal && codeStr.includes(spinnerEndSignal);
-
-    if (hasCodeStart && !isSpinnerActive) {
-      // Start spinning when start signal is detected
-      isSpinnerActive = true;
-      headerIconState = 'spinner';
-    } else if (hasCodeEnd && isSpinnerActive) {
-      // Stop spinning and show check when end signal is detected
-      isSpinnerActive = false;
-      headerIconState = 'check';
-      // Auto-hide check after 1.5s
-      if (iconTransitionTimer) clearTimeout(iconTransitionTimer);
-      iconTransitionTimer = setTimeout(() => {
-        headerIconState = 'hidden';
-        iconTransitionTimer = null;
-      }, 1500);
-    } else if (isSpinnerActive) {
-      // Keep spinner active while spinning
-      headerIconState = 'spinner';
-    } else {
-      // Hide when not active
-      headerIconState = 'hidden';
-    }
-  }
-  let iconTransitionTimer: ReturnType<typeof setTimeout> | null = null;
+  let iconTransitionTimer: ReturnType<typeof setTimeout> | null = $state(null);
   // Whether we've already auto-expanded after a streaming session
-  let autoExpandedDone: boolean = false;
+  let autoExpandedDone: boolean = $state(false);
   // Streaming spinner state
   let _spinnerHost: HTMLSpanElement | null = null;
 
@@ -79,7 +72,7 @@
     try {
       const text = renderedCode || code || '';
       if (text != null) navigator.clipboard.writeText(text);
-      dispatch('copied');
+      onCopied?.();
     } catch {}
   }
 
@@ -183,7 +176,7 @@
           preEl!.scrollTop = preEl!.scrollHeight;
         } catch {}
         try {
-          container.scrollIntoView({ block: 'end', behavior: 'auto' });
+          container?.scrollIntoView({ block: 'end', behavior: 'auto' });
         } catch {}
       });
     }
@@ -229,7 +222,7 @@
     // Disable expand/collapse during streaming
     if (isStreaming) return;
     isExpanded = !isExpanded;
-    dispatch('toggle', { expanded: isExpanded });
+    onToggle?.({ expanded: isExpanded });
   }
 
   function handleStreamingTimeout() {
@@ -240,7 +233,7 @@
     // Auto-complete streaming after 30 seconds of inactivity
     streamingTimeout = setTimeout(() => {
       if (isStreaming) {
-        dispatch('streamingTimeout');
+        onStreamingTimeout?.();
       }
     }, 30000);
   }
@@ -253,7 +246,7 @@
     try {
       const text = renderedCode || code || '';
       navigator.clipboard.writeText(text);
-      dispatch('copied');
+      onCopied?.();
     } catch (err) {
       console.error('Failed to copy code content', err);
     }
@@ -278,83 +271,10 @@
     }
   });
 
-  // React to streaming state changes
-  $: if (isStreaming) {
-    // While streaming, keep the editor collapsed and prevent auto-expansion
-    if (isExpanded) isExpanded = false;
-    autoExpandedDone = false;
-    // Cancel any pending auto-collapse/expand timers
-    if (collapseTimer) {
-      clearTimeout(collapseTimer);
-      collapseTimer = null;
-    }
-    handleStreamingTimeout();
-    // Coalesced incremental updates during streaming to avoid UI jank
-    scheduleStreamingUpdate(code);
-    // Keep block in view (stick to bottom of viewport)
-    if (container) {
-      requestAnimationFrame(() => {
-        try {
-          container.scrollIntoView({ block: 'end', behavior: 'auto' });
-        } catch {}
-      });
-    }
-    wasStreaming = true;
-  } else {
-    // Clear timeout when streaming stops
-    if (streamingTimeout) {
-      clearTimeout(streamingTimeout);
-      streamingTimeout = null;
-    }
-    // Full update when streaming completes
-    updateEditorFull(code);
-    // If we just finished a streaming session, auto-expand once and then don't auto-toggle anymore
-    if (wasStreaming && prevIsStreaming && !isStreaming) {
-      // Small delay to avoid races with the final chunk
-      if (collapseTimer) {
-        clearTimeout(collapseTimer);
-      }
-      collapseTimer = setTimeout(() => {
-        if (!isStreaming && !autoExpandedDone) {
-          isExpanded = true;
-          autoExpandedDone = true;
-        }
-        wasStreaming = false;
-        collapseTimer = null;
 
-        // Icon transition is now handled by the reactive block above
-      }, 120);
-    }
-  }
 
-  // Auto-expand when this specific code block becomes complete (closing ``` detected)
-  $: if (isComplete && !autoExpandedDone) {
-    // Only auto-expand once per block; respect manual user collapse/expand afterwards
-    isExpanded = true;
-    autoExpandedDone = true;
-  }
 
-  // Track previous streaming state
-  $: prevIsStreaming = isStreaming;
 
-  // No external expand/collapse controls; header click toggles collapsed state
-
-  // React to other prop changes: re-render when code changes and not streaming
-  $: if (container && !isStreaming && code !== undefined) {
-    updateEditorFull(code);
-  }
-  // Recreate on theme change (rare) to keep header/widget layout intact
-  $: if (container && theme) {
-    // Re-render to pick new theme
-    updateEditorFull(code);
-  }
-
-  // No longer recreate editor based on streaming flag: header is external
-
-  // Track code length changes for streaming detection
-  $: if (code.length !== lastCodeLength) {
-    lastCodeLength = code.length;
-  }
 
   // Listen for theme changes
   let mediaQuery: MediaQueryList;
@@ -372,6 +292,119 @@
       };
     }
   });
+  // Detect spinner signals in code
+  $effect(() => {
+    const codeStr = code || '';
+    const hasCodeStart = spinnerStartSignal && codeStr.includes(spinnerStartSignal);
+    const hasCodeEnd = spinnerEndSignal && codeStr.includes(spinnerEndSignal);
+
+    if (hasCodeStart && !isSpinnerActive) {
+      // Start spinning when start signal is detected
+      isSpinnerActive = true;
+      headerIconState = 'spinner';
+    } else if (hasCodeEnd && isSpinnerActive) {
+      // Stop spinning and show check when end signal is detected
+      isSpinnerActive = false;
+      headerIconState = 'check';
+      // Auto-hide check after 1.5s
+      if (iconTransitionTimer) clearTimeout(iconTransitionTimer);
+      iconTransitionTimer = setTimeout(() => {
+        headerIconState = 'hidden';
+        iconTransitionTimer = null;
+      }, 1500);
+    } else if (isSpinnerActive) {
+      // Keep spinner active while spinning
+      headerIconState = 'spinner';
+    } else {
+      // Hide when not active
+      headerIconState = 'hidden';
+    }
+  });
+  // Track previous streaming state
+  $effect(() => {
+    prevIsStreaming = isStreaming;
+  });
+  // React to streaming state changes
+  $effect(() => {
+    if (isStreaming) {
+      // While streaming, keep the editor collapsed and prevent auto-expansion
+      if (isExpanded) isExpanded = false;
+      autoExpandedDone = false;
+      // Cancel any pending auto-collapse/expand timers
+      if (collapseTimer) {
+        clearTimeout(collapseTimer);
+        collapseTimer = null;
+      }
+      handleStreamingTimeout();
+      // Coalesced incremental updates during streaming to avoid UI jank
+      scheduleStreamingUpdate(code);
+      // Keep block in view (stick to bottom of viewport)
+      if (container) {
+        requestAnimationFrame(() => {
+          try {
+            container?.scrollIntoView({ block: 'end', behavior: 'auto' });
+          } catch {}
+        });
+      }
+      wasStreaming = true;
+    } else {
+      // Clear timeout when streaming stops
+      if (streamingTimeout) {
+        clearTimeout(streamingTimeout);
+        streamingTimeout = null;
+      }
+      // Full update when streaming completes
+      updateEditorFull(code);
+      // If we just finished a streaming session, auto-expand once and then don't auto-toggle anymore
+      if (wasStreaming && prevIsStreaming && !isStreaming) {
+        // Small delay to avoid races with the final chunk
+        if (collapseTimer) {
+          clearTimeout(collapseTimer);
+        }
+        collapseTimer = setTimeout(() => {
+          if (!isStreaming && !autoExpandedDone) {
+            isExpanded = true;
+            autoExpandedDone = true;
+          }
+          wasStreaming = false;
+          collapseTimer = null;
+
+          // Icon transition is now handled by the reactive block above
+        }, 120);
+      }
+    }
+  });
+  // Auto-expand when this specific code block becomes complete (closing ``` detected)
+  $effect(() => {
+    if (isComplete && !autoExpandedDone) {
+      // Only auto-expand once per block; respect manual user collapse/expand afterwards
+      isExpanded = true;
+      autoExpandedDone = true;
+    }
+  });
+  // No external expand/collapse controls; header click toggles collapsed state
+
+  // React to other prop changes: re-render when code changes and not streaming
+  $effect(() => {
+    if (container && !isStreaming && code !== undefined) {
+      updateEditorFull(code);
+    }
+  });
+  // Recreate on theme change (rare) to keep header/widget layout intact
+  $effect(() => {
+    if (container && theme) {
+      // Re-render to pick new theme
+      updateEditorFull(code);
+    }
+  });
+  // No longer recreate editor based on streaming flag: header is external
+
+  // Track code length changes for streaming detection
+  $effect(() => {
+    if (code.length !== lastCodeLength) {
+      lastCodeLength = code.length;
+    }
+  });
 </script>
 
 <div class="streaming-code-block" class:streaming={isStreaming} class:collapsed={!isExpanded}>
@@ -382,8 +415,8 @@
     aria-expanded={isExpanded}
     aria-disabled={isStreaming}
     tabindex={isStreaming ? -1 : 0}
-    on:click={handleProgressBarClick}
-    on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleProgressBarClick()}
+    onclick={handleProgressBarClick}
+    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleProgressBarClick()}
   >
     <div class="left">
       <span
@@ -406,7 +439,7 @@
         type="button"
         aria-label="Копировать"
         title="Копировать"
-        on:click|stopPropagation={copyCurrentCode}
+        onclick={stopPropagation(copyCurrentCode)}
       >
         <CopySimple size={16} />
       </button>

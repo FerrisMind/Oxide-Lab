@@ -2,9 +2,13 @@
   import type { HFModel } from '$lib/services/huggingface';
   import { getTagColor } from './formatters';
 
-  export let model: HFModel;
+  interface Props {
+    model: HFModel;
+  }
+
+  let { model }: Props = $props();
   
-  let tagsCollapsed = false;
+  let tagsCollapsed = $state(false);
 </script>
 
 {#if model.tags && model.tags.length > 0}
@@ -12,7 +16,7 @@
     <div class="section-header">
       <button 
         class="collapse-btn" 
-        on:click={() => tagsCollapsed = !tagsCollapsed}
+        onclick={() => tagsCollapsed = !tagsCollapsed}
         aria-label={tagsCollapsed ? 'Развернуть теги' : 'Свернуть теги'}
       >
         <h3>Теги</h3>

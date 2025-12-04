@@ -716,11 +716,11 @@
         {isLoaderPanelVisible}
         {isChatHistoryVisible}
         hasMessages={hasMessages}
-        on:send={sendMessage}
-        on:stop={stopGenerate}
-        on:attach={(event) => attachFileToPrompt(event.detail)}
-        on:toggle-loader-panel={toggleLoaderPanelVisibility}
-        on:toggle-chat-history={toggleChatHistoryVisibility}
+        onSend={sendMessage}
+        onStop={stopGenerate}
+        onAttach={attachFileToPrompt}
+        onToggleLoaderPanel={toggleLoaderPanelVisibility}
+        onToggleChatHistory={toggleChatHistoryVisibility}
       />
     </section>
 
@@ -762,7 +762,7 @@
             bind:verbose_prompt
             bind:tracing
             onMainAction={mainAction}
-            on:device-toggle={(e: CustomEvent) => setDeviceByToggle(!!(e.detail as any)?.checked)}
+            onDeviceToggle={(detail: { checked: boolean }) => setDeviceByToggle(!!detail?.checked)}
           >
             <!-- Параметры инференса -->
             {#if isLoaded}

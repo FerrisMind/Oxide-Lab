@@ -2,17 +2,20 @@
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
   import Heart from 'phosphor-svelte/lib/Heart';
   import type { HFModel } from '$lib/services/huggingface';
-  import { createEventDispatcher } from 'svelte';
+  interface Props {
+    model: HFModel;
+    selectedModelId?: string | null;
+    onSelectModel?: (detail: { model: HFModel }) => void;
+  }
 
-  export let model: HFModel;
-  export let selectedModelId: string | null = null;
-
-  const dispatch = createEventDispatcher<{
-    selectModel: { model: HFModel };
-  }>();
+  let { 
+    model, 
+    selectedModelId = null,
+    onSelectModel
+  }: Props = $props();
 
   function handleModelSelect() {
-    dispatch('selectModel', { model });
+    onSelectModel?.({ model });
   }
 
   // Форматирование числа загрузок
@@ -49,8 +52,8 @@
 <div 
   class="model-item" 
   class:selected={selectedModelId === model.id}
-  on:click={handleModelSelect}
-  on:keydown={(e) => e.key === 'Enter' && handleModelSelect()}
+  onclick={handleModelSelect}
+  onkeydown={(e) => e.key === 'Enter' && handleModelSelect()}
   role="button"
   tabindex="0"
 >

@@ -1,20 +1,25 @@
 <script lang="ts">
   import type { HFModel } from '$lib/services/huggingface';
-  import { createEventDispatcher } from 'svelte';
   import ModelItem from './model/ModelItem.svelte';
   import LoadingState from './model/LoadingState.svelte';
   import EmptyState from './model/EmptyState.svelte';
 
-  export let models: HFModel[] = [];
-  export let selectedModelId: string | null = null;
-  export let loading = false;
+  interface Props {
+    models?: HFModel[];
+    selectedModelId?: string | null;
+    loading?: boolean;
+    onSelectModel?: (detail: { model: HFModel }) => void;
+  }
 
-  const dispatch = createEventDispatcher<{
-    selectModel: { model: HFModel };
-  }>();
+  let { 
+    models = [], 
+    selectedModelId = null, 
+    loading = false,
+    onSelectModel
+  }: Props = $props();
 
-  function handleModelSelect(event: CustomEvent<{ model: HFModel }>) {
-    dispatch('selectModel', event.detail);
+  function handleModelSelect(detail: { model: HFModel }) {
+    onSelectModel?.(detail);
   }
 </script>
 
@@ -28,7 +33,7 @@
         <ModelItem 
           {model} 
           {selectedModelId} 
-          on:selectModel={handleModelSelect}
+          onSelectModel={handleModelSelect}
         />
       {/each}
     </div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+
   import ArrowUp from 'phosphor-svelte/lib/ArrowUp';
   import Stop from 'phosphor-svelte/lib/Stop';
   import Paperclip from 'phosphor-svelte/lib/Paperclip';
@@ -40,55 +40,70 @@
   const AUDIO_EXTENSIONS = ['wav', 'mp3', 'ogg', 'flac', 'm4a'];
   const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'mkv'];
   const DEFAULT_TEXT_ACCEPT = TEXT_EXTENSIONS.map((ext) => `.${ext}`).join(',');
-  const dispatch = createEventDispatcher<{
-    send: void;
-    stop: void;
-    clear: void;
-    attach: AttachDetail;
-    'toggle-loader-panel': void;
-    'toggle-chat-history': void;
-  }>();
 
-  export let prompt: string = '';
-  export let busy: boolean = false;
-  export let isLoaded: boolean = false;
-  export let canStop: boolean = false;
-  export let isRecording: boolean = false;
-  export let supports_text: boolean = true;
-  export let supports_image: boolean = false;
-  export let supports_audio: boolean = false;
-  export let supports_video: boolean = false;
-  export let isLoaderPanelVisible: boolean = false;
-  export let isChatHistoryVisible: boolean = false;
-  export let hasMessages: boolean = false;
+  interface Props {
+    prompt?: string;
+    busy?: boolean;
+    isLoaded?: boolean;
+    canStop?: boolean;
+    isRecording?: boolean;
+    supports_text?: boolean;
+    supports_image?: boolean;
+    supports_audio?: boolean;
+    supports_video?: boolean;
+    isLoaderPanelVisible?: boolean;
+    isChatHistoryVisible?: boolean;
+    hasMessages?: boolean;
+    onSend?: () => void;
+    onStop?: () => void;
+    onClear?: () => void;
+    onAttach?: (detail: AttachDetail) => void;
+    onToggleLoaderPanel?: () => void;
+    onToggleChatHistory?: () => void;
+  }
 
-  let fileInput: HTMLInputElement | null = null;
-  let textareaElement: HTMLTextAreaElement | null = null;
+  let {
+    prompt = $bindable(''),
+    busy = false,
+    isLoaded = false,
+    canStop = false,
+    isRecording = $bindable(false),
+    supports_text = true,
+    supports_image = false,
+    supports_audio = false,
+    supports_video = false,
+    isLoaderPanelVisible = false,
+    isChatHistoryVisible = false,
+    hasMessages = false,
+    onSend,
+    onStop,
+    onClear,
+    onAttach,
+    onToggleLoaderPanel,
+    onToggleChatHistory
+  }: Props = $props();
+
+  let fileInput: HTMLInputElement | null = $state(null);
+  let textareaElement: HTMLTextAreaElement | null = $state(null);
   const MAX_FILE_SIZE = 20 * 1024 * 1024;
-  let attachError: string | null = null;
+  let attachError: string | null = $state(null);
   let errorTimer: ReturnType<typeof setTimeout> | null = null;
-  let accept = DEFAULT_TEXT_ACCEPT;
-  let attachedFiles: AttachDetail[] = [];
-  $: experimentalReady = experimentalFeatures.initialized && experimentalFeatures.enabled;
-  $: experimentalStatusMessage = experimentalFeatures.initialized
-    ? experimentalFeatures.enabled
-      ? null
-      : $t('chat.composer.experimental.disabled')
-    : $t('chat.composer.experimental.loading');
+  let accept = $state(DEFAULT_TEXT_ACCEPT);
+  let attachedFiles: AttachDetail[] = $state([]);
 
   // Переменные для автоматического изменения высоты
-  let textareaHeight = 34; // Стандартная высота однострочного поля
+  let textareaHeight = $state(34); // Стандартная высота однострочного поля
   const MIN_HEIGHT = 34; // Минимальная высота (как у кнопок)
   const MAX_HEIGHT = 102; // Максимальная высота (3 строки)
 
   function triggerSend() {
     if (busy || !isLoaded || !prompt.trim()) return;
-    dispatch('send');
+    onSend?.();
   }
 
   function triggerStop() {
     if (!canStop) return;
-    dispatch('stop');
+    onStop?.();
   }
 
   function triggerClear() {
@@ -96,7 +111,7 @@
     prompt = '';
     attachError = null;
     clearErrorTimer();
-    dispatch('clear');
+    onClear?.();
   }
 
   function triggerVoiceInput() {
@@ -112,11 +127,11 @@
   }
 
   function triggerSettings() {
-    dispatch('toggle-loader-panel');
+    onToggleLoaderPanel?.();
   }
 
   function triggerChatHistory() {
-    dispatch('toggle-chat-history');
+    onToggleChatHistory?.();
   }
 
   function removeAttachment(index: number) {
@@ -128,7 +143,6 @@
     fileInput.click();
   }
 
-  $: accept = buildAccept();
 
   function buildAccept() {
     const extensions: string[] = [];
@@ -194,7 +208,7 @@
         const content = await file.text();
         const attachment = { filename: name, content };
         attachedFiles = [...attachedFiles, attachment];
-        dispatch('attach', attachment);
+        onAttach?.(attachment);
         attachError = null;
         clearErrorTimer();
         return;
@@ -215,7 +229,7 @@
       if (marker) {
         const attachment = { filename: name, content: marker };
         attachedFiles = [...attachedFiles, attachment];
-        dispatch('attach', attachment);
+        onAttach?.(attachment);
         attachError = null;
         clearErrorTimer();
       } else {
@@ -262,13 +276,24 @@
     adjustTextareaHeight();
   }
 
+  let experimentalReady = $derived(experimentalFeatures.initialized && experimentalFeatures.enabled);
+  let experimentalStatusMessage = $derived(experimentalFeatures.initialized
+    ? experimentalFeatures.enabled
+      ? null
+      : $t('chat.composer.experimental.disabled')
+    : $t('chat.composer.experimental.loading'));
+  $effect(() => {
+    accept = buildAccept();
+  });
   // Реактивное обновление высоты при изменении prompt
-  $: if (prompt !== undefined) {
-    // Используем setTimeout для корректного обновления после рендера
-    setTimeout(() => {
-      adjustTextareaHeight();
-    }, 0);
-  }
+  $effect(() => {
+    if (prompt !== undefined) {
+      // Используем setTimeout для корректного обновления после рендера
+      setTimeout(() => {
+        adjustTextareaHeight();
+      }, 0);
+    }
+  });
 </script>
 
 {#if isLoaded}
@@ -289,7 +314,7 @@
             variant="ghost"
             size="icon-sm"
             class="text-muted-foreground transition hover:text-foreground"
-            on:click={() => removeAttachment(index)}
+            onclick={() => removeAttachment(index)}
             aria-label={$t('errors.file.removeFile') + ' ' + attachment.filename}
           >
             <X size={14} weight="bold" />
@@ -308,8 +333,8 @@
         placeholder={$t('chat.composer.placeholder')}
         class="composer-textarea resize-none border-none bg-transparent px-0 pb-1 pt-0 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
         style={`height:${textareaHeight}px`}
-        on:keydown={handleKeydown}
-        on:input={handleTextareaInput}
+        onkeydown={handleKeydown}
+        oninput={handleTextareaInput}
       />
 
       <div class="composer-controls flex flex-wrap items-center gap-2">
@@ -318,7 +343,7 @@
             variant="ghost"
             size="icon-sm"
             class="icon-button"
-            on:click={triggerAttach}
+            onclick={triggerAttach}
             disabled={busy || !isLoaded || !experimentalReady}
             aria-label={$t('chat.composer.attach')}
             title={experimentalStatusMessage ?? undefined}
@@ -330,7 +355,7 @@
             variant="ghost"
             size="icon-sm"
             class={cn('icon-button', isChatHistoryVisible && 'is-active')}
-            on:click={triggerChatHistory}
+            onclick={triggerChatHistory}
             aria-label={isChatHistoryVisible ? $t('chat.composer.hideHistory') : $t('chat.composer.showHistory')}
             disabled={!experimentalReady}
             title={experimentalStatusMessage ?? undefined}
@@ -342,7 +367,7 @@
             variant="ghost"
             size="icon-sm"
             class={cn('icon-button', isLoaderPanelVisible && 'is-active')}
-            on:click={triggerSettings}
+            onclick={triggerSettings}
             aria-label={$t('chat.composer.loaderSettings')}
           >
             <SlidersHorizontal size={16} weight="bold" />
@@ -355,7 +380,7 @@
               variant="ghost"
               size="icon-sm"
               class="icon-button"
-              on:click={triggerClear}
+              onclick={triggerClear}
               disabled={busy}
               aria-label={$t('chat.composer.clear')}
             >
@@ -367,7 +392,7 @@
             variant="ghost"
             size="icon-sm"
             class="icon-button"
-            on:click={triggerVoiceInput}
+            onclick={triggerVoiceInput}
             disabled={busy || !isLoaded || !experimentalReady}
             aria-label={isRecording ? $t('chat.composer.voice.stopRecording') : $t('chat.composer.voice.startRecording')}
             aria-pressed={isRecording}
@@ -384,7 +409,7 @@
             variant="default"
             size="icon-sm"
             class="send-button"
-            on:click={busy ? triggerStop : triggerSend}
+            onclick={busy ? triggerStop : triggerSend}
             disabled={!isLoaded || (!busy && !prompt.trim())}
             aria-label={busy ? $t('chat.composer.stop') : $t('chat.composer.send')}
           >
@@ -405,7 +430,7 @@
     type="file"
     {accept}
     bind:this={fileInput}
-    on:change={handleFileChange}
+    onchange={handleFileChange}
   />
 
   {#if attachError}
@@ -434,20 +459,20 @@
     transform: translate(-50%, -50%);
   }
 
-  .composer-textarea {
+  :global(.composer-textarea) {
     min-height: 34px;
   }
 
-  .icon-button {
+  :global(.icon-button) {
     border-radius: 9999px;
   }
 
-  .icon-button.is-active {
+  :global(.icon-button.is-active) {
     background-color: hsl(var(--primary) / 0.12);
     color: hsl(var(--primary));
   }
 
-  .send-button {
+  :global(.send-button) {
     border-radius: 9999px;
   }
 </style>

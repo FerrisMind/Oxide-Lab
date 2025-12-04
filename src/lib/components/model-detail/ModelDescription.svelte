@@ -4,15 +4,17 @@
   import { createCodeMirrorManager } from './codemirror-manager';
   import { onDestroy } from 'svelte';
 
-  export let model: HFModel | null;
-  export let detailedModel: HFModel | null;
-  export let detailsLoading: boolean;
+  interface Props {
+    model: HFModel | null;
+    detailedModel: HFModel | null;
+    detailsLoading: boolean;
+  }
 
-  let descriptionEl: HTMLElement;
+  let { model, detailedModel, detailsLoading }: Props = $props();
+
+  let descriptionEl: HTMLElement | undefined = $state();
   const codeMirrorManager = createCodeMirrorManager();
 
-  // Apply CodeMirror to description content when it's rendered
-  $: setupCodeMirror(descriptionEl, detailedModel?.description || model?.description);
   
   function setupCodeMirror(element: HTMLElement, description: string | undefined) {
     if (element && description) {
@@ -22,6 +24,13 @@
 
   onDestroy(() => {
     codeMirrorManager.cleanup();
+  });
+  
+  // Apply CodeMirror to description content when it's rendered
+  $effect(() => {
+    if (descriptionEl) {
+      setupCodeMirror(descriptionEl, detailedModel?.description || model?.description);
+    }
   });
 </script>
 

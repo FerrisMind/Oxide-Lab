@@ -1,13 +1,20 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
   import Cpu from "phosphor-svelte/lib/Cpu";
   import GraphicsCard from "phosphor-svelte/lib/GraphicsCard";
   
-  const dispatch = createEventDispatcher();
-  
-  export let use_gpu = false;
-  export let cuda_available = false;
-  export let cuda_build = false;
+  interface Props {
+    use_gpu?: boolean;
+    cuda_available?: boolean;
+    cuda_build?: boolean;
+    onDeviceToggle?: (detail: { checked: boolean }) => void;
+  }
+
+  let { 
+    use_gpu = $bindable(false), 
+    cuda_available = $bindable(false), 
+    cuda_build = $bindable(false),
+    onDeviceToggle
+  }: Props = $props();
 </script>
 
 <div class="param">
@@ -18,7 +25,7 @@
         type="button"
         class="segment" class:active={!use_gpu}
         aria-label="Процессор"
-        on:click={() => dispatch('device-toggle', { checked: false })}
+        onclick={() => onDeviceToggle?.({ checked: false })}
       >
         <Cpu size={18} />
         <span>ЦП</span>
@@ -27,7 +34,7 @@
         type="button"
         class="segment" class:active={use_gpu} disabled={!cuda_build}
         aria-label="Графический процессор"
-        on:click={() => dispatch('device-toggle', { checked: true })}
+        onclick={() => onDeviceToggle?.({ checked: true })}
         title={!cuda_build ? 'Сборка без CUDA' : (!cuda_available ? 'Попытка переключить CUDA (может завершиться ошибкой)' : 'GPU (CUDA)')}
       >
         <GraphicsCard size={18} />

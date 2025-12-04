@@ -21,10 +21,10 @@
   import Cpu from 'phosphor-svelte/lib/Cpu';
   import GraphicsCard from 'phosphor-svelte/lib/GraphicsCard';
 
-  let summary: PerformanceSummary | null = null;
-  let systemUsage: SystemUsage | null = null;
-  let loading = false;
-  let error: string | null = null;
+  let summary: PerformanceSummary | null = $state(null);
+  let systemUsage: SystemUsage | null = $state(null);
+  let loading = $state(false);
+  let error: string | null = $state(null);
   const autoRefresh = true; // Включено по умолчанию для постоянного мониторинга
   let refreshInterval: number | null = null;
 
@@ -126,7 +126,7 @@
       Мониторинг производительности
     </h3>
     <div class="actions">
-      <button on:click={loadSummary} disabled={loading} class="btn-refresh">
+      <button onclick={loadSummary} disabled={loading} class="btn-refresh">
         <ArrowClockwise size={16} class={loading ? 'animate-spin' : ''} />
         Обновить
       </button>
@@ -134,7 +134,7 @@
         <div class="pulse-dot"></div>
         <span>Реальное время</span>
       </div>
-      <button on:click={clearMetrics} class="btn-clear">
+      <button onclick={clearMetrics} class="btn-clear">
         <Trash size={16} />
         Очистить
       </button>

@@ -1,7 +1,11 @@
 <script lang="ts">
   import type { HFModel } from '$lib/services/huggingface';
 
-  export let detailedModel: HFModel | null;
+  interface Props {
+    detailedModel: HFModel | null;
+  }
+
+  let { detailedModel }: Props = $props();
 </script>
 
 {#if detailedModel}
