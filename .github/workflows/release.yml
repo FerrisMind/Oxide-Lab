@@ -20,12 +20,6 @@ jobs:
             cargo_features: 'metal,fast-cpu-accelerate'
             use_git_ring: true
             
-          - platform: 'macos-13'  # Intel runner
-            args: '--target x86_64-apple-darwin'
-            rust_targets: 'x86_64-apple-darwin'
-            cargo_features: 'fast-cpu-accelerate'
-            use_git_ring: false
-            
           - platform: 'ubuntu-22.04'
             args: ''
             rust_targets: ''
@@ -48,16 +42,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Enable Git ring for Apple Silicon
-        if: matrix.use_git_ring == true
-        shell: bash
-        run: |
-          cat >> src-tauri/Cargo.toml << 'EOF'
-          
-          [patch.crates-io]
-          ring = { git = "https://github.com/briansmith/ring", branch = "main" }
-          EOF
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
