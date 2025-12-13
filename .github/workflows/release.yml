@@ -15,29 +15,30 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'
+          - platform: 'macos-14'
             args: ''
             rust_targets: ''
             cargo_features: 'metal,fast-cpu-accelerate'
-            use_git_ring: false
+          
+          - platform: 'macos-14'
+            args: '--target x86_64-apple-darwin'
+            rust_targets: 'x86_64-apple-darwin'
+            cargo_features: 'fast-cpu-accelerate'
             
           - platform: 'ubuntu-22.04'
             args: ''
             rust_targets: ''
-            cargo_features: ''
-            use_git_ring: false
+            cargo_features: ''           
             
           - platform: 'windows-latest'
             args: ''
             rust_targets: ''
             cargo_features: ''
-            use_git_ring: false
             
           - platform: 'windows-latest'
             args: '--target aarch64-pc-windows-msvc'
             rust_targets: 'aarch64-pc-windows-msvc'
-            cargo_features: ''
-            use_git_ring: false
+            cargo_features: ''          
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -101,10 +102,8 @@ jobs:
             - 🪟 ARM64: CPU-only
             
             ### 🎮 CUDA Version
-            For NVIDIA GPU users, build locally with:
-            ```
-            cargo build --release --features cuda,cudnn,flash-attn
-            ```
+            For NVIDIA GPU users
+
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}${{ matrix.cargo_features && format(' --features {0}', matrix.cargo_features) || '' }}
