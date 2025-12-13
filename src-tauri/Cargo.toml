@@ -84,6 +84,3 @@ debug-assertions = true
 
 [profile.dev.package."*"]
 debug-assertions = false
-
-[patch.crates-io]
-ring = { git = "https://github.com/briansmith/ring", branch = "main" }

@@ -14,34 +14,50 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS Universal (Intel + Apple Silicon) с Metal и Accelerate
           - platform: 'macos-latest'
-            args: '--target universal-apple-darwin'
-            rust_targets: 'aarch64-apple-darwin,x86_64-apple-darwin'
+            args: '--target aarch64-apple-darwin'
+            rust_targets: 'aarch64-apple-darwin'
             cargo_features: 'metal,fast-cpu-accelerate'
+            use_git_ring: true
             
-          # Linux x86_64 с Intel MKL оптимизациями
+          - platform: 'macos-13'  # Intel runner
+            args: '--target x86_64-apple-darwin'
+            rust_targets: 'x86_64-apple-darwin'
+            cargo_features: 'fast-cpu-accelerate'
+            use_git_ring: false
+            
           - platform: 'ubuntu-22.04'
             args: ''
             rust_targets: ''
             cargo_features: 'fast-cpu-mkl'
+            use_git_ring: false
             
-          # Windows x86_64 (CPU-only, без CUDA)
           - platform: 'windows-latest'
             args: ''
             rust_targets: ''
             cargo_features: ''
+            use_git_ring: false
             
-          # Windows ARM64 (CPU-only)
           - platform: 'windows-latest'
             args: '--target aarch64-pc-windows-msvc'
             rust_targets: 'aarch64-pc-windows-msvc'
             cargo_features: ''
+            use_git_ring: false
 
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Enable Git ring for Apple Silicon
+        if: matrix.use_git_ring == true
+        shell: bash
+        run: |
+          cat >> src-tauri/Cargo.toml << 'EOF'
+          
+          [patch.crates-io]
+          ring = { git = "https://github.com/briansmith/ring", branch = "main" }
+          EOF
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -58,18 +74,8 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
+          key: ${{ matrix.platform }}-${{ matrix.use_git_ring }}
 
-      # macOS: устанавливаем build tools для git ring
-      - name: Install build tools (macOS only)
-        if: matrix.platform == 'macos-latest'
-        run: |
-          # Xcode Command Line Tools уже установлены
-          # Проверяем доступность clang и других инструментов
-          clang --version
-          which perl
-          perl --version
-
-      # Linux: устанавливаем зависимости + Intel MKL
       - name: Install dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -79,53 +85,7 @@ jobs:
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
-            build-essential \
-            perl
-          
-          # Устанавливаем Intel MKL для ускорения CPU
-          wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
-            | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
-          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
-            | sudo tee /etc/apt/sources.list.d/oneAPI.list
-          sudo apt-get update
-          sudo apt-get install -y intel-oneapi-mkl-devel
-
-      # Windows: устанавливаем Perl + NASM для git-версии ring
-      - name: Install build tools (Windows only)
-        if: matrix.platform == 'windows-latest'
-        shell: powershell
-        run: |
-          # Устанавливаем Strawberry Perl
-          Write-Host "Installing Strawberry Perl..."
-          choco install strawberryperl -y --no-progress
-          
-          # Устанавливаем NASM
-          Write-Host "Installing NASM..."
-          choco install nasm -y --no-progress
-          
-          # Обновляем PATH для текущей сессии
-          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-          
-          # Проверяем установку
-          Write-Host "Perl version:"
-          perl --version
-          Write-Host "NASM version:"
-          nasm --version
-
-      # Альтернативный метод для NASM (если chocolatey не работает)
-      - name: Verify NASM installation (Windows)
-        if: matrix.platform == 'windows-latest'
-        shell: powershell
-        run: |
-          try {
-            nasm --version
-          } catch {
-            Write-Host "NASM not found via chocolatey, installing manually..."
-            Invoke-WebRequest -Uri "https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-win64.zip" -OutFile "nasm.zip"
-            Expand-Archive -Path "nasm.zip" -DestinationPath "C:\nasm"
-            echo "C:\nasm\nasm-2.16.03" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            & "C:\nasm\nasm-2.16.03\nasm.exe" --version
-          }
+            build-essential
 
       - name: Install frontend dependencies
         run: npm ci
@@ -140,44 +100,26 @@ jobs:
           tagName: v__VERSION__
           releaseName: 'Oxide-Lab v__VERSION__'
           releaseBody: |
-            ## 🚀 Oxide-Lab Release
+            ## 🚀 Oxide-Lab v__VERSION__
             
             ### CPU-Optimized Builds
             
-            **Download for your platform:**
-            - 🍎 **macOS Universal** (Intel + Apple Silicon)
-              - ✨ Metal GPU acceleration
-              - ⚡ Apple Accelerate framework
-              - 🎯 Works on all Macs (M1/M2/M3 + Intel)
+            **macOS**
+            - 🍎 Apple Silicon (M1/M2/M3/M4): Metal + Accelerate
+            - 🍎 Intel: Accelerate framework
             
-            - 🐧 **Linux x86_64**
-              - ⚡ Intel MKL optimizations
-              - 🚄 Fast CPU inference
+            **Linux**
+            - 🐧 x86_64: Intel MKL optimizations
             
-            - 🪟 **Windows x86_64**
-              - 💻 CPU-only build
-              - ✅ Compatible with all systems
+            **Windows**
+            - 🪟 x86_64: CPU-only
+            - 🪟 ARM64: CPU-only
             
-            - 🪟 **Windows ARM64**
-              - 💻 CPU-only build
-              - 🎯 For ARM-based Windows devices
-            
-            ---
-            
-            ### 🎮 NVIDIA GPU Users
-            
-            **CUDA builds available separately** with:
-            - 🔥 CUDA acceleration
-            - ⚡ cuDNN support
-            - 🚀 Flash Attention
-            
-            Look for assets with `-cuda` suffix for maximum GPU performance.
-            
-            ---
-            
-            ### 📦 Installation
-            
-            Download the appropriate installer for your platform from the assets below.
+            ### 🎮 CUDA Version
+            For NVIDIA GPU users, build locally with:
+            ```
+            cargo build --release --features cuda,cudnn,flash-attn
+            ```
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }} ${{ matrix.cargo_features && format('--features {0}', matrix.cargo_features) || '' }}
