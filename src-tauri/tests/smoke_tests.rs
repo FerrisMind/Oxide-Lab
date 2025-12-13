@@ -3,10 +3,10 @@
 
 use candle::quantized::gguf_file::Value;
 use candle::{Device, Tensor};
-use llm_chat_lib::core::prompt::{ChatMessage, PromptBuilder};
-use llm_chat_lib::core::tokenizer::{extract_eos_ids, tokenizer_from_gguf_metadata};
-use llm_chat_lib::models::common::model::ModelBackend;
-use llm_chat_lib::models::registry::{detect_arch, get_model_factory};
+use oxide_lib::core::prompt::{ChatMessage, PromptBuilder};
+use oxide_lib::core::tokenizer::{extract_eos_ids, tokenizer_from_gguf_metadata};
+use oxide_lib::models::common::model::ModelBackend;
+use oxide_lib::models::registry::{detect_arch, get_model_factory};
 use std::collections::HashMap;
 use std::fs::File;
 

@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use llm_chat_lib::core::weights;
+    use oxide_lib::core::weights;
 
     #[test]
     fn test_local_list_safetensors_empty() {

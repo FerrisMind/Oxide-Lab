@@ -1,6 +1,6 @@
 //! Integration test for chat template functionality in the generation pipeline
 
-use llm_chat_lib::core::types::{ChatMessage, GenerateRequest};
+use oxide_lib::core::types::{ChatMessage, GenerateRequest};
 
 #[test]
 fn test_generate_request_with_chat_messages() {

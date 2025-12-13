@@ -1,6 +1,6 @@
 use candle::Device;
-use llm_chat_lib::core::device::select_device;
-use llm_chat_lib::core::types::DevicePreference;
+use oxide_lib::core::device::select_device;
+use oxide_lib::core::types::DevicePreference;
 
 #[test]
 fn test_auto_device_selection() {

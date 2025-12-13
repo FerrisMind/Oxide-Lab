@@ -1,7 +1,7 @@
 //! Test for the chat template integration functionality
 
-use llm_chat_lib::core::types::ChatMessage;
-use llm_chat_lib::generate::stream::build_prompt_with_template;
+use oxide_lib::core::types::ChatMessage;
+use oxide_lib::generate::stream::build_prompt_with_template;
 
 #[test]
 fn test_build_prompt_with_template() {

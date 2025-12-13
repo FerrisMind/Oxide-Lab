@@ -1,6 +1,6 @@
 //! Test for the prompt builder functionality
 
-use llm_chat_lib::core::prompt::{ChatMessage, PromptBuilder};
+use oxide_lib::core::prompt::{ChatMessage, PromptBuilder};
 
 #[test]
 fn test_prompt_builder_no_template() {

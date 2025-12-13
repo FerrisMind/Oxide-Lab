@@ -7,7 +7,7 @@ use crate::core::state::{ModelState, SharedState};
 use crate::core::types::DevicePreference;
 use crate::i18n;
 use crate::models::common::model::ModelBackend;
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 
 #[tauri::command]
 fn get_app_info() -> serde_json::Value {

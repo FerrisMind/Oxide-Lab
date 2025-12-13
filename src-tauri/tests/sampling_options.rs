@@ -1,4 +1,4 @@
-use llm_chat_lib::core::config::SamplingOptions;
+use oxide_lib::core::config::SamplingOptions;
 
 #[test]
 fn test_sampling_options_default() {
