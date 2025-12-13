@@ -122,5 +122,5 @@ jobs:
             ```
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }} ${{ matrix.cargo_features && format('--features {0}', matrix.cargo_features) || '' }}
+          args: ${{ matrix.args }}${{ matrix.cargo_features && format(' --features {0}', matrix.cargo_features) || '' }}
           updaterJsonPreferNsis: true
