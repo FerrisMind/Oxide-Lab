@@ -6,10 +6,11 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   release:
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -23,7 +24,7 @@ jobs:
           - platform: 'ubuntu-22.04'
             args: ''
             rust_targets: ''
-            cargo_features: 'fast-cpu-mkl'
+            cargo_features: ''
             use_git_ring: false
             
           - platform: 'windows-latest'
