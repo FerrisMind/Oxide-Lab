@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Oxide Lab",
+  "productName": "Oxide-Lab",
   "version": "0.13.0",
   "identifier": "OxideLab",
   "build": {
@@ -32,6 +32,8 @@
     }
   },
   "bundle": {
+    "shortDescription": "Oxide Lab - AI Chat Application",
+    "longDescription": "Private AI chat application with local model support",
     "active": true,
     "targets": "nsis",
     "publisher": "FerrisMind",

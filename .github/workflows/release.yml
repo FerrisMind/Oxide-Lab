@@ -16,10 +16,10 @@ jobs:
       matrix:
         include:
           - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
-            rust_targets: 'aarch64-apple-darwin'
+            args: ''
+            rust_targets: ''
             cargo_features: 'metal,fast-cpu-accelerate'
-            use_git_ring: true
+            use_git_ring: false
             
           - platform: 'ubuntu-22.04'
             args: ''
