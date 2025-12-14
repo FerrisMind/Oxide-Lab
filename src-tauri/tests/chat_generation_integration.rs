@@ -29,6 +29,9 @@ fn test_generate_request_with_chat_messages() {
         repeat_last_n: 64,
         use_custom_params: false,
         seed: None,
+        split_prompt: None,
+        verbose_prompt: None,
+        tracing: None,
     };
 
     assert_eq!(req.prompt, "Direct prompt");
@@ -52,6 +55,9 @@ fn test_generate_request_without_chat_messages() {
         repeat_last_n: 64,
         use_custom_params: false,
         seed: None,
+        split_prompt: None,
+        verbose_prompt: None,
+        tracing: None,
     };
 
     assert_eq!(req.prompt, "Direct prompt");

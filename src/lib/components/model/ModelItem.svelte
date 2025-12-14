@@ -8,11 +8,7 @@
     onSelectModel?: (detail: { model: HFModel }) => void;
   }
 
-  let { 
-    model, 
-    selectedModelId = null,
-    onSelectModel
-  }: Props = $props();
+  let { model, selectedModelId = null, onSelectModel }: Props = $props();
 
   function handleModelSelect() {
     onSelectModel?.({ model });
@@ -33,24 +29,24 @@
     const date = new Date(dateString);
     return date.toLocaleDateString('ru-RU', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   }
 
   // Получение цвета для формата
   function getFormatColor(format: string): string {
     const formatColors: Record<string, string> = {
-      'gguf': '#10b981',
-      'safetensors': '#3b82f6',
-      'pytorch': '#ee4b2b',
-      'onnx': '#5a67d8'
+      gguf: '#10b981',
+      safetensors: '#3b82f6',
+      pytorch: '#ee4b2b',
+      onnx: '#5a67d8',
     };
     return formatColors[format.toLowerCase()] || '#6b7280';
   }
 </script>
 
-<div 
-  class="model-item" 
+<div
+  class="model-item"
   class:selected={selectedModelId === model.id}
   onclick={handleModelSelect}
   onkeydown={(e) => e.key === 'Enter' && handleModelSelect()}
@@ -63,10 +59,7 @@
         <h4 class="model-name">{model.name}</h4>
         <div class="formats">
           {#each model.formats.slice(0, 2) as format}
-            <span 
-              class="format-badge" 
-              style="background-color: {getFormatColor(format)}"
-            >
+            <span class="format-badge" style="background-color: {getFormatColor(format)}">
               {format}
             </span>
           {/each}
@@ -77,14 +70,16 @@
       </div>
       <div class="title-stats">
         <span class="stat likes" title="Лайки">
-          <Heart size={12} /> {formatDownloads(model.likes)}
+          <Heart size={12} />
+          {formatDownloads(model.likes)}
         </span>
         <span class="stat downloads" title="Загрузки">
-          <DownloadSimple size={12} /> {formatDownloads(model.downloads)}
+          <DownloadSimple size={12} />
+          {formatDownloads(model.downloads)}
         </span>
       </div>
     </div>
-    
+
     <div class="model-info-row">
       <span class="model-author">by {model.author}</span>
       <div class="model-stats">
@@ -96,10 +91,10 @@
 
 <style>
   .model-item {
-    padding: 16px;
-    margin-bottom: 8px;
+    padding: var(--space-3); /* 16px */
+    margin-bottom: var(--space-2); /* 8px */
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     cursor: default;
     transition: all 0.2s ease;
     background: var(--card);
@@ -120,19 +115,19 @@
   .model-header {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
   }
 
   .model-title-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3); /* 16px */
   }
 
   .title-stats {
     display: flex;
-    gap: 12px;
+    gap: var(--space-3); /* 16px */
     align-items: center;
     flex-shrink: 0;
   }
@@ -140,14 +135,14 @@
   .title-with-formats {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
     flex: 1;
     min-width: 0;
   }
 
   .model-name {
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
     margin: 0;
     line-height: 1.4;
@@ -161,7 +156,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3); /* 16px */
   }
 
   .model-author {
@@ -173,7 +168,7 @@
 
   .model-stats {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
     flex-shrink: 0;
   }
 
@@ -183,21 +178,21 @@
     white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
   }
 
   .formats {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
     flex-shrink: 0;
   }
 
   .format-badge {
     font-size: 0.75rem;
     color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-weight: 500;
+    padding: var(--baseline) var(--space-2); /* 4px 8px → 2px 8px closest */
+    border-radius: var(--radius-lg); /* 16px */
+    font-weight: var(--font-weight-medium);
     white-space: nowrap;
   }
 

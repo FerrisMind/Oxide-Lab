@@ -20,13 +20,13 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 200px;
+    height: calc(var(--space-12) * 2 + var(--space-2)); /* 200px = 25 units */
     color: var(--muted);
     text-align: center;
   }
 
   .empty-hint {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm); /* 14px */
     color: var(--muted);
     opacity: 0.8;
   }

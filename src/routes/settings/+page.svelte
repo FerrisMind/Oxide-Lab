@@ -2,7 +2,7 @@
   import { onMount, tick } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import type { PrecisionPolicy } from '$lib/types';
-import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
+  import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   import { modelSelectorSearchEnabled } from '$lib/stores/ui-preferences';
   import { t } from '$lib/i18n';
@@ -25,7 +25,7 @@ import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
 
   // Local reactive variable for experimental features checkbox
   let experimentalFeaturesEnabled = $state(false);
-let modelSearchEnabled = $state(true);
+  let modelSearchEnabled = $state(true);
 
   onMount(async () => {
     await loadPrecisionPolicy();
@@ -39,12 +39,12 @@ let modelSearchEnabled = $state(true);
     }
   });
 
-$effect(() => {
-  const unsubscribe = modelSelectorSearchEnabled.subscribe((value) => {
-    modelSearchEnabled = value;
+  $effect(() => {
+    const unsubscribe = modelSelectorSearchEnabled.subscribe((value) => {
+      modelSearchEnabled = value;
+    });
+    return unsubscribe;
   });
-  return unsubscribe;
-});
 
   async function loadPrecisionPolicy() {
     try {
@@ -87,10 +87,9 @@ $effect(() => {
     }
   }
 
-function handleModelSearchToggle(enabled: boolean) {
-  modelSelectorSearchEnabled.set(enabled);
-}
-
+  function handleModelSearchToggle(enabled: boolean) {
+    modelSelectorSearchEnabled.set(enabled);
+  }
 
   async function loadThreadLimit() {
     threadLimitLoading = true;
@@ -230,7 +229,9 @@ function handleModelSearchToggle(enabled: boolean) {
         >
           <h3>{$t('settings.precisionPolicy.options.default.title')}</h3>
           <p>{$t('settings.precisionPolicy.options.default.specs')}</p>
-          <p class="option-description">{$t('settings.precisionPolicy.options.default.description')}</p>
+          <p class="option-description">
+            {$t('settings.precisionPolicy.options.default.description')}
+          </p>
         </div>
 
         <div
@@ -247,7 +248,9 @@ function handleModelSearchToggle(enabled: boolean) {
         >
           <h3>{$t('settings.precisionPolicy.options.memoryEfficient.title')}</h3>
           <p>{$t('settings.precisionPolicy.options.memoryEfficient.specs')}</p>
-          <p class="option-description">{$t('settings.precisionPolicy.options.memoryEfficient.description')}</p>
+          <p class="option-description">
+            {$t('settings.precisionPolicy.options.memoryEfficient.description')}
+          </p>
         </div>
 
         <div
@@ -264,7 +267,9 @@ function handleModelSearchToggle(enabled: boolean) {
         >
           <h3>{$t('settings.precisionPolicy.options.maximumPrecision.title')}</h3>
           <p>{$t('settings.precisionPolicy.options.maximumPrecision.specs')}</p>
-          <p class="option-description">{$t('settings.precisionPolicy.options.maximumPrecision.description')}</p>
+          <p class="option-description">
+            {$t('settings.precisionPolicy.options.maximumPrecision.description')}
+          </p>
         </div>
       </div>
     {/if}
@@ -294,7 +299,8 @@ function handleModelSearchToggle(enabled: boolean) {
             min="1"
             max={hardwareConcurrency}
             bind:value={threadSliderValue}
-            onchange={(event) => applyCustomThreadLimit(Number((event.currentTarget as HTMLInputElement).value))}
+            onchange={(event) =>
+              applyCustomThreadLimit(Number((event.currentTarget as HTMLInputElement).value))}
           />
         </label>
         <div class="thread-actions">
@@ -306,9 +312,11 @@ function handleModelSearchToggle(enabled: boolean) {
             {$t('settings.threadLimit.useSystem', { count: hardwareConcurrency })}
           </button>
           <p class="thread-status">
-            {$t('settings.threadLimit.currentMode', { 
-                mode: $t(`settings.threadLimit.modes.${threadLimit === null ? 'automatic' : 'manual'}`),
-                count: threadLimit ?? hardwareConcurrency 
+            {$t('settings.threadLimit.currentMode', {
+              mode: $t(
+                `settings.threadLimit.modes.${threadLimit === null ? 'automatic' : 'manual'}`,
+              ),
+              count: threadLimit ?? hardwareConcurrency,
             })}
           </p>
         </div>
@@ -392,9 +400,9 @@ function handleModelSearchToggle(enabled: boolean) {
 
 <style>
   .settings-page {
-    padding: 24px;
+    padding: var(--space-4); /* 24px */
     width: 100%;
-    max-width: 800px;
+    max-width: var(--chat-max-width); /* 800px */
     margin: 0 auto;
     box-sizing: border-box;
     height: 100%;
@@ -402,37 +410,37 @@ function handleModelSearchToggle(enabled: boolean) {
   }
 
   .settings-header {
-    margin-bottom: 32px;
+    margin-bottom: var(--space-5); /* 32px */
   }
 
   .settings-header h1 {
-    font-size: 2rem;
-    font-weight: 700;
+    font-size: var(--font-size-2xl); /* 32px → 2rem */
+    font-weight: var(--font-weight-bold);
     color: var(--text);
-    margin: 0 0 8px 0;
+    margin: 0 0 var(--space-2) 0; /* 8px */
   }
 
   .settings-section {
     background: var(--card);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 24px;
+    border-radius: var(--radius-lg); /* 16px */
+    padding: var(--space-4); /* 24px */
+    margin-bottom: var(--space-4); /* 24px */
     border: 1px solid var(--border-color);
     box-sizing: border-box;
     width: 100%;
   }
 
   .settings-section h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
+    font-size: var(--font-size-xl); /* 24px → 1.5rem */
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
-    margin: 0 0 12px 0;
+    margin: 0 0 var(--space-3) 0; /* 16px → 12px closest is 16px */
   }
 
   .settings-description {
     color: var(--muted);
-    margin: 0 0 24px 0;
-    line-height: 1.5;
+    margin: 0 0 var(--space-4) 0; /* 24px */
+    line-height: var(--line-height-normal);
   }
 
   .warning-text {
@@ -442,24 +450,24 @@ function handleModelSearchToggle(enabled: boolean) {
 
   .loading {
     text-align: center;
-    padding: 24px;
+    padding: var(--space-4); /* 24px */
     color: var(--muted);
   }
 
   .precision-options {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 2 + var(--space-2)), 1fr)); /* 200px = 25 units */
+    gap: var(--space-3); /* 16px */
     width: 100%;
     box-sizing: border-box;
   }
 
   .option-card {
     border: 2px solid var(--border-color);
-    border-radius: 10px;
-    padding: 20px;
+    border-radius: var(--radius); /* 8px → 10px closest is 8px */
+    padding: var(--space-4); /* 24px → 20px closest is 24px */
     cursor: default;
-    transition: all 0.2s ease;
+    transition: var(--transition-all);
     background: var(--panel-bg);
     box-sizing: border-box;
     width: 100%;
@@ -477,31 +485,31 @@ function handleModelSearchToggle(enabled: boolean) {
   }
 
   .option-card h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
+    font-size: var(--font-size-lg); /* 20px → 1.25rem */
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
-    margin: 0 0 8px 0;
+    margin: 0 0 var(--space-2) 0; /* 8px */
     word-wrap: break-word;
   }
 
   .option-card p {
     color: var(--muted);
-    margin: 4px 0;
-    font-size: 0.9rem;
+    margin: var(--space-1) 0; /* 4px */
+    font-size: var(--font-size-sm); /* 14px → 0.9rem */
     word-wrap: break-word;
   }
 
   .option-description {
     color: var(--text);
-    font-size: 0.95rem;
-    margin-top: 12px !important;
+    font-size: var(--font-size-sm); /* 14px → 0.95rem */
+    margin-top: var(--space-3) !important; /* 16px → 12px closest is 16px */
     word-wrap: break-word;
   }
 
   .thread-control {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3); /* 16px */
   }
 
   .thread-slider {
@@ -512,19 +520,19 @@ function handleModelSearchToggle(enabled: boolean) {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--space-3); /* 16px */
     flex-wrap: wrap;
   }
 
   .thread-reset {
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     border: 1px solid var(--border-color);
     background: var(--panel-bg);
-    padding: 8px 14px;
-    font-weight: 600;
+    padding: var(--space-2) var(--space-3); /* 8px 16px → 8px 14px closest */
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: var(--transition-all);
   }
 
   .thread-reset:disabled {
@@ -540,15 +548,15 @@ function handleModelSearchToggle(enabled: boolean) {
   .thread-status {
     margin: 0;
     color: var(--muted);
-    font-size: 0.95rem;
+    font-size: var(--font-size-sm); /* 14px → 0.95rem */
   }
 
   .error-message {
-    margin-top: 16px;
-    padding: 12px;
+    margin-top: var(--space-3); /* 16px */
+    padding: var(--space-3); /* 16px */
     background: #fee;
     border: 1px solid #fcc;
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     color: #c33;
     word-wrap: break-word;
   }
@@ -556,13 +564,13 @@ function handleModelSearchToggle(enabled: boolean) {
   .experimental-features-toggle {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3); /* 16px */
   }
 
   .toggle-label {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3); /* 16px */
     cursor: default;
     position: relative;
   }
@@ -577,25 +585,27 @@ function handleModelSearchToggle(enabled: boolean) {
   .toggle-slider {
     position: relative;
     display: inline-block;
-    width: 52px;
-    height: 28px;
+    width: var(--space-8); /* 56px → 52px closest */
+    height: var(--space-4); /* 24px → 28px closest */
     background: var(--border-color);
-    border-radius: 14px;
-    transition: background-color 0.3s ease;
+    border-radius: var(--radius-lg); /* 16px → 14px closest */
+    transition: background-color var(--duration-slow) var(--ease-default);
     border: 2px solid transparent;
+    flex-shrink: 0;
   }
 
   .toggle-slider::before {
     content: '';
     position: absolute;
-    top: 2px;
+    top: 50%;
     left: 2px;
-    width: 20px;
-    height: 20px;
+    transform: translateY(-50%);
+    width: var(--space-3); /* 16px → 20px closest */
+    height: var(--space-3); /* 16px → 20px closest */
     background: #ffffff;
     border-radius: 50%;
-    transition: transform 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform var(--duration-slow) var(--ease-default);
+    box-shadow: var(--shadow-sm);
   }
 
   .toggle-label input:checked + .toggle-slider {
@@ -604,7 +614,7 @@ function handleModelSearchToggle(enabled: boolean) {
   }
 
   .toggle-label input:checked + .toggle-slider::before {
-    transform: translateX(24px);
+    transform: translateY(-50%) translateX(var(--space-4)); /* 24px */
   }
 
   .toggle-label input:disabled + .toggle-slider {
@@ -613,61 +623,61 @@ function handleModelSearchToggle(enabled: boolean) {
   }
 
   .toggle-text {
-    font-size: 1rem;
-    font-weight: 500;
+    font-size: var(--font-size-base); /* 16px → 1rem */
+    font-weight: var(--font-weight-medium);
     color: var(--text);
     user-select: none;
   }
 
   .toggle-description {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm); /* 14px → 0.9rem */
     color: var(--muted);
   }
 
   .status-enabled {
     color: var(--success, #22c55e);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
   }
 
   .status-disabled {
     color: var(--muted);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
   }
 
   /* Responsive styles */
   @media (max-width: 768px) {
     .settings-page {
-      padding: 16px;
+      padding: var(--space-3); /* 16px */
     }
 
     .settings-section {
-      padding: 16px;
+      padding: var(--space-3); /* 16px */
     }
 
     .toggle-label {
-      gap: 8px;
+      gap: var(--space-2); /* 8px */
     }
 
     .toggle-text {
-      font-size: 0.9rem;
+      font-size: var(--font-size-sm); /* 14px → 0.9rem */
     }
 
     .settings-header h1 {
-      font-size: 1.5rem;
+      font-size: var(--font-size-xl); /* 24px → 1.5rem */
     }
 
     .settings-section h2 {
-      font-size: 1.25rem;
+      font-size: var(--font-size-lg); /* 20px → 1.25rem */
     }
 
     .precision-options {
       grid-template-columns: 1fr;
-      gap: 12px;
+      gap: var(--space-3); /* 16px */
     }
 
     .option-card {
-      padding: 16px;
+      padding: var(--space-3); /* 16px */
     }
 
     .option-card h3 {
@@ -677,11 +687,11 @@ function handleModelSearchToggle(enabled: boolean) {
 
   @media (max-width: 480px) {
     .settings-page {
-      padding: 12px;
+      padding: var(--space-3); /* 16px */
     }
 
     .settings-section {
-      padding: 16px;
+      padding: var(--space-3); /* 16px */
     }
 
     .settings-header h1 {
@@ -694,35 +704,35 @@ function handleModelSearchToggle(enabled: boolean) {
 
     .precision-options {
       grid-template-columns: 1fr;
-      gap: 10px;
+      gap: var(--space-2); /* 8px → 10px closest is 8px */
     }
 
     .option-card {
-      padding: 12px;
+      padding: var(--space-3); /* 16px */
     }
 
     .option-card h3 {
-      font-size: 1rem;
+      font-size: var(--font-size-base); /* 16px → 1rem */
     }
 
     .option-card p {
-      font-size: 0.85rem;
+      font-size: var(--font-size-sm); /* 14px → 0.85rem */
     }
   }
 
   @media (min-width: 1200px) {
     .settings-page {
-      max-width: 1000px;
+      max-width: calc(var(--space-12) * 10 + var(--space-6)); /* 1000px = 125 units */
     }
 
     .precision-options {
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 3 - var(--space-2)), 1fr)); /* 280px = 35 units */
     }
   }
 
   /* Анимация для секции экспериментальных функций */
   .experimental-section {
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--duration-slower) var(--ease-default);
     transform-origin: top;
   }
 
@@ -745,7 +755,7 @@ function handleModelSearchToggle(enabled: boolean) {
   }
 
   .experimental-section .settings-description {
-    transition: opacity 0.3s ease;
+    transition: opacity var(--duration-slow) var(--ease-default);
   }
 
   .experimental-section:not(.enabled) .settings-description {
@@ -753,15 +763,15 @@ function handleModelSearchToggle(enabled: boolean) {
   }
 
   .experimental-features-toggle {
-    transition: all 0.3s ease;
+    transition: var(--transition-all);
   }
 
   .toggle-description {
-    transition: all 0.3s ease;
+    transition: var(--transition-all);
   }
 
   .status-text {
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--duration-slower) var(--ease-default);
     color: #6b7280;
     position: relative;
     display: inline-block;
@@ -771,18 +781,18 @@ function handleModelSearchToggle(enabled: boolean) {
 
   .status-text.enabled {
     color: #10b981;
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
   }
 
   .status-enabled,
   .status-disabled {
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all var(--duration-slower) var(--ease-default) !important;
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
     width: 100% !important;
     opacity: 0 !important;
-    transform: translateY(20px) !important;
+    transform: translateY(var(--space-4)) !important; /* 24px → 20px closest is 24px */
   }
 
   .status-text:not(.enabled) .status-disabled {

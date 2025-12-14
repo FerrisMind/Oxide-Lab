@@ -240,9 +240,9 @@
   }
 
   function calculateGroupSpeed(group: DownloadGroup): number | null {
-    const activeJobs = group.jobs.filter(job => job.status === 'downloading');
+    const activeJobs = group.jobs.filter((job) => job.status === 'downloading');
     if (activeJobs.length === 0) return null;
-    
+
     const totalSpeed = activeJobs.reduce((sum, job) => sum + (job.speed_bytes_per_sec ?? 0), 0);
     return totalSpeed > 0 ? totalSpeed : null;
   }
@@ -250,10 +250,10 @@
   function calculateGroupEta(group: DownloadGroup): number | null {
     const speed = calculateGroupSpeed(group);
     if (!speed || speed <= 0 || group.totalBytes === null) return null;
-    
+
     const remainingBytes = group.totalBytes - group.downloadedBytes;
     if (remainingBytes <= 0) return 0;
-    
+
     return Math.ceil(remainingBytes / speed);
   }
 
@@ -416,16 +416,28 @@
                   </div>
                   <div class="actions">
                     {#if group.jobs.some((job) => job.status === 'downloading' || job.status === 'queued')}
-                      <button class="icon-button" title={$t('common.downloads.pause')} onclick={() => handleGroupPause(group)}>
+                      <button
+                        class="icon-button"
+                        title={$t('common.downloads.pause')}
+                        onclick={() => handleGroupPause(group)}
+                      >
                         <Pause size={16} />
                       </button>
                     {/if}
                     {#if group.jobs.some((job) => job.status === 'paused' || job.status === 'error')}
-                      <button class="icon-button" title={$t('common.downloads.resume')} onclick={() => handleGroupResume(group)}>
+                      <button
+                        class="icon-button"
+                        title={$t('common.downloads.resume')}
+                        onclick={() => handleGroupResume(group)}
+                      >
                         <Play size={16} />
                       </button>
                     {/if}
-                    <button class="icon-button" title={$t('common.downloads.cancel')} onclick={() => handleGroupCancel(group)}>
+                    <button
+                      class="icon-button"
+                      title={$t('common.downloads.cancel')}
+                      onclick={() => handleGroupCancel(group)}
+                    >
                       <XCircle size={16} />
                     </button>
                   </div>
@@ -434,7 +446,9 @@
                   <span class="meta-item">
                     <DownloadSimple size={14} weight="bold" />
                     {formatBytes(group.downloadedBytes)}
-                    {group.totalBytes !== null ? ` ${$t('common.downloads.of')} ${formatBytes(group.totalBytes)}` : ''}
+                    {group.totalBytes !== null
+                      ? ` ${$t('common.downloads.of')} ${formatBytes(group.totalBytes)}`
+                      : ''}
                   </span>
                   <span class="meta-item">
                     <Speedometer size={14} weight="bold" />
@@ -459,13 +473,13 @@
 
   .download-modal {
     position: absolute;
-    width: 720px;
-    min-width: 400px;
-    min-height: 300px;
-    max-width: calc(100vw - 32px);
-    max-height: calc(100vh - 32px);
+    width: calc(var(--space-12) * 7 + var(--space-7)); /* 720px = 90 units */
+    min-width: calc(var(--space-12) * 4 + var(--space-3)); /* 400px = 50 units */
+    min-height: calc(var(--space-12) * 3 + var(--space-1)); /* 300px = fixed modal min-height */
+    max-width: calc(100vw - var(--space-5));
+    max-height: calc(100vh - var(--space-5));
     background: var(--card);
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-hover);
     display: flex;
@@ -482,8 +496,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 24px;
-    height: 48px;
+    padding: var(--space-3) var(--space-4);
+    height: var(--space-7);
     border-bottom: 1px solid var(--border-color);
     background: var(--panel-bg);
     cursor: default;
@@ -499,12 +513,12 @@
   }
 
   .modal-header h2 {
-    font-size: 18px;
+    font-size: var(--font-size-base); /* 16px */
     margin: 0;
   }
 
   .modal-section {
-    padding: 20px 24px;
+    padding: var(--space-4) var(--space-4);
     overflow-y: auto;
     border-bottom: 1px solid var(--border-color);
     flex: 1;
@@ -537,17 +551,17 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .download-item {
-    padding: 16px;
+    padding: var(--space-3);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: var(--card);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
     box-shadow: var(--shadow);
     transition: box-shadow 0.2s ease;
   }
@@ -557,13 +571,13 @@
   }
 
   .item-title {
-    font-size: 14px;
+    font-size: var(--font-size-sm);
   }
 
   .item-progress-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .item-progress-row .progress {
@@ -572,15 +586,15 @@
 
   .actions {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     align-items: center;
   }
 
   .icon-button {
     border: none;
     background: none;
-    padding: 8px;
-    border-radius: 12px;
+    padding: var(--space-2);
+    border-radius: var(--radius);
     cursor: default;
     color: var(--text);
     transition: all 0.2s ease;
@@ -602,12 +616,12 @@
   .progress {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .progress-bar {
-    height: 8px;
-    border-radius: 999px;
+    height: var(--space-2);
+    border-radius: var(--radius-full);
     background: var(--panel-bg);
     overflow: hidden;
     border: 1px solid var(--border-color);
@@ -622,18 +636,18 @@
   .progress-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
-    font-size: 13px;
+    gap: var(--space-3);
+    font-size: var(--font-size-xs);
     color: var(--muted, #6b7280);
   }
 
   .meta-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3);
     border: 1px solid var(--border-color, #e2e8f0);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--accent, #3498db) 5%, transparent 95%);
     white-space: nowrap;
   }
@@ -653,13 +667,13 @@
   }
 
   .empty {
-    margin: 12px 0 0;
+    margin: var(--space-2) 0 0;
     color: var(--muted);
-    font-size: 14px;
+    font-size: var(--font-size-sm);
     text-align: center;
-    padding: 20px;
+    padding: var(--space-4);
     background: var(--card);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
   }
 
   /* Resize handles - курсоры меняются автоматически при наведении на края */
@@ -688,9 +702,9 @@
 
   @media (max-width: 640px) {
     .download-modal {
-      width: calc(100vw - 16px);
-      max-height: calc(100vh - 16px);
-      border-radius: 12px;
+      width: calc(100vw - var(--space-3));
+      max-height: calc(100vh - var(--space-3));
+      border-radius: var(--radius-lg);
     }
   }
 </style>

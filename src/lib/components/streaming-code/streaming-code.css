@@ -3,21 +3,13 @@
 .streaming-code-placeholder {
   display: block;
   width: 100%;
-  margin: 8px 0;
-}
-
-.codemirror-wrapper {
-  width: 100%;
-  margin: 8px 0;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  overflow: hidden;
+  margin: var(--space-2) 0; /* 8px 0 */
 }
 
 .streaming-editor {
   opacity: 0.9;
-  border: 1px solid var(--accent-color);
-  box-shadow: 0 0 0 1px var(--accent-color-alpha);
+  border: 1px solid var(--streaming-accent-color);
+  box-shadow: 0 0 0 1px var(--streaming-accent-color-alpha);
 }
 
 /* Progress bar animations */
@@ -48,30 +40,15 @@
 /* CSS Variables for theming */
 
 :root {
-  --streaming-accent-color: #007acc;
-  --streaming-accent-color-alpha: rgb(0, 122, 204, 0.1);
-  --streaming-border-color: #e1e5e9;
-  --streaming-panel-bg: #fff;
-  --streaming-panel-alt-bg: #f8f9fa;
-  --streaming-text-primary: #24292f;
-  --streaming-text-secondary: #656d76;
-  --streaming-code-bg: #f6f8fa;
-  --streaming-code-fg: #24292f;
-}
-
-/* Dark theme */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --streaming-accent-color: #58a6ff;
-    --streaming-accent-color-alpha: rgb(88, 166, 255, 0.1);
-    --streaming-border-color: #30363d;
-    --streaming-panel-bg: #0d1117;
-    --streaming-panel-alt-bg: #161b22;
-    --streaming-text-primary: #f0f6fc;
-    --streaming-text-secondary: #8b949e;
-    --streaming-code-bg: #161b22;
-    --streaming-code-fg: #f0f6fc;
-  }
+  --streaming-accent-color: var(--accent);
+  --streaming-accent-color-alpha: color-mix(in srgb, var(--accent) 18%, transparent);
+  --streaming-border-color: var(--border-color);
+  --streaming-panel-bg: var(--card);
+  --streaming-panel-alt-bg: var(--panel-bg);
+  --streaming-text-primary: var(--text);
+  --streaming-text-secondary: var(--muted);
+  --streaming-code-bg: var(--code-bg);
+  --streaming-code-fg: var(--code-fg);
 }
 
 /* High contrast mode */
@@ -94,7 +71,6 @@
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .streaming-code-block,
-  .codemirror-wrapper,
   .progress-bar,
   .status,
   .expand-icon {

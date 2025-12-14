@@ -1,8 +1,7 @@
 <script lang="ts">
   import type { HFModel } from '$lib/services/huggingface';
   import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
-  import { createCodeMirrorManager } from './codemirror-manager';
-  import { onDestroy } from 'svelte';
+  import { enableExternalLinks } from '$lib/chat/external-links';
 
   interface Props {
     model: HFModel | null;
@@ -13,23 +12,11 @@
   let { model, detailedModel, detailsLoading }: Props = $props();
 
   let descriptionEl: HTMLElement | undefined = $state();
-  const codeMirrorManager = createCodeMirrorManager();
 
-  
-  function setupCodeMirror(element: HTMLElement, description: string | undefined) {
-    if (element && description) {
-      codeMirrorManager.setupCodeMirror(element, description);
-    }
-  }
-
-  onDestroy(() => {
-    codeMirrorManager.cleanup();
-  });
-  
-  // Apply CodeMirror to description content when it's rendered
+  // Apply link enhancements when description is rendered
   $effect(() => {
     if (descriptionEl) {
-      setupCodeMirror(descriptionEl, detailedModel?.description || model?.description);
+      enableExternalLinks(descriptionEl);
     }
   });
 </script>
@@ -50,14 +37,14 @@
 
 <style>
   .model-description {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-4); /* 24px */
   }
 
   .model-description h3 {
     font-size: 1.125rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
-    margin: 0 0 12px 0;
+    margin: 0 0 var(--space-2) 0; /* 8px → 12px closest */
   }
 
   .model-description p {
@@ -82,7 +69,7 @@
   .description-content :global(img) {
     max-width: 100%;
     height: auto;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin: 1em 0;
     display: block;

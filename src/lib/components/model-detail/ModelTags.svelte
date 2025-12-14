@@ -7,16 +7,16 @@
   }
 
   let { model }: Props = $props();
-  
+
   let tagsCollapsed = $state(false);
 </script>
 
 {#if model.tags && model.tags.length > 0}
   <div class="model-tags">
     <div class="section-header">
-      <button 
-        class="collapse-btn" 
-        onclick={() => tagsCollapsed = !tagsCollapsed}
+      <button
+        class="collapse-btn"
+        onclick={() => (tagsCollapsed = !tagsCollapsed)}
         aria-label={tagsCollapsed ? 'Развернуть теги' : 'Свернуть теги'}
       >
         <h3>Теги</h3>
@@ -26,10 +26,7 @@
     {#if !tagsCollapsed}
       <div class="tags-container">
         {#each model.tags as tag}
-          <span 
-            class="tag" 
-            style="background-color: {getTagColor(tag)}"
-          >
+          <span class="tag" style="background-color: {getTagColor(tag)}">
             {tag}
           </span>
         {/each}
@@ -40,31 +37,31 @@
 
 <style>
   .model-tags {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-4); /* 24px */
   }
 
   .model-tags h3 {
     font-size: 1.125rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
-    margin: 0 0 12px 0;
+    margin: 0 0 var(--space-2) 0; /* 8px → 12px closest */
   }
 
   .section-header {
-    margin-bottom: 12px;
+    margin-bottom: var(--space-3); /* 16px */
   }
 
   .collapse-btn {
     background: none;
     border: none;
-     cursor: default;
-    padding: 8px;
-    border-radius: 12px;
+    cursor: default;
+    padding: var(--space-2); /* 8px */
+    border-radius: var(--radius-lg); /* 16px */
     transition: all 0.2s ease;
     color: var(--muted);
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
   }
 
   .collapse-btn h3 {
@@ -89,17 +86,17 @@
   .tags-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
+    gap: var(--space-2); /* 8px */
+    margin-top: var(--space-2); /* 8px */
   }
 
   .tag {
     display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
+    padding: var(--space-1) var(--space-3); /* 4px 16px */
+    border-radius: var(--radius-lg); /* 16px → 20px closest */
     color: white;
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease;

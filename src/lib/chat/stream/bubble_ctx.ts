@@ -1,20 +1,8 @@
 import { unmount } from 'svelte';
-import { cleanupRenderer } from '$lib/chat/codemirror-renderer';
 
 export type StreamSegment = { kind: 'html' | 'text'; data: string };
 
 export type BubbleCtx = {
-  inThink: boolean;
-  thinkBlock: HTMLElement | null;
-  thinkCardEl: HTMLElement | null;
-  thinkBody: HTMLElement | null;
-  thinkToggleBtn: HTMLButtonElement | null;
-  thinkLoaderEl: HTMLElement | null;
-  thinkChevronEl: HTMLElement | null;
-  thinkLabelEl: HTMLElement | null;
-  thinkKey: string | null;
-  thinkExpanded: boolean;
-  thinkToggleHandler: ((event: Event) => void) | null;
   mdEl: HTMLElement | null;
   mdContentEl: HTMLElement | null;
   mdRawEl: HTMLElement | null;
@@ -24,7 +12,12 @@ export type BubbleCtx = {
   mdEyeIcon: any | null;
   mdText: string;
   lastKind: 'html' | 'text' | null;
-  codeMirrorWatching: boolean;
+  thinkKey: string | null;
+  thinkBlock: HTMLDivElement | null;
+  thinkComponent: any | null;
+  thinkExpanded: boolean;
+  inThink: boolean;
+  externalButton?: HTMLElement | null;
 };
 
 export const _assistantBubbleEls = new Map<number, HTMLDivElement>();
@@ -37,17 +30,6 @@ export function getAssistantBubbleEl(index: number): HTMLDivElement | undefined 
 export function registerAssistantBubble(node: HTMLDivElement, params: { index: number }) {
   _assistantBubbleEls.set(params.index, node);
   bubbleCtxs.set(params.index, {
-    inThink: false,
-    thinkBlock: null,
-    thinkCardEl: null,
-    thinkBody: null,
-    thinkToggleBtn: null,
-    thinkLoaderEl: null,
-    thinkChevronEl: null,
-    thinkLabelEl: null,
-    thinkKey: null,
-    thinkExpanded: false,
-    thinkToggleHandler: null,
     mdEl: null,
     mdContentEl: null,
     mdRawEl: null,
@@ -57,7 +39,12 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
     mdEyeIcon: null,
     mdText: '',
     lastKind: null,
-    codeMirrorWatching: false,
+    thinkKey: null,
+    thinkBlock: null,
+    thinkComponent: null,
+    thinkExpanded: false,
+    inThink: false,
+    externalButton: null,
   });
 
   const onScroll = () => {
@@ -73,17 +60,6 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
       bubbleCtxs.set(
         newParams.index,
         prev ?? {
-          inThink: false,
-          thinkBlock: null,
-          thinkCardEl: null,
-          thinkBody: null,
-          thinkToggleBtn: null,
-          thinkLoaderEl: null,
-          thinkChevronEl: null,
-          thinkLabelEl: null,
-          thinkKey: null,
-          thinkExpanded: false,
-          thinkToggleHandler: null,
           mdEl: null,
           mdContentEl: null,
           mdRawEl: null,
@@ -93,28 +69,21 @@ export function registerAssistantBubble(node: HTMLDivElement, params: { index: n
           mdEyeIcon: null,
           mdText: '',
           lastKind: null,
-          codeMirrorWatching: false,
+          thinkKey: null,
+          thinkBlock: null,
+          thinkComponent: null,
+          thinkExpanded: false,
+          inThink: false,
+          externalButton: null,
         },
       );
       bubbleCtxs.delete(params.index);
     },
     destroy() {
       const ctx = bubbleCtxs.get(params.index);
-      if (ctx?.thinkToggleBtn && ctx?.thinkToggleHandler) {
-        try {
-          ctx.thinkToggleBtn.removeEventListener('click', ctx.thinkToggleHandler);
-        } catch {}
-        ctx.thinkToggleHandler = null;
-      }
       if (ctx?.mdEyeIcon) {
         try {
           unmount(ctx.mdEyeIcon);
-        } catch {}
-      }
-      // Cleanup CodeMirror if it was watching this bubble
-      if (ctx?.codeMirrorWatching && ctx?.mdContentEl) {
-        try {
-          cleanupRenderer(ctx.mdContentEl);
         } catch {}
       }
       node.removeEventListener('scroll', onScroll as any);

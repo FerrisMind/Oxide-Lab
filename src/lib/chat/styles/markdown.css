@@ -1,8 +1,6 @@
 /* Modular Markdown Styles - Main Import File */
 
 /* Import modular CSS files for better organization and maintainability */
-@import url('./thinking-block.css');
-
 @import url('./code-syntax.css');
 
 @import url('./md-stream.css');
@@ -19,7 +17,6 @@
  * This file now serves as the main entry point for all markdown-related styles.
  * Each imported file focuses on a specific aspect of markdown rendering:
  * 
- * - thinking-block.css: Thinking block styles (≈80 lines)
  * - code-syntax.css: Code blocks and syntax highlighting (105 lines)
  * - md-stream.css: Markdown stream container and controls (64 lines)
  * - typography.css: Headings, lists, and text formatting (154 lines)

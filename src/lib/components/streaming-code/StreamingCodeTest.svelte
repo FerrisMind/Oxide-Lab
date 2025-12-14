@@ -37,7 +37,7 @@
   });
 </script>
 
-<div style="padding: 20px;">
+<div style="padding: var(--space-4);">
   <h2>Streaming Code Block Test</h2>
   <StreamingCodeBlock 
     {code} 

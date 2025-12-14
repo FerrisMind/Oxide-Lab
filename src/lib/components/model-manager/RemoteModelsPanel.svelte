@@ -1,5 +1,4 @@
 <script lang="ts">
-
   import { onMount } from 'svelte';
   import { folderPath, scanFolder } from '$lib/stores/local-models';
   import { ModelCardsService } from '$lib/services/model-cards';
@@ -32,14 +31,14 @@
   function getModelIcon(card: ModelCardSummary) {
     const family = card.family?.toLowerCase() || '';
     const name = card.name.toLowerCase();
-    
+
     if (family.includes('gemma') || name.includes('gemma')) {
       return Gemma;
     }
     if (family.includes('qwen') || name.includes('qwen')) {
       return Qwen;
     }
-    
+
     // Default icon
     return 'cube';
   }
@@ -57,9 +56,6 @@
     void loadModelCards();
     void ensureDownloadManager();
   });
-
-
-
 
   function getDownloadId(card: ModelCardSummary, format: 'gguf' | 'safetensors') {
     return `model-card::${card.id}::${format}`;
@@ -106,7 +102,9 @@
     return false;
   }
 
-  function updateFilter(filter: Partial<{ searchText: string; family: string; format: 'gguf' | 'safetensors' | '' }>) {
+  function updateFilter(
+    filter: Partial<{ searchText: string; family: string; format: 'gguf' | 'safetensors' | '' }>,
+  ) {
     modelCardFilters.update((prev) => ({ ...prev, ...filter }));
   }
 
@@ -138,10 +136,7 @@
     }
   });
   $effect(() => {
-    if (
-      selectedCard &&
-      !$filteredModelCards.find((card) => card.id === selectedCard?.id)
-    ) {
+    if (selectedCard && !$filteredModelCards.find((card) => card.id === selectedCard?.id)) {
       selectedCard = $filteredModelCards[0] ?? null;
     }
   });
@@ -181,11 +176,13 @@
       type="search"
       placeholder={$t('models.remote.searchPlaceholder')}
       value={$modelCardFilters.searchText}
-      oninput={(event) => updateFilter({ searchText: (event.currentTarget as HTMLInputElement).value })}
+      oninput={(event) =>
+        updateFilter({ searchText: (event.currentTarget as HTMLInputElement).value })}
     />
     <select
       value={$modelCardFilters.family}
-      onchange={(event) => updateFilter({ family: (event.currentTarget as HTMLSelectElement).value })}
+      onchange={(event) =>
+        updateFilter({ family: (event.currentTarget as HTMLSelectElement).value })}
     >
       <option value="">{$t('models.remote.allFamilies')}</option>
       {#each $uniqueFamilies as family}
@@ -194,7 +191,10 @@
     </select>
     <select
       value={$modelCardFilters.format}
-      onchange={(event) => updateFilter({ format: (event.currentTarget as HTMLSelectElement).value as 'gguf' | 'safetensors' | '' })}
+      onchange={(event) =>
+        updateFilter({
+          format: (event.currentTarget as HTMLSelectElement).value as 'gguf' | 'safetensors' | '',
+        })}
     >
       <option value="">{$t('models.remote.allFormats')}</option>
       <option value="gguf">GGUF</option>
@@ -211,7 +211,8 @@
         {$t('models.remote.resetConfig')}
       </button>
       <span class="config-version">
-        {$t('models.remote.version')} {$modelCardsVersion ?? '—'}
+        {$t('models.remote.version')}
+        {$modelCardsVersion ?? '—'}
       </span>
     </div>
   </section>
@@ -272,7 +273,11 @@
                   </span>
                   <div>
                     <h3>
-                      <a href={`https://huggingface.co/${selectedCard.hf_repo_id}`} target="_blank" rel="noreferrer">
+                      <a
+                        href={`https://huggingface.co/${selectedCard.hf_repo_id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
                         {selectedCard.name}
                       </a>
                     </h3>
@@ -287,15 +292,22 @@
                 </div>
               </header>
 
-              <p class="description">{selectedCard.description ?? $t('models.remote.noDescription')}</p>
+              <p class="description">
+                {selectedCard.description ?? $t('models.remote.noDescription')}
+              </p>
 
               {#if selectedCard.sources}
                 <div class="source-row">
                   {#if selectedCard.sources.gguf}
-                    <span>{$t('models.remote.sources.gguf')} {selectedCard.sources.gguf.repo_id}</span>
+                    <span
+                      >{$t('models.remote.sources.gguf')} {selectedCard.sources.gguf.repo_id}</span
+                    >
                   {/if}
                   {#if selectedCard.sources.safetensors}
-                    <span>{$t('models.remote.sources.safetensors')} {selectedCard.sources.safetensors.repo_id}</span>
+                    <span
+                      >{$t('models.remote.sources.safetensors')}
+                      {selectedCard.sources.safetensors.repo_id}</span
+                    >
                   {/if}
                 </div>
               {/if}
@@ -309,17 +321,19 @@
               <div class="formats">
                 {#if selectedCardQuantizations.length}
                   <div class="quantization-row">
-                    <label for={`quant-${selectedCard.id}`}>{$t('models.remote.quantization')}</label>
+                    <label for={`quant-${selectedCard.id}`}
+                      >{$t('models.remote.quantization')}</label
+                    >
                     <select
                       id={`quant-${selectedCard.id}`}
                       value={selectedQuantizations[selectedCard.id] ?? selectedCardQuantizations[0]}
-                    onchange={(event) => {
-                      if (!selectedCard) return;
-                      setQuantization(
-                        selectedCard.id,
-                        (event.currentTarget as HTMLSelectElement).value,
-                      );
-                    }}
+                      onchange={(event) => {
+                        if (!selectedCard) return;
+                        setQuantization(
+                          selectedCard.id,
+                          (event.currentTarget as HTMLSelectElement).value,
+                        );
+                      }}
                     >
                       {#each selectedCardQuantizations as quant}
                         <option value={quant}>{quant}</option>
@@ -350,7 +364,9 @@
                     safetensors
                   </button>
                   {#if downloadErrors[getDownloadId(selectedCard!, 'safetensors')]}
-                    <p class="error-text">{downloadErrors[getDownloadId(selectedCard!, 'safetensors')]}</p>
+                    <p class="error-text">
+                      {downloadErrors[getDownloadId(selectedCard!, 'safetensors')]}
+                    </p>
                   {/if}
                 {/if}
               </div>
@@ -378,7 +394,7 @@
   .remote-models-panel {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-3);
     height: 100%;
     min-height: 0;
     color: var(--text);
@@ -386,33 +402,33 @@
 
   .search-bar {
     display: flex;
-    gap: 0.75rem;
+    gap: var(--space-3);
     align-items: center;
     background: #1a1a1a;
     border: 1px solid var(--border-color, #d8dee5);
-    border-radius: 12px;
-    padding: 1rem;
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
     flex-wrap: wrap;
     box-shadow: var(--shadow);
   }
 
   .search-bar input,
   .search-bar select {
-    padding: 0.6rem 0.8rem;
-    border-radius: 10px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius);
     border: 1px solid var(--border-color, #d8dee5);
     background: var(--panel-bg);
-    min-width: 160px;
+    min-width: 160px; /* fixed input width */
   }
 
   .config-actions {
     display: inline-flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
     align-items: center;
   }
 
   .config-version {
-    font-size: 0.8rem;
+    font-size: var(--font-size-xs);
     color: var(--muted);
   }
 
@@ -424,7 +440,7 @@
   .results-layout {
     display: flex;
     height: 100%;
-    gap: 1rem;
+    gap: var(--space-3);
     min-height: 0;
   }
 
@@ -433,9 +449,9 @@
     max-width: 40%;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 14px;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border-radius: var(--radius-lg);
     border: 1px solid var(--border-color, #e2e8f0);
     background: var(--panel-bg);
     overflow-y: auto;
@@ -445,16 +461,18 @@
   .results-item {
     width: 100%;
     border: none;
-    border-radius: 10px;
-    padding: 0.75rem;
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
     background: #1a1a1a;
     color: var(--text);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--space-3);
     cursor: pointer;
-    transition: background 0.2s ease, transform 0.15s ease;
+    transition:
+      background 0.2s ease,
+      transform 0.15s ease;
   }
 
   .results-item.selected {
@@ -467,27 +485,27 @@
   }
 
   .item-subtitle {
-    font-size: 0.8rem;
+    font-size: var(--font-size-xs);
     color: var(--muted);
   }
 
   .tag-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
-    margin-top: 0.35rem;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
   }
 
   .tag-pill {
-    padding: 0.2rem 0.55rem;
-    border-radius: 999px;
-    font-size: 0.7rem;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
     background: #1a1a1a;
     border: 1px solid var(--border-color, #d8dee5);
   }
 
   .card-progress {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--muted);
   }
 
@@ -499,21 +517,21 @@
   }
 
   .model-card {
-    border-radius: 14px;
-    padding: 1rem 1.25rem;
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4);
     border: 1px solid var(--border-color, #d8dee5);
     background: #1a1a1a;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--space-3);
     box-shadow: var(--shadow);
   }
 
   .source-row {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    font-size: 0.8rem;
+    gap: var(--space-1);
+    font-size: var(--font-size-xs);
     color: var(--muted);
   }
 
@@ -526,13 +544,13 @@
   .model-card__title {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--space-3);
   }
 
   .model-card__icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
+    width: var(--space-6); /* 40px icon container */
+    height: var(--space-6); /* 40px icon container */
+    border-radius: var(--radius);
     background: color-mix(in srgb, var(--accent, #3498db) 25%, transparent 75%);
     display: inline-flex;
     align-items: center;
@@ -541,22 +559,22 @@
 
   .model-card__repo {
     margin: 0;
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm);
     color: var(--muted);
   }
 
   .model-card__stats {
     display: flex;
-    gap: 0.45rem;
+    gap: var(--space-2);
   }
 
   .stat-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    border-radius: 999px;
+    gap: var(--space-1);
+    border-radius: var(--radius);
     border: 1px solid var(--border-color, #d8dee5);
-    padding: 0.25rem 0.55rem;
+    padding: var(--space-1) var(--space-2);
   }
 
   .description {
@@ -567,39 +585,39 @@
 
   .formats {
     display: flex;
-    gap: 0.75rem;
+    gap: var(--space-3);
     flex-wrap: wrap;
   }
 
   .quantization-row {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
-    min-width: 180px;
+    gap: var(--space-1);
+    min-width: 180px; /* fixed select width */
   }
 
   .quantization-row label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--muted);
   }
 
   .quantization-row select {
-    padding: 0.5rem;
-    border-radius: 12px;
+    padding: var(--space-2);
+    border-radius: var(--radius);
     border: 1px solid var(--border-color, #d8dee5);
     background: var(--panel-bg);
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm);
   }
 
   .btn {
-    padding: 0.5rem 0.85rem;
-    border-radius: 10px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius);
     border: none;
     background: var(--accent, #3498db);
     color: #fff;
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: var(--space-2);
   }
 
   .btn.secondary {
@@ -614,33 +632,33 @@
 
   .destination {
     margin: 0;
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm);
     color: var(--muted);
   }
 
   .empty-state,
   .loading-state {
-    padding: 1.5rem;
-    border-radius: 12px;
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
     border: 1px dashed var(--border-color, #d8dee5);
     text-align: center;
     color: var(--muted);
   }
 
   .error-banner {
-    padding: 0.75rem 1rem;
-    border-radius: 10px;
+    padding: var(--space-3) var(--space-3);
+    border-radius: var(--radius-md);
     border: 1px solid color-mix(in srgb, var(--danger, #ef4444) 35%, transparent 65%);
     background: color-mix(in srgb, var(--danger, #ef4444) 12%, transparent 88%);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 1rem;
+    gap: var(--space-3);
   }
 
   .error-text {
-    margin: 0.35rem 0 0;
-    font-size: 0.8rem;
+    margin: var(--space-1) 0 0;
+    font-size: var(--font-size-xs);
     color: #ef4444;
   }
 

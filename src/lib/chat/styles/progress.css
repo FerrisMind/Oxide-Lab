@@ -1,33 +1,39 @@
+/* =================================================================
+   PROGRESS & LOADING STATES (8pt Grid)
+   Spinner size: 16px (2 units), Gap: 8px
+   Animation durations кратны 50ms
+   ================================================================= */
+
 .loading-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2); /* 8px */
   width: 100%;
-  animation: fadeIn 0.3s ease-in-out;
+  animation: fadeIn var(--duration-slow) var(--ease-default); /* 300ms */
 }
 
 .loading-spinner {
-  width: 16px;
-  height: 16px;
+  width: var(--space-3); /* 16px = 2 units */
+  height: var(--space-3);
   border: 2px solid transparent;
   border-top: 2px solid currentcolor;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  transition: all 0.3s ease;
+  border-radius: var(--radius-full);
+  animation: spin var(--duration-1000) linear infinite; /* 1000ms */
+  transition: var(--transition-transform);
 }
 
 .loading-spinner:hover {
   transform: scale(1.1);
-  border-width: 3px;
+  border-width: 3px; /* intentional thin border */
 }
 
 .loading-text {
-  font-size: 14px;
+  font-size: var(--font-size-sm); /* 14px */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
+  max-width: calc(var(--space-12) * 2 + var(--space-2)); /* 200px = 25 units */
 }
 
 .primary.loading {
@@ -36,7 +42,7 @@
   background: var(--accent);
   color: white;
   cursor: default;
-  transition: all 0.3s ease;
+  transition: var(--transition-all);
 }
 
 .primary.loading::after {
@@ -44,11 +50,11 @@
   position: absolute;
   bottom: 0;
   left: 0;
-  height: 3px;
+  height: 3px; /* intentional thin line */
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   width: var(--progress-width, 0%);
-  transition: width 0.3s ease;
-  animation: progressPulse 2s ease-in-out infinite;
+  transition: width var(--duration-slow) var(--ease-default); /* 300ms */
+  animation: progressPulse var(--duration-2000) var(--ease-in-out) infinite; /* 2000ms */
 }
 
 .primary.loading:hover {
@@ -61,7 +67,7 @@
   background: #ff6b6b;
   color: white;
   cursor: default;
-  transition: all 0.3s ease;
+  transition: var(--transition-all);
 }
 
 .primary.cancelling:hover {
@@ -71,68 +77,68 @@
 }
 
 .cancelling-spinner {
-  width: 16px;
-  height: 16px;
+  width: var(--space-3); /* 16px = 2 units */
+  height: var(--space-3);
   border: 2px solid transparent;
   border-top: 2px solid currentcolor;
-  border-radius: 50%;
-  animation: spin 0.5s linear infinite;
+  border-radius: var(--radius-full);
+  animation: spin var(--duration-default) linear infinite; /* 500ms */
 }
 
 .unloading-spinner {
-  width: 16px;
-  height: 16px;
+  width: var(--space-3); /* 16px = 2 units */
+  height: var(--space-3);
   border: 2px solid transparent;
   border-bottom: 2px solid currentcolor;
-  border-radius: 50%;
-  animation: spin 1.2s linear infinite;
-  transition: all 0.3s ease;
+  border-radius: var(--radius-full);
+  animation: spin 1200ms linear infinite; /* 1200ms */
+  transition: var(--transition-all);
 }
 
 .unloading-spinner:hover {
   transform: scale(1.1);
-  border-width: 3px;
+  border-width: 3px; /* intentional thin border */
 }
 
 .loading-status {
-  margin-top: 12px;
-  padding: 16px;
+  margin-top: var(--space-3); /* 16px */
+  padding: var(--space-3); /* 16px */
   background: var(--panel-alt-bg);
-  border-radius: 12px;
+  border-radius: var(--radius-lg); /* 16px */
   border: 1px solid var(--border-color);
-  animation: slideDown 0.3s ease-out;
-  transition: all 0.3s ease;
+  animation: slideDown var(--duration-slow) var(--ease-out); /* 300ms */
+  transition: var(--transition-all);
 }
 
 .loading-stage {
-  margin-bottom: 16px;
-  font-size: 14px;
-  font-weight: 500;
+  margin-bottom: var(--space-3); /* 16px */
+  font-size: var(--font-size-sm); /* 14px */
+  font-weight: var(--font-weight-medium);
   color: var(--text);
 }
 
 .loading-progress-bar {
   width: 100%;
-  height: 8px;
+  height: var(--space-2); /* 8px = 1 unit */
   background: var(--panel-bg);
-  border-radius: 3px;
+  border-radius: var(--radius-sm); /* 4px */
   overflow: hidden;
   position: relative;
-  transition: all 0.3s ease;
-  margin-bottom: 16px;
+  transition: var(--transition-all);
+  margin-bottom: var(--space-3); /* 16px */
 }
 
 .loading-hint {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--font-size-xs); /* 12px baseline */
   opacity: 0.8;
-  line-height: 1.4;
+  line-height: var(--line-height-normal); /* 1.5 */
 }
 
 .stage-icon {
   display: inline-flex;
   align-items: center;
-  margin-right: 8px;
+  margin-right: var(--space-2); /* 8px */
   color: var(--text);
 }
 
@@ -154,15 +160,15 @@
 }
 
 .loading-progress-bar:hover {
-  height: 8px;
+  height: var(--space-2); /* 8px */
   transform: scaleY(1.1);
 }
 
 .progress-fill {
   height: 100%;
   background: var(--accent);
-  border-radius: 3px;
-  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius-sm); /* 4px */
+  transition: width var(--duration-default) var(--ease-default); /* 500ms */
   position: relative;
 }
 
@@ -178,6 +184,7 @@
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -188,6 +195,7 @@
     opacity: 0;
     transform: translateY(-2px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -199,6 +207,7 @@
   100% {
     opacity: 0.7;
   }
+
   50% {
     opacity: 1;
   }
@@ -208,6 +217,7 @@
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -218,6 +228,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -229,6 +240,7 @@
   100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.2);
   }
@@ -238,9 +250,11 @@
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.02);
   }
+
   100% {
     transform: scale(1);
   }

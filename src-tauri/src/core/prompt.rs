@@ -3,7 +3,9 @@
 //! using Jinja-style chat templates extracted from tokenizers.
 
 use crate::{log_template, log_template_error};
-use minijinja::{Environment, Value, context};
+use minijinja::{context, Environment, Value};
+use once_cell::sync::OnceCell;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 /// Represents a chat message with role and content
@@ -17,6 +19,34 @@ pub struct ChatMessage {
 pub struct PromptBuilder {
     chat_template: Option<String>,
     bos_token: Option<String>,
+}
+
+/// Нормализует чат-шаблоны, написанные в стилистике Jinja2/Python,
+/// в совместимый с MiniJinja вид. Основной кейс — методы строк вида
+/// `foo.startswith("bar")`/`foo.endswith("bar")`, которые MiniJinja не
+/// поддерживает напрямую. Мы переписываем их в фильтры
+/// `foo|starts_with("bar")`/`foo|ends_with("bar")`.
+pub fn normalize_chat_template(raw: &str) -> String {
+    static STARTS_RE: OnceCell<Regex> = OnceCell::new();
+    static ENDS_RE: OnceCell<Regex> = OnceCell::new();
+    static SPLIT_RE: OnceCell<Regex> = OnceCell::new();
+
+    let starts_re = STARTS_RE
+        .get_or_init(|| Regex::new(r"\.startswith\s*\(").expect("valid startswith regex"));
+    let ends_re = ENDS_RE
+        .get_or_init(|| Regex::new(r"\.endswith\s*\(").expect("valid endswith regex"));
+    let split_re = SPLIT_RE
+        .get_or_init(|| Regex::new(r"\.split\s*\(").expect("valid split regex"));
+
+    let tmp = starts_re.replace_all(raw, "|starts_with(");
+    let tmp = ends_re.replace_all(&tmp, "|ends_with(");
+    split_re.replace_all(&tmp, "|split(").into_owned()
+}
+
+/// Регистрирует общие фильтры для работы с шаблонами чата.
+pub fn configure_chat_template_environment<'a>(env: &mut Environment<'a>) {
+    env.add_filter("starts_with", |s: &str, needle: &str| s.starts_with(needle));
+    env.add_filter("ends_with", |s: &str, needle: &str| s.ends_with(needle));
 }
 
 impl PromptBuilder {
@@ -47,11 +77,13 @@ impl PromptBuilder {
             Some(s) if !s.trim().is_empty() => s.clone(),
             _ => return Err("chat_template not available".into()),
         };
+        let tpl = normalize_chat_template(&tpl);
 
         // Log input
         log_template!("render: msgs={}, tpl_len={}", messages.len(), tpl.len());
 
         let mut env = Environment::new();
+        configure_chat_template_environment(&mut env);
         env.add_template("tpl", &tpl).map_err(|e| e.to_string())?;
         let tmpl = env.get_template("tpl").map_err(|e| e.to_string())?;
 
@@ -130,5 +162,27 @@ impl PromptBuilder {
 impl Default for PromptBuilder {
     fn default() -> Self {
         Self::new(None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_chat_template;
+
+    #[test]
+    fn rewrites_py_string_methods_to_filters() {
+        let tpl = r#"{{ foo.startswith("<") }} {{ bar.endswith(">") }} {{ baz.split(", ") }}"#;
+        let normalized = normalize_chat_template(tpl);
+
+        assert!(normalized.contains(r#"foo|starts_with("<")"#));
+        assert!(normalized.contains(r#"bar|ends_with(">")"#));
+        assert!(normalized.contains(r#"baz|split(", ")"#));
+    }
+
+    #[test]
+    fn keeps_unrelated_content_intact() {
+        let tpl =
+            r#"{% for message in messages %}{{ message.role }}: {{ message.content }}{% endfor %}"#;
+        assert_eq!(normalize_chat_template(tpl), tpl);
     }
 }

@@ -1,4 +1,7 @@
 use std::sync::{Arc, Mutex};
+use tauri::Emitter;
+#[cfg(debug_assertions)]
+use tauri::Manager;
 
 use crate::api::commands::threads::apply_rayon_thread_limit;
 use crate::core::device::select_device;
@@ -7,7 +10,7 @@ use crate::core::state::{ModelState, SharedState};
 use crate::core::types::DevicePreference;
 use crate::i18n;
 use crate::models::common::model::ModelBackend;
-use tauri::Emitter;
+use tauri_plugin_sql::{Builder, Migration, MigrationKind};
 
 #[tauri::command]
 fn get_app_info() -> serde_json::Value {
@@ -59,11 +62,45 @@ pub fn run() {
         guard.performance_monitor.clone()
     };
 
+    let migrations = vec![
+        Migration {
+            version: 1,
+            description: "create sessions and messages tables",
+            sql: "
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    model_path TEXT,
+                    repo_id TEXT,
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions(updated_at DESC);
+                
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
+                    content TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
+            ",
+            kind: MigrationKind::Up,
+        },
+    ];
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(
+            Builder::default()
+                .add_migrations("sqlite:chat_history.db", migrations)
+                .build(),
+        )
         .manage(shared.clone())
         .invoke_handler(tauri::generate_handler![
             crate::api::greet,

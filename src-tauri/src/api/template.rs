@@ -1,5 +1,6 @@
+use crate::core::prompt::{configure_chat_template_environment, normalize_chat_template};
 use crate::log_template;
-use minijinja::{Environment, Value, context};
+use minijinja::{context, Environment, Value};
 
 pub fn render_prompt(
     chat_template: &Option<String>,
@@ -9,11 +10,13 @@ pub fn render_prompt(
         Some(s) if !s.trim().is_empty() => s.clone(),
         _ => return Err("chat_template not available".into()),
     };
+    let tpl = normalize_chat_template(&tpl);
 
     // Лог на вход
     log_template!("render: msgs={}, tpl_len={}", messages.len(), tpl.len());
     let msgs = messages;
     let mut env = Environment::new();
+    configure_chat_template_environment(&mut env);
     env.add_template("tpl", &tpl).map_err(|e| e.to_string())?;
     let tmpl = env.get_template("tpl").map_err(|e| e.to_string())?;
 

@@ -14,6 +14,7 @@
     "dialog:default",
     "fs:default",
     "store:default",
+    "sql:default",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
     "fs:allow-read-file",
@@ -29,7 +30,8 @@
     "fs:allow-appdata-read",
     "fs:allow-appdata-write",
     "fs:allow-document-read",
-    "fs:allow-document-write"
+    "fs:allow-document-write",
+    "sql:allow-execute"
   ],
   "scope": {
     "allow": ["$DOWNLOAD/**", "$APPDATA/**", "$DOCUMENT/**"],

@@ -157,9 +157,9 @@ const user = createUser("John Doe", "john@example.com");`,
 
 <style>
   .demo-container {
-    max-width: 800px;
+    max-width: var(--chat-max-width); /* 800px */
     margin: 0 auto;
-    padding: 20px;
+    padding: var(--space-3); /* 16px → 20px closest */
     font-family:
       system-ui,
       -apple-system,
@@ -168,34 +168,34 @@ const user = createUser("John Doe", "john@example.com");`,
 
   .controls {
     display: flex;
-    gap: 20px;
-    margin-bottom: 30px;
-    padding: 20px;
+    gap: var(--space-3); /* 16px → 20px closest */
+    margin-bottom: var(--space-5); /* 32px → 30px closest */
+    padding: var(--space-3); /* 16px → 20px closest */
     background: var(--panel-bg, #f5f5f5);
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     border: 1px solid var(--border-color, #ddd);
   }
 
   .control-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
   }
 
   .control-group label {
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm); /* 14px */
     color: var(--text-primary, #333);
   }
 
   .control-group select,
   .control-group button {
-    padding: 8px 12px;
+    padding: var(--space-2) var(--space-3); /* 8px 16px */
     border: 1px solid var(--border-color, #ddd);
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     background: var(--input-bg, white);
     color: var(--text-primary, #333);
-    font-size: 14px;
+    font-size: var(--font-size-sm); /* 14px */
   }
 
   .control-group button {
@@ -216,24 +216,24 @@ const user = createUser("John Doe", "john@example.com");`,
   }
 
   .demo-section {
-    margin-bottom: 30px;
+    margin-bottom: var(--space-5); /* 32px → 30px closest */
   }
 
   .demo-section h3 {
-    margin-bottom: 15px;
+    margin-bottom: var(--space-3); /* 16px → 15px closest */
     color: var(--text-primary, #333);
   }
 
   .info-section {
-    padding: 20px;
+    padding: var(--space-3); /* 16px → 20px closest */
     background: var(--panel-alt-bg, #f9f9f9);
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     border: 1px solid var(--border-color, #ddd);
   }
 
   .info-section h3 {
     margin-top: 0;
-    margin-bottom: 15px;
+    margin-bottom: var(--space-3); /* 16px → 15px closest */
     color: var(--text-primary, #333);
   }
 
@@ -244,7 +244,7 @@ const user = createUser("John Doe", "john@example.com");`,
   }
 
   .info-section li {
-    padding: 4px 0;
+    padding: var(--space-1) 0; /* 4px 0 */
     color: var(--text-secondary, #666);
   }
 

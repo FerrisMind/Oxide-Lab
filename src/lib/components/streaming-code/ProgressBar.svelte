@@ -12,13 +12,7 @@
     onCopy?: () => void;
   }
 
-  let { 
-    language = '', 
-    isStreaming = false, 
-    isExpanded = false,
-    onClick,
-    onCopy
-  }: Props = $props();
+  let { language = '', isStreaming = false, isExpanded = false, onClick, onCopy }: Props = $props();
 
   function handleClick() {
     onClick?.();
@@ -148,7 +142,7 @@
     flex-direction: column;
     background: var(--panel-bg);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     overflow: hidden;
     transition: all 0.3s ease;
     position: relative;
@@ -181,8 +175,8 @@
   .progress-content {
     display: flex;
     align-items: center;
-    padding: 12px 16px;
-    gap: 12px;
+    padding: var(--space-2) var(--space-3); /* 8px 16px → 12px 16px closest */
+    gap: var(--space-3); /* 16px */
   }
 
   .progress-icon {
@@ -198,20 +192,20 @@
   .progress-text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 2px; /* intentional small gap - not 8pt aligned */
     flex: 1;
   }
 
   .language {
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm); /* 14px */
     color: var(--text-primary);
   }
 
   .status {
-    font-size: 12px;
+    font-size: var(--font-size-base); /* 16px */
     color: var(--text-secondary);
-    transition: color 0.3s ease;
+    transition: color var(--duration-slow) var(--ease-default);
   }
 
   .status.streaming-text {
@@ -222,7 +216,7 @@
     display: flex;
     align-items: center;
     color: var(--text-secondary);
-    transition: color 0.3s ease;
+    transition: color var(--duration-slow) var(--ease-default);
   }
 
   .progress-bar.interactive:hover .expand-icon {
@@ -230,7 +224,7 @@
   }
 
   .progress-indicator {
-    height: 2px;
+    height: 2px; /* intentional thin line - not 8pt aligned */
     background: var(--border-color);
     position: relative;
     overflow: hidden;

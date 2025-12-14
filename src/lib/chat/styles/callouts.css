@@ -1,55 +1,56 @@
-/* Callouts and Blockquotes */
+/* =================================================================
+   CALLOUTS & BLOCKQUOTES (8pt Grid)
+   Padding: 16px (2 units), Gap: 16px, Border-radius: 8px
+   ================================================================= */
 
 /* Horizontal lines */
-
 .md-stream hr {
   border: none;
   border-top: 1px solid var(--border-color);
-  margin: 2em 0;
+  margin: var(--space-7) 0; /* 48px */
   height: 0;
 }
 
 /* GitHub-style Callouts */
-
 .md-stream .callout {
-  margin: 1em 0;
-  padding: 16px;
-  border-radius: 12px;
+  margin: var(--space-3) 0; /* 16px */
+  padding: var(--space-3); /* 16px */
+  border-radius: var(--radius); /* 8px */
   border-left: 4px solid;
   background-color: var(--panel-alt-bg);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
-  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-shadow);
 }
 
 .md-stream .callout:hover {
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+  box-shadow: var(--shadow);
 }
 
 .md-stream .callout-body {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--space-3); /* 16px */
 }
 
 .md-stream .callout-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: var(--space-4); /* 24px - 3 units */
+  height: var(--space-4); /* 24px */
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .md-stream .callout-icon svg {
-  width: 16px;
-  height: 16px;
+  width: var(--space-3); /* 16px - 2 units */
+  height: var(--space-3); /* 16px */
 }
 
 .md-stream .callout-content {
   flex: 1;
   color: var(--text);
-  line-height: 1.6;
+  line-height: var(--line-height-normal); /* 1.5 */
 }
 
 .md-stream .callout-content > :first-child {
@@ -61,8 +62,8 @@
 }
 
 .md-stream .callout-custom-title {
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-2); /* 8px */
   color: var(--text);
 }
 

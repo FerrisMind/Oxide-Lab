@@ -1,6 +1,7 @@
+export const THINK_OPEN_TOKEN = '<think>';
+export const THINK_CLOSE_TOKEN = '</think>';
+
 export const KNOWN_TAG_PREFIXES = [
-  '<think>',
-  '</think>',
   '<start_of_turn>',
   '<end_of_turn>',
   '<|im_start|>',
@@ -32,7 +33,6 @@ export const KNOWN_TAG_PREFIXES = [
   '<|/video|>',
   '<s>',
   '</s>',
+  THINK_OPEN_TOKEN,
+  THINK_CLOSE_TOKEN,
 ];
-
-export const THINK_OPEN_TOKEN = '<!--__THINK_OPEN__-->';
-export const THINK_CLOSE_TOKEN = '<!--__THINK_CLOSE__-->';

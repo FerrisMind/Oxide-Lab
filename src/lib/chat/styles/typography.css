@@ -1,67 +1,81 @@
-/* Typography: Headings, Lists, Text Formatting */
+/* =================================================================
+   TYPOGRAPHY: Headings, Lists, Text Formatting
+   8pt Grid System with 4px baseline alignment
+   Font sizes: 12/16/20/24/32px (кратны 4)
+   Line-height: 1.5× (24px при 16px base)
+   Вертикальные отступы: 24/32/48px
+   ================================================================= */
 
-/* Headings with proper hierarchy */
-
+/* Headings with proper hierarchy and 8pt spacing */
 .md-stream h1,
 .md-stream h2,
 .md-stream h3,
 .md-stream h4,
 .md-stream h5,
 .md-stream h6 {
-  margin: 1.2em 0 0.6em;
-  font-weight: 600;
-  line-height: 1.25;
+  margin-top: var(--space-5); /* 32px */
+  margin-bottom: var(--space-3); /* 16px */
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight); /* 1.2 */
   color: var(--text);
 }
 
+.md-stream h1:first-child,
+.md-stream h2:first-child,
+.md-stream h3:first-child,
+.md-stream h4:first-child,
+.md-stream h5:first-child,
+.md-stream h6:first-child {
+  margin-top: 0;
+}
+
 .md-stream h1 {
-  font-size: 2em;
+  font-size: var(--font-size-2xl); /* 32px */
   border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.3em;
+  padding-bottom: var(--space-2); /* 8px */
 }
 
 .md-stream h2 {
-  font-size: 1.5em;
+  font-size: var(--font-size-xl); /* 24px */
   border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.3em;
+  padding-bottom: var(--space-2); /* 8px */
 }
 
 .md-stream h3 {
-  font-size: 1.25em;
+  font-size: var(--font-size-lg); /* 20px */
 }
 
 .md-stream h4 {
-  font-size: 1em;
+  font-size: var(--font-size-base); /* 16px */
 }
 
 .md-stream h5 {
-  font-size: 0.875em;
+  font-size: var(--font-size-sm); /* 14px */
 }
 
 .md-stream h6 {
-  font-size: 0.85em;
+  font-size: var(--font-size-xs); /* 12px */
   color: var(--muted);
 }
 
-/* Lists with proper indentation and styling */
-
+/* Lists with 8pt grid spacing */
 .md-stream ul,
 .md-stream ol {
-  margin: 1em 0;
-  padding-left: 2em;
-  line-height: 1.6;
+  margin: var(--space-3) 0; /* 16px */
+  padding-left: var(--space-5); /* 32px */
+  line-height: var(--line-height-normal); /* 1.5 */
 }
 
 .md-stream ul ul,
 .md-stream ol ol,
 .md-stream ul ol,
 .md-stream ol ul {
-  margin: 0.25em 0;
-  padding-left: 1.5em;
+  margin: var(--space-1) 0; /* 4px */
+  padding-left: var(--space-4); /* 24px */
 }
 
 .md-stream li {
-  margin: 0.25em 0;
+  margin: var(--space-1) 0; /* 4px */
 }
 
 .md-stream ul > li {

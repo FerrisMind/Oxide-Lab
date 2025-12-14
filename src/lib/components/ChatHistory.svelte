@@ -8,11 +8,19 @@
   import Plus from 'phosphor-svelte/lib/Plus';
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
   import StackMinus from 'phosphor-svelte/lib/StackMinus';
+  import DotsThreeVertical from 'phosphor-svelte/lib/DotsThreeVertical';
   import { writeTextFile } from '@tauri-apps/plugin-fs';
   import { save } from '@tauri-apps/plugin-dialog';
   import hljs from 'highlight.js/lib/core';
   import json from 'highlight.js/lib/languages/json';
   import 'highlight.js/styles/github-dark.css';
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from '$lib/components/ui/dropdown-menu';
 
   // Инициализация highlight.js
   hljs.registerLanguage('json', json);
@@ -215,9 +223,9 @@
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const content = e.target?.result as string;
-      if (chatHistory.importSession(content)) {
+      if (await chatHistory.importSession(content)) {
         alert('Чат успешно импортирован!');
       } else {
         alert('Ошибка импорта чата. Проверьте формат файла.');
@@ -245,10 +253,7 @@
   }
 
   onMount(() => {
-    // Если нет текущей сессии, создаем новую
-    if (!$currentSession) {
-      handleNewChat();
-    }
+    // Стартуем без автосоздания: пользователь сам начинает новую сессию
   });
 </script>
 
@@ -349,30 +354,33 @@
               aria-label="Действия с чатом"
               tabindex="-1"
             >
-              <button
-                class="btn-icon-small"
-                onclick={() => startEditing(session)}
-                title="Переименовать"
-                aria-label={`Переименовать чат "${session.title}"`}
-              >
-                <PencilSimpleLine size={16} weight="bold" />
-              </button>
-              <button
-                class="btn-icon-small"
-                onclick={() => handleExport(session.id)}
-                title="Экспорт"
-                aria-label={`Экспортировать чат "${session.title}"`}
-              >
-                <Export size={16} weight="bold" />
-              </button>
-              <button
-                class="btn-icon-small danger"
-                onclick={() => confirmDelete(session.id)}
-                title="Удалить"
-                aria-label={`Удалить чат "${session.title}"`}
-              >
-                <TrashSimple size={16} weight="bold" />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger class="btn-icon-small" aria-label={`Открыть меню чата ${session.title}`}>
+                  <DotsThreeVertical size={16} weight="bold" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="end">
+                  <DropdownMenuItem
+                    onSelect={() => startEditing(session)}
+                    aria-label={`Переименовать чат ${session.title}`}
+                  >
+                    <PencilSimpleLine size={16} weight="bold" /> Переименовать
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => handleExport(session.id)}
+                    aria-label={`Экспортировать чат ${session.title}`}
+                  >
+                    <Export size={16} weight="bold" /> Экспорт
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    class="danger-item"
+                    onSelect={() => confirmDelete(session.id)}
+                    aria-label={`Удалить чат ${session.title}`}
+                  >
+                    <TrashSimple size={16} weight="bold" /> Удалить
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -520,12 +528,12 @@
   /* ===== Chat History Panel - LoaderPanel Style ===== */
 
   .chat-history {
-    --control-radius: 10px;
-    --control-padding-y: 8px;
-    --control-padding-x: 12px;
+    --control-radius: var(--radius);
+    --control-padding-y: var(--space-2);
+    --control-padding-x: var(--space-3);
     --focus-ring: 0 0 0 3px rgb(179 205 224 / 0.15);
-    --composer-row-height: 34px;
-    --composer-control-radius: 12px;
+    --composer-row-height: var(--space-5); /* 32px → 34px closest */
+    --composer-control-radius: var(--radius-lg);
 
     width: 100%;
     max-width: 100%;
@@ -536,30 +544,30 @@
     flex-direction: column;
     height: 100%;
     background: var(--card);
-    border-radius: 14px;
-    padding: 16px;
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
   }
 
   .chat-history-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-3);
     border-bottom: 1px solid var(--border-color);
     overflow: visible;
   }
 
   .chat-history-header h3 {
     margin: 0;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
   }
 
   .header-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     align-items: center;
   }
 
@@ -571,8 +579,8 @@
     padding: 0;
     width: var(--composer-row-height);
     height: var(--composer-row-height);
-    font-size: 14px;
-    font-weight: 500;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
     cursor: default;
     transition:
       transform 0.2s ease,
@@ -645,8 +653,8 @@
   }
 
   .btn-icon :global(svg) {
-    width: 16px;
-    height: 16px;
+    width: var(--space-3); /* 16px */
+    height: var(--space-3); /* 16px */
     color: currentColor;
     display: block;
     flex-shrink: 0;
@@ -663,14 +671,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+    padding: var(--space-6) var(--space-4);
     text-align: center;
     color: var(--muted);
   }
 
   .empty-state p {
-    margin: 0 0 16px 0;
-    font-size: 14px;
+    margin: 0 0 var(--space-3) 0;
+    font-size: var(--font-size-sm);
   }
 
   /* Primary button style matching LoaderPanel */
@@ -679,10 +687,10 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #ffffff;
     border-radius: var(--composer-control-radius);
-    padding: 10px 16px;
+    padding: var(--space-2) var(--space-3);
     height: var(--composer-row-height);
-    font-size: 14px;
-    font-weight: 600;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
     cursor: default;
     transition:
       transform 0.2s ease,
@@ -755,11 +763,11 @@
     border: 2px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
-    border-radius: 12px;
-    padding: 10px 16px;
+    border-radius: var(--radius-lg);
+    padding: var(--space-2) var(--space-3);
     height: var(--composer-row-height);
-    font-size: 14px;
-    font-weight: 500;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
     cursor: default;
     transition:
       transform 0.2s ease,
@@ -824,11 +832,11 @@
     border: 2px solid transparent;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #ffffff;
-    border-radius: 12px;
-    padding: 10px 16px;
+    border-radius: var(--radius-lg);
+    padding: var(--space-2) var(--space-3);
     height: var(--composer-row-height);
-    font-size: 14px;
-    font-weight: 600;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
     cursor: default;
     pointer-events: auto;
     transition:
@@ -902,12 +910,12 @@
   /* Session items styled like LoaderPanel fields */
   .session-item {
     display: grid;
-    gap: 8px;
-    margin: 6px 0;
-    padding: 12px;
-    border: 1px solid var(--border-color);
+    gap: var(--space-2);
+    margin: var(--space-1) 0; /* 4px → 6px closest */
+    padding: var(--space-3);
+    border: 1px solid var(--sidebar-border);
     border-radius: var(--control-radius);
-    background: var(--card);
+    background: var(--background);
     cursor: default;
     transition: all 0.2s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -921,37 +929,55 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 3px;
+    height: var(--baseline); /* 4px → 3px closest */
     background: transparent;
     transition: background 0.2s ease;
   }
 
   .session-item:hover {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--card) 95%, var(--accent) 5%);
+    border-color: var(--sidebar-border);
+    background: var(--sidebar-accent);
+    color: var(--sidebar-accent-foreground);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
+  .session-item:hover .session-title {
+    color: var(--sidebar-accent-foreground);
+  }
+
+  .session-item:hover .session-meta {
+    color: color-mix(in srgb, var(--sidebar-accent-foreground) 70%, transparent);
+  }
+
   .session-item:hover::before {
-    background: var(--accent);
+    background: var(--sidebar-accent);
   }
 
   .session-item.active {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--card) 90%, var(--accent) 10%);
+    border-color: var(--sidebar-accent);
+    background: color-mix(in srgb, var(--sidebar-accent) 80%, var(--background) 20%);
+    color: var(--sidebar-accent-foreground);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
+  .session-item.active .session-title {
+    color: var(--sidebar-accent-foreground);
+  }
+
+  .session-item.active .session-meta {
+    color: color-mix(in srgb, var(--sidebar-accent-foreground) 70%, transparent);
+  }
+
   .session-item.active::before {
-    background: var(--accent);
+    background: var(--sidebar-accent);
   }
 
   .session-content {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .session-info {
@@ -960,10 +986,10 @@
   }
 
   .session-title {
-    font-size: 14px;
-    font-weight: 500;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
     color: var(--text);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -971,8 +997,8 @@
 
   .session-meta {
     display: flex;
-    gap: 8px;
-    font-size: 12px;
+    gap: var(--space-2);
+    font-size: var(--font-size-base);
     color: var(--muted);
   }
 
@@ -986,7 +1012,7 @@
 
   .session-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     opacity: 0;
     visibility: hidden;
     transition:
@@ -1008,16 +1034,16 @@
     transform: translateY(0);
   }
 
-  .btn-icon-small {
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+  :global(.btn-icon-small) {
+    border: 1px solid var(--sidebar-border);
+    background: var(--background);
+    color: var(--text);
     border-radius: var(--composer-control-radius);
     padding: 0;
     width: var(--composer-row-height);
     height: var(--composer-row-height);
-    font-size: 14px;
-    font-weight: 500;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
     cursor: default;
     transition:
       transform 0.2s ease,
@@ -1035,66 +1061,45 @@
     overflow: hidden;
   }
 
-  .btn-icon-small::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transition: left 0.5s ease;
-  }
-
-  .btn-icon-small:not(:disabled):hover {
+  :global(.btn-icon-small:not(:disabled):hover) {
     transform: none;
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--sidebar-accent);
+    border-color: var(--sidebar-accent);
+    color: var(--sidebar-accent-foreground);
     box-shadow:
       0 8px 25px rgba(0, 0, 0, 0.15),
       0 4px 12px rgba(0, 0, 0, 0.1);
-    scale: 1.1;
-  }
-
-  .btn-icon-small:not(:disabled):hover::before {
-    left: 100%;
-  }
-
-  .btn-icon-small:not(:disabled):active {
-    transform: none;
     scale: 1.05;
+  }
+
+  :global(.btn-icon-small:not(:disabled):active) {
+    transform: none;
+    scale: 1.02;
     box-shadow:
       0 4px 15px rgba(0, 0, 0, 0.2),
       0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
-  .btn-icon-small.danger {
-    color: var(--danger);
-    border-color: rgba(231, 76, 60, 0.3);
-    background: rgba(231, 76, 60, 0.1);
-  }
-
-  .btn-icon-small.danger:not(:disabled):hover {
-    background: rgba(231, 76, 60, 0.2);
-    border-color: rgba(231, 76, 60, 0.5);
-    box-shadow:
-      0 8px 25px rgba(231, 76, 60, 0.3),
-      0 4px 12px rgba(0, 0, 0, 0.1);
-    scale: 1.1;
-  }
-
-  .btn-icon-small.danger:not(:disabled):active {
-    background: rgba(231, 76, 60, 0.3);
-    border-color: rgba(231, 76, 60, 0.6);
-    scale: 1.05;
-  }
-
-  .btn-icon-small :global(svg) {
-    width: 16px;
-    height: 16px;
+  :global(.btn-icon-small) :global(svg) {
+    width: var(--space-3); /* 16px */
+    height: var(--space-3); /* 16px */
     color: currentColor;
     display: block;
     flex-shrink: 0;
+  }
+
+  .session-actions :global([data-slot='dropdown-menu-content']) {
+    min-width: 200px;
+    background: var(--background);
+    border: 1px solid var(--sidebar-border);
+  }
+
+  .session-actions :global([data-slot='dropdown-menu-item']) {
+    gap: var(--space-2);
+  }
+
+  .session-actions :global(.danger-item) {
+    color: var(--destructive, #ef4444);
   }
 
   /* Edit input matching LoaderPanel field inputs */
@@ -1107,7 +1112,7 @@
     outline: none;
     width: 100%;
     box-sizing: border-box;
-    font-size: 14px;
+    font-size: var(--font-size-sm);
   }
 
   .edit-input:focus {
@@ -1122,7 +1127,7 @@
 
   /* Delete confirmation styled like LoaderPanel */
   .delete-confirm {
-    margin-top: 8px;
+    margin-top: var(--space-2);
     padding: var(--control-padding-y) var(--control-padding-x);
     border-radius: var(--control-radius);
     background: color-mix(in srgb, #ffb3b3 20%, transparent 80%);
@@ -1130,15 +1135,15 @@
   }
 
   .delete-confirm p {
-    margin: 0 0 12px 0;
-    font-size: 14px;
+    margin: 0 0 var(--space-3) 0;
+    font-size: var(--font-size-sm);
     color: #3a1f1f;
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
   }
 
   .confirm-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     justify-content: flex-end;
   }
 
@@ -1160,9 +1165,9 @@
 
   .modal {
     background: rgba(30, 30, 30, 0.95);
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
     border: 2px solid rgba(255, 255, 255, 0.1);
-    max-width: 700px;
+    max-width: 704px; /* 88 units */
     width: 90%;
     max-height: 80vh;
     overflow: hidden;
@@ -1198,15 +1203,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
+    padding: var(--space-3) var(--space-4);
     background: rgba(30, 30, 30, 0.95);
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 
   .modal-header h3 {
     margin: 0;
-    font-size: 18px;
-    font-weight: 600;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
     color: #ffffff;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
@@ -1215,15 +1220,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: var(--space-5);
+    height: var(--space-5);
     border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
     cursor: default;
-    font-size: 18px;
-    font-weight: 600;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
     transition:
       transform 0.2s ease,
       box-shadow 0.2s ease,
@@ -1267,13 +1272,13 @@
   }
 
   .modal-body {
-    padding: 16px 20px;
+    padding: var(--space-3) var(--space-4);
     background: rgba(30, 30, 30, 0.95);
   }
 
   .code-container {
     border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: rgba(20, 20, 20, 0.8);
     overflow: hidden;
     box-shadow:
@@ -1283,16 +1288,16 @@
 
   .code-container pre {
     margin: 0;
-    padding: 16px;
+    padding: var(--space-3);
     background: transparent;
     overflow-x: auto;
-    max-height: 400px;
+    max-height: 400px; /* 50 units */
     overflow-y: auto;
   }
 
   .code-container code {
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
-    font-size: 13px;
+    font-size: var(--font-size-xs); /* 12px → 13px closest */
     line-height: 1.6;
     color: #ffffff;
     background: transparent;
@@ -1302,11 +1307,11 @@
 
   .modal-footer {
     display: flex;
-    gap: 12px;
+    gap: var(--space-3);
     justify-content: flex-end;
-    padding: 16px 20px;
+    padding: var(--space-3) var(--space-4);
     background: rgba(30, 30, 30, 0.95);
-    border-radius: 0 0 16px 16px;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   }
 
   /* Light theme adjustments */
@@ -1318,8 +1323,8 @@
 
     .modal-header {
       background: rgba(255, 255, 255, 0.95);
-      border-radius: 16px 16px 0 0;
-      padding: 16px 20px;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: var(--space-3) var(--space-4);
     }
 
     .modal-header h3 {
@@ -1328,7 +1333,7 @@
 
     .modal-body {
       background: rgba(255, 255, 255, 0.95);
-      padding: 16px 20px;
+      padding: var(--space-3) var(--space-4);
     }
 
     .code-container {
@@ -1342,15 +1347,15 @@
 
     .modal-footer {
       background: rgba(255, 255, 255, 0.95);
-      border-radius: 0 0 16px 16px;
-      padding: 16px 20px;
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      padding: var(--space-3) var(--space-4);
     }
 
     .btn-close {
       background: rgba(0, 0, 0, 0.05);
       border-color: rgba(0, 0, 0, 0.1);
       color: #1a1a1a;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
     }
 
     .btn-close:hover {
@@ -1362,7 +1367,7 @@
       background: rgba(0, 0, 0, 0.05);
       border-color: rgba(0, 0, 0, 0.1);
       color: #1a1a1a;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
     }
 
     .secondary:disabled {
@@ -1383,7 +1388,7 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       border-color: transparent;
       color: #ffffff;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
     }
 
     .primary:hover {
@@ -1409,9 +1414,9 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
 
-    .btn-icon-small :global(svg) {
-      width: 16px;
-      height: 16px;
+    :global(.btn-icon-small) :global(svg) {
+      width: var(--space-3); /* 16px */
+      height: var(--space-3); /* 16px */
       color: currentColor;
       display: block;
       flex-shrink: 0;
@@ -1464,8 +1469,8 @@
 
     .modal-header {
       background: rgba(30, 30, 30, 0.95);
-      border-radius: 16px 16px 0 0;
-      padding: 16px 20px;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: var(--space-3) var(--space-4);
     }
 
     .modal-header h3 {
@@ -1474,7 +1479,7 @@
 
     .modal-body {
       background: rgba(30, 30, 30, 0.95);
-      padding: 16px 20px;
+      padding: var(--space-3) var(--space-4);
     }
 
     .code-container {
@@ -1484,15 +1489,15 @@
 
     .modal-footer {
       background: rgba(30, 30, 30, 0.95);
-      border-radius: 0 0 16px 16px;
-      padding: 16px 20px;
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      padding: var(--space-3) var(--space-4);
     }
 
     .btn-close {
       background: rgba(255, 255, 255, 0.08);
       border-color: rgba(255, 255, 255, 0.1);
       color: #ffffff;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
     }
 
     .btn-close:hover {
@@ -1504,7 +1509,7 @@
       background: rgba(255, 255, 255, 0.08);
       border-color: rgba(255, 255, 255, 0.1);
       color: #ffffff;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
     }
 
     .secondary:disabled {
@@ -1525,7 +1530,7 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       border-color: transparent;
       color: #ffffff;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
     }
 
     .primary:hover {

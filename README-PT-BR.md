@@ -282,5 +282,3 @@ Oxide Lab é construído com a ajuda de tecnologias incríveis de código aberto
 
 > **Feito com ❤️ para a comunidade de entusiastas de IA**  
 > _Liberdade, privacidade e controle sobre inteligência artificial_
-
-

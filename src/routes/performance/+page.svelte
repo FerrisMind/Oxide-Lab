@@ -81,75 +81,75 @@
   .performance-page {
     min-height: 100vh;
     background: var(--bg);
-    padding: 2rem;
+    padding: var(--space-5); /* 32px → 2rem */
   }
 
   .page-header {
-    max-width: 1400px;
-    margin: 0 auto 2rem;
+    max-width: var(--container-max); /* 1440px → 1400px closest */
+    margin: 0 auto var(--space-5); /* 32px → 2rem */
   }
 
   .page-header h1 {
-    margin: 0 0 0.5rem 0;
-    font-size: 2rem;
-    font-weight: 700;
+    margin: 0 0 var(--space-2) 0; /* 8px → 0.5rem */
+    font-size: var(--font-size-2xl); /* 32px → 2rem */
+    font-weight: var(--font-weight-bold);
     color: var(--text);
   }
 
   .page-description {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--font-size-base); /* 16px → 1rem */
     color: var(--muted);
-    line-height: 1.6;
+    line-height: var(--line-height-relaxed);
   }
 
   .alerts-section {
-    max-width: 1400px;
-    margin: 0 auto 2rem;
+    max-width: var(--container-max); /* 1440px */
+    margin: 0 auto var(--space-5); /* 32px */
   }
 
   .performance-layout {
     display: grid;
-    grid-template-columns: 1fr 380px;
-    gap: 2rem;
-    max-width: 1400px;
+    grid-template-columns: 1fr calc(var(--space-12) * 4); /* 384px = 48 units */
+    gap: var(--space-5); /* 32px */
+    max-width: var(--container-max); /* 1440px */
     margin: 0 auto;
   }
 
   .metrics-panel {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: var(--space-5); /* 32px → 2rem */
   }
 
   .info-panel {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: var(--space-5); /* 32px → 2rem */
     position: sticky;
-    top: 2rem;
+    top: var(--space-5); /* 32px → 2rem */
     align-self: start;
-    max-height: calc(100vh - 4rem);
+    max-height: calc(100vh - var(--space-6)); /* 40px → 4rem */
     overflow-y: auto;
   }
 
   .info-card {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 1.5rem;
+    border-radius: var(--radius-lg); /* 16px */
+    padding: var(--space-4); /* 24px → 1.5rem */
   }
 
   .info-card h3 {
-    margin: 0 0 1.5rem 0;
+    margin: 0 0 var(--space-4) 0; /* 24px → 1.5rem */
     font-size: 1.125rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
   }
 
   .info-section {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1.5rem;
+    margin-bottom: var(--space-4); /* 24px → 1.5rem */
+    padding-bottom: var(--space-4); /* 24px → 1.5rem */
     border-bottom: 1px solid var(--border-color);
   }
 
@@ -160,17 +160,17 @@
   }
 
   .info-section h4 {
-    margin: 0 0 0.5rem 0;
-    font-size: 0.875rem;
-    font-weight: 600;
+    margin: 0 0 var(--space-2) 0; /* 8px → 0.5rem */
+    font-size: var(--font-size-sm); /* 14px → 0.875rem */
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
   }
 
   .info-section p {
-    margin: 0 0 0.5rem 0;
-    font-size: 0.75rem;
+    margin: 0 0 var(--space-2) 0; /* 8px → 0.5rem */
+    font-size: var(--font-size-xs); /* 12px → 0.75rem */
     color: var(--muted);
-    line-height: 1.6;
+    line-height: var(--line-height-relaxed);
   }
 
   .info-section p:last-child {
@@ -178,11 +178,11 @@
   }
 
   .target-info {
-    padding: 0.5rem 0.75rem;
+    padding: var(--space-2) var(--space-2); /* 8px 8px → 0.5rem 0.75rem closest */
     background: rgba(52, 152, 219, 0.1);
-    border-left: 3px solid var(--info, #3498db);
-    border-radius: 12px;
-    font-size: 0.75rem;
+    border-left: var(--space-1) solid var(--info, #3498db); /* 4px → 3px closest */
+    border-radius: var(--radius-lg); /* 16px */
+    font-size: var(--font-size-xs); /* 12px → 0.75rem */
     color: var(--text);
   }
 
@@ -194,7 +194,7 @@
   @media (max-width: 1200px) {
     .performance-layout {
       grid-template-columns: 1fr;
-      gap: 1.5rem;
+      gap: var(--space-4); /* 24px → 1.5rem */
     }
 
     .info-panel {
@@ -206,35 +206,35 @@
   /* Адаптивность для мобильных */
   @media (max-width: 768px) {
     .performance-page {
-      padding: 1rem;
+      padding: var(--space-3); /* 16px → 1rem */
     }
 
     .page-header h1 {
-      font-size: 1.5rem;
+      font-size: var(--font-size-xl); /* 24px → 1.5rem */
     }
 
     .info-card {
-      padding: 1rem;
+      padding: var(--space-3); /* 16px → 1rem */
     }
   }
 
   /* Скроллбар для info panel */
   .info-panel::-webkit-scrollbar {
-    width: 8px;
+    width: var(--space-2); /* 8px */
   }
 
   .info-panel::-webkit-scrollbar-track {
     background: transparent;
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
   }
 
   .info-panel::-webkit-scrollbar-thumb {
-    background: rgba(179, 205, 224, 0.6);
-    border-radius: 12px;
-    transition: background 0.3s ease;
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-lg); /* 16px */
+    transition: background var(--duration-slow) var(--ease-default);
   }
 
   .info-panel::-webkit-scrollbar-thumb:hover {
-    background: rgba(179, 205, 224, 0.8);
+    background: var(--scrollbar-thumb-hover);
   }
 </style>

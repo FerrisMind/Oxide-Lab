@@ -1,13 +1,15 @@
-/* Code blocks and syntax highlighting */
+/* =================================================================
+   CODE BLOCKS & SYNTAX HIGHLIGHTING (8pt Grid)
+   Padding: 16px (2 units), Margin: 16px (2 units)
+   Border-radius: 8px (1 unit)
+   ================================================================= */
 
 pre.code {
-  margin: 8px 0;
-  padding: 10px;
+  margin: var(--space-3) 0; /* 16px */
+  padding: var(--space-3); /* 16px */
   background: var(--code-bg);
   color: var(--code-fg);
-  border-radius: 12px;
-
-  /* Vertical-only scroll inside code blocks */
+  border-radius: var(--radius); /* 8px */
   overflow: auto hidden;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -16,9 +18,9 @@ pre.code {
 }
 
 pre.code code {
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-    monospace;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm); /* 14px */
+  line-height: var(--line-height-normal); /* 1.5 */
   white-space: inherit;
   overflow-wrap: inherit;
   word-break: inherit;
@@ -74,23 +76,22 @@ pre.code code {
   font-style: italic;
 }
 
-/* Inline code elements */
-
+/* Inline code elements (8pt grid padding) */
 .md-stream :not(pre) > code {
   background: var(--code-bg);
   color: var(--code-fg);
-  padding: 0.15em 0.35em;
-  border-radius: 12px;
+  padding: var(--space-1) var(--space-2); /* 4px 8px */
+  border-radius: var(--radius-sm); /* 4px */
+  font-family: var(--font-mono);
+  font-size: 0.9em;
 }
 
 .md-stream pre {
-  margin: 8px 0;
-  padding: 10px;
+  margin: var(--space-3) 0; /* 16px */
+  padding: var(--space-3); /* 16px */
   background: var(--code-bg);
   color: var(--code-fg);
-  border-radius: 12px;
-
-  /* Vertical-only scroll inside markdown code blocks */
+  border-radius: var(--radius); /* 8px */
   overflow: auto hidden;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -99,9 +100,9 @@ pre.code code {
 }
 
 .md-stream pre code {
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-    monospace;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm); /* 14px */
+  line-height: var(--line-height-normal); /* 1.5 */
   white-space: inherit;
   overflow-wrap: inherit;
   word-break: inherit;

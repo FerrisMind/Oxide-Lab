@@ -1,49 +1,86 @@
+/* =================================================================
+   CHAT CONTAINER (8pt Grid System)
+   Main Chat Area: 800px max-width (правило третей)
+   ================================================================= */
+
 .chat {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 16px;
+  gap: 0;
+  height: 100%;
+  width: 100%;
+  position: relative;
 }
 
 .chat {
   grid-row: 1;
 }
 
+/* Center content in the chat area */
 .chat > * {
   margin-left: auto;
   margin-right: auto;
+  max-width: var(--chat-max-width); /* 800px */
+  width: 100%;
 }
 
 .loader {
   grid-row: 2;
 }
 
+/* =================================================================
+   MESSAGES CONTAINER (8pt Grid aligned)
+   Padding: 24px 32px desktop, 16px 24px mobile
+   Gap: 0 (без расстояния между сообщениями)
+   ================================================================= */
+
 .messages {
   margin-top: 0;
   margin-left: auto;
   margin-right: auto;
-  background: #1a1a1a;
+  background: transparent;
   border: none;
-  border-radius: 10px;
-  padding: 12px;
+  border-radius: 0;
+
+  /* Mobile padding */
+  padding: var(--message-padding-mobile); /* 16px 24px */
+
   flex: 1 1 auto;
-  max-width: 772px;
+  max-width: var(--chat-max-width); /* 800px */
   width: 100%;
 
-  /* Only vertical scroll; prevent horizontal scrollbar */
   overflow: hidden auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--message-gap); /* 0 */
   color: var(--text);
+
+  /* Padding at bottom for composer space */
+  padding-bottom: calc(160px + var(--space-4)); /* 160px + 24px */
 }
+
+/* Desktop: 24px 32px padding */
+@media (min-width: 768px) {
+  .messages {
+    padding: var(--message-padding-desktop); /* 24px 32px */
+    padding-bottom: calc(160px + var(--space-5)); /* 160px + 32px */
+  }
+}
+
+/* =================================================================
+   MESSAGE ROW (8pt Grid)
+   ================================================================= */
 
 .message {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
 }
 
+/* User messages align right */
 .message.user {
   align-items: flex-end;
 }
@@ -61,13 +98,20 @@
 .message {
   overflow-wrap: anywhere;
   word-break: break-word;
+  margin-bottom: -16px; /* перекрытие между сообщениями */
 }
 
+/* =================================================================
+   MESSAGE BUBBLE (8pt Grid aligned)
+   Padding: 16px 24px, Border-radius: 12px
+   ================================================================= */
+
 .bubble {
-  max-width: 80%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #2d2d2d;
+  max-width: 100%;
+  width: fit-content;
+  padding: var(--space-3) var(--space-4); /* 16px 24px */
+  border-radius: var(--message-border-radius); /* 12px */
+  background: transparent;
   color: var(--text);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -81,23 +125,38 @@
   word-break: break-word;
   max-width: 100%;
   min-width: 0;
+  font-size: var(--font-size-base); /* 16px */
+  line-height: var(--line-height-normal); /* 1.5 = 24px */
 }
 
+/* User bubble: subtle background */
 .message.user .bubble {
-  background: var(--accent-2);
+  background: var(--panel-bg);
+  color: var(--text);
+  border-radius: var(--message-border-radius); /* 12px */
+  max-width: var(--message-content-max-width); /* 736px */
 }
 
+/* Assistant bubble: clean, no background */
 .message.assistant .bubble {
-  background: #2d2d2d;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+  max-width: 100%;
 }
 
-/* Modern toggle switch */
+/* =================================================================
+   TOGGLE SWITCH (8pt Grid aligned)
+   Width: 48px (6 units), Height: 24px (3 units)
+   Thumb centered vertically with transform
+   ================================================================= */
 
 .switch {
   position: relative;
   display: inline-block;
-  width: 48px;
-  height: 26px;
+  width: var(--space-7); /* 48px - 6 units */
+  height: var(--space-4); /* 24px - 3 units */
+  flex-shrink: 0;
 }
 
 .switch input {
@@ -110,31 +169,32 @@
   position: absolute;
   cursor: default;
   inset: 0;
-  background: #ccc;
-  transition: background-color 0.2s ease;
-  border-radius: 26px;
-  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.1);
+  background: color-mix(in srgb, var(--border-color) 40%, var(--panel-bg) 60%);
+  transition: var(--transition-colors);
+  border-radius: var(--radius-full);
+  box-shadow: inset 0 1px var(--space-1) rgb(0 0 0 / 0.1); /* 4px → 3px */
 }
 
 .slider::before {
   position: absolute;
   content: '';
-  height: 22px;
-  width: 22px;
-  left: 2px;
-  top: 2px;
+  height: var(--space-3); /* 16px → 20px, using 16px for proper centering */
+  width: var(--space-3); /* 16px */
+  left: var(--space-1); /* 4px */
+  top: 50%;
+  transform: translateY(-50%);
   background: white;
-  transition: transform 0.2s ease;
+  transition: var(--transition-transform);
   border-radius: 50%;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .switch input:checked + .slider {
-  background: linear-gradient(135deg, var(--accent-2), #d4b8ff);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
 }
 
 .switch input:checked + .slider::before {
-  transform: translateX(22px);
+  transform: translateY(-50%) translateX(var(--space-4)); /* 24px */
 }
 
 .switch.disabled {
@@ -142,44 +202,51 @@
   cursor: default;
 }
 
+/* =================================================================
+   SEGMENTED TOGGLE (8pt Grid aligned)
+   ================================================================= */
+
 .segmented-toggle {
   display: inline-flex;
-  border: 1px solid var(--border-color, #e8e6e3);
-  background: #1a1a1a;
-  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--panel-bg);
+  border-radius: var(--radius-lg); /* 16px */
   overflow: hidden;
-  padding: 2px;
-  gap: 2px;
+  padding: var(--space-1); /* 4px */
+  gap: var(--space-1); /* 4px */
 }
 
 .segmented-toggle .segment {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
+  gap: var(--space-2); /* 8px */
+  padding: var(--space-1) var(--space-2); /* 4px 8px */
   border: none;
   background: transparent;
   color: var(--text);
   cursor: default;
-  border-radius: 12px;
+  border-radius: var(--radius-md); /* 12px */
+  transition: var(--transition-colors);
 }
 
 .segmented-toggle .segment.active {
-  background: linear-gradient(135deg, var(--accent-2), #d4b8ff);
-  color: #1c1c1c;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #ffffff;
 }
 
-/* Indicative segmented block: highlight supported icons similarly to active */
-
 .segmented-toggle .indicator.supported {
-  background: linear-gradient(135deg, var(--accent-2), #d4b8ff);
-  color: #1c1c1c;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #ffffff;
 }
 
 .segmented-toggle .segment:disabled {
   opacity: 0.6;
   cursor: default;
 }
+
+/* =================================================================
+   CHAT PLACEHOLDER (8pt Grid aligned)
+   ================================================================= */
 
 .chat-placeholder {
   display: flex;
@@ -189,10 +256,10 @@
   height: 100%;
   flex: 1;
   min-height: 0;
-  padding: 16px;
+  padding: var(--space-3); /* 16px */
   box-sizing: border-box;
   background: transparent;
-  border-radius: 14px;
+  border-radius: var(--radius-lg); /* 16px */
   margin: 0;
 }
 
@@ -200,102 +267,52 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3); /* 16px */
   text-align: left;
   color: var(--muted);
   background: transparent;
-  border-radius: 10px;
+  border-radius: var(--radius); /* 8px */
 }
 
 .placeholder-content h3 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--font-size-lg); /* 20px */
+  font-weight: var(--font-weight-semibold);
 }
 
 .placeholder-content .placeholder-text {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2); /* 8px */
 }
 
 .placeholder-content p {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm); /* 14px */
   opacity: 0.8;
 }
 
-@media (prefers-color-scheme: dark) {
-  .messages {
-    background: #222;
-    border-color: #333;
-  }
-
-  .message.user .bubble {
-    background: #4a3f66;
-    color: #eee;
-  }
-
-  .message.assistant .bubble {
-    background: #2f3640;
-    color: #eee;
-  }
-
-  /* Темная тема для кнопок скрепки и микрофона */
-
-  .slider {
-    background: #555;
-  }
-
-  .switch input:checked + .slider {
-    background: linear-gradient(135deg, #695b99, #5a4b8a);
-  }
-
-  .segmented-toggle {
-    background: #2d2d2d;
-    border-color: #3a3a3a;
-  }
-
-  .segmented-toggle .segment {
-    color: #eee;
-  }
-
-  .segmented-toggle .segment.active {
-    background: linear-gradient(135deg, #695b99, #5a4b8a);
-    color: #fff;
-  }
-
-  .segmented-toggle .indicator.supported {
-    background: linear-gradient(135deg, #695b99, #5a4b8a);
-    color: #fff;
-  }
-}
-
-@media (width >= 960px) {
+@media (min-width: 1024px) {
   /* Use flex layout for desktop to keep consistent heights (defined in base.css) */
 
   .wrap {
     display: flex;
-    gap: 20px;
-    padding: 24px 32px;
+    gap: 0;
+    /* Sidebar handles its own border/gap */
+    padding: 0;
+    /* Main wrapper padding might interfere with sidebar */
     height: 100%;
     box-sizing: border-box;
   }
 
+  /* Adjust chat section for larger screens */
   .chat {
     flex: 1 1 auto;
     grid-column: unset;
     grid-row: unset;
     min-height: 0;
-  }
-
-  .loader {
-    flex: 0 0 360px;
-    grid-column: unset;
-    grid-row: unset;
-    min-height: 0;
-
-    /* Only vertical scroll to avoid horizontal scrollbar */
-    overflow: hidden auto;
+    /* Ensure only the content is limited, not the container background */
+    align-items: center;
+    /* Helper to center direct children if they have width */
   }
 }

@@ -1,37 +1,40 @@
+/* =================================================================
+   THINKING BLOCK (8pt Grid)
+   Padding: 16px, Border-radius: 8px
+   ================================================================= */
+
 .thinking-block {
   width: 100%;
-  margin: 12px 0;
+  margin: var(--space-3) 0; /* 16px */
 }
 
 .thinking-card {
-  border: 1px dashed rgb(148, 163, 184);
-  border-radius: 12px;
-  background: var(--panel-bg, rgba(148, 163, 184, 0.08));
-  padding: 12px;
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease;
+  border: 1px dashed rgb(148 163 184);
+  border-radius: var(--radius); /* 8px */
+  background: var(--panel-bg, rgb(148 163 184 / 0.08));
+  padding: var(--space-3); /* 16px */
+  transition: var(--transition-colors);
 }
 
 .thinking-card.is-loading {
   border-style: solid;
-  border-color: var(--accent-color, rgb(96, 165, 250));
-  background: rgb(96, 165, 250);
+  border-color: var(--accent-color, rgb(96 165 250));
+  background: rgb(96 165 250);
 }
 
 .thinking-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2); /* 8px */
 }
 
 .thinking-loader {
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  border: 2px solid rgb(148, 163, 184);
+  width: var(--space-3); /* 16px = 2 units */
+  height: var(--space-3);
+  border-radius: var(--radius-full);
+  border: 2px solid rgb(148 163 184);
   border-top-color: transparent;
-  animation: thinking-spin 0.8s linear infinite;
+  animation: thinking-spin 800ms linear infinite; /* 800ms кратно 50ms */
 }
 
 .thinking-loader.is-hidden {
@@ -43,15 +46,16 @@
   background: none;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 2px 0;
+  gap: var(--space-2); /* 8px */
+  padding: var(--space-1) 0; /* 4px */
   font: inherit;
   color: inherit;
   cursor: default;
+  transition: var(--transition-colors);
 }
 
 .thinking-toggle:focus-visible {
-  outline: 2px solid var(--accent-color, rgb(96, 165, 250));
+  outline: 2px solid var(--accent-color, rgb(96 165 250));
   outline-offset: 2px;
 }
 
@@ -60,12 +64,12 @@
   align-items: center;
   justify-content: center;
   width: 1em;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .thinking-title {
-  font-weight: 600;
-  color: var(--text-primary, rgb(226, 232, 240));
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary, rgb(226 232 240));
 }
 
 .thinking-card:not(.is-expanded) .thinking-body {
@@ -73,12 +77,12 @@
 }
 
 .thinking-body {
-  margin-top: 8px;
-  padding-left: 1.5rem;
-  padding-right: 1rem;
-  color: var(--muted, rgb(148, 163, 184));
-  font-size: 0.875rem;
-  line-height: 1.6;
+  margin-top: var(--space-2); /* 8px */
+  padding-left: var(--space-4); /* 24px */
+  padding-right: var(--space-3); /* 16px */
+  color: var(--muted, rgb(148 163 184));
+  font-size: var(--font-size-sm); /* 14px */
+  line-height: var(--line-height-relaxed); /* 1.625 */
 }
 
 @keyframes thinking-spin {

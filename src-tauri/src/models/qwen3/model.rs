@@ -39,4 +39,8 @@ impl crate::models::common::model::ModelBackend for ModelWeights {
             .forward(input, position)
             .map_err(|e| e.to_string())
     }
+
+    fn clear_kv_cache(&mut self) {
+        self.inner.clear_kv_cache();
+    }
 }

@@ -1,12 +1,12 @@
-/* Desktop layout: place chat and loader side-by-side with equal height */
-@media (width >= 960px) {
-  /* Use flex layout to guarantee equal heights between chat and loader */
+/* =================================================================
+   DESKTOP LAYOUT (8pt Grid System)
+   Использует flex layout для равной высоты chat и loader
+   ================================================================= */
 
+@media (width >= 960px) {
   .wrap {
     display: flex;
-    gap: var(--content-gap);
-
-    /* fill available height from parent (app-main) to avoid exceeding viewport */
+    gap: var(--space-3); /* 16px gutters */
     height: 100%;
     box-sizing: border-box;
     align-items: stretch;
@@ -20,34 +20,30 @@
   }
 
   .loader {
-    flex: 0 0 360px;
+    flex: 0 0 360px; /* 45 units - фиксированная ширина */
     display: flex;
     flex-direction: column;
     min-height: 0;
-    /* Vertical-only scrolling */
     overflow-y: auto;
     overflow-x: hidden;
   }
 
-  /* messages area should grow to fill available space */
   .chat .messages {
     flex: 1 1 auto;
     min-height: 0;
   }
 }
 
-/* Ensure strict equality of chat and loader heights and prevent content from pushing height */
+/* Строгое равенство высот chat и loader */
 @media (width >= 960px) {
   .chat,
   .loader {
     box-sizing: border-box;
     max-height: 100%;
-    /* Only vertical scrolling to avoid horizontal scrollbars in panels */
     overflow-y: auto !important;
     overflow-x: hidden !important;
   }
 
-  /* prevent children margins from expanding container */
   .chat * {
     margin-bottom: 0;
   }
@@ -56,26 +52,34 @@
   }
 }
 
+/* =================================================================
+   BASE WRAP CONTAINER (8pt Grid)
+   Container: 1440px max, Content: 1200px, Margins: 24px, Gutters: 16px
+   ================================================================= */
+
 .wrap {
   min-height: 0;
-  background: none; /* remove gradient background */
+  background: none;
   color: var(--text);
   display: grid;
   grid-template-columns: 1fr;
   grid-template-rows: minmax(0, 1fr) auto;
-  gap: 16px;
-  padding: 16px;
+  gap: var(--space-3); /* 16px */
+  padding: var(--space-3); /* 16px */
   width: 100%;
   margin: 0;
   box-sizing: border-box;
 }
 
+/* =================================================================
+   CHAT & LOADER PANELS (8pt Grid aligned)
+   Border-radius: 16px (2 units), Padding: 16px (2 units)
+   ================================================================= */
+
 .loader,
 .chat {
   background: var(--card);
-
-  /* increased rounding for chat and loader */
-  border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 6px 30px rgb(0 0 0 / 0.05);
+  border-radius: var(--radius-lg); /* 16px */
+  padding: var(--space-3); /* 16px */
+  box-shadow: var(--shadow-sm);
 }

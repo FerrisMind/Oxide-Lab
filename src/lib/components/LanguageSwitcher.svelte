@@ -10,8 +10,8 @@
   import { locale, setLocale, syncLocaleWithBackend, SUPPORTED_LOCALES } from '$lib/i18n';
   import { page } from '$app/stores';
   import { invoke } from '@tauri-apps/api/core';
-  import Globe from 'phosphor-svelte/lib/Globe';
-  import Check from 'phosphor-svelte/lib/Check';
+import Globe from 'phosphor-svelte/lib/Globe';
+import Check from 'phosphor-svelte/lib/CheckCircle';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import { Button } from '$lib/components/ui/button';
   import { cn } from '$lib/utils';

@@ -164,9 +164,9 @@
   .dialog-content {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    max-width: 500px;
+    max-width: 496px; /* 62 units */
     width: 100%;
     animation: slideIn 0.2s ease;
   }
@@ -215,9 +215,9 @@
   .btn {
     padding: 0.625rem 1.25rem;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     font-size: 0.9375rem;
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
     cursor: default;
     transition: all 0.2s ease;
   }

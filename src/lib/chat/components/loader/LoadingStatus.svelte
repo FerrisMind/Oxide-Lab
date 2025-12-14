@@ -2,7 +2,7 @@
   import Stop from "phosphor-svelte/lib/Stop";
   import Package from "phosphor-svelte/lib/Package";
   import _TextT from "phosphor-svelte/lib/TextT";
-  import CheckCircle from "phosphor-svelte/lib/CheckCircle";
+import CheckCircle from "phosphor-svelte/lib/CheckCircle";
   import Lightbulb from "phosphor-svelte/lib/Lightbulb";
   import { t } from '$lib/i18n';
   
@@ -53,7 +53,7 @@
         <div class="progress-fill" style="width: {loadingProgress}%"></div>
       </div>
       <div class="loading-hint">
-        <Lightbulb size={14} weight="duotone" style="vertical-align: -2px;" /> {$t('chat.loading.cancelHint')}
+        <span class="hint-icon"><Lightbulb size={14} weight="duotone" /></span> {$t('chat.loading.cancelHint')}
       </div>
     {/if}
   </div>
@@ -64,3 +64,12 @@
     </div>
   </div>
 {/if}
+
+<style>
+  /* Icon alignment using flexbox instead of hardcoded pixels */
+  .hint-icon {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+  }
+</style>

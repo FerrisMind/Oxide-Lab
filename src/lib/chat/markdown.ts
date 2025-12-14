@@ -65,11 +65,58 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
       }
       enhanced = out.join('\n');
     }
+
+    const openCountRaw = countThink(enhanced, '<think>');
+    const closeCountRaw = countThink(enhanced, '</think>');
+    const openCountEscRaw = countThink(enhanced, '&lt;think>');
+    const closeCountEscRaw = countThink(enhanced, '&lt;/think>');
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: 'H5',
+        location: 'markdown.ts:renderMarkdownToSafeHtml:raw',
+        message: 'raw think counters',
+        data: { openCountRaw, closeCountRaw, openCountEscRaw, closeCountEscRaw, len: enhanced.length },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
     const dirty = (
       typeof (marked as any).parse === 'function'
         ? (marked as any).parse(enhanced)
         : (marked as any)(enhanced)
     ) as string;
+
+    const openCountDirty = countThink(dirty, '<think>');
+    const closeCountDirty = countThink(dirty, '</think>');
+    const openCountEscDirty = countThink(dirty, '&lt;think>');
+    const closeCountEscDirty = countThink(dirty, '&lt;/think>');
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: 'H5',
+        location: 'markdown.ts:renderMarkdownToSafeHtml:dirty',
+        message: 'dirty think counters',
+        data: {
+          openCountDirty,
+          closeCountDirty,
+          openCountEscDirty,
+          closeCountEscDirty,
+          len: dirty.length,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     // Разрешаем типичные теги Markdown, остальное вычищаем
     const sanitized =
       typeof window !== 'undefined'
@@ -142,6 +189,7 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
               // Интерактивные элементы
               'details',
               'summary',
+              'think',
               // Семантические элементы
               'span',
               'abbr',
@@ -260,10 +308,105 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
             ],
           })
         : dirty;
-    return sanitized;
+    return wrapThinkBlocks(sanitized);
   } catch {
     return DOMPurify.sanitize(markdownText ?? '');
   }
+}
+
+// Оборачиваем завершённые блоки <think>...</think> в плейсхолдеры под аккордеон
+function wrapThinkBlocks(html: string): string {
+  const OPEN = '<think>';
+  const CLOSE = '</think>';
+  if (!html.includes(OPEN)) return html;
+
+  let out = '';
+  let cursor = 0;
+  let idx = 0;
+
+  while (true) {
+    const start = html.indexOf(OPEN, cursor);
+    if (start === -1) {
+      out += html.slice(cursor);
+      break;
+    }
+    const end = html.indexOf(CLOSE, start + OPEN.length);
+    const streaming = end === -1;
+    const endPos = streaming ? html.length : end;
+
+    const before = html.slice(cursor, start);
+    const inner = html.slice(start + OPEN.length, endPos);
+    const key = `think-${idx++}`;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: 'H5',
+        location: 'markdown.ts:wrapThinkBlocks:loop',
+        message: 'wrap iteration',
+        data: {
+          key,
+          streaming,
+          start,
+          end,
+          endPos,
+          innerLen: inner.length,
+          htmlLen: html.length,
+          snippet: html.slice(start, Math.min(html.length, start + 80)),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    out += before;
+    out += `<div class="thinking-placeholder" data-think-id="${key}" data-streaming="${streaming}">`;
+    out += `<div class="thinking-content" data-think-slot>${inner}</div>`;
+    out += `<div class="thinking-mount"></div>`;
+    out += `</div>`;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: streaming ? 'H1' : 'H2',
+        location: 'markdown.ts:wrapThinkBlocks',
+        message: 'wrap think block',
+        data: { key, streaming, innerLen: inner.length },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    if (streaming) {
+      // всё оставшееся сейчас в размышлении — ждём закрывающий тег в следующих чанках
+      cursor = html.length;
+      break;
+    }
+
+    cursor = endPos + CLOSE.length;
+  }
+
+  return out;
+}
+
+function countThink(text: string, token: string): number {
+  let count = 0;
+  let idx = 0;
+  while (true) {
+    const pos = text.indexOf(token, idx);
+    if (pos === -1) break;
+    count += 1;
+    idx = pos + token.length;
+  }
+  return count;
 }
 
 // Функция для обработки GitHub-style callouts

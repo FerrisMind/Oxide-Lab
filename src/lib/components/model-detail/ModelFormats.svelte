@@ -23,29 +23,29 @@
 
 <style>
   .model-formats {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-4); /* 24px */
   }
 
   .model-formats h3 {
     font-size: 1.125rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
-    margin: 0 0 12px 0;
+    margin: 0 0 var(--space-2) 0; /* 8px → 12px closest */
   }
 
   .formats-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
   }
 
   .format-item {
-    padding: 6px 12px;
+    padding: var(--space-1) var(--space-3); /* 4px 16px → 6px 16px closest */
     background: var(--panel-alt-bg);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
     color: var(--text);
     transition: all 0.2s ease;
   }

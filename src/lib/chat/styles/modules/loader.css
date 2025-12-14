@@ -1,10 +1,12 @@
 /* ===== Loader panel form controls (right panel) ===== */
 
 .loader {
-  --control-radius: 10px;
-  --control-padding-y: 8px; /* 4px grid */
-  --control-padding-x: 12px; /* 4px grid */
-  --focus-ring: 0 0 0 3px rgb(179 205 224 / 0.15);
+  --control-radius: var(--radius); /* 8px */
+  --control-padding-y: var(--space-2); /* 8px */
+  /* 4px grid */
+  --control-padding-x: var(--space-3); /* 16px */
+  /* 4px grid */
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 
   width: 100%;
   max-width: 100%;
@@ -17,9 +19,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 22px;
-  margin-top: -6px; /* nudge a bit higher */
-  margin-bottom: 8px;
+  gap: var(--space-4); /* 24px → 22px closest */
+  margin-top: calc(var(--space-2) * -1); /* -8px, nudge higher */
+  margin-bottom: var(--space-2); /* 8px */
   color: var(--muted);
 }
 
@@ -28,6 +30,7 @@
   cursor: default;
   pointer-events: none;
 }
+
 .loader .content-type-toggle .indicator:not(.supported) {
   opacity: 0.35;
 }
@@ -38,19 +41,19 @@
 
 .loader .field {
   display: grid;
-  gap: 8px;
-  margin: 8px 0;
+  gap: var(--space-2); /* 8px */
+  margin: var(--space-2) 0; /* 8px 0 */
 }
 
 .loader .field label {
-  font-size: 12px;
+  font-size: var(--font-size-base); /* 16px */
   color: var(--muted);
 }
 
 .loader .field input[type='text'],
 .loader .field input:not([type]) {
   border: 1px solid var(--border-color);
-  background: #fcfbfa;
+  background: var(--card);
   color: var(--text);
   border-radius: var(--control-radius);
   padding: var(--control-padding-y) var(--control-padding-x);
@@ -68,7 +71,8 @@
 }
 
 .loader .field .input-with-button input {
-  padding-right: 44px; /* Увеличиваем отступ для кнопки */
+  padding-right: var(--space-7); /* 48px → 44px closest */
+  /* Увеличиваем отступ для кнопки */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -77,7 +81,7 @@
 }
 
 .loader .field input::placeholder {
-  color: #5a5a5a;
+  color: var(--muted);
   opacity: 0.9;
 }
 
@@ -85,7 +89,7 @@
 
 .loader .input-with-button input {
   padding: var(--control-padding-y) var(--control-padding-x);
-  padding-right: 40px;
+  padding-right: var(--space-6); /* 40px */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -95,24 +99,26 @@
 
 .loader .inside-btn {
   cursor: default;
-  right: 8px;
+  right: var(--space-2); /* 8px */
 }
 
 /* Checkbox */
 
 .loader input[type='checkbox'] {
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: var(--space-3); /* 16px */
+  height: var(--space-3); /* 16px */
   border: 1px solid var(--border-color);
 
   /* make checkbox slightly more rounded to avoid sharp rectangle */
-  border-radius: 12px;
+  border-radius: var(--radius-lg); /* 16px */
   background: var(--panel-bg);
   display: inline-block;
   position: relative;
-  padding: 0; /* prevent global input padding from stretching it */
-  box-sizing: content-box; /* ensure fixed width/height aren't affected by padding */
+  padding: 0;
+  /* prevent global input padding from stretching it */
+  box-sizing: content-box;
+  /* ensure fixed width/height aren't affected by padding */
   vertical-align: middle;
   flex: 0 0 auto;
 }
@@ -129,21 +135,21 @@
   /* center the checkmark inside the 16x16 box */
   left: 50%;
   top: 36%;
-  width: 8px;
-  height: 10px;
-  border: solid #1b1b1b;
+  width: var(--space-2); /* 8px */
+  height: var(--space-2); /* 8px → 10px closest */
+  border: solid #1a1f2e;
   border-width: 0 2px 2px 0;
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .loader .param .row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2); /* 8px */
   align-items: center;
 }
 
 .loader .param label {
-  font-size: 12px;
+  font-size: var(--font-size-base); /* 16px */
   color: var(--muted);
 }
 
@@ -151,17 +157,17 @@
 
 .loader input[type='range'] {
   appearance: none;
-  height: 8px;
+  height: var(--space-2); /* 8px */
   background: linear-gradient(0deg, var(--panel-bg), var(--panel-bg));
   border: 1px solid var(--border-color);
-  border-radius: 999px;
+  border-radius: var(--radius-full); /* 9999px */
   outline: none;
 }
 
 .loader input[type='range']::-webkit-slider-thumb {
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: var(--space-3); /* 16px */
+  height: var(--space-3); /* 16px */
   background: var(--accent);
   border: none;
   border-radius: 50%;
@@ -169,8 +175,8 @@
 }
 
 .loader input[type='range']::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: var(--space-3); /* 16px */
+  height: var(--space-3); /* 16px */
   background: var(--accent);
   border: none;
   border-radius: 50%;
@@ -179,12 +185,12 @@
 
 .loader input[type='number'] {
   border: 1px solid var(--border-color);
-  background: #fcfbfa;
+  background: var(--card);
   color: var(--text);
   border-radius: var(--control-radius);
   padding: var(--control-padding-y) var(--control-padding-x);
   outline: none;
-  width: 112px; /* компактно, кратно 4px */
+  width: calc(var(--space-12) + var(--space-3)); /* 112px = 14 units */
 }
 
 /* Стилизация стрелок в числовых полях */
@@ -196,7 +202,7 @@
   background: var(--panel-bg);
   border-left: 1px solid var(--border-color);
   border-radius: 0 var(--control-radius) var(--control-radius) 0;
-  width: 20px;
+  width: var(--space-4); /* 24px = 3 units */
   height: 100%;
   position: relative;
   cursor: default;
@@ -245,7 +251,7 @@
   background: var(--panel-bg);
   border: none;
   border-radius: 0;
-  width: 20px;
+  width: var(--space-4); /* 24px = 3 units */
   height: 50%;
   cursor: default;
 }
@@ -261,62 +267,4 @@
 .loader input[type='number']:focus {
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
-}
-
-@media (prefers-color-scheme: dark) {
-  .loader .field input[type='text'],
-  .loader .field input:not([type]),
-  .loader input[type='number'] {
-    background: #2d2d2d;
-    border-color: #3a3a3a;
-    color: #eee;
-  }
-
-  .loader input[type='checkbox'] {
-    background: #2d2d2d;
-    border-color: #3a3a3a;
-  }
-
-  .loader input[type='checkbox']:checked::after {
-    border-color: #fff;
-  }
-
-  /* Улучшенный клиппинг для темной темы */
-
-  .loader .field .input-with-button input {
-    background: #2d2d2d;
-    border-color: #3a3a3a;
-    color: #eee;
-  }
-
-  /* Стили для стрелок в темной теме */
-
-  .loader input[type='number']::-webkit-outer-spin-button,
-  .loader input[type='number']::-webkit-inner-spin-button {
-    background: #2d2d2d;
-    border-left-color: #3a3a3a;
-  }
-
-  .loader input[type='number']::-webkit-outer-spin-button:hover,
-  .loader input[type='number']::-webkit-inner-spin-button:hover {
-    background: var(--accent);
-  }
-
-  .loader input[type='number']::-webkit-outer-spin-button::before {
-    border-bottom-color: #eee;
-  }
-
-  .loader input[type='number']::-webkit-inner-spin-button::before {
-    border-top-color: #eee;
-  }
-
-  .loader input[type='number']::-moz-number-spin-box {
-    background: #2d2d2d;
-    border-left-color: #3a3a3a;
-  }
-
-  .loader input[type='number']::-moz-number-spin-up,
-  .loader input[type='number']::-moz-number-spin-down {
-    background: #2d2d2d;
-  }
 }

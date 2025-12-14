@@ -316,7 +316,7 @@
   .param-presets {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 1rem;
   }
 
@@ -339,7 +339,7 @@
     background: var(--accent, #3498db);
     color: white;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 0.75rem;
     font-weight: 500;
     cursor: default;
@@ -359,7 +359,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    max-height: 500px;
+    max-height: 500px; /* Custom constraint, not part of 8pt grid */
     overflow-y: auto;
   }
 
@@ -367,7 +367,7 @@
     padding: 0.75rem;
     background: rgba(149, 165, 166, 0.05);
     border: 2px solid transparent;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     transition: all 0.2s ease;
   }
 
@@ -396,7 +396,7 @@
 
   .badge {
     padding: 0.125rem 0.5rem;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 0.625rem;
     font-weight: 500;
     text-transform: uppercase;
@@ -425,7 +425,7 @@
     padding: 0.25rem 0.5rem;
     background: rgba(52, 152, 219, 0.1);
     border: 1px solid rgba(52, 152, 219, 0.2);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 0.625rem;
     font-family: monospace;
     color: var(--info, #3498db);
@@ -439,7 +439,7 @@
   .btn {
     padding: 0.5rem 0.75rem;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 0.75rem;
     font-weight: 500;
     cursor: default;
@@ -498,9 +498,9 @@
   .dialog {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 1.5rem;
-    max-width: 500px;
+    max-width: 500px; /* Custom constraint, not part of 8pt grid */
     width: 90%;
   }
 
@@ -529,7 +529,7 @@
     padding: 0.5rem;
     background: var(--bg);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 0.875rem;
     color: var(--text);
     font-family: inherit;
@@ -572,7 +572,7 @@
 
   /* Скроллбар */
   .presets-list::-webkit-scrollbar {
-    width: 8px;
+    width: var(--space-2);
   }
 
   .presets-list::-webkit-scrollbar-track {
@@ -581,7 +581,7 @@
 
   .presets-list::-webkit-scrollbar-thumb {
     background: rgba(179, 205, 224, 0.6);
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
   }
 
   .presets-list::-webkit-scrollbar-thumb:hover {

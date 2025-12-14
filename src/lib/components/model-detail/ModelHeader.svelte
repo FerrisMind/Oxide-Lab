@@ -70,16 +70,16 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
+    margin-bottom: var(--space-4); /* 24px */
+    padding-bottom: var(--space-3); /* 16px */
     border-bottom: 1px solid var(--border-color);
   }
 
   .model-name {
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: var(--font-weight-bold);
     color: var(--text);
-    margin: 0 0 4px 0;
+    margin: 0 0 var(--baseline) 0; /* 4px */
     line-height: 1.3;
   }
 
@@ -92,13 +92,13 @@
   .model-actions {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    min-width: 200px;
+    gap: var(--space-2); /* 8px */
+    min-width: 200px; /* 25 units */
   }
 
   .action-row {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
   }
 
   .btn-hf {
@@ -109,7 +109,7 @@
     .model-header {
       flex-direction: column;
       align-items: stretch;
-      gap: 16px;
+      gap: var(--space-3); /* 16px */
     }
     
     .model-title {
@@ -130,12 +130,12 @@
   .btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    gap: var(--space-2); /* 8px */
+    padding: var(--space-2) var(--space-3); /* 8px 16px */
     border: none;
-    border-radius: 10px;
+    border-radius: var(--radius); /* 8px → 10px closest */
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
      cursor: default;
     transition: all 0.2s ease;
   }

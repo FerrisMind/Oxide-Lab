@@ -1,42 +1,45 @@
 .switch {
   display: inline-flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--space-2); /* 8px */
+  margin-bottom: var(--space-3); /* 16px */
 }
 
 .switch button {
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: var(--space-2) var(--space-3); /* 8px 16px */
+  border-radius: var(--radius-md); /* 12px - close to 10px but on grid */
   border: 1px solid transparent;
-  background: #f3f3f3;
+  background: var(--panel-bg);
   color: var(--text);
   cursor: default;
 }
+
 .switch button.active {
   background: var(--accent);
 }
 
 .field {
   display: grid;
-  gap: 8px;
-  margin: 10px 0;
+  gap: var(--space-2); /* 8px */
+  margin: var(--space-2) 0; /* 8px */
 }
+
 .field label {
-  font-size: 12px;
+  font-size: var(--font-size-base); /* 16px */
   color: var(--muted);
 }
 
 .field input {
-  border: 1px solid #e8e6e3;
-  padding: 10px 12px;
-  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  padding: var(--space-2) var(--space-3); /* 8px 16px */
+  border-radius: var(--radius-md); /* 12px */
   outline: none;
-  background: #fcfbfa;
+  background: var(--card);
   color: var(--text);
   width: 100%;
 }
+
 .field input::placeholder {
-  color: #5a5a5a;
+  color: var(--muted);
   opacity: 0.9;
 }
 
@@ -51,7 +54,7 @@
 
 .input-with-button input {
   padding: var(--control-padding-y) var(--control-padding-x);
-  padding-right: 40px;
+  padding-right: var(--space-6); /* 40px = 5 units */
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
@@ -63,48 +66,51 @@
 
 .inside-btn {
   position: absolute;
-  right: 8px;
+  right: var(--space-2); /* 8px */
   top: 50%;
   transform: translateY(-50%);
-  width: 28px;
-  height: 28px;
+  width: var(--space-6); /* 32px */
+  height: var(--space-6); /* 32px */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-color);
   background: var(--panel-bg);
   color: var(--text);
-  border-radius: 12px;
+  border-radius: var(--radius-lg); /* 16px */
   cursor: default;
 }
+
 .inside-btn svg {
-  width: 18px;
-  height: 18px;
+  width: var(--space-4); /* 20px close to 18px */
+  height: var(--space-4);
 }
+
 .inside-btn:hover {
   background: var(--accent);
-  color: #1b1b1b;
+  color: #1a1f2e;
   border-color: transparent;
 }
 
 .primary {
   background: var(--accent-2);
   border: none;
-  border-radius: 12px;
-  padding: 10px 14px;
+  border-radius: var(--radius-lg); /* 16px */
+  padding: var(--space-2) var(--space-3); /* 8px 12px adjusted to grid */
   cursor: default;
-  color: #3a2f4f;
-  font-weight: 600;
-  margin-top: 8px;
+  color: #ffffff;
+  font-weight: var(--font-weight-semibold);
+  margin-top: var(--space-2); /* 8px */
 }
+
 .primary.danger {
-  background: #ffb3b3;
-  color: #3a1f1f;
+  background: var(--danger);
+  color: #ffffff;
 }
 
 .file-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2); /* 8px */
   align-items: center;
   width: 100%;
   max-width: 100%;
@@ -119,27 +125,32 @@
 
 .params {
   display: grid;
-  gap: 10px;
-  margin-top: 12px;
+  gap: var(--space-2); /* 8px */
+  margin-top: var(--space-3); /* 16px */
 }
+
 .param {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2); /* 8px */
 }
+
 .param label {
-  font-size: 12px;
+  font-size: var(--font-size-base); /* 16px */
   color: var(--muted);
 }
+
 .param .row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2); /* 8px */
   align-items: center;
 }
+
 .param input[type='range'] {
   flex: 1;
 }
+
 .thinking-spacer {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3); /* 16px */
 }
 
 /* Новая структура параметров: чекбокс слева, название, справа инпут; слайдер ниже */
@@ -147,16 +158,17 @@
 .param .head {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 8px;
+  gap: var(--space-2); /* 8px */
   align-items: center;
 }
+
 .param .head label {
-  font-size: 13px;
+  font-size: var(--font-size-xs); /* 12px baseline */
   color: var(--text);
 }
 
 .param .head .value-input {
-  width: 112px;
+  width: calc(var(--space-12) + var(--space-4)); /* 120px = 15 units */
 }
 
 .param .slider-row {

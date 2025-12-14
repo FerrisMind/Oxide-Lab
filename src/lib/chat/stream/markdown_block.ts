@@ -1,8 +1,15 @@
 import { mount, unmount } from 'svelte';
+import { get } from 'svelte/store';
 import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
 // CodeMirror renderer removed — using Shiki-based StreamingCodeBlock for highlighting
 import { enableExternalLinks } from '$lib/chat/external-links';
 import { StreamingCodeBlock } from '$lib/components/streaming-code';
+import ThinkingAccordion from '../components/ThinkingAccordion.svelte';
+import { t } from '$lib/i18n';
+
+const thinkState = new Map<string, boolean>();
+const THINK_LOADING_LABEL = () => get(t)('chat.thinking.loading');
+const THINK_READY_LABEL = () => get(t)('chat.thinking.ready');
 import type { BubbleCtx } from './bubble_ctx';
 
 function _hasMarkdownFeatures(text: string): boolean {
@@ -26,6 +33,7 @@ export function ensureMarkdownContainer(ctx: BubbleCtx, bubble: HTMLDivElement):
     // Cleanup existing streaming components if any
     if (ctx.mdContentEl) {
       cleanupStreamingCodeComponents(ctx.mdContentEl);
+      cleanupThinkingComponents(ctx.mdContentEl);
     }
 
     ctx.mdEl = document.createElement('div');
@@ -48,6 +56,20 @@ export function ensureMarkdownContainer(ctx: BubbleCtx, bubble: HTMLDivElement):
     ctx.mdText = '';
   }
   return ctx;
+}
+
+function cleanupThinkingComponents(container: HTMLElement) {
+  const placeholders = container.querySelectorAll('.thinking-placeholder');
+  placeholders.forEach((placeholder) => {
+    const element = placeholder as HTMLElement & { __thinkComponent?: any };
+    const component = element.__thinkComponent;
+    if (component) {
+      try {
+        unmount(component);
+      } catch {}
+      delete element.__thinkComponent;
+    }
+  });
 }
 
 // Detect if text contains streaming code blocks
@@ -181,6 +203,111 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
   });
 }
 
+// Mount thinking accordions for sanitized <think> blocks
+function mountThinkingComponents(container: HTMLElement) {
+  const placeholders = container.querySelectorAll('.thinking-placeholder');
+
+  placeholders.forEach((placeholder) => {
+    const element = placeholder as HTMLElement & { __thinkComponent?: any };
+    const mountTarget = (element.querySelector('.thinking-mount') as HTMLElement | null) ?? element;
+    const contentEl = element.querySelector('[data-think-slot]') as HTMLElement | null;
+    const innerHtml = contentEl?.innerHTML ?? '';
+    const key = element.dataset.thinkId || 'thinking';
+    const streaming = element.dataset.streaming === 'true';
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: 'H3',
+        location: 'markdown_block.ts:mountThinkingComponents:before',
+        message: 'mount think start',
+        data: { key, streaming, innerLen: innerHtml.length },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    // remove stash content to avoid double render
+    if (contentEl) {
+      contentEl.remove();
+    }
+
+    try {
+      // reuse if already mounted
+      if (element.__thinkComponent) {
+        const existing = element.__thinkComponent;
+        existing.resetContent?.();
+        existing.appendHtml?.(innerHtml);
+        const stored = thinkState.has(key) ? thinkState.get(key)! : false;
+        const open = streaming ? true : stored;
+        existing.setOpen?.(open);
+        existing.setStreaming?.(streaming);
+
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'debug-session',
+            runId: 'run-pre-fix',
+            hypothesisId: 'H3',
+            location: 'markdown_block.ts:mountThinkingComponents:reuse',
+            message: 'reuse think component',
+            data: { key, streaming, stored, open },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        return;
+      }
+
+      const component = mount(ThinkingAccordion, {
+        target: mountTarget,
+        props: {
+          value: key,
+          labelLoading: THINK_LOADING_LABEL(),
+          labelReady: THINK_READY_LABEL(),
+          streaming,
+          autoCollapse: true,
+          onToggle: (open: boolean) => thinkState.set(key, open),
+        },
+      });
+
+      component.resetContent?.();
+      component.appendHtml?.(innerHtml);
+
+      const stored = thinkState.has(key) ? thinkState.get(key)! : false;
+      const open = streaming ? true : stored;
+      component.setOpen?.(open);
+      component.setStreaming?.(streaming);
+
+      element.__thinkComponent = component;
+
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'run-pre-fix',
+          hypothesisId: 'H3',
+          location: 'markdown_block.ts:mountThinkingComponents:new',
+          message: 'new think component',
+          data: { key, streaming, stored, open },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+    } catch (error) {
+      console.error('Failed to mount ThinkingAccordion:', error);
+    }
+  });
+}
+
 // Cleanup streaming code components
 function cleanupStreamingCodeComponents(container: HTMLElement) {
   const placeholders = container.querySelectorAll('.streaming-code-placeholder');
@@ -213,14 +340,44 @@ export function appendMarkdownText(
     const newContent = renderMarkdownWithStreamingCode(ctx.mdText, isStreaming);
 
     const needsFullRender = hasStreamingCodeBlocksChanged(ctx.mdContentEl, newContent);
+    const openCount = (ctx.mdText.match(/<think>/g) || []).length;
+    const closeCount = (ctx.mdText.match(/<\/think>/g) || []).length;
+    const openEscCount = (ctx.mdText.match(/&lt;think>/g) || []).length;
+    const closeEscCount = (ctx.mdText.match(/&lt;\/think>/g) || []).length;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: 'H4',
+        location: 'markdown_block.ts:appendMarkdownText',
+        message: 'render markdown chunk',
+        data: {
+          isStreaming,
+          needsFullRender,
+          mdTextLen: ctx.mdText.length,
+          openCount,
+          closeCount,
+          openEscCount,
+          closeEscCount,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     if (needsFullRender) {
       cleanupStreamingCodeComponents(ctx.mdContentEl);
+      cleanupThinkingComponents(ctx.mdContentEl);
 
       ctx.mdContentEl.innerHTML = newContent;
 
       enableExternalLinks(ctx.mdContentEl);
       mountStreamingCodeComponents(ctx.mdContentEl, isStreaming);
+      mountThinkingComponents(ctx.mdContentEl);
     } else {
       updateStreamingCodeComponents(ctx.mdContentEl, isStreaming, ctx.mdText);
     }

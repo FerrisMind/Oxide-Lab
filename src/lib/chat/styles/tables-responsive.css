@@ -1,23 +1,25 @@
-/* Tables and Responsive Layouts */
-
-/* Tables with full styling */
+/* =================================================================
+   TABLES & RESPONSIVE LAYOUTS (8pt Grid)
+   Cell padding: 12px 16px (aligned to baseline)
+   Border-radius: 8px
+   ================================================================= */
 
 .md-stream table {
   width: 100%;
   max-width: 100%;
   border-collapse: collapse;
-  margin: 1em 0;
+  margin: var(--space-3) 0; /* 16px */
   background: var(--bg);
   border: 1px solid var(--border-color);
-  border-radius: 0.5em;
+  border-radius: var(--radius); /* 8px */
   overflow: hidden;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .md-stream table caption {
-  padding: 0.75em;
+  padding: var(--space-2) var(--space-3); /* 8px 16px */
   color: var(--muted);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-align: left;
   caption-side: top;
 }
@@ -29,14 +31,14 @@
 .md-stream th,
 .md-stream td {
   border: 1px solid var(--border-color);
-  padding: 0.75em 1em;
+  padding: var(--space-2) var(--space-3); /* 8px 16px */
   text-align: left;
   vertical-align: top;
   word-wrap: break-word;
 }
 
 .md-stream th {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--text);
   background: var(--panel-alt-bg);
   border-bottom: 2px solid var(--border-color);
@@ -56,11 +58,10 @@
 
 .md-stream tfoot {
   background: var(--panel-alt-bg);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Table alignment */
-
 .md-stream th[align='center'],
 .md-stream td[align='center'] {
   text-align: center;
@@ -77,37 +78,35 @@
 }
 
 /* Responsive table container */
-
 .md-stream .table-responsive {
   overflow-x: auto;
-  margin: 1em 0;
+  margin: var(--space-3) 0; /* 16px */
 }
 
 /* Mobile responsive adjustments */
 @media (width <= 480px) {
   .md-stream .callout {
-    padding: 12px;
-    margin: 0.75em 0;
+    padding: var(--space-3); /* 16px */
+    margin: var(--space-2) 0; /* 8px */
   }
 
   .md-stream .callout-body {
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
   }
 
   .md-stream .callout-icon {
-    width: 18px;
-    height: 18px;
-    margin-top: 1px;
+    width: var(--space-3); /* 16px = 2 units */
+    height: var(--space-3);
   }
 
   .md-stream .callout-icon svg {
-    width: 14px;
-    height: 14px;
+    width: var(--font-size-sm); /* 14px */
+    height: var(--font-size-sm);
   }
 
   .md-stream .callout-custom-title {
     font-size: 0.9em;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2); /* 8px */
   }
 
   .md-stream table {
@@ -154,7 +153,7 @@
 }
 
 /* Very small screens - stack table cells vertically */
-@media (width <= 768px) {
+@media (width <=768px) {
   .md-stream table {
     font-size: 0.8rem;
   }

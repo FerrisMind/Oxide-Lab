@@ -1,4 +1,7 @@
-/* Базовые стили */
+/* =================================================================
+   BASE STYLES (8pt Grid System)
+   All typography and spacing aligned to 8pt grid
+   ================================================================= */
 
 * {
   box-sizing: border-box;
@@ -10,26 +13,23 @@ html,
 body {
   height: 100%;
   min-height: 100%;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;
+  font-size: var(--font-size-base); /* 16px */
+  line-height: var(--line-height-normal); /* 1.5 */
 }
 
 /* Базовые стили для компонентов */
-
 .wrap {
-  padding: 16px;
+  padding: var(--space-3); /* 16px */
   width: 100%;
-
-  /* fill parent's height rather than forcing min-height:100% which can exceed viewport */
   height: 100%;
   min-height: 0;
 }
 
-/* Стили для заголовков */
-
+/* Стили для заголовков (кратны 4px) */
 h1,
 h2,
 h3,
@@ -37,50 +37,56 @@ h4,
 h5,
 h6 {
   color: var(--text);
-  font-weight: 600;
-  line-height: 1.2;
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight); /* 1.2 */
 }
 
 h1 {
-  font-size: 2rem;
+  font-size: var(--font-size-2xl); /* 32px → 2rem */
 }
+
 h2 {
-  font-size: 1.75rem;
+  font-size: var(--font-size-xl); /* 24px → 1.75rem */
 }
+
 h3 {
-  font-size: 1.5rem;
+  font-size: var(--font-size-lg); /* 20px → 1.5rem */
 }
+
 h4 {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg); /* 20px → 1.25rem */
 }
+
 h5 {
-  font-size: 1.125rem;
+  font-size: var(--font-size-base); /* 16px → 1.125rem */
 }
+
 h6 {
-  font-size: 1rem;
+  font-size: var(--font-size-base); /* 16px → 1rem */
 }
 
 /* Стили для параграфов */
-
 p {
   color: var(--text);
-  line-height: 1.6;
-  margin-bottom: 1rem;
+  line-height: var(--line-height-relaxed); /* 1.625 */
+  margin-bottom: var(--space-3); /* 16px → 1rem */
 }
 
 /* Адаптивность */
-@media (width <= 768px) {
+@media (width <=768px) {
   .wrap {
-    padding: 12px;
+    padding: var(--space-3); /* 16px */
   }
 
   h1 {
-    font-size: 1.75rem;
+    font-size: var(--font-size-xl); /* 24px → 1.75rem */
   }
+
   h2 {
-    font-size: 1.5rem;
+    font-size: var(--font-size-lg); /* 20px → 1.5rem */
   }
+
   h3 {
-    font-size: 1.25rem;
+    font-size: var(--font-size-lg); /* 20px → 1.25rem */
   }
 }

@@ -19,26 +19,26 @@ jobs:
             args: ''
             rust_targets: ''
             cargo_features: 'metal,fast-cpu-accelerate'
-          
+
           - platform: 'macos-14'
             args: '--target x86_64-apple-darwin'
             rust_targets: 'x86_64-apple-darwin'
             cargo_features: 'fast-cpu-accelerate'
-            
+
           - platform: 'ubuntu-22.04'
             args: ''
             rust_targets: ''
-            cargo_features: ''           
-            
+            cargo_features: ''
+
           - platform: 'windows-latest'
             args: ''
             rust_targets: ''
             cargo_features: ''
-            
+
           - platform: 'windows-latest'
             args: '--target aarch64-pc-windows-msvc'
             rust_targets: 'aarch64-pc-windows-msvc'
-            cargo_features: ''          
+            cargo_features: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -86,20 +86,20 @@ jobs:
           releaseName: 'Oxide-Lab v__VERSION__'
           releaseBody: |
             ## 🚀 Oxide-Lab v__VERSION__
-            
+
             ### CPU-Optimized Builds
-            
+
             **macOS**
             - 🍎 Apple Silicon (M1/M2/M3/M4): Metal + Accelerate
             - 🍎 Intel: Accelerate framework
-            
+
             **Linux**
             - 🐧 x86_64: Intel MKL optimizations
-            
+
             **Windows**
             - 🪟 x86_64: CPU-only
             - 🪟 ARM64: CPU-only
-            
+
             ### 🎮 CUDA Version
             For NVIDIA GPU users
 

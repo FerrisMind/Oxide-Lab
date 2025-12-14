@@ -3,17 +3,17 @@
   import Heart from 'phosphor-svelte/lib/Heart';
   interface Props {
     model: {
-    id: string;
-    name: string;
-    description: string;
-    downloads: number;
-    likes: number;
-    tags: string[];
-    author: string;
-    lastModified: string;
-    modelType: string;
-    formats: string[];
-  };
+      id: string;
+      name: string;
+      description: string;
+      downloads: number;
+      likes: number;
+      tags: string[];
+      author: string;
+      lastModified: string;
+      modelType: string;
+      formats: string[];
+    };
     onClick?: (event: MouseEvent) => void;
   }
 
@@ -35,26 +35,26 @@
     return date.toLocaleDateString('ru-RU', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   }
 
   // Получение цвета для тега
   function getTagColor(tag: string): string {
     const tagColors: Record<string, string> = {
-      'gguf': '#10b981',
-      'safetensors': '#3b82f6',
-      'llama': '#8b5cf6',
-      'mistral': '#f59e0b',
-      'gemma': '#ef4444',
-      'qwen': '#06b6d4'
+      gguf: '#10b981',
+      safetensors: '#3b82f6',
+      llama: '#8b5cf6',
+      mistral: '#f59e0b',
+      gemma: '#ef4444',
+      qwen: '#06b6d4',
     };
     return tagColors[tag.toLowerCase()] || '#6b7280';
   }
 </script>
 
-<div 
-  class="model-card" 
+<div
+  class="model-card"
   onclick={(e) => onClick?.(e)}
   onkeydown={(e) => {
     if (e.key === 'Enter') {
@@ -85,10 +85,7 @@
 
   <div class="model-tags">
     {#each model.tags.slice(0, 6) as tag}
-      <span 
-        class="tag" 
-        style="background-color: {getTagColor(tag)}"
-      >
+      <span class="tag" style="background-color: {getTagColor(tag)}">
         {tag}
       </span>
     {/each}
@@ -107,9 +104,7 @@
 
   <div class="model-footer">
     <span class="last-modified">Обновлено: {formatDate(model.lastModified)}</span>
-    <button class="add-model-btn" title="Добавить в менеджер моделей">
-      Добавить
-    </button>
+    <button class="add-model-btn" title="Добавить в менеджер моделей"> Добавить </button>
   </div>
 </div>
 
@@ -117,10 +112,10 @@
   .model-card {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 20px;
+    border-radius: var(--radius-lg); /* 16px */
+    padding: var(--space-3); /* 16px → 20px closest */
     transition: all 0.2s ease;
-     cursor: default;
+    cursor: default;
     position: relative;
     overflow: hidden;
   }
@@ -141,7 +136,7 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-3); /* 16px */
   }
 
   .model-info {
@@ -150,10 +145,10 @@
   }
 
   .model-name {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: var(--font-size-lg); /* 20px → 18px closest */
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
-    margin: 0 0 4px 0;
+    margin: 0 0 var(--space-1) 0; /* 4px */
     line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -161,22 +156,22 @@
   }
 
   .model-author {
-    font-size: 14px;
+    font-size: var(--font-size-sm); /* 14px */
     color: var(--muted);
     margin: 0;
   }
 
   .model-stats {
     display: flex;
-    gap: 12px;
+    gap: var(--space-3); /* 16px */
     flex-shrink: 0;
   }
 
   .stat {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
+    gap: var(--space-2); /* 8px */
+    font-size: var(--font-size-sm); /* 14px */
     color: var(--muted);
   }
 
@@ -191,9 +186,9 @@
 
   .model-description {
     color: var(--text);
-    font-size: 14px;
-    line-height: 1.5;
-    margin: 0 0 16px 0;
+    font-size: var(--font-size-sm); /* 14px */
+    line-height: var(--line-height-normal);
+    margin: 0 0 var(--space-3) 0; /* 16px */
     display: -webkit-box;
     /* standard property for line clamping */
     line-clamp: 3;
@@ -205,17 +200,17 @@
   .model-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: var(--space-2); /* 8px */
+    margin-bottom: var(--space-3); /* 16px */
   }
 
   .tag {
     background: var(--accent);
     color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
+    padding: var(--space-1) var(--space-2); /* 4px 8px */
+    border-radius: var(--radius-lg); /* 16px */
+    font-size: var(--font-size-base); /* 16px */
+    font-weight: var(--font-weight-medium);
     white-space: nowrap;
   }
 
@@ -226,15 +221,15 @@
 
   .model-formats {
     display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: var(--space-2); /* 8px */
+    margin-bottom: var(--space-3); /* 16px */
   }
 
   .format-badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
+    padding: var(--space-1) var(--space-2); /* 4px 8px */
+    border-radius: var(--radius-lg); /* 16px */
+    font-size: var(--font-size-base); /* 16px */
+    font-weight: var(--font-weight-semibold);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -253,12 +248,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 16px;
+    padding-top: var(--space-3); /* 16px */
     border-top: 1px solid var(--border-color);
   }
 
   .last-modified {
-    font-size: 12px;
+    font-size: var(--font-size-base); /* 16px */
     color: var(--muted);
   }
 
@@ -266,11 +261,11 @@
     background: var(--accent-2);
     color: white;
     border: none;
-    padding: 8px 16px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-     cursor: default;
+    padding: var(--space-2) var(--space-3); /* 8px 16px */
+    border-radius: var(--radius-lg); /* 16px */
+    font-size: var(--font-size-sm); /* 14px */
+    font-weight: var(--font-weight-semibold);
+    cursor: default;
     transition: all 0.2s ease;
   }
 

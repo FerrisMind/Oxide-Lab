@@ -13,14 +13,14 @@
     error,
   } from '$lib/stores/local-models';
   import { LocalModelsService } from '$lib/services/local-models';
-import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local-models';
+  import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local-models';
   import Checkbox from '$lib/components/ui/Checkbox.svelte';
   import Dropdown from '$lib/components/ui/Dropdown.svelte';
   import { open } from '@tauri-apps/plugin-dialog';
-  import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
-  import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
-  import Check from 'phosphor-svelte/lib/Check';
-  import X from 'phosphor-svelte/lib/X';
+import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
+import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+import Check from 'phosphor-svelte/lib/CheckCircle';
+import X from 'phosphor-svelte/lib/X';
   import { t } from '$lib/i18n';
 
   const validationColors: Record<ValidationLevel, string> = {
@@ -33,17 +33,12 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   let editingModelPath = $state<string | null>(null);
   let editPublisher = $state('');
   let editName = $state('');
-  let candleOnlyFilter = $state($filterOptions.candleOnly ?? false);
+  let candleOnlyFilter = $state(false);
 
   function startEditing(model: ModelInfo) {
     editingModelPath = model.path;
-    editPublisher =
-      model.metadata?.author ??
-      model.source_repo_id?.split('/')[0] ??
-      'local';
-    editName = model.format === 'safetensors'
-      ? model.source_repo_name ?? model.name
-      : model.name;
+    editPublisher = model.metadata?.author ?? model.source_repo_id?.split('/')[0] ?? 'local';
+    editName = model.format === 'safetensors' ? (model.source_repo_name ?? model.name) : model.name;
   }
 
   function cancelEditing() {
@@ -81,6 +76,9 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   }
 
   onMount(async () => {
+    // Инициализируем значение из store
+    candleOnlyFilter = $filterOptions.candleOnly ?? false;
+
     if ($folderPath) {
       await scanFolder($folderPath);
     }
@@ -110,19 +108,11 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     }));
   }
 
-  // Синхронизация: обновляем локальное состояние из store при изменении store
-  $effect(() => {
-    const storeValue = $filterOptions.candleOnly ?? false;
-    if (candleOnlyFilter !== storeValue) {
-      candleOnlyFilter = storeValue;
-    }
-  });
-
-  // Обновление store только по пользовательскому вводу, чтобы исключить циклы эффектов
+  // Обработка изменения чекбокса пользователем
   function handleCandleOnlyChange(newValue: boolean) {
-    if (newValue !== ($filterOptions.candleOnly ?? false)) {
-      updateFilter({ candleOnly: newValue });
-    }
+    // Обновляем store
+    // Локальное состояние уже обновлено через bind:checked
+    updateFilter({ candleOnly: newValue });
   }
 
   async function handleDelete(model: ModelInfo) {
@@ -228,15 +218,15 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
 
       <table>
         <thead>
-        <tr>
-          <th>{$t('models.local.table.architecture')}</th>
-          <th>{$t('models.local.table.parameters')}</th>
-          <th>{$t('models.local.table.publisher')}</th>
-          <th>{$t('models.local.table.modelName')}</th>
-          <th>{$t('models.local.table.quant')}</th>
-          <th>{$t('models.local.table.size')}</th>
-          <th>{$t('models.local.table.format')}</th>
-        </tr>
+          <tr>
+            <th>{$t('models.local.table.architecture')}</th>
+            <th>{$t('models.local.table.parameters')}</th>
+            <th>{$t('models.local.table.publisher')}</th>
+            <th>{$t('models.local.table.modelName')}</th>
+            <th>{$t('models.local.table.quant')}</th>
+            <th>{$t('models.local.table.size')}</th>
+            <th>{$t('models.local.table.format')}</th>
+          </tr>
         </thead>
         <tbody>
           {#each $filteredModels as model (model.path)}
@@ -246,44 +236,44 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
             >
               <td>{model.architecture ?? '—'}</td>
               <td>{model.parameter_count ?? '—'}</td>
-               <td class="publisher-cell">
-                 <button
-                   type="button"
-                   class="icon-btn"
-                   onclick={() => startEditing(model)}
-                   aria-label={$t('models.local.details.edit.ariaLabel')}
-                 >
-                   <PencilSimple size={16} />
-                 </button>
-                 <span>
-                   {#if model.format === 'safetensors'}
-                     {model.metadata?.author ?? '—'}
-                   {:else if model.source_repo_id}
-                     {model.source_repo_id.split('/')[0]}
-                   {:else}
-                     {model.metadata?.author ?? '—'}
-                   {/if}
-                 </span>
-               </td>
-               <td class="title-cell">
-                 <button
-                   type="button"
-                   class="icon-btn"
-                   onclick={() => startEditing(model)}
-                   aria-label={$t('models.local.details.edit.ariaLabel')}
-                 >
-                   <PencilSimple size={16} />
-                 </button>
-                 <div class="model-title">
-                   <strong title={model.name}>
-                     {#if model.format === 'safetensors'}
-                       {model.source_repo_name ?? '—'}
-                     {:else}
-                       {model.name}
-                     {/if}
-                   </strong>
-                 </div>
-               </td>
+              <td class="publisher-cell">
+                <button
+                  type="button"
+                  class="icon-btn"
+                  onclick={() => startEditing(model)}
+                  aria-label={$t('models.local.details.edit.ariaLabel')}
+                >
+                  <PencilSimple size={16} />
+                </button>
+                <span>
+                  {#if model.format === 'safetensors'}
+                    {model.metadata?.author ?? '—'}
+                  {:else if model.source_repo_id}
+                    {model.source_repo_id.split('/')[0]}
+                  {:else}
+                    {model.metadata?.author ?? '—'}
+                  {/if}
+                </span>
+              </td>
+              <td class="title-cell">
+                <button
+                  type="button"
+                  class="icon-btn"
+                  onclick={() => startEditing(model)}
+                  aria-label={$t('models.local.details.edit.ariaLabel')}
+                >
+                  <PencilSimple size={16} />
+                </button>
+                <div class="model-title">
+                  <strong title={model.name}>
+                    {#if model.format === 'safetensors'}
+                      {model.source_repo_name ?? '—'}
+                    {:else}
+                      {model.name}
+                    {/if}
+                  </strong>
+                </div>
+              </td>
               <td>
                 {#if model.format === 'safetensors'}
                   {model.source_quantization ?? '—'}
@@ -316,10 +306,12 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
                     </label>
                     <div class="edit-actions">
                       <button type="button" class="btn" onclick={() => saveEditing(model)}>
-                        <Check size={16} /> {$t('models.local.details.edit.save')}
+                        <Check size={16} />
+                        {$t('models.local.details.edit.save')}
                       </button>
                       <button type="button" class="btn secondary" onclick={cancelEditing}>
-                        <X size={16} /> {$t('models.local.details.edit.cancel')}
+                        <X size={16} />
+                        {$t('models.local.details.edit.cancel')}
                       </button>
                     </div>
                   </div>
@@ -380,7 +372,9 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
         <section class="validation">
           <h4>{$t('models.local.details.validation')}</h4>
           <span class={`badge ${validationColors[$selectedModel.validation_status.level]}`}>
-            {$t(`models.local.details.${$selectedModel.validation_status.level === 'ok' ? 'valid' : $selectedModel.validation_status.level}`)}
+            {$t(
+              `models.local.details.${$selectedModel.validation_status.level === 'ok' ? 'valid' : $selectedModel.validation_status.level}`,
+            )}
           </span>
           {#if $selectedModel.validation_status.messages.length}
             <ul>
@@ -452,14 +446,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   .local-models-panel {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    height: 100%;
-  }
-
-  .local-models-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-3);
     height: 100%;
     min-height: 0;
     color: var(--text);
@@ -469,11 +456,11 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-3);
     background: var(--card);
-    border-radius: 12px;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--border-color, #d8dee5);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-color);
     box-shadow: var(--shadow);
     flex-wrap: wrap;
   }
@@ -481,7 +468,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   .controls-left {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: var(--space-3);
     flex: 1;
     min-width: 0;
   }
@@ -490,20 +477,20 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     display: flex;
     align-items: center;
     justify-items: center;
-    gap: 0.75rem;
+    gap: var(--space-3);
     flex-wrap: wrap;
   }
 
   .path-group {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
     min-width: 0;
     flex: 0 1 250px;
   }
 
   .path-group .label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--muted);
     white-space: nowrap;
     flex-shrink: 0;
@@ -512,15 +499,15 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   .path-display {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
     font-family: var(--mono-font, 'JetBrains Mono', monospace);
-    font-size: 0.8rem;
+    font-size: var(--font-size-xs);
     min-width: 0;
     flex: 1;
-    border: 1px solid var(--border-color, #d8dee5);
-    border-radius: 12px;
-    padding: 0.35rem 0.5rem;
-    background: #1a1a1a;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-1) var(--space-2);
+    background: var(--panel-bg);
   }
 
   .path-display span {
@@ -530,59 +517,57 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     white-space: nowrap;
   }
 
-
   .metrics {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    gap: 0.75rem;
+    gap: var(--space-3);
   }
 
   .metric {
-    background: #1a1a1a;
-    border-radius: 10px;
-    border: 1px solid var(--border-color, #d8dee5);
-    padding: 0.75rem;
+    background: var(--panel-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    padding: var(--space-3);
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: var(--space-1);
     box-shadow: var(--shadow);
   }
 
   .metric.ok {
-    border-color: rgba(46, 204, 113, 0.4);
+    border-color: color-mix(in srgb, var(--accent-2) 55%, transparent);
   }
   .metric.warn {
-    border-color: rgba(241, 196, 15, 0.4);
+    border-color: color-mix(in srgb, var(--warning) 55%, transparent);
   }
   .metric.error {
-    border-color: rgba(231, 76, 60, 0.4);
+    border-color: color-mix(in srgb, var(--danger) 55%, transparent);
   }
 
   .metric-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--muted);
   }
 
   .metric-value {
-    font-weight: 600;
-    font-size: 1.1rem;
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-lg);
   }
-
 
   .filter-group {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    font-size: 0.75rem;
+    gap: var(--space-1);
+    font-size: var(--font-size-xs);
   }
 
   .filter-group input {
-    padding: 0.35rem 0.5rem;
-    border-radius: 12px;
-    border: 1px solid var(--border-color, #d8dee5);
-    background: #1a1a1a;
-    font-size: 0.8rem;
-    min-width: 200px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    background: var(--panel-bg);
+    font-size: var(--font-size-xs);
+    min-width: 200px; /* fixed input width */
   }
 
   .checkbox-wrapper {
@@ -595,8 +580,8 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1rem;
-    border-radius: 10px;
+    padding: var(--space-3) var(--space-3);
+    border-radius: var(--radius-md);
     border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent 65%);
     background: color-mix(in srgb, var(--danger) 12%, transparent 88%);
     color: color-mix(in srgb, var(--danger) 85%, black 15%);
@@ -605,7 +590,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   .content {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: var(--space-3);
     height: 100%;
     min-height: 0;
     overflow: hidden;
@@ -622,9 +607,9 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
 
   .list {
     overflow: auto;
-    border-radius: 12px;
-    border: 1px solid var(--border-color, #d8dee5);
-    background: #1a1a1a;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    background: var(--card);
     box-shadow: var(--shadow);
     min-height: 0;
   }
@@ -635,19 +620,19 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   }
 
   thead {
-    background: #1a1a1a;
+    background: var(--panel-bg);
   }
 
   th,
   td {
-    padding: 0.65rem 0.9rem;
+    padding: var(--space-2) var(--space-3);
     text-align: left;
-    border-bottom: 1px solid var(--border-color, #e1e5ea);
-    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: var(--font-size-sm);
   }
 
   td.format-cell {
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     text-transform: uppercase;
   }
 
@@ -672,41 +657,41 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   .badge {
     display: inline-flex;
     align-items: center;
-    padding: 0.2rem 0.5rem;
-    border-radius: 99px;
-    font-size: 0.72rem;
-    font-weight: 600;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
   }
 
   .badge-success {
-    background: rgba(46, 204, 113, 0.14);
-    color: #1e8449;
+    background: color-mix(in srgb, var(--accent-2) 18%, transparent 82%);
+    color: color-mix(in srgb, var(--accent-2) 70%, var(--text) 30%);
   }
 
   .badge-warning {
-    background: rgba(241, 196, 15, 0.16);
-    color: #b9770e;
+    background: color-mix(in srgb, var(--warning) 18%, transparent 82%);
+    color: color-mix(in srgb, var(--warning) 70%, var(--text) 30%);
   }
 
   .badge-error {
-    background: rgba(231, 76, 60, 0.16);
-    color: #c0392b;
+    background: color-mix(in srgb, var(--danger) 18%, transparent 82%);
+    color: color-mix(in srgb, var(--danger) 70%, var(--text) 30%);
   }
 
   .badge-muted {
-    background: rgba(127, 140, 141, 0.16);
-    color: #646d6f;
+    background: color-mix(in srgb, var(--muted) 16%, transparent 84%);
+    color: var(--muted);
   }
 
   .details {
-    border-radius: 12px;
-    border: 1px solid var(--border-color, #d8dee5);
-    background: #1a1a1a;
-    padding: 1rem 1.2rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    background: var(--card);
+    padding: var(--space-3) var(--space-4);
     overflow: auto;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-3);
     box-shadow: var(--shadow);
     min-height: 0;
   }
@@ -719,46 +704,46 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
 
   .details header .actions {
     display: inline-flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
   .details h3 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: var(--font-size-lg);
   }
 
   .properties {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 0.75rem;
+    gap: var(--space-3);
   }
 
   .properties div {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: var(--space-1);
   }
 
   .properties dt {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--muted);
   }
 
   .properties dd {
     margin: 0;
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
   }
 
   .properties dd.path {
     font-family: var(--mono-font, 'JetBrains Mono', monospace);
-    font-size: 0.8rem;
+    font-size: var(--font-size-xs);
     word-break: break-all;
   }
 
   .validation ul {
-    margin: 0.5rem 0 0;
-    padding-left: 1rem;
-    font-size: 0.85rem;
+    margin: var(--space-2) 0 0;
+    padding-left: var(--space-3);
+    font-size: var(--font-size-sm);
   }
 
   .metadata header {
@@ -770,33 +755,33 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   .meta-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0.6rem;
-    margin-top: 0.75rem;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
   }
 
   .meta-grid div {
     display: flex;
     flex-direction: column;
-    padding: 0.6rem;
-    border: 1px dashed var(--border-color, #d8dee5);
-    border-radius: 12px;
-    background: rgba(248, 249, 251, 0.6);
+    padding: var(--space-2);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--panel-bg);
   }
 
   .meta-grid dt {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--muted);
   }
 
   .meta-grid dd {
     margin: 0;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
   }
 
   .meta-table {
-    margin-top: 0.75rem;
-    border: 1px solid var(--border-color, #d8dee5);
-    border-radius: 10px;
+    margin-top: var(--space-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
     overflow: hidden;
   }
 
@@ -806,7 +791,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
 
   .meta-table pre {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     white-space: pre-wrap;
     word-break: break-word;
     font-family: var(--mono-font, 'JetBrains Mono', monospace);
@@ -814,29 +799,29 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
 
   .placeholder,
   .empty-state {
-    padding: 1.5rem;
+    padding: var(--space-4);
     text-align: center;
     color: var(--muted);
   }
 
   .btn {
-    padding: 0.35rem 0.7rem;
-    border-radius: 12px;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-lg);
     border: none;
-    background: var(--accent, #3498db);
-    color: #fff;
+    background: var(--accent);
+    color: #ffffff;
     cursor: default;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     transition: opacity 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--space-1);
     white-space: nowrap;
   }
 
   .btn.secondary {
     background: color-mix(in srgb, var(--accent) 12%, transparent 88%);
-    color: var(--accent, #3498db);
+    color: var(--accent);
   }
 
   .btn.danger {
@@ -855,7 +840,7 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-right: 0.35rem;
+    margin-right: var(--space-1);
     cursor: pointer;
     opacity: 0.7;
   }
@@ -868,41 +853,41 @@ import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local
   .title-cell {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--space-1);
   }
 
   .edit-row {
-    background: rgba(255, 255, 255, 0.03);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    background: color-mix(in srgb, var(--panel-bg) 70%, transparent 30%);
+    border-top: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
   }
 
   .edit-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.75rem;
+    gap: var(--space-3);
     align-items: end;
   }
 
   .edit-grid label {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    font-size: 0.8rem;
+    gap: var(--space-1);
+    font-size: var(--font-size-xs);
     color: var(--muted);
   }
 
   .edit-grid input {
-    border: 1px solid var(--border-color, #4a4a4a);
-    border-radius: 12px;
-    padding: 0.4rem 0.6rem;
-    background: var(--bg-secondary, #1f1f1f);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-1) var(--space-2);
+    background: var(--panel-bg);
     color: var(--text);
   }
 
   .edit-actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
     justify-content: flex-end;
   }
 

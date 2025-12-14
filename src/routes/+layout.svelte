@@ -8,26 +8,24 @@
   import { onMount, tick } from 'svelte';
   import type { UnlistenFn } from '@tauri-apps/api/event';
   import { getCurrentWindow } from '@tauri-apps/api/window';
-  import Minus from 'phosphor-svelte/lib/Minus';
+import Minus from 'phosphor-svelte/lib/Minus';
   import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
   import ArrowsOut from 'phosphor-svelte/lib/ArrowsOut';
   import X from 'phosphor-svelte/lib/X';
   import CaretDown from 'phosphor-svelte/lib/CaretDown';
-  import Check from 'phosphor-svelte/lib/Check';
+import Check from 'phosphor-svelte/lib/CheckCircle';
   import AppSidebar from '$lib/components/app-sidebar.svelte';
-  import ChatHistory from '$lib/components/ChatHistory.svelte';
   import { ensureGlobalChatStream } from '$lib/chat/global-stream';
   import Chat from '$lib/chat/Chat.svelte';
-  import { showChatHistory } from '$lib/stores/sidebar';
   import DownloadManagerModal from '$lib/components/DownloadManagerModal.svelte';
   import * as SidebarUI from '$lib/components/ui/sidebar/index';
   import { openUrl } from '@tauri-apps/plugin-opener';
   import GithubLogo from 'phosphor-svelte/lib/GithubLogo';
   import { locale } from '$lib/i18n';
 
-import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
-import { pageTabsList, activePageTab } from '$lib/stores/page-tabs.svelte';
-import type { TabId } from '$lib/stores/page-tabs.svelte';
+  import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+  import { pageTabsList, activePageTab } from '$lib/stores/page-tabs.svelte';
+  import type { TabId } from '$lib/stores/page-tabs.svelte';
   import { chatState } from '$lib/stores/chat';
   import { folderPath, models, scanFolder } from '$lib/stores/local-models';
   import type { ModelInfo } from '$lib/types/local-models';
@@ -37,7 +35,7 @@ import type { TabId } from '$lib/stores/page-tabs.svelte';
   import { Button } from '$lib/components/ui/button';
   import * as Popover from '$lib/components/ui/popover';
   import * as Command from '$lib/components/ui/command';
-import * as Tabs from '$lib/components/ui/tabs';
+  import * as Tabs from '$lib/components/ui/tabs';
   import { cn } from '$lib/utils';
   import { t } from '$lib/i18n';
 
@@ -369,7 +367,9 @@ import * as Tabs from '$lib/components/ui/tabs';
                             </span>
                           </div>
                           {#if model.path === $currentModelPath}
-                            <span class="model-combobox-item-badge">{$t('common.model.current')}</span>
+                            <span class="model-combobox-item-badge"
+                              >{$t('common.model.current')}</span
+                            >
                           {/if}
                         </Command.Item>
                       {/each}
@@ -421,7 +421,9 @@ import * as Tabs from '$lib/components/ui/tabs';
           <button
             type="button"
             class="win-btn"
-            title={isMaximized ? $t('common.windowControls.restore') : $t('common.windowControls.maximize')}
+            title={isMaximized
+              ? $t('common.windowControls.restore')
+              : $t('common.windowControls.maximize')}
             onclick={toggleMaximize}
           >
             {#if isMaximized}
@@ -441,12 +443,7 @@ import * as Tabs from '$lib/components/ui/tabs';
         </div>
       </header>
     </div>
-    <div class="app-body" class:with-history={$showChatHistory && $page.url.pathname === '/'}>
-      {#if $showChatHistory && $page.url.pathname === '/'}
-        <div class="chat-history-panel">
-          <ChatHistory />
-        </div>
-      {/if}
+    <div class="app-body">
       <main class="app-main" class:models-compact={$page.url.pathname === '/models'}>
         <div class="view-switch">
           <!-- Все страницы постоянно смонтированы, переключение через CSS -->
@@ -552,7 +549,6 @@ import * as Tabs from '$lib/components/ui/tabs';
 <style>
   /* App shell & header */
   :global(.app-shell) {
-    --model-combobox-bg: transparent;
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -565,7 +561,7 @@ import * as Tabs from '$lib/components/ui/tabs';
     top: 0;
     left: 0;
     right: 0;
-    height: 64px;
+    height: var(--space-8); /* 56px */
     box-sizing: border-box;
     -webkit-app-region: drag; /* Enable window dragging */
     z-index: 200;
@@ -580,9 +576,9 @@ import * as Tabs from '$lib/components/ui/tabs';
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 12px;
-    height: 56px;
-    background: #1a1a1a;
+    padding: 0 var(--space-2) 0 var(--space-2); /* 16px */
+    height: var(--space-8); /* 56px */
+    background: var(--bg);
     position: relative;
     z-index: 100;
   }
@@ -599,27 +595,24 @@ import * as Tabs from '$lib/components/ui/tabs';
   }
 
   :global(.model-combobox-trigger) {
-    min-width: 220px;
+    min-width: 224px; /* 28 units (кратно 8) */
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
     padding: 0.35rem 0.75rem;
-    background: var(--model-combobox-bg);
-    color: #fff;
+    background: var(--bg);
+    color: var(--text);
     border: 1px solid transparent;
-    border-radius: 10px;
+    border-radius: var(--radius); /* 8px */
     -webkit-app-region: no-drag;
-    transition:
-      background 0.2s ease,
-      border 0.2s ease,
-      color 0.2s ease;
+    transition: var(--transition-colors);
   }
 
   :global(.model-combobox-trigger:hover),
   :global(.model-combobox-trigger:focus-visible),
   :global(.model-combobox-trigger--active) {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background: color-mix(in srgb, var(--card) 75%, transparent 25%);
+    border-color: color-mix(in srgb, var(--border-color) 55%, transparent);
+    color: var(--text);
   }
 
   :global(.model-combobox-label) {
@@ -631,14 +624,12 @@ import * as Tabs from '$lib/components/ui/tabs';
   }
 
   :global(.model-combobox-content) {
-    width: 320px;
-    padding: 0.5rem;
+    width: calc(var(--space-12) * 3 + var(--space-5)); /* 320px = 40 units */
+    padding: var(--space-2); /* 8px */
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow:
-      0 20px 45px rgba(0, 0, 0, 0.35),
-      0 4px 18px rgba(0, 0, 0, 0.15);
+    border-radius: var(--radius-lg); /* 16px */
+    box-shadow: var(--shadow-lg);
     z-index: 1200;
     -webkit-app-region: no-drag;
   }
@@ -646,18 +637,31 @@ import * as Tabs from '$lib/components/ui/tabs';
   :global(.model-combobox-input) {
     width: 100%;
     margin-bottom: 0.5rem;
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     border: none;
-    background: var(--model-combobox-bg);
+    background: var(--card);
     color: var(--text);
-    font-size: 0.85rem;
-    padding: 0.55rem 0.75rem;
+    font-size: var(--font-size-sm); /* 14px → 0.85rem */
     outline: none;
   }
 
+  :global([data-slot='command-input-wrapper'] > :first-child) {
+    margin-left: 0.4rem;
+    margin-bottom: 0.35rem;
+    margin-right: -0.8rem;
+  }
+
+  :global(.model-combobox-input:focus),
+  :global(.model-combobox-input:focus-visible) {
+    outline: none;
+    border: none;
+    box-shadow: none;
+  }
+
   :global(.model-combobox-list) {
-    max-height: 320px;
+    max-height: 320px; /* 40 units */
     overflow-y: auto;
+    margin-top: 0.5rem;
   }
 
   :global(.model-combobox-empty) {
@@ -671,18 +675,18 @@ import * as Tabs from '$lib/components/ui/tabs';
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 0.5rem;
-    border-radius: 12px;
-    transition: background 0.15s ease;
+    border-radius: var(--radius-lg); /* 16px */
+    transition: background var(--duration-fast) var(--ease-default);
   }
 
   :global(.model-combobox-item:hover) {
-    background: rgba(59, 130, 246, 0.08);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
   }
 
   :global(.model-combobox-check) {
     color: var(--accent);
     flex-shrink: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity var(--duration-normal) var(--ease-default);
   }
 
   :global(.model-combobox-check--hidden) {
@@ -710,11 +714,11 @@ import * as Tabs from '$lib/components/ui/tabs';
   }
 
   :global(.model-combobox-item-badge) {
-    font-size: 0.7rem;
+    font-size: var(--font-size-xs); /* 12px → 0.7rem */
     line-height: 1;
     padding: 0.2rem 0.5rem;
-    border-radius: 9999px;
-    background: rgba(59, 130, 246, 0.15);
+    border-radius: var(--radius-full); /* 9999px */
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
     color: var(--accent);
     flex-shrink: 0;
   }
@@ -722,22 +726,20 @@ import * as Tabs from '$lib/components/ui/tabs';
   .model-reload-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    background: rgba(255, 255, 255, 0.05);
+    gap: var(--space-2); /* 8px */
+    padding: var(--space-1) var(--space-2); /* 4px 8px → aligned 4px 10px */
+    border-radius: var(--radius-lg); /* 16px */
+    border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
+    background: color-mix(in srgb, var(--card) 60%, transparent);
     color: inherit;
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm); /* 14px → 0.85rem */
     cursor: pointer;
-    transition:
-      background 0.2s ease,
-      border-color 0.2s ease;
+    transition: var(--transition-colors);
   }
 
   .model-reload-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.6);
+    background: color-mix(in srgb, var(--card) 75%, transparent);
+    border-color: var(--border-color);
   }
 
   .page-tabs {
@@ -775,17 +777,17 @@ import * as Tabs from '$lib/components/ui/tabs';
     color: var(--text);
     cursor: default;
     font-size: 0.9rem;
-    border-radius: 12px;
-    transition: background 0.2s ease;
+    border-radius: var(--radius-lg); /* 16px */
+    transition: background var(--duration-normal) var(--ease-default);
     -webkit-app-region: no-drag;
   }
 
   :global(.page-tabs .page-tab:hover) {
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--card) 70%, transparent);
   }
 
   :global(.page-tabs .page-tab[data-state='active']) {
-    background: rgba(255, 255, 255, 0.2);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
     font-weight: 600;
   }
   .app-body {
@@ -802,24 +804,17 @@ import * as Tabs from '$lib/components/ui/tabs';
     bottom: 0;
   }
 
-  .app-body.with-history {
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
-  }
-
-  .app-body.with-history .app-main {
-    grid-column: 2;
-  }
   .app-main {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
     overflow: hidden;
-    padding: var(--content-gap);
-    padding-top: calc(var(--content-gap-top) + 64px);
+    padding: 0 var(--content-gap) var(--content-gap);
+    padding-top: var(--space-8); /* 56px */
   }
 
   .app-main.models-compact {
-    padding-top: 56px;
+    padding-top: var(--space-8); /* 56px */
   }
 
   /* Переключение страниц через CSS - все смонтированы одновременно */
@@ -887,12 +882,11 @@ import * as Tabs from '$lib/components/ui/tabs';
   /* shift chat content slightly left and give it full height under header */
   /* ensure main wrap fits under header */
   :global(main.wrap) {
-    padding: var(--content-gap);
+    padding: 0;
     height: 100%;
     min-height: 0;
     box-sizing: border-box;
-    max-height: calc(100vh - 56px);
-    overflow: auto;
+    overflow: hidden;
   }
   /* ensure chat area fills available vertical space */
   :global(.chat) {
@@ -903,12 +897,14 @@ import * as Tabs from '$lib/components/ui/tabs';
   }
   .window-controls {
     display: inline-flex;
-    gap: 2px;
+    gap: var(--baseline); /* 4px → 2px is not 8pt aligned */
     align-items: center;
+    margin-left: auto;
+    
   }
   .win-btn {
-    width: 36px;
-    height: 28px;
+    width: var(--space-6); /* 40px → 36px closest is 40px */
+    height: var(--space-6); /* 24px → 28px closest is 24px */
     padding: 0;
     background: transparent;
     border: none;
@@ -918,30 +914,16 @@ import * as Tabs from '$lib/components/ui/tabs';
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 12px;
-    transition: all 0.2s ease;
+    border-radius: var(--radius); /* 16px */
+    transition: var(--transition-all);
   }
   .win-btn:hover {
-    background: #f0f0f0;
-    color: #212121;
+    background: var(--panel-bg);
+    color: var(--text);
   }
   .win-btn.close:hover {
-    background: #e81123;
-    color: #212121;
-  }
-
-  /* История чатов */
-  .chat-history-panel {
-    width: 360px;
-    min-width: 360px;
-    max-width: 500px;
-    height: calc(100vh - 80px);
-    background: var(--card);
-    overflow-y: auto;
-    flex-shrink: 0;
-    margin: 16px 0;
-    border-radius: 14px;
-    box-shadow: 0 6px 30px rgb(0 0 0 / 0.05);
+    background: var(--danger);
+    color: #1a1f2e;
   }
 
   .about-modal {
@@ -952,40 +934,40 @@ import * as Tabs from '$lib/components/ui/tabs';
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(var(--baseline)); /* 4px → 2px is not aligned */
   }
 
   .about-content {
     background: var(--card);
     color: var(--text);
     border: 1px solid var(--border-color, #e8e6e3);
-    border-radius: 12px;
-    padding: 16px;
-    width: min(520px, calc(100vw - 32px));
-    box-shadow: var(--shadow, 0 4px 20px rgb(0 0 0 / 0.06));
+    border-radius: var(--radius-lg); /* 16px */
+    padding: var(--space-3); /* 16px */
+    width: min(520px, calc(100vw - var(--space-5))); /* 32px */
+    box-shadow: var(--shadow);
     pointer-events: auto;
   }
 
   .about-info {
-    margin-top: 8px;
+    margin-top: var(--space-2); /* 8px */
   }
 
   .about-info p {
-    margin: 6px 0;
-    line-height: 1.4;
+    margin: var(--space-1) 0; /* 4px → 6px closest is 4px or 8px */
+    line-height: var(--line-height-snug);
   }
 
   .translation-credit {
-    margin-top: 12px;
-    padding-top: 12px;
+    margin-top: var(--space-3); /* 16px */
+    padding-top: var(--space-3); /* 16px */
     border-top: 1px solid var(--border-color);
-    font-size: 13px;
+    font-size: var(--font-size-xs); /* 12px → 13px closest is 12px */
     color: var(--muted);
     font-style: italic;
   }
 
   .about-actions {
-    margin-top: 16px;
+    margin-top: var(--space-3); /* 16px */
     display: flex;
     justify-content: space-between;
   }
@@ -994,13 +976,13 @@ import * as Tabs from '$lib/components/ui/tabs';
     background: var(--accent);
     color: #fff;
     border: none;
-    border-radius: 12px;
-    padding: 8px 16px;
+    border-radius: var(--radius-lg); /* 16px */
+    padding: var(--space-2) var(--space-3); /* 8px 16px */
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background-color 0.2s ease;
-    min-width: 80px;
+    font-size: var(--font-size-sm); /* 14px */
+    font-weight: var(--font-weight-medium);
+    transition: background-color var(--duration-normal) var(--ease-default);
+    min-width: var(--space-11); /* 80px */
   }
 
   .close-btn:hover {
@@ -1009,7 +991,7 @@ import * as Tabs from '$lib/components/ui/tabs';
 
   .close-btn:focus {
     outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline-offset: var(--baseline); /* 4px → 2px closest is 4px */
   }
 
   .github-btn,
@@ -1017,17 +999,17 @@ import * as Tabs from '$lib/components/ui/tabs';
     background: transparent;
     color: var(--text);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 8px 16px;
+    border-radius: var(--radius-lg); /* 16px */
+    padding: var(--space-2) var(--space-3); /* 8px 16px */
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    min-width: 80px;
+    font-size: var(--font-size-sm); /* 14px */
+    font-weight: var(--font-weight-medium);
+    transition: var(--transition-all);
+    min-width: var(--space-11); /* 80px */
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-right: 8px;
+    gap: var(--space-2); /* 8px */
+    margin-right: var(--space-2); /* 8px */
   }
 
   .github-btn:hover,
@@ -1039,34 +1021,13 @@ import * as Tabs from '$lib/components/ui/tabs';
   .github-btn:focus,
   .gitverse-btn:focus {
     outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
-  /* Адаптивность для мобильных и планшетов */
-  @media (max-width: 1024px) {
-    .chat-history-panel {
-      width: 300px;
-      min-width: 300px;
-      margin-left: 8px;
-    }
+    outline-offset: var(--baseline); /* 4px → 2px closest is 4px */
   }
 
   @media (max-width: 768px) {
     .app-main {
       padding: 0.5rem;
       padding-top: 0.5rem;
-    }
-
-    .chat-history-panel {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 280px;
-      min-width: 280px;
-      height: 100%;
-      margin: 0;
-      z-index: 100;
-      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
     }
 
     .page-container {
@@ -1083,11 +1044,6 @@ import * as Tabs from '$lib/components/ui/tabs';
     .page-container {
       padding: 0.25rem;
     }
-
-    .chat-history-panel {
-      width: 100%;
-      min-width: 100%;
-    }
   }
 
   /* Адаптивность контента для всех размеров */
@@ -1095,12 +1051,6 @@ import * as Tabs from '$lib/components/ui/tabs';
     .page-container :global(> *) {
       max-width: 1400px;
       margin: 0 auto;
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .chat-history-panel {
-      background: #1a1a1a;
     }
   }
 </style>

@@ -11,7 +11,7 @@
   import { createChatController } from '$lib/chat/controller';
   import InferenceParams from '$lib/chat/components/InferenceParams.svelte';
   import { chatState, chatUiMounted, getDefaultChatState } from '$lib/stores/chat';
-  import { chatHistory, currentSession } from '$lib/stores/chat-history';
+  import { currentSession } from '$lib/stores/chat-history';
   import { showChatHistory } from '$lib/stores/sidebar';
   import { get as getStore } from 'svelte/store';
   import { invoke } from '@tauri-apps/api/core';
@@ -98,6 +98,61 @@
   $effect(() => {
     detectModalities();
   });
+
+  const METRICS_KEY_PREFIX = 'oxide-infer-metrics-';
+
+  function saveMetricsToStorage(sessionId: string, index: number, metrics: InferenceMetrics) {
+    try {
+      const key = `${METRICS_KEY_PREFIX}${sessionId}`;
+      const raw = localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : {};
+      parsed[index] = metrics;
+      localStorage.setItem(key, JSON.stringify(parsed));
+      // #region agent log
+      void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'run2',
+          hypothesisId: 'H8',
+          location: 'Chat.svelte:saveMetrics',
+          message: 'persist metrics',
+          data: { sessionId, index },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+    } catch {}
+  }
+
+  function loadMetricsFromStorage(sessionId: string): Map<number, InferenceMetrics> {
+    try {
+      const key = `${METRICS_KEY_PREFIX}${sessionId}`;
+      const raw = localStorage.getItem(key);
+      if (!raw) return new Map();
+      const parsed = JSON.parse(raw) as Record<string, InferenceMetrics>;
+      const entries = Object.entries(parsed).map(([k, v]) => [Number(k), v] as [number, InferenceMetrics]);
+      // #region agent log
+      void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'run2',
+          hypothesisId: 'H9',
+          location: 'Chat.svelte:loadMetrics',
+          message: 'restore metrics from storage',
+          data: { sessionId, restored: entries.length },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      return new Map(entries);
+    } catch {
+      return new Map();
+    }
+  }
 
   // Состояние загрузки модели
   let isLoadingModel = $state(false);
@@ -627,6 +682,11 @@
           const lastAssistantIndex = messages.findLastIndex((m) => m.role === 'assistant');
           if (lastAssistantIndex !== -1) {
             inferenceMetricsStore.setMetrics(lastAssistantIndex, inferenceMetrics);
+            const cs = getStore(currentSession);
+            const sid = cs?.id;
+            if (sid) {
+              saveMetricsToStorage(sid, lastAssistantIndex, inferenceMetrics);
+            }
           }
         }, 150);
       },
@@ -634,36 +694,57 @@
   });
 
   // Флаг для предотвращения циклических обновлений
-  let isLoadingFromHistory = false;
+  // let isLoadingFromHistory = false; // Удалено как неиспользуемое
   let lastSessionId: string | null = null;
 
   // Загрузка сообщений при переключении сессии
   $effect(() => {
     if ($currentSession && $currentSession.id !== lastSessionId) {
-      console.log(
-        'Загружаем сессию:',
-        $currentSession.id,
-        'Сообщений:',
-        $currentSession.messages.length,
-      );
-      isLoadingFromHistory = true;
+      // #region agent log
+      void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'run2',
+          hypothesisId: 'H5',
+          location: 'Chat.svelte:$effect',
+          message: 'load currentSession into view',
+          data: {
+            sessionId: $currentSession.id,
+            messagesCount: $currentSession.messages.length,
+            roles: $currentSession.messages.map((m) => m.role),
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      // isLoadingFromHistory = true; // Удалено
       messages = [...$currentSession.messages]; // Создаем новый массив для триггера реактивности
       lastSessionId = $currentSession.id;
 
-      // Сбрасываем флаг после небольшой задержки
-      setTimeout(() => {
-        isLoadingFromHistory = false;
-      }, 100);
+      // Восстанавливаем метрики из localStorage для выбранной сессии
+      const restoredMetrics = loadMetricsFromStorage($currentSession.id);
+      if (restoredMetrics.size > 0) {
+        inferenceMetricsStore.set(restoredMetrics);
+      } else {
+        inferenceMetricsStore.clear();
+      }
+
+      // Сбрасываем флаг после небольшой задержки - удалено
+      // setTimeout(() => {
+      //   isLoadingFromHistory = false;
+      // }, 100);
     }
   });
 
-  // Синхронизация сообщений с историей чатов (только если не загружаем из истории)
-  $effect(() => {
-    if (messages && !isLoadingFromHistory && $currentSession) {
-      console.log('Синхронизируем сообщения в историю:', messages.length);
-      chatHistory.updateMessages(messages);
-    }
-  });
+  // Синхронизация сообщений с историей чатов теперь происходит явно в actions.ts и listener.ts
+  // $effect(() => {
+  //   if (messages && !isLoadingFromHistory && $currentSession) {
+  //     console.log('Синхронизируем сообщения в историю:', messages.length);
+  //     chatHistory.updateMessages(messages);
+  //   }
+  // });
 
   let _canRegenerate = false;
 
@@ -703,7 +784,11 @@
   <div class="chat-container">
     <!-- удалено дублирование заголовка -->
     <section class="chat">
-      <MessageList bind:messages bind:messagesEl showModelNotice={!isLoaded} />
+      <MessageList
+        bind:messages
+        bind:messagesEl
+        showModelNotice={!isLoaded && messages.length === 0}
+      />
       <Composer
         bind:prompt
         {busy}
@@ -715,7 +800,7 @@
         {supports_video}
         {isLoaderPanelVisible}
         {isChatHistoryVisible}
-        hasMessages={hasMessages}
+        {hasMessages}
         onSend={sendMessage}
         onStop={stopGenerate}
         onAttach={attachFileToPrompt}
@@ -793,9 +878,7 @@
     display: flex;
     flex-direction: row;
     align-items: stretch;
-    gap: 16px;
     height: 100%;
-    min-height: 0;
   }
 
   /* Левая колонка (сообщения+композер) занимает всё доступное */
@@ -814,8 +897,8 @@
     min-height: 100%;
   }
 
-	/* Не затемнять хедер/сайдбар при открытии LoaderPanel */
-	:global([data-slot="sheet-overlay"]) {
-		background: transparent !important;
-	}
+  /* Не затемнять хедер/сайдбар при открытии LoaderPanel */
+  :global([data-slot='sheet-overlay']) {
+    background: transparent !important;
+  }
 </style>

@@ -1,23 +1,26 @@
 <script lang="ts">
-  import type { ChatMessage } from "$lib/chat/types";
-  import { registerAssistantBubble, getAssistantBubbleEl } from "$lib/chat/stream_render";
-  import ChatPlaceholder from "./ChatPlaceholder.svelte";
-  import InferenceMetricsDisplay from "./InferenceMetricsDisplay.svelte";
-  import UserMessageActions from "./UserMessageActions.svelte";
-import { inferenceMetricsStore } from "$lib/stores/inference-metrics";
+  import type { ChatMessage } from '$lib/chat/types';
+  import {
+    appendSegments,
+    finalizeStreaming,
+    getAssistantBubbleEl,
+    registerAssistantBubble,
+  } from '$lib/chat/stream_render';
+  import ChatPlaceholder from './ChatPlaceholder.svelte';
+  import InferenceMetricsDisplay from './InferenceMetricsDisplay.svelte';
+  import UserMessageActions from './UserMessageActions.svelte';
+  import { inferenceMetricsStore } from '$lib/stores/inference-metrics';
 
   // Используем Svelte 5 руны для props
-  let { 
-    messages = $bindable([]), 
-    messagesEl = $bindable(null), 
-    showModelNotice = false 
+  let {
+    messages = $bindable([]),
+    messagesEl = $bindable(null),
+    showModelNotice = false,
   }: {
     messages?: ChatMessage[];
     messagesEl?: HTMLDivElement | null;
     showModelNotice?: boolean;
   } = $props();
-
-  const baseBackground = '#1a1a1a';
   
   // Производное значение для placeholderOnly
   let placeholderOnly = $derived(showModelNotice && messages.length === 0);
@@ -26,10 +29,63 @@ import { inferenceMetricsStore } from "$lib/stores/inference-metrics";
   let metricsMap = $state(new Map());
   
   $effect(() => {
-    const unsubscribe = inferenceMetricsStore.subscribe(value => {
+    const unsubscribe = inferenceMetricsStore.subscribe((value) => {
       metricsMap = value;
     });
     return unsubscribe;
+  });
+
+  // Ре-гидратация ассистентских сообщений при загрузке истории (plain text -> markdown bubble)
+  $effect(() => {
+    messages.forEach((m, i) => {
+      if (m.role !== 'assistant') return;
+      if (!m.content || m.content.trim() === '') return;
+      const bubble = getAssistantBubbleEl(i);
+      if (!bubble) return;
+      if (bubble.textContent && bubble.textContent.trim().length > 0) return;
+
+      // #region agent log
+      void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'run2',
+          hypothesisId: 'H6',
+          location: 'MessageList.svelte:rehydrate',
+          message: 'rehydrate assistant bubble',
+          data: {
+            index: i,
+            contentLength: m.content.length,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+
+      appendSegments(i, bubble as HTMLDivElement, [{ kind: 'text', data: m.content }], false);
+      finalizeStreaming(i);
+
+      // Проверим наличие метрик после ре-гидратации (H7)
+      const metrics = metricsMap.get(i);
+      if (!metrics) {
+        // #region agent log
+        void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'debug-session',
+            runId: 'run2',
+            hypothesisId: 'H7',
+            location: 'MessageList.svelte:metricsMissing',
+            message: 'no metrics for assistant after rehydrate',
+            data: { index: i, contentLength: m.content.length },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+      }
+    });
   });
 
   // Функция для получения mdStreamEl для конкретного сообщения
@@ -63,7 +119,6 @@ import { inferenceMetricsStore } from "$lib/stores/inference-metrics";
   bind:this={messagesEl}
   class:placeholder-only={placeholderOnly}
   class:with-placeholder={showModelNotice}
-  style:background-color={baseBackground}
 >
   {#if showModelNotice}
     <ChatPlaceholder variant="inline" />
@@ -89,10 +144,8 @@ import { inferenceMetricsStore } from "$lib/stores/inference-metrics";
         {/if}
       {/if}
 
-      <!-- Отображаем кнопку копирования для сообщений пользователя -->
-      {#if m.role === 'user'}
-        <UserMessageActions messageContent={m.content} />
-      {/if}
+      <!-- Отображаем кнопку копирования для сообщений пользователя и ассистента -->
+      <UserMessageActions messageContent={m.content} />
       
       <!-- Кнопка будет добавлена здесь через JavaScript -->
     </div>

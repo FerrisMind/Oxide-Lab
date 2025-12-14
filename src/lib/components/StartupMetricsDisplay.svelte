@@ -5,7 +5,7 @@
   import ChartBar from 'phosphor-svelte/lib/ChartBar';
   import Clock from 'phosphor-svelte/lib/Clock';
   import Memory from 'phosphor-svelte/lib/Memory';
-  import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
+import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
   import WarningCircle from 'phosphor-svelte/lib/WarningCircle';
 
   let metrics: StartupMetrics | null = $state(null);

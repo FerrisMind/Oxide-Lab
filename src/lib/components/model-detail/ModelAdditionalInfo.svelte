@@ -34,8 +34,8 @@
         <div class="info-item">
           <span class="info-label">Язык:</span>
           <span class="info-value">
-            {Array.isArray(detailedModel.language) 
-              ? detailedModel.language.join(', ') 
+            {Array.isArray(detailedModel.language)
+              ? detailedModel.language.join(', ')
               : detailedModel.language}
           </span>
         </div>
@@ -46,30 +46,30 @@
 
 <style>
   .additional-info {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-4); /* 24px */
   }
 
   .additional-info h3 {
     font-size: 1.125rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
-    margin: 0 0 12px 0;
+    margin: 0 0 var(--space-2) 0; /* 8px → 12px closest */
   }
 
   .info-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 12px;
+    gap: var(--space-3); /* 16px */
   }
 
   .info-item {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 12px;
+    gap: var(--space-2); /* 8px */
+    padding: var(--space-3); /* 16px */
     background: var(--panel-alt-bg);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
     transition: all 0.2s ease;
   }
 

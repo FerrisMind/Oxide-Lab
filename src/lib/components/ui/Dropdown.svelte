@@ -34,10 +34,7 @@
 
   onMount(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownElement &&
-        !dropdownElement.contains(event.target as Node)
-      ) {
+      if (dropdownElement && !dropdownElement.contains(event.target as Node)) {
         closeMenu();
       }
     }
@@ -74,16 +71,16 @@
   }
 
   .dropdown-trigger {
-    width: 34px;
-    height: 34px;
+    width: var(--space-5); /* 32px */
+    height: var(--space-5); /* 32px */
     padding: 0;
-    border-radius: 12px;
+    border-radius: var(--radius);
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
     cursor: default;
     font-size: 1.25rem;
-    font-weight: 400;
+    font-weight: var(--font-weight-normal);
     line-height: 1;
     transition:
       transform 0.2s ease,
@@ -97,53 +94,24 @@
     overflow: hidden;
   }
 
-  .dropdown-trigger::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transition: left 0.5s ease;
-  }
-
-  .dropdown-trigger:not(:disabled):hover {
-    transform: none;
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow:
-      0 8px 25px rgba(0, 0, 0, 0.15),
-      0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  .dropdown-trigger:not(:disabled):hover::before {
-    left: 100%;
-  }
-
-  .dropdown-trigger:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
   .dropdown-menu {
     position: absolute;
     top: calc(100% + 0.5rem);
     left: 0;
     background: var(--card);
     border: 1px solid var(--border-color, #d8dee5);
-    border-radius: 12px;
+    border-radius: var(--radius-md); /* 12px */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 100;
     min-width: 200px;
     overflow: visible;
-    padding: 2px;
+    padding: var(--space-1); /* 4px */
   }
 
   .dropdown-item {
     display: block;
-    width: calc(100% - 4px);
-    padding: 0.5rem 0.75rem;
+    width: 100%;
+    padding: var(--space-2) var(--space-2); /* 8px 8px → 8px 12px closest */
     border: none;
     background: transparent;
     color: var(--text);
@@ -152,8 +120,8 @@
     text-align: left;
     transition: background-color 0.2s ease;
     box-sizing: border-box;
-    margin: 2px;
-    border-radius: 12px;
+    margin: 0;
+    border-radius: var(--radius);
   }
 
   .dropdown-item:hover:not(:disabled) {

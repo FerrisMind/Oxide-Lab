@@ -61,12 +61,7 @@
   <!-- Панель индикаторов модальностей удалена по требованию -->
 
   {#if format === 'gguf' || format === 'local_safetensors'}
-    <DeviceSelector
-      bind:use_gpu
-      bind:cuda_available
-      bind:cuda_build
-      onDeviceToggle={onDeviceToggle}
-    />
+    <DeviceSelector bind:use_gpu bind:cuda_available bind:cuda_build {onDeviceToggle} />
 
     <!-- thinking toggle removed -->
 
@@ -94,7 +89,7 @@
     </div>
 
     <div class="param">
-      <div class="row" style="gap:8px; flex-wrap: wrap;">
+      <div class="row" style="gap: var(--space-2); flex-wrap: wrap;">
         <span>CPU:</span>
         <span class="chip" class:active={avx}>AVX</span>
         <span class="chip" class:active={neon}>NEON</span>
@@ -111,12 +106,7 @@
       bind:errorText
     />
   {:else if format === 'hub_gguf'}
-    <DeviceSelector
-      bind:use_gpu
-      bind:cuda_available
-      bind:cuda_build
-      onDeviceToggle={onDeviceToggle}
-    />
+    <DeviceSelector bind:use_gpu bind:cuda_available bind:cuda_build {onDeviceToggle} />
 
     <HubModelForm bind:repoId bind:revision bind:hubGgufFilename />
 
@@ -144,7 +134,7 @@
     </div>
 
     <div class="param">
-      <div class="row" style="gap:8px; flex-wrap: wrap;">
+      <div class="row" style="gap: var(--space-2); flex-wrap: wrap;">
         <span>CPU:</span>
         <span class="chip" class:active={avx}>AVX</span>
         <span class="chip" class:active={neon}>NEON</span>
@@ -161,12 +151,7 @@
       bind:errorText
     />
   {:else}
-    <DeviceSelector
-      bind:use_gpu
-      bind:cuda_available
-      bind:cuda_build
-      onDeviceToggle={onDeviceToggle}
-    />
+    <DeviceSelector bind:use_gpu bind:cuda_available bind:cuda_build {onDeviceToggle} />
 
     <HubModelForm bind:repoId bind:revision isSafetensors={true} />
 
@@ -194,7 +179,7 @@
     </div>
 
     <div class="param">
-      <div class="row" style="gap:8px; flex-wrap: wrap;">
+      <div class="row" style="gap: var(--space-2); flex-wrap: wrap;">
         <span>CPU:</span>
         <span class="chip" class:active={avx}>AVX</span>
         <span class="chip" class:active={neon}>NEON</span>
@@ -222,21 +207,21 @@
 
 <style>
   .chip {
-    padding: 2px 8px;
-    border-radius: 10px;
+    padding: 2px var(--space-2); /* intentional 2px vertical for compact chips */
+    border-radius: var(--radius); /* 8px */
     border: 1px solid #777;
     color: #777;
-    font-size: 12px;
+    font-size: var(--font-size-base); /* 16px */
   }
   .chip.active {
     border-color: #2a7;
     color: #2a7;
   }
   .dump {
-    max-height: 160px;
+    max-height: calc(var(--space-12) + var(--space-9)); /* 160px = 20 units */
     overflow: auto;
     background: #1114;
-    padding: 8px;
-    border-radius: 12px;
+    padding: var(--space-2); /* 8px */
+    border-radius: var(--radius-lg); /* 16px */
   }
 </style>

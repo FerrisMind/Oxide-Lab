@@ -97,6 +97,6 @@
   }
 
   .detail-content {
-    padding: 24px;
+    padding: var(--space-4);
   }
 </style>

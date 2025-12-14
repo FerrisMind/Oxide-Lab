@@ -1,6 +1,6 @@
 <script lang="ts">
   import Copy from 'phosphor-svelte/lib/Copy';
-  import Check from 'phosphor-svelte/lib/Check';
+  import Check from 'phosphor-svelte/lib/CheckCircle';
 
   let { messageContent }: { messageContent: string } = $props();
 
@@ -50,8 +50,8 @@
     background: none;
     border: none;
     cursor: default;
-    padding: 8px;
-    border-radius: 5px;
+    padding: var(--space-2); /* 8px */
+    border-radius: var(--radius-sm); /* 4px → 5px closest */
     display: flex;
     align-items: center;
     justify-content: center;

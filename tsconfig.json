@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "types": ["vitest", "prismjs"],
+    "types": ["vitest"],
     "moduleResolution": "bundler",
     "allowArbitraryExtensions": true
   },

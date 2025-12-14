@@ -3,108 +3,271 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Глобальные CSS переменные (src/styles/variables.css) */
+/* Глобальные CSS переменные */
 
 :root {
-  --bg: #f7f5f2;
-  --card: #fff;
-  --panel-bg: #f8f9fa;
-  --text: #2b2a29;
-  --muted: #6d6a6a;
-  --border-color: #e8e6e3;
-  --accent: #3b82f6;
-  --accent-2: #1d4ed8;
-  --panel-alt-bg: #f8f9fa;
-  --shadow: 0 4px 20px rgb(0 0 0 / 0.06);
-  --shadow-hover: 0 8px 30px rgb(0 0 0 / 0.12);
-  --content-gap: 8px;
-  /* default gap between left/right/bottom and content */
-  --content-gap-top: 8px;
-  /* larger gap from header */
-  --radius: 0.625rem;
+  /* =================================================================
+     8pt GRID DESIGN SYSTEM
+     Все размеры, отступы и маржины кратны 8px для пиксельной точности
+     на экранах разной плотности и визуальной согласованности.
+     Baseline grid 4px для текста создаёт вертикальный ритм.
+     ================================================================= */
+
+  /* --- Core 8pt Grid Units --- */
+  --grid-unit: 8px;
+  --baseline: 4px; /* Baseline grid для типографики */
+
+  /* --- 8pt Grid Spacing Scale --- */
+  --space-0: 0px;
+  --space-1: 4px; /* 0.5 unit - baseline */
+  --space-2: 8px; /* 1 unit */
+  --space-3: 16px; /* 2 units */
+  --space-4: 24px; /* 3 units */
+  --space-5: 32px; /* 4 units */
+  --space-6: 40px; /* 5 units */
+  --space-7: 48px; /* 6 units */
+  --space-8: 56px; /* 7 units */
+  --space-9: 64px; /* 8 units */
+  --space-10: 72px; /* 9 units */
+  --space-11: 80px; /* 10 units */
+  --space-12: 96px; /* 12 units */
+
+  /* --- Legacy Spacing Aliases (backwards compat) --- */
+  --spacing-unit: var(--space-2);
+  --spacing-xs: var(--space-1); /* 4px */
+  --spacing-sm: var(--space-2); /* 8px */
+  --spacing-md: var(--space-3); /* 16px */
+  --spacing-lg: var(--space-4); /* 24px */
+  --spacing-xl: var(--space-5); /* 32px */
+  --spacing-2xl: var(--space-7); /* 48px */
+  --spacing-3xl: var(--space-9); /* 64px */
+
+  /* --- Layout Grid System --- */
+  /* 8-column modular grid: 1440px container, 1200px content area */
+  --container-max: 1440px;
+  --content-max: 1200px;
+  --column-count: 8;
+  --column-width: 120px; /* 1200px / 8 columns - gutters */
+  --gutter: var(--space-3); /* 16px gutters между колонками */
+  --margin-desktop: var(--space-4); /* 24px маржины */
+  --margin-mobile: var(--space-3); /* 16px маржины на мобильных */
+
+  /* --- Content Gaps (8pt aligned) --- */
+  --content-gap: var(--space-2); /* 8px default gap */
+  --content-gap-top: var(--space-2);
+
+  /* --- Color System (Monochromatic with 8% lightness steps) --- */
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --panel-bg: #f0f3f8;
+  --text: #1a1f2e;
+  --muted: #6b7a8e;
+  --border-color: #d5dce6;
+  --accent: #b87652;
+  --accent-2: #4a5a7a;
+  --warning: #d97b4a;
+  --danger: #d97b4a;
+  --panel-alt-bg: var(--panel-bg);
+
+  /* --- Shadows (глубина без агрессии) --- */
+  --shadow-sm: 0 2px 8px rgb(0 0 0 / 0.04);
+  --shadow: 0 4px 16px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 6px 24px rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 8px 32px rgb(0 0 0 / 0.1);
+  --shadow-hover: 0 8px 32px rgb(0 0 0 / 0.12);
+
+  /* --- Border Radius (8pt aligned) --- */
+  --radius-sm: 4px; /* 0.5 unit */
+  --radius: 8px; /* 1 unit */
+  --radius-md: 12px; /* 1.5 units */
+  --radius-lg: 16px; /* 2 units */
+  --radius-xl: 24px; /* 3 units */
+  --radius-full: 9999px;
+
+  /* =================================================================
+     TYPOGRAPHY SYSTEM
+     Размеры кратны 4px: 12/16/20/24/32px
+     Line-height 1.5× для natural baseline 4px alignment
+     ================================================================= */
+
+  /* --- Font Family --- */
+  --font-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+
+  /* --- Font Sizes (кратны 4px) --- */
+  --font-size-xs: 12px; /* 3 baseline units */
+  --font-size-sm: 14px; /* 3.5 baseline units (exception for readability) */
+  --font-size-base: 16px; /* 4 baseline units */
+  --font-size-lg: 20px; /* 5 baseline units */
+  --font-size-xl: 24px; /* 6 baseline units */
+  --font-size-2xl: 32px; /* 8 baseline units */
+  --font-size-3xl: 40px; /* 10 baseline units */
+  --font-size-4xl: 48px; /* 12 baseline units */
+
+  /* --- Line Heights (1.5× для baseline alignment) --- */
+  --line-height-tight: 1.2; /* Для заголовков */
+  --line-height-snug: 1.375; /* Компактный текст */
+  --line-height-normal: 1.5; /* Основной текст - 24px при 16px */
+  --line-height-relaxed: 1.625; /* Расслабленный */
+  --line-height-loose: 1.75; /* Свободный */
+
+  /* --- Font Weights --- */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* --- Paragraph Spacing (8pt aligned) --- */
+  --paragraph-spacing: var(--space-3); /* 16px */
+  --heading-spacing-top: var(--space-5); /* 32px */
+  --heading-spacing-bottom: var(--space-3); /* 16px */
+
+  /* =================================================================
+     ANIMATION SYSTEM
+     Transitions 200ms cubic-bezier(0.4, 0.0, 0.2, 1)
+     Все длительности кратны 50ms
+     ================================================================= */
+
+  /* --- Duration Scale (кратно 50ms) --- */
+  --duration-instant: 50ms;
+  --duration-fast: 100ms;
+  --duration-normal: 200ms; /* Основная длительность */
+  --duration-slow: 300ms;
+  --duration-slower: 400ms;
+  --duration-default: 500ms; /* For longer animations */
+  --duration-slowest: 500ms;
+  --duration-1000: 1000ms; /* 1 second */
+  --duration-2000: 2000ms; /* 2 seconds */
+
+  /* --- Easing Functions --- */
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1); /* Material Design standard */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* --- Common Transitions --- */
+  --transition-colors:
+    color var(--duration-normal) var(--ease-default),
+    background-color var(--duration-normal) var(--ease-default),
+    border-color var(--duration-normal) var(--ease-default);
+  --transition-opacity: opacity var(--duration-normal) var(--ease-default);
+  --transition-transform: transform var(--duration-normal) var(--ease-default);
+  --transition-shadow: box-shadow var(--duration-normal) var(--ease-default);
+  --transition-all: all var(--duration-normal) var(--ease-default);
+
+  /* =================================================================
+     CHAT INTERFACE (8pt aligned)
+     ================================================================= */
+
+  /* Message Container Padding (24px 32px) */
+  --message-padding-desktop: var(--space-4) var(--space-5); /* 24px 32px */
+  --message-padding-mobile: var(--space-3) var(--space-4); /* 16px 24px */
+
+  /* Spacing Between Messages */
+
+  /* Layout Constraints (6 колонок = 720-800px для чата) */
+  --chat-max-width: 800px; /* ~6.67 колонок */
+  --chat-container-width: 100%;
+
+  /* Message Elements */
+  --message-content-max-width: 736px; /* 800px - 64px padding, кратно 8 */
+  --message-border-radius: var(--radius-md); /* 12px */
+  --message-gap: 0; /* без расстояния */
+
+  /* Composer (высота кратна 8) */
+  --composer-height-desktop: 56px; /* 7 units */
+  --composer-height-mobile: 48px; /* 6 units */
+  --composer-max-height: 200px; /* 25 units */
+
+  /* Scrollbar colors */
+  --scrollbar-thumb: rgb(107 122 142 / 0.35);
+  --scrollbar-thumb-hover: rgb(107 122 142 / 0.55);
+  --scrollbar-thumb-active: rgb(107 122 142 / 0.7);
+  --scrollbar-thumb-fade: rgb(107 122 142 / 0.25);
 
   /* ↓ Добавляем переменные цветовой схемы для кода/hljs, согласованные с UI */
   --code-bg: var(--panel-bg);
   --code-fg: var(--text);
   --code-keyword: var(--accent-2);
-  --code-string: #0e814a;
-  /* зелёный для строк */
-  --code-title: #950;
-  /* заголовки/имена */
-  --code-number: #b45309;
-  /* числа/символы */
-  --code-variable: #6d28d9;
-  /* переменные */
-  --code-tag: #2563eb;
-  /* теги/мета */
+  --code-string: color-mix(in srgb, var(--accent) 35%, var(--text) 65%);
+  --code-title: var(--accent);
+  --code-number: var(--warning);
+  --code-variable: color-mix(in srgb, var(--accent-2) 60%, var(--text) 40%);
+  --code-tag: var(--accent-2);
   --code-comment: var(--muted);
   /* комментарии */
 
-  /* ↓ Специализированные токены для shadcn-svelte Sidebar */
+  /* ↓ Специализированные токены для shadcn-svelte Sidebar (8pt aligned) */
   --sidebar: var(--card);
   --sidebar-foreground: var(--text);
-  --sidebar-primary: var(--accent-2);
+  --sidebar-primary: var(--accent);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--panel-alt-bg);
+  --sidebar-accent: var(--panel-bg);
   --sidebar-accent-foreground: var(--text);
   --sidebar-border: var(--border-color);
   --sidebar-ring: var(--accent);
-  --sidebar-width: 16rem;
-  /* ~256px */
-  --sidebar-width-icon: 562px;
-  /* 56px */
-  --sidebar-width-mobile: 17.5rem;
-  /* ~280px overlay */
-  --sidebar-collapsed-bg: #1a1a1a;
+  --sidebar-width: 240px; /* 30 units (240px кратно 8) */
+  --sidebar-width-icon: 56px; /* 7 units */
+  --sidebar-width-mobile: 280px; /* 35 units */
+  --sidebar-collapsed-bg: var(--bg);
 
   /* Tooltip styling */
-  --tooltip-bg: #f4f4f4;
-  --tooltip-fg: #1a1a1a;
-  --tooltip-border: rgb(0 0 0 / 0.15);
-  --tooltip-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+  --tooltip-bg: #1a1f2e;
+  --tooltip-fg: #e8eaf0;
+  --tooltip-border: rgb(0 0 0 / 0.25);
+  --tooltip-shadow: 0 10px 24px rgb(0 0 0 / 0.25);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1a1a1a;
-    --card: #2d2d2d;
-    --panel-bg: #252525;
-    --text: #fff;
-    --muted: #a0a0a0;
-    --border-color: #404040;
-    --panel-alt-bg: #252525;
+    --bg: #1a1f2e;
+    /* Solid surfaces for dialogs/menus (avoid "see-through" UI) */
+    --card: color-mix(in srgb, var(--bg) 88%, white 12%);
+    --panel-bg: color-mix(in srgb, var(--bg) 84%, white 16%);
+    --text: #e8eaf0;
+    --muted: #9ba5b8;
+    --border-color: #6b7a8e;
+    --panel-alt-bg: color-mix(in srgb, var(--bg) 86%, white 14%);
+
+    --scrollbar-thumb: rgb(107 122 142 / 0.4);
+    --scrollbar-thumb-hover: rgb(107 122 142 / 0.6);
+    --scrollbar-thumb-active: rgb(107 122 142 / 0.75);
+    --scrollbar-thumb-fade: rgb(107 122 142 / 0.3);
 
     /* ↓ Темные значения для подсветки синтаксиса */
     --code-bg: var(--panel-bg);
     --code-fg: var(--text);
-    --code-keyword: #93c5fd;
+    --code-keyword: var(--accent);
     /* светло-синий */
-    --code-string: #86efac;
+    --code-string: color-mix(in srgb, var(--accent) 45%, var(--text) 55%);
     /* светло-зелёный */
-    --code-title: #fcd34d;
+    --code-title: var(--accent-2);
     /* жёлтый для заголовков/имён */
-    --code-number: #fdba74;
+    --code-number: var(--warning);
     /* персиковый для чисел */
-    --code-variable: #c4b5fd;
+    --code-variable: color-mix(in srgb, var(--accent-2) 60%, var(--text) 40%);
     /* сиреневый для переменных */
-    --code-tag: #93c5fd;
+    --code-tag: var(--accent-2);
     /* голубой для тегов/мета */
-    --code-comment: #9ca3af;
+    --code-comment: var(--muted);
     /* серый для комментариев */
 
-    --sidebar: #2c2c2c;
-    --sidebar-foreground: #f8f8f8;
-    --sidebar-primary: #60a5fa;
-    --sidebar-primary-foreground: #0f172a;
-    --sidebar-accent: #2a2a2a;
-    --sidebar-accent-foreground: #f8f8f8;
-    --sidebar-border: #333;
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--text);
+    --sidebar-primary: var(--accent);
+    --sidebar-primary-foreground: var(--text);
+    --sidebar-accent: var(--panel-bg);
+    --sidebar-accent-foreground: var(--text);
+    --sidebar-border: var(--border-color);
     --sidebar-ring: var(--accent);
-    --sidebar-collapsed-bg: #1a1a1a;
+    --sidebar-collapsed-bg: var(--bg);
 
-    --tooltip-bg: #f4f4f4;
-    --tooltip-fg: #0f1115;
-    --tooltip-border: rgb(0 0 0 / 0.35);
+    --tooltip-bg: color-mix(in srgb, var(--bg) 80%, black 20%);
+    --tooltip-fg: var(--text);
+    --tooltip-border: color-mix(in srgb, var(--border-color) 60%, transparent);
     --tooltip-shadow: 0 10px 24px rgb(0 0 0 / 0.45);
   }
 }
@@ -112,19 +275,19 @@
 /* Улучшенные стили для скроллбаров (src/styles/scrollbar.css) */
 
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: var(--space-3); /* 16px */
+  height: var(--space-3); /* 16px */
 }
 
 ::-webkit-scrollbar-track {
   background: transparent;
-  border-radius: 12px;
+  border-radius: var(--radius-lg); /* 16px */
   margin: 2px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgb(179 205 224 / 0.8);
-  border-radius: 12px;
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-lg); /* 16px */
   border: 2px solid transparent;
   background-clip: content-box;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -132,14 +295,14 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(179 205 224 / 1);
+  background: var(--scrollbar-thumb-hover);
   background-clip: content-box;
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: rgb(179 205 224 / 1);
+  background: var(--scrollbar-thumb-active);
   background-clip: content-box;
   transform: scale(1.1);
   box-shadow: 0 6px 16px rgb(0 0 0 / 0.2);
@@ -151,64 +314,30 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(179 205 224 / 0.8) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   scroll-behavior: smooth;
 }
 
 ::-webkit-scrollbar:horizontal {
-  height: 8px;
+  height: var(--space-2); /* 8px */
 }
 
 ::-webkit-scrollbar-thumb:horizontal {
-  background: linear-gradient(90deg, rgb(179 205 224 / 0.8), rgb(179 205 224 / 0.6));
-  border-radius: 12px;
+  background: linear-gradient(90deg, var(--scrollbar-thumb), var(--scrollbar-thumb-fade));
+  border-radius: var(--radius-lg); /* 16px */
   border: 1px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:horizontal:hover {
-  background: linear-gradient(90deg, rgb(179 205 224 / 1), rgb(179 205 224 / 0.8));
+  background: linear-gradient(90deg, var(--scrollbar-thumb-hover), var(--scrollbar-thumb));
   background-clip: content-box;
-}
-
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: rgb(91 124 153 / 0.8);
-    background-clip: content-box;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgb(91 124 153 / 1);
-    background-clip: content-box;
-    box-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
-  }
-
-  ::-webkit-scrollbar-thumb:active {
-    background: rgb(91 124 153 / 1);
-    background-clip: content-box;
-    box-shadow: 0 6px 16px rgb(0 0 0 / 0.5);
-  }
-
-  ::-webkit-scrollbar-thumb:horizontal {
-    background: linear-gradient(90deg, rgb(91 124 153 / 0.8), rgb(91 124 153 / 0.6));
-    background-clip: content-box;
-  }
-
-  ::-webkit-scrollbar-thumb:horizontal:hover {
-    background: linear-gradient(90deg, rgb(91 124 153 / 1), rgb(91 124 153 / 0.8));
-    background-clip: content-box;
-  }
-
-  * {
-    scrollbar-color: rgb(91 124 153 / 0.8) transparent;
-  }
 }
 
 @media (width <=768px) {
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: var(--space-2); /* 8px */
+    height: var(--space-2); /* 8px */
   }
 
   ::-webkit-scrollbar-thumb {
@@ -218,8 +347,8 @@
 
 @media (min-device-pixel-ratio: 2), (resolution >=192dpi) {
   ::-webkit-scrollbar {
-    width: 14px;
-    height: 14px;
+    width: var(--space-3); /* 16px → 14px closest */
+    height: var(--space-3); /* 16px → 14px closest */
   }
 
   ::-webkit-scrollbar-thumb {
@@ -227,7 +356,9 @@
   }
 }
 
-/* Базовые стили (src/styles/base.css) */
+/* =================================================================
+   BASE STYLES (8pt Grid System)
+   ================================================================= */
 
 * {
   box-sizing: border-box;
@@ -239,19 +370,30 @@ html,
 body {
   height: 100%;
   min-height: 100%;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base); /* 16px */
+  line-height: var(--line-height-normal); /* 1.5 = 24px line-height */
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Container with 24px margins, 16px content gap */
 .wrap {
-  padding: 16px;
+  padding: var(--space-3); /* 16px */
   width: 100%;
   height: 100%;
   min-height: 0;
 }
+
+/* =================================================================
+   TYPOGRAPHY (8pt Grid aligned)
+   Font sizes: 12/16/20/24/32px (кратны 4)
+   Line-height: 1.5× для baseline 4px alignment
+   Вертикальные отступы: 24/32/48px
+   ================================================================= */
 
 h1,
 h2,
@@ -260,68 +402,90 @@ h4,
 h5,
 h6 {
   color: var(--text);
-  font-weight: 600;
-  line-height: 1.2;
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight); /* 1.2 для заголовков */
+  margin-top: var(--space-5); /* 32px */
+  margin-bottom: var(--space-3); /* 16px */
+}
+
+h1:first-child,
+h2:first-child,
+h3:first-child,
+h4:first-child,
+h5:first-child,
+h6:first-child {
+  margin-top: 0;
 }
 
 h1 {
-  font-size: 2rem;
+  font-size: var(--font-size-2xl); /* 32px */
 }
 
 h2 {
-  font-size: 1.75rem;
+  font-size: var(--font-size-xl); /* 24px */
 }
 
 h3 {
-  font-size: 1.5rem;
+  font-size: var(--font-size-lg); /* 20px */
 }
 
 h4 {
-  font-size: 1.25rem;
+  font-size: var(--font-size-base); /* 16px */
+  font-weight: var(--font-weight-semibold);
 }
 
 h5 {
-  font-size: 1.125rem;
+  font-size: var(--font-size-sm); /* 14px */
+  font-weight: var(--font-weight-semibold);
 }
 
 h6 {
-  font-size: 1rem;
+  font-size: var(--font-size-xs); /* 12px */
+  font-weight: var(--font-weight-medium);
+  color: var(--muted);
 }
 
 p {
   color: var(--text);
-  line-height: 1.6;
-  margin-bottom: 1rem;
+  line-height: var(--line-height-normal); /* 1.5 */
+  margin-bottom: var(--space-3); /* 16px */
 }
 
-@media (width <=768px) {
+p:last-child {
+  margin-bottom: 0;
+}
+
+/* Mobile typography adjustments */
+@media (width <= 768px) {
   .wrap {
-    padding: 12px;
+    padding: var(--space-3); /* 16px */
   }
 
   h1 {
-    font-size: 1.75rem;
+    font-size: var(--font-size-xl); /* 24px */
   }
 
   h2 {
-    font-size: 1.5rem;
+    font-size: var(--font-size-lg); /* 20px */
   }
 
   h3 {
-    font-size: 1.25rem;
+    font-size: var(--font-size-base); /* 16px */
   }
 }
 
-/* Компонентные стили (src/styles/components.css) */
+/* =================================================================
+   COMPONENT STYLES (8pt Grid System)
+   ================================================================= */
 
 button {
   cursor: default;
   border: none;
-  border-radius: 12px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  border-radius: var(--radius); /* 8px */
+  padding: var(--space-2) var(--space-3); /* 8px 16px */
+  font-size: var(--font-size-sm); /* 14px */
+  font-weight: var(--font-weight-medium);
+  transition: var(--transition-all);
   background: var(--accent);
   color: white;
 }
@@ -339,7 +503,7 @@ button:disabled {
 a {
   color: var(--accent);
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: var(--transition-colors);
 }
 
 a:hover {
@@ -351,12 +515,14 @@ input,
 textarea,
 select {
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 8px 12px;
-  font-size: 14px;
+  border-radius: var(--radius); /* 8px */
+  padding: var(--space-2) var(--space-3); /* 8px 16px */
+  font-size: var(--font-size-sm); /* 14px */
+  font-family: var(--font-sans);
+  line-height: var(--line-height-normal);
   background: var(--card);
   color: var(--text);
-  transition: border-color 0.2s ease;
+  transition: var(--transition-colors), var(--transition-shadow);
 }
 
 input:focus,
@@ -364,25 +530,25 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .card {
   background: var(--card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: var(--radius-lg); /* 16px */
+  padding: var(--space-4); /* 24px */
   box-shadow: var(--shadow);
-  transition: box-shadow 0.2s ease;
+  transition: var(--transition-shadow);
 }
 
 .card:hover {
   box-shadow: var(--shadow-hover);
 }
 
-@media (width <=768px) {
+@media (width <= 768px) {
   .card {
-    padding: 16px;
+    padding: var(--space-3); /* 16px */
   }
 }
 
@@ -392,11 +558,11 @@ select:focus {
 
 .checkbox-label {
   position: relative;
-  padding-left: 30px;
+  padding-left: var(--space-5); /* 32px → 30px closest */
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
-  font-size: 14px;
+  font-size: var(--font-size-sm); /* 14px */
   color: var(--text);
   transition: color 0.2s ease;
 }
@@ -406,10 +572,10 @@ select:focus {
   position: absolute;
   left: 0;
   top: 2px;
-  width: 18px;
-  height: 18px;
+  width: var(--space-3); /* 16px → 18px closest */
+  height: var(--space-3); /* 16px → 18px closest */
   border: 2px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-lg); /* 16px */
   background-color: var(--card);
   transition: all 0.2s ease;
 }
@@ -417,10 +583,10 @@ select:focus {
 .checkbox-input:checked + .checkbox-label::before {
   background-color: var(--accent);
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgb(59 130 246 / 0.1);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
   content: '✓';
   color: white;
-  font-size: 14px;
+  font-size: var(--font-size-sm); /* 14px */
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -429,22 +595,22 @@ select:focus {
 
 .checkbox-label:hover::before {
   border-color: var(--accent-2);
-  box-shadow: 0 0 0 1px rgb(59 130 246 / 0.2);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-2) 25%, transparent);
 }
 
 @media (width <=768px) {
   .checkbox-label {
-    padding-left: 32px;
-    font-size: 16px;
+    padding-left: var(--space-5); /* 32px */
+    font-size: var(--font-size-base); /* 16px */
   }
 
   .checkbox-label::before {
-    width: 20px;
-    height: 20px;
+    width: var(--space-3); /* 16px → 20px closest */
+    height: var(--space-3); /* 16px → 20px closest */
   }
 
   .checkbox-input:checked + .checkbox-label::before {
-    font-size: 16px;
+    font-size: var(--font-size-base); /* 16px */
   }
 }
 
@@ -498,7 +664,7 @@ select:focus {
 .loading-button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2); /* 8px */
 }
 
 .loading-text {
@@ -552,9 +718,53 @@ select:focus {
 
 /* Override collapsed sidebar width */
 [data-state='collapsed'] [data-slot='sidebar-container'] {
-  width: 56px !important;
+  width: var(--space-8) !important; /* 56px */
 }
 
 [data-state='collapsed'] [data-slot='sidebar-gap'] {
-  width: 56px !important;
+  width: var(--space-8) !important; /* 56px */
+}
+
+/* =================================================================
+   TOOLTIP ARROW STYLES
+   Moved from tooltip-content.svelte to avoid "no scopable elements" warning
+   ================================================================= */
+
+[data-slot='tooltip-content'] {
+  --tooltip-arrow-size: 8px;
+}
+
+[data-slot='tooltip-content']::after {
+  content: '';
+  position: absolute;
+  width: var(--tooltip-arrow-size);
+  height: var(--tooltip-arrow-size);
+  background: var(--tooltip-bg);
+  box-shadow: var(--tooltip-shadow);
+  z-index: -1;
+  transform: rotate(45deg);
+}
+
+[data-slot='tooltip-content'][data-side='top']::after {
+  bottom: calc(var(--tooltip-arrow-size) / -2);
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+[data-slot='tooltip-content'][data-side='bottom']::after {
+  top: calc(var(--tooltip-arrow-size) / -2);
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+[data-slot='tooltip-content'][data-side='left']::after {
+  right: calc(var(--tooltip-arrow-size) / -2);
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+[data-slot='tooltip-content'][data-side='right']::after {
+  left: calc(var(--tooltip-arrow-size) / -2);
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
 }

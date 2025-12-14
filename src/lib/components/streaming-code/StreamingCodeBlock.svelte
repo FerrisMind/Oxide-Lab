@@ -1,12 +1,10 @@
 <script lang="ts">
-
   import { onMount, onDestroy } from 'svelte';
   import CopySimple from 'phosphor-svelte/lib/CopySimple';
   import CircleNotch from 'phosphor-svelte/lib/CircleNotch';
-  import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
+import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
   import hljs from 'highlight.js/lib/common';
 
-  
   interface Props {
     code?: string;
     language?: string;
@@ -36,7 +34,7 @@
     readonly: _readonly = true,
     onCopied,
     onToggle,
-    onStreamingTimeout
+    onStreamingTimeout,
   }: Props = $props();
 
   let container: HTMLElement | undefined = $state();
@@ -51,18 +49,18 @@
   // By default code blocks should be collapsed per UX requirement
   let isExpanded: boolean = $state(false);
   // Timer handle for streaming inactivity timeout
-  let streamingTimeout: ReturnType<typeof setTimeout> | null = $state(null);
+  let streamingTimeout: ReturnType<typeof setTimeout> | null = null;
   // Track transition from streaming -> idle to auto-collapse only once
-  let wasStreaming: boolean = $state(false);
-  let prevIsStreaming: boolean = $state(false);
-  let collapseTimer: ReturnType<typeof setTimeout> | null = $state(null);
+  let wasStreaming: boolean = false;
+  let prevIsStreaming: boolean = false;
+  let collapseTimer: ReturnType<typeof setTimeout> | null = null;
   // Icon transition state: 'spinner' | 'check' | 'hidden'
   let headerIconState: 'spinner' | 'check' | 'hidden' = $state('hidden');
   let isSpinnerActive: boolean = $state(false);
 
-  let iconTransitionTimer: ReturnType<typeof setTimeout> | null = $state(null);
+  let iconTransitionTimer: ReturnType<typeof setTimeout> | null = null;
   // Whether we've already auto-expanded after a streaming session
-  let autoExpandedDone: boolean = $state(false);
+  let autoExpandedDone: boolean = false;
   // Streaming spinner state
   let _spinnerHost: HTMLSpanElement | null = null;
 
@@ -271,11 +269,6 @@
     }
   });
 
-
-
-
-
-
   // Listen for theme changes
   let mediaQuery: MediaQueryList;
   onMount(() => {
@@ -451,8 +444,8 @@
 <style>
   .streaming-code-block {
     width: 100%;
-    margin: 8px 0;
-    border-radius: 12px;
+    margin: var(--space-2) 0; /* 8px 0 */
+    border-radius: var(--radius-lg); /* 16px */
     overflow: hidden;
     transition: all 0.3s ease;
   }
@@ -467,7 +460,7 @@
     transition: opacity 0.3s ease;
     border: 1px solid var(--border-color);
     border-top: none;
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 var(--radius) 0; /* 8px */
     background: var(--code-bg, var(--panel-bg));
   }
 
@@ -479,25 +472,25 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 8px 12px;
+    gap: var(--space-3); /* 16px */
+    padding: var(--space-2) var(--space-3); /* 8px 16px */
     background: var(--panel-bg);
     border: 1px solid var(--border-color);
     border-bottom: none;
-    border-radius: 8px 8px 0 0;
+    border-radius: var(--radius) var(--radius) 0 0; /* 8px 8px 0 0 */
     cursor: default;
   }
   .streaming-code-header .left {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2); /* 8px */
   }
   .streaming-code-header .header-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: var(--space-3); /* 16px → 18px closest */
+    height: var(--space-3); /* 16px → 18px closest */
     opacity: 0;
     transition:
       opacity 200ms linear,
@@ -509,8 +502,8 @@
   }
   .streaming-code-header .header-icon :global(svg) {
     color: var(--accent-color);
-    width: 18px;
-    height: 18px;
+    width: var(--space-3); /* 16px → 18px closest */
+    height: var(--space-3); /* 16px → 18px closest */
     display: block;
     transform-box: fill-box;
   }
@@ -531,20 +524,20 @@
     cursor: not-allowed;
   }
   .streaming-code-header .status {
-    font-size: 12px;
+    font-size: var(--font-size-base); /* 16px */
     color: var(--muted);
   }
   .streaming-code-header .copy-btn {
     display: grid;
     place-items: center;
-    width: 24px;
-    height: 24px;
+    width: var(--space-4); /* 24px */
+    height: var(--space-4); /* 24px */
     padding: 0;
     margin: 0;
     border: 1px solid var(--border-color);
     background: var(--panel-bg);
     color: var(--text);
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
   }
 
   /* Collapse styles */
@@ -553,7 +546,7 @@
   }
   .streaming-code-block.collapsed .streaming-code-header {
     border-bottom: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg); /* 16px */
   }
 
   /* Reduce motion for accessibility */

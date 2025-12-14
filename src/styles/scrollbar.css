@@ -1,39 +1,42 @@
-/* Улучшенные стили для скроллбаров */
+/* =================================================================
+   SCROLLBAR STYLES (8pt Grid Aligned)
+   All sizes use CSS variables from design system
+   ================================================================= */
 
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: var(--space-3); /* 16px */
+  height: var(--space-3); /* 16px */
 }
 
 ::-webkit-scrollbar-track {
   background: transparent;
-  border-radius: 12px;
-  margin: 2px;
+  border-radius: var(--radius-lg); /* 16px */
+  margin: var(--baseline); /* 4px → 2px is not 8pt aligned, use 4px */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgb(179 205 224 / 0.8);
-  border-radius: 12px;
-  border: 2px solid transparent;
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-lg); /* 16px */
+  border: var(--baseline) solid transparent; /* 4px → 2px is not aligned */
   background-clip: content-box;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
-  animation: scrollbarFadeIn 0.3s ease-out;
+  transition: all var(--duration-slow) var(--ease-default);
+  box-shadow: var(--shadow-sm);
+  animation: scrollbarFadeIn var(--duration-slow) var(--ease-out);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(179 205 224 / 1);
+  background: var(--scrollbar-thumb-hover);
   background-clip: content-box;
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+  box-shadow: var(--shadow);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: rgb(179 205 224 / 1);
+  background: var(--scrollbar-thumb-active);
   background-clip: content-box;
   transform: scale(1.1);
-  box-shadow: 0 6px 16px rgb(0 0 0 / 0.2);
-  animation: scrollbarPulse 1s ease-in-out infinite;
+  box-shadow: var(--shadow-md);
+  animation: scrollbarPulse 1s var(--ease-in-out) infinite;
 }
 
 ::-webkit-scrollbar-corner {
@@ -44,68 +47,68 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(179 205 224 / 0.8) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   scroll-behavior: smooth;
 }
 
 /* Горизонтальные скроллбары */
 
 ::-webkit-scrollbar:horizontal {
-  height: 8px;
+  height: var(--space-2); /* 8px */
 }
 
 ::-webkit-scrollbar-thumb:horizontal {
-  background: linear-gradient(90deg, rgb(179 205 224 / 0.8), rgb(179 205 224 / 0.6));
-  border-radius: 12px;
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-lg); /* 16px */
   border: 1px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:horizontal:hover {
-  background: linear-gradient(90deg, rgb(179 205 224 / 1), rgb(179 205 224 / 0.8));
+  background: var(--scrollbar-thumb-hover);
   background-clip: content-box;
 }
 
-/* Темная тема */
+/* Темная тема - использует CSS переменные, которые уже переопределены в :root */
 @media (prefers-color-scheme: dark) {
   ::-webkit-scrollbar-thumb {
-    background: rgb(91 124 153 / 0.8);
+    background: var(--scrollbar-thumb);
     background-clip: content-box;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+    box-shadow: 0 var(--baseline) var(--space-2) rgb(0 0 0 / 0.3);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgb(91 124 153 / 1);
+    background: var(--scrollbar-thumb-hover);
     background-clip: content-box;
-    box-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
+    box-shadow: 0 var(--space-1) var(--space-3) rgb(0 0 0 / 0.4);
   }
 
   ::-webkit-scrollbar-thumb:active {
-    background: rgb(91 124 153 / 1);
+    background: var(--scrollbar-thumb-active);
     background-clip: content-box;
-    box-shadow: 0 6px 16px rgb(0 0 0 / 0.5);
+    box-shadow: 0 var(--space-1) var(--space-3) rgb(0 0 0 / 0.5);
   }
 
   ::-webkit-scrollbar-thumb:horizontal {
-    background: linear-gradient(90deg, rgb(91 124 153 / 0.8), rgb(91 124 153 / 0.6));
+    background: var(--scrollbar-thumb);
     background-clip: content-box;
   }
 
   ::-webkit-scrollbar-thumb:horizontal:hover {
-    background: linear-gradient(90deg, rgb(91 124 153 / 1), rgb(91 124 153 / 0.8));
+    background: var(--scrollbar-thumb-hover);
     background-clip: content-box;
   }
 
   * {
-    scrollbar-color: rgb(91 124 153 / 0.8) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 }
 
 /* Мобильные устройства */
-@media (width <= 768px) {
+@media (width <=768px) {
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: var(--space-2); /* 8px */
+    height: var(--space-2); /* 8px */
   }
 
   ::-webkit-scrollbar-thumb {
@@ -114,14 +117,14 @@
 }
 
 /* Высокие DPI дисплеи */
-@media (min-device-pixel-ratio: 2), (resolution >= 192dpi) {
+@media (min-device-pixel-ratio: 2), (resolution >=192dpi) {
   ::-webkit-scrollbar {
-    width: 14px;
-    height: 14px;
+    width: var(--space-3); /* 16px - ближайшее к 14px в 8pt grid */
+    height: var(--space-3); /* 16px */
   }
 
   ::-webkit-scrollbar-thumb {
-    border: 3px solid transparent;
+    border: var(--space-1) solid transparent; /* 4px */
   }
 }
 
@@ -129,7 +132,7 @@
 @keyframes scrollbarFadeIn {
   from {
     opacity: 0;
-    transform: translateX(10px);
+    transform: translateX(var(--space-2)); /* 8px */
   }
 
   to {
@@ -143,6 +146,7 @@
   100% {
     opacity: 0.6;
   }
+
   50% {
     opacity: 1;
   }

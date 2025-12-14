@@ -15,17 +15,21 @@
   }
 
   .loading-spinner {
-    width: 32px;
-    height: 32px;
+    width: var(--space-5); /* 32px */
+    height: var(--space-5); /* 32px */
     border: 3px solid var(--panel-alt-bg);
     border-top: 3px solid var(--accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-3); /* 16px */
   }
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 </style>

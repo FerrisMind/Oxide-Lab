@@ -28,11 +28,11 @@
   .model-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-    padding: 16px;
+    gap: var(--space-3); /* 16px */
+    margin-bottom: var(--space-4); /* 24px */
+    padding: var(--space-3); /* 16px */
     background: var(--panel-alt-bg);
-    border-radius: 10px;
+    border-radius: var(--radius); /* 8px → 10px closest */
     border: 1px solid var(--border-color);
   }
 
@@ -44,13 +44,13 @@
     display: block;
     font-size: 0.875rem;
     color: var(--muted);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2); /* 8px */
   }
 
   .stat-value {
     display: block;
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--text);
   }
 </style>

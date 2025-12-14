@@ -3,14 +3,21 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import * as Sidebar from '$lib/components/ui/sidebar/index';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index';
+
+  // Icons
   import SidebarSimple from 'phosphor-svelte/lib/SidebarSimple';
-  import ChatCircle from 'phosphor-svelte/lib/ChatCircle';
   import Database from 'phosphor-svelte/lib/Database';
   import Gear from 'phosphor-svelte/lib/Gear';
   import Code from 'phosphor-svelte/lib/Code';
   import ChartLine from 'phosphor-svelte/lib/ChartLine';
   import ArrowCircleDown from 'phosphor-svelte/lib/ArrowCircleDown';
   import Info from 'phosphor-svelte/lib/Info';
+  import Plus from 'phosphor-svelte/lib/Plus';
+  import Trash from 'phosphor-svelte/lib/Trash';
+  import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+  import DotsThree from 'phosphor-svelte/lib/DotsThree';
+
   import {
     activeDownloads,
     downloadsLoaded,
@@ -19,15 +26,15 @@
   import { useSidebar } from '$lib/components/ui/sidebar/context.svelte.js';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   import { t } from '$lib/i18n';
+  import { chatHistory, sortedSessions, currentSession } from '$lib/stores/chat-history';
+import { showChatHistory } from '$lib/stores/sidebar';
 
   // Navigation items с переводами
   const baseNavigationItems = $derived([
-    {
-      id: 'chat',
-      title: $t('sidebar.navigation.chat'),
-      icon: ChatCircle,
-      path: '/',
-    },
+    // Chat удален из навигации, так как он теперь основной контекст или "New Chat"
+    // Но "My Stuff" может содержать ссылки на другие разделы.
+    // В референсе "Chat" нет в списке "My Stuff", там "Home" или ничего.
+    // Оставим Models и Settings здесь.
     {
       id: 'models',
       title: $t('sidebar.navigation.models'),
@@ -59,12 +66,7 @@
 
   const navigationItems = $derived(
     experimentalFeatures.enabled
-      ? [
-          baseNavigationItems[0],
-          ...experimentalNavigationItems,
-          baseNavigationItems[1],
-          baseNavigationItems[2],
-        ]
+      ? [...experimentalNavigationItems, ...baseNavigationItems]
       : baseNavigationItems,
   );
 
@@ -97,6 +99,21 @@
   );
 
   const sidebar = useSidebar();
+  let editingSessionId: string | null = $state(null);
+  let editingTitle = $state('');
+
+  // При сворачивании сайдбара скрываем историю чатов (чтобы вести себя как лейбл Chats)
+  $effect(() => {
+    if (sidebar.state === 'collapsed') {
+      showChatHistory.set(false);
+    }
+  });
+
+  // Svelte action for programmatic focus (avoids a11y autofocus warning)
+  function focusOnMount(node: HTMLInputElement) {
+    node.focus();
+    return {};
+  }
 
   onMount(() => {
     void ensureDownloadManager();
@@ -107,7 +124,6 @@
     goto(path);
   }
 
-  // When the sidebar is collapsed, repurpose the brand button as the toggle trigger.
   function handleBrandClick(event: MouseEvent) {
     if (sidebar.state === 'collapsed') {
       event.preventDefault();
@@ -123,6 +139,38 @@
 
   function handleAboutClick() {
     onOpenAbout?.();
+  }
+
+  // Chat Actions
+  async function handleNewChat() {
+    const _id = await chatHistory.createSession();
+    if (currentPath !== '/') goto('/');
+  }
+
+  function handleLoadSession(id: string) {
+    chatHistory.loadSession(id);
+    if (currentPath !== '/') goto('/');
+  }
+
+  function handleRenameSession(id: string, newTitle: string) {
+    chatHistory.renameSession(id, newTitle);
+    editingSessionId = null;
+  }
+
+  function startEditing(session: any) {
+    editingSessionId = session.id;
+    editingTitle = session.title;
+  }
+
+  function cancelEdit() {
+    editingSessionId = null;
+  }
+
+  function handleDeleteSession(id: string) {
+    // В реальном приложении лучше спросить подтверждение,
+    // но в сайдбаре часто удаляют сразу или через меню.
+    // Сделаем через DropdownMenu действие.
+    chatHistory.deleteSession(id);
   }
 </script>
 
@@ -147,25 +195,33 @@
     {/if}
   </Sidebar.Header>
 
-  <Sidebar.Content class="app-sidebar__content">
+  <Sidebar.Content class="app-sidebar__content gap-0">
+    <!-- "New Chat" shortcut when collapsed or main action -->
     <Sidebar.Group>
-      <Sidebar.Menu class="app-sidebar__menu">
+      <Sidebar.Menu>
+        <Sidebar.MenuItem>
+          <Sidebar.MenuButton isActive={false} tooltipContent="New Chat">
+            {#snippet child({ props })}
+              <button {...props} onclick={handleNewChat}>
+                <Plus size={16} weight="bold" class="text-sidebar-foreground" />
+                <span>New chat</span>
+              </button>
+            {/snippet}
+          </Sidebar.MenuButton>
+        </Sidebar.MenuItem>
+      </Sidebar.Menu>
+    </Sidebar.Group>
+
+    <!-- My Stuff Group -->
+    <Sidebar.Group>
+      <Sidebar.Menu>
         {#each navigationItems as item}
           {@const Icon = item.icon}
           <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              tooltipContent={item.title}
-              isActive={currentPath === item.path}
-              aria-label={item.title}
-            >
+            <Sidebar.MenuButton tooltipContent={item.title} isActive={currentPath === item.path}>
               {#snippet child({ props })}
-                <button
-                  type="button"
-                  {...props}
-                  onclick={() => navigateTo(item.path)}
-                  aria-current={currentPath === item.path ? 'page' : undefined}
-                >
-                  <Icon size={20} weight="regular" />
+                <button {...props} onclick={() => navigateTo(item.path)}>
+                  <Icon size={16} weight="regular" />
                   <span>{item.title}</span>
                 </button>
               {/snippet}
@@ -174,6 +230,82 @@
         {/each}
       </Sidebar.Menu>
     </Sidebar.Group>
+
+    <!-- Chats History Group (hidden when collapsed) -->
+    {#if sidebar.state !== 'collapsed'}
+      <Sidebar.Group class="flex-1 min-h-0">
+        <Sidebar.GroupLabel class="chats-label">Chats</Sidebar.GroupLabel>
+        <Sidebar.Menu class="gap-0.5">
+          {#each $sortedSessions as session (session.id)}
+            <Sidebar.MenuItem>
+              {#if editingSessionId === session.id}
+                <div class="px-2 py-1">
+                  <input
+                    class="w-full bg-sidebar-input rounded-md px-2 py-1 text-sm text-sidebar-foreground border border-sidebar-border focus:outline-none focus:ring-1 focus:ring-sidebar-ring"
+                    bind:value={editingTitle}
+                    onblur={() => handleRenameSession(session.id, editingTitle)}
+                    onkeydown={(e) => {
+                      if (e.key === 'Enter') handleRenameSession(session.id, editingTitle);
+                      if (e.key === 'Escape') cancelEdit();
+                    }}
+                    use:focusOnMount
+                  />
+                </div>
+              {:else}
+                <Sidebar.MenuButton
+                  isActive={$currentSession?.id === session.id}
+                  class="group/item chat-session-button"
+                >
+                  {#snippet child({ props })}
+                    <div class="flex w-full items-center justify-between gap-2 overflow-hidden">
+                      <button
+                        {...props}
+                        onclick={() => handleLoadSession(session.id)}
+                        class="flex-1 overflow-hidden text-left truncate"
+                      >
+                        <span>{session.title || 'Untitled Chat'}</span>
+                      </button>
+
+                      <!-- Actions Dropdown -->
+                      <div
+                        class="chat-session-actions opacity-0 transition-opacity group-hover/item:opacity-100 focus-within:opacity-100"
+                        data-no-drag
+                      >
+                        <DropdownMenu.Root>
+                          <DropdownMenu.Trigger>
+                            {#snippet child({ props: triggerProps })}
+                              <button
+                                {...triggerProps}
+                                class="h-6 w-6 flex items-center justify-center rounded-md hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-primary"
+                              >
+                                <DotsThree size={16} weight="bold" />
+                              </button>
+                            {/snippet}
+                          </DropdownMenu.Trigger>
+                          <DropdownMenu.Content align="end">
+                            <DropdownMenu.Item onclick={() => startEditing(session)}>
+                              <PencilSimple class="mr-2 h-3.5 w-3.5" />
+                              <span>Rename</span>
+                            </DropdownMenu.Item>
+                            <DropdownMenu.Item
+                              onclick={() => handleDeleteSession(session.id)}
+                              class="text-destructive focus:text-destructive"
+                            >
+                              <Trash class="mr-2 h-3.5 w-3.5" />
+                              <span>Delete</span>
+                            </DropdownMenu.Item>
+                          </DropdownMenu.Content>
+                        </DropdownMenu.Root>
+                      </div>
+                    </div>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              {/if}
+            </Sidebar.MenuItem>
+          {/each}
+        </Sidebar.Menu>
+      </Sidebar.Group>
+    {/if}
   </Sidebar.Content>
 
   <Sidebar.Footer class="app-sidebar__footer">
@@ -210,7 +342,10 @@
           {/if}
         </Sidebar.MenuItem>
         <Sidebar.MenuItem>
-          <Sidebar.MenuButton tooltipContent={$t('sidebar.footer.about')} aria-label={$t('sidebar.footer.about')}>
+          <Sidebar.MenuButton
+            tooltipContent={$t('sidebar.footer.about')}
+            aria-label={$t('sidebar.footer.about')}
+          >
             {#snippet child({ props })}
               <button type="button" {...props} onclick={handleAboutClick}>
                 <Info size={20} weight="regular" />
@@ -236,32 +371,12 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    height: 56px;
-    min-height: 56px;
+    height: var(--space-8); /* 56px */
+    min-height: var(--space-8); /* 56px */
     padding: 0 !important;
     width: 100%;
     justify-content: flex-start !important;
     -webkit-app-region: drag;
-  }
-
-  .brand-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    margin-left: 8px;
-    flex-shrink: 0;
-    border-radius: 12px;
-    background: transparent;
-    border: 1px solid transparent;
-    transition:
-      background 0.2s ease,
-      border-color 0.2s ease;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    -webkit-app-region: no-drag;
   }
 
   :global(.sidebar-header-trigger) {
@@ -282,6 +397,25 @@
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--sidebar-primary) 20%, transparent);
   }
 
+  .brand-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--space-6); /* 40px */
+    height: var(--space-6); /* 40px */
+    margin-left: var(--space-2); /* 8px */
+    flex-shrink: 0;
+    border-radius: var(--radius); /* 16px */
+    background: transparent;
+    border: 1px solid transparent;
+    transition:
+      background 0.2s ease,
+      border-color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+  }
 
   .brand-button:hover {
     background: color-mix(in srgb, var(--sidebar-border) 20%, transparent);
@@ -289,8 +423,8 @@
   }
 
   .brand-icon {
-    width: 28px;
-    height: 28px;
+    width: var(--space-4); /* 24px → 28px closest */
+    height: var(--space-4); /* 24px → 28px closest */
     position: absolute;
     inset: 0;
     margin: auto;
@@ -323,6 +457,42 @@
     flex: 1;
   }
 
+  /* История чатов: выравниваем ширину и ховер с остальными пунктами */
+  :global(.chat-session-button [data-slot='menu-button-trigger']) {
+    width: 100%;
+  }
+
+  :global(.chat-session-button [data-slot='menu-button-trigger'] > div) {
+    width: 100%;
+  }
+
+  :global(.chat-session-button button) {
+    width: 100%;
+  }
+
+  :global(.chat-session-actions) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    width: auto;
+    margin-left: auto;
+  }
+
+  /* Ховер/фон у пункта истории на всю ширину */
+  :global(.chat-session-button [data-slot='menu-button']) {
+    width: 100%;
+  }
+
+  /* Видимость кнопки с тремя точками внутри пункта */
+  :global(.chat-session-actions button) {
+    color: var(--sidebar-foreground);
+  }
+
+  :global(.chat-session-actions button:hover) {
+    color: var(--sidebar-primary);
+  }
+
   :global(.app-sidebar__menu) {
     gap: 0.25rem;
   }
@@ -346,10 +516,16 @@
     padding: 0.25rem 0 0.4rem;
   }
 
+  :global(.chats-label) {
+    display: block;
+    padding-left: var(--space-3);
+    padding-top: var(--space-2);
+  }
+
   .indicator-bar {
     position: relative;
-    height: 8px;
-    border-radius: 999px;
+    height: var(--space-2); /* 8px */
+    border-radius: var(--radius-full); /* 9999px */
     background: color-mix(in srgb, var(--sidebar-ring) 18%, transparent 82%);
     overflow: hidden;
   }

@@ -29,7 +29,7 @@ build/
 .out/
 .turbo/
 .cursor/
-
+# /example/
 # Logs
 logs/
 *.log
@@ -65,7 +65,7 @@ desktop.ini
 # Tauri
 src-tauri/target/
 src-tauri/gen/
-**/example/
+# **/example/
 # Ignore example folder (examples from upstream, not checked by linters)
 
 # License compliance reports

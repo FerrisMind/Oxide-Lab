@@ -257,11 +257,38 @@ export function createActions(ctx: ChatControllerCtx) {
       });
       return;
     }
-    // Сохраняем явные управляющие команды (/think, /no_think) в истории как есть
+
+    // Добавляем сообщение пользователя в БД
+    const chatHistoryModule = await import('$lib/stores/chat-history');
+    const { chatHistory } = chatHistoryModule;
+
+    // Если нет текущей сессии, создаем её
+    const state = get(chatHistory);
+    if (!state.currentSessionId) {
+      await chatHistory.createSession(ctx.modelPath, ctx.repoId);
+    }
+
+    // Сохраняем user message
+    await chatHistory.addMessage({ role: 'user', content: text });
+
+    // Сохраняем placeholder для ассистента - он обновится через стрим
+    // ВАЖНО: Мы сначала добавляем его в БД, а потом будем обновлять content
+    // Или, лучше: добавляем в UI ctx.messages, а в БД запишем только в конце?
+    // План гласит: "Сохранять сообщение в БД только после завершения генерации"
+    // Значит user message сохраняем сразу, а assistant - потом.
+
+    // Обновляем локальный контекст из стора (или просто пушим для реактивности, если ctx не подписан напрямую)
+    // ctx.messages = get(currentSession)?.messages || [];
+    // ^ Это зависит от того, как ctx.messages связаны.
+    // В старом коде: msgs.push... ctx.messages = msgs.
+    // Сделаем так же для совместимости, но данные берем из стора если нужно.
+
+    // Для совместимости с текущим рендерингом (если он не полностью переведен на стор):
     const msgs = ctx.messages;
     msgs.push({ role: 'user', content: text } as any);
     msgs.push({ role: 'assistant', content: '' } as any);
     ctx.messages = msgs;
+
     ctx.prompt = '';
     queueMicrotask(() => {
       const c = ctx.messagesEl;
@@ -358,6 +385,16 @@ export function createActions(ctx: ChatControllerCtx) {
   async function stopGenerate() {
     try {
       await invoke('cancel_generation');
+      // Save partial generation
+      const { chatHistory } = await import('$lib/stores/chat-history');
+      const state = get(chatHistory);
+      if (state.currentSessionId) {
+        const msgs = ctx.messages;
+        const last = msgs[msgs.length - 1];
+        if (last && last.role === 'assistant' && last.content) {
+          await chatHistory.saveAssistantMessage(state.currentSessionId, last.content);
+        }
+      }
     } catch {}
   }
 

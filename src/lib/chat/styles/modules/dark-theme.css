@@ -1,11 +1,12 @@
 @media (prefers-color-scheme: dark) {
-  /* Chat-specific dark tweaks only */
+  /* Chat-specific dark tweaks only (keep consistent with global palette) */
   .field input {
-    background: #2d2d2d;
-    border-color: #3a3a3a;
+    background: var(--card);
+    border-color: var(--border-color);
+    color: var(--text);
   }
   .field input::placeholder {
-    color: #bdbdbd;
+    color: var(--muted);
     opacity: 1;
   }
 }

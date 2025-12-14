@@ -83,8 +83,17 @@
       <span class="loading-text">Выгрузка модели... {Math.round(unloadingProgress)}%</span>
     </div>
   {:else if isLoaded}
-    <UploadSimple size={18} style="vertical-align: -3px;" /> Выгрузить
+    <span class="btn-icon"><UploadSimple size={18} /></span> Выгрузить
   {:else}
-    <DownloadSimple size={18} style="vertical-align: -3px;" /> Загрузить
+    <span class="btn-icon"><DownloadSimple size={18} /></span> Загрузить
   {/if}
 </button>
+
+<style>
+  /* Icon alignment for buttons - using flexbox instead of hardcoded pixels */
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+  }
+</style>

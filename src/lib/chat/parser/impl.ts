@@ -1,12 +1,9 @@
 import type { ParseResult, StreamSegment } from './types.js';
 import { escapeAttr, escapeHtml } from './escape.js';
-import { KNOWN_TAG_PREFIXES, THINK_OPEN_TOKEN, THINK_CLOSE_TOKEN } from './constants.js';
+import { KNOWN_TAG_PREFIXES, THINK_CLOSE_TOKEN, THINK_OPEN_TOKEN } from './constants.js';
 
 export function createStreamParser() {
   // Состояния парсера для потокового разбора спец-тегов
-  let inThink = false;
-  let thinkBuf = '';
-  let thinkOpenEmitted = false;
   let inCode = false;
   let codeLang: string | null = null;
   let _codeBuf = '';
@@ -39,47 +36,6 @@ export function createStreamParser() {
 
     let i = 0;
     while (i < buf.length) {
-      // Внутри <think> (инкрементально)
-      if (inThink) {
-        const endIdx = buf.indexOf('</think>', i);
-        if (endIdx === -1) {
-          // Закрывающего тега в этом чанке нет — аккумулируем
-          const chunk = buf.slice(i);
-          const isFirstPortion = thinkBuf.length === 0;
-          thinkBuf += chunk;
-          let out = chunk.replace(/<\/?think>/gi, '');
-          if (isFirstPortion) out = out.replace(/^[ \t]*(?:\r?\n)+/, '');
-          // Если содержимое непустое и открытие ещё не было эмитировано — эмитируем открывающий HTML
-          if (!thinkOpenEmitted && thinkBuf.trim().length > 0) {
-            thinkOpenEmitted = true;
-            segments.push({ kind: 'html', data: THINK_OPEN_TOKEN });
-          }
-          if (thinkOpenEmitted) {
-            segments.push({ kind: 'html', data: escapeHtml(out) });
-          }
-          i = buf.length;
-          break;
-        }
-        const chunk = buf.slice(i, endIdx);
-        const isFirstPortion = thinkBuf.length === 0;
-        thinkBuf += chunk;
-        let out = chunk.replace(/<\/?think>/gi, '');
-        if (isFirstPortion) out = out.replace(/^[ \t]*(?:\r?\n)+/, '');
-        if (!thinkOpenEmitted && thinkBuf.trim().length > 0) {
-          thinkOpenEmitted = true;
-          segments.push({ kind: 'html', data: THINK_OPEN_TOKEN });
-        }
-        if (thinkOpenEmitted) {
-          segments.push({ kind: 'html', data: escapeHtml(out) });
-          segments.push({ kind: 'html', data: THINK_CLOSE_TOKEN });
-        }
-        thinkBuf = '';
-        thinkOpenEmitted = false;
-        inThink = false;
-        i = endIdx + '</think>'.length;
-        continue;
-      }
-
       // Внутри кода (инкрементальный вывод)
       if (inCode) {
         const closeCandidates: Array<{ token: string; index: number }> = [];
@@ -202,19 +158,6 @@ export function createStreamParser() {
       appendPlain(buf.slice(i, lt));
       i = lt;
       const rest = buf.slice(i);
-
-      // think
-      if (rest.startsWith('<think>')) {
-        inThink = true;
-        thinkBuf = '';
-        thinkOpenEmitted = false;
-        i += '<think>'.length;
-        continue;
-      }
-      if (rest.startsWith('</think>')) {
-        i += '</think>'.length;
-        continue;
-      }
 
       // ChatML / роли
       // Gemma-style turn markers
@@ -370,6 +313,56 @@ export function createStreamParser() {
         continue;
       }
 
+      // Потоковые размышления: передаем теги как есть, без спец-парсинга
+      if (rest.startsWith(THINK_OPEN_TOKEN)) {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'debug-session',
+            runId: 'run-pre-fix',
+            hypothesisId: 'H12',
+            location: 'parser.impl.ts:parse',
+            message: 'THINK_OPEN_TOKEN encountered',
+            data: { index: i, bufSnippet: rest.slice(0, 80) },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        appendPlain(THINK_OPEN_TOKEN);
+        i += THINK_OPEN_TOKEN.length;
+        continue;
+      }
+      if (rest.startsWith(THINK_CLOSE_TOKEN)) {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'debug-session',
+            runId: 'run-pre-fix',
+            hypothesisId: 'H12',
+            location: 'parser.impl.ts:parse',
+            message: 'THINK_CLOSE_TOKEN encountered',
+            data: { index: i, bufSnippet: rest.slice(0, 80) },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        appendPlain(THINK_CLOSE_TOKEN);
+        i += THINK_CLOSE_TOKEN.length;
+        continue;
+      }
+
+      // Если теги размышлений пришли частично — ждём догрузку
+      if (
+        THINK_OPEN_TOKEN.startsWith(rest) ||
+        THINK_CLOSE_TOKEN.startsWith(rest)
+      ) {
+        break;
+      }
+
       // reserved tokens
       const m = rest.match(/^<\|reserved_[^|]*\|>/);
       if (m) {
@@ -395,8 +388,6 @@ export function createStreamParser() {
   }
 
   function reset() {
-    inThink = false;
-    thinkBuf = '';
     inCode = false;
     codeLang = null;
     _codeBuf = '';

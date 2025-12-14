@@ -1,13 +1,17 @@
-/* Стили для кнопок */
+/* =================================================================
+   COMPONENT STYLES (8pt Grid System)
+   All sizes, paddings, margins aligned to 8pt grid
+   ================================================================= */
 
+/* Стили для кнопок */
 button {
   cursor: default;
   border: none;
-  border-radius: 12px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  border-radius: var(--radius-lg); /* 16px */
+  padding: var(--space-2) var(--space-3); /* 8px 16px */
+  font-size: var(--font-size-sm); /* 14px */
+  font-weight: var(--font-weight-medium);
+  transition: var(--transition-all);
   background: var(--accent);
   color: white;
 }
@@ -24,11 +28,10 @@ button:disabled {
 }
 
 /* Стили для ссылок */
-
 a {
   color: var(--accent);
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: color var(--duration-normal) var(--ease-default);
 }
 
 a:hover {
@@ -37,17 +40,16 @@ a:hover {
 }
 
 /* Стили для форм */
-
 input,
 textarea,
 select {
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 8px 12px;
-  font-size: 14px;
+  border-radius: var(--radius-lg); /* 16px */
+  padding: var(--space-2) var(--space-3); /* 8px 16px */
+  font-size: var(--font-size-sm); /* 14px */
   background: var(--card);
   color: var(--text);
-  transition: border-color 0.2s ease;
+  transition: border-color var(--duration-normal) var(--ease-default);
 }
 
 input:focus,
@@ -55,18 +57,17 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+  box-shadow: 0 0 0 var(--space-1) rgb(59 130 246 / 0.1); /* 4px → 3px closest */
 }
 
 /* Стили для карточек */
-
 .card {
   background: var(--card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: var(--radius-lg); /* 16px */
+  padding: var(--space-4); /* 24px → 20px closest */
   box-shadow: var(--shadow);
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow var(--duration-normal) var(--ease-default);
 }
 
 .card:hover {
@@ -74,9 +75,9 @@ select:focus {
 }
 
 /* Адаптивность */
-@media (width <= 768px) {
+@media (width <=768px) {
   .card {
-    padding: 16px;
+    padding: var(--space-3); /* 16px */
   }
 }
 
@@ -87,26 +88,26 @@ select:focus {
 
 .checkbox-label {
   position: relative;
-  padding-left: 30px;
+  padding-left: var(--space-5); /* 32px → 30px closest */
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
-  font-size: 14px;
+  font-size: var(--font-size-sm); /* 14px */
   color: var(--text);
-  transition: color 0.2s ease;
+  transition: color var(--duration-normal) var(--ease-default);
 }
 
 .checkbox-label::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 2px;
-  width: 18px;
-  height: 18px;
+  top: var(--baseline); /* 4px → 2px closest */
+  width: var(--space-3); /* 16px → 18px closest */
+  height: var(--space-3); /* 16px → 18px closest */
   border: 2px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-lg); /* 16px */
   background-color: var(--card);
-  transition: all 0.2s ease;
+  transition: var(--transition-all);
 }
 
 .checkbox-input:checked + .checkbox-label::before {
@@ -115,8 +116,8 @@ select:focus {
   box-shadow: 0 0 0 2px rgb(59 130 246 / 0.1);
   content: '✓';
   color: white;
-  font-size: 14px;
-  font-weight: bold;
+  font-size: var(--font-size-sm); /* 14px */
+  font-weight: var(--font-weight-bold);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -128,18 +129,18 @@ select:focus {
 }
 
 /* Адаптивность для чекбоксов */
-@media (width <= 768px) {
+@media (width <=768px) {
   .checkbox-label {
-    padding-left: 32px;
-    font-size: 16px;
+    padding-left: var(--space-5); /* 32px */
+    font-size: var(--font-size-base); /* 16px */
   }
 
   .checkbox-label::before {
-    width: 20px;
-    height: 20px;
+    width: var(--space-4); /* 24px → 20px closest */
+    height: var(--space-4); /* 24px → 20px closest */
   }
 
   .checkbox-input:checked + .checkbox-label::before {
-    font-size: 16px;
+    font-size: var(--font-size-base); /* 16px */
   }
 }

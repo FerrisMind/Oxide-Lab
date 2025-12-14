@@ -52,3 +52,23 @@ fn test_prompt_builder_with_template() {
     assert!(prompt.contains("assistant: I'm doing well, thank you!"));
     assert!(prompt.ends_with("assistant:"));
 }
+
+#[test]
+fn test_prompt_builder_pythonic_methods_are_normalized() {
+    let template = "{% if messages[0].role.startswith('system') %}SYS{% endif %}{% if messages[0].role.endswith('prompt') %}END{% endif %}";
+    let builder = PromptBuilder::new(Some(template.to_string()));
+    assert!(builder.has_template());
+
+    let messages = vec![ChatMessage {
+        role: "system prompt".to_string(),
+        content: "irrelevant".to_string(),
+    }];
+
+    let result = builder.render_prompt(messages);
+    assert!(result.is_ok(), "Template with pythonic methods should render");
+    let prompt = result.unwrap();
+    assert!(
+        prompt.contains("SYS") && prompt.contains("END"),
+        "Rendered prompt should include both checks"
+    );
+}

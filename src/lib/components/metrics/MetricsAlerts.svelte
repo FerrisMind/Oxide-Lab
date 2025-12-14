@@ -339,7 +339,7 @@
   .metrics-alerts {
     background: var(--card);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 1rem;
   }
 
@@ -367,12 +367,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 24px;
-    height: 24px;
+    min-width: var(--space-4);
+    height: var(--space-4);
     padding: 0 0.5rem;
     background: var(--error, #e74c3c);
     color: white;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 0.75rem;
     font-weight: 600;
   }
@@ -385,7 +385,7 @@
   .btn {
     padding: 0.375rem 0.75rem;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 0.75rem;
     font-weight: 500;
     cursor: default;
@@ -396,8 +396,8 @@
     background: transparent;
     border: 1px solid var(--border-color);
     color: var(--text);
-    width: 32px;
-    height: 32px;
+    width: var(--space-5);
+    height: var(--space-5);
     padding: 0;
     font-size: 1.25rem;
   }
@@ -420,7 +420,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    max-height: 400px;
+    max-height: 400px; /* Custom constraint, not part of 8pt grid */
     overflow-y: auto;
   }
 
@@ -443,7 +443,7 @@
 
   .alert {
     padding: 0.75rem;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     border: 2px solid;
     transition: all 0.3s ease;
   }
@@ -494,15 +494,15 @@
   }
 
   .btn-dismiss {
-    width: 24px;
-    height: 24px;
+    width: var(--space-4);
+    height: var(--space-4);
     padding: 0;
     background: transparent;
     border: 1px solid var(--border-color);
     color: var(--text);
     font-size: 1.25rem;
     line-height: 1;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
   }
 
   .btn-dismiss:hover {
@@ -543,7 +543,7 @@
 
   /* Скроллбар */
   .alerts-list::-webkit-scrollbar {
-    width: 8px;
+    width: var(--space-2);
   }
 
   .alerts-list::-webkit-scrollbar-track {
@@ -552,7 +552,7 @@
 
   .alerts-list::-webkit-scrollbar-thumb {
     background: rgba(179, 205, 224, 0.6);
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
   }
 
   .alerts-list::-webkit-scrollbar-thumb:hover {

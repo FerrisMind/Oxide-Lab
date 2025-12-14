@@ -211,6 +211,11 @@ fn generate_stream_impl(
 
     let _vocab = tos.tokenizer().get_vocab(true);
 
+    // Сбрасываем KV-кэш перед новым запросом, чтобы не тянуть состояние предыдущего диалога.
+    if let Some(model) = guard.gguf_model.as_mut() {
+        model.clear_kv_cache();
+    }
+
     // Начинаем prefill
     inference_tracker.start_prefill();
 
@@ -382,6 +387,11 @@ fn generate_stream_impl(
         emitter.push_maybe_emit(&rest);
     }
     emitter.finalize();
+
+    // Очищаем KV-кэш после запроса, чтобы следующее поколение стартовало с чистого состояния.
+    if let Some(model) = guard.gguf_model.as_mut() {
+        model.clear_kv_cache();
+    }
 
     // Финализируем метрики inference
     let inference_metrics = tokio::runtime::Runtime::new()

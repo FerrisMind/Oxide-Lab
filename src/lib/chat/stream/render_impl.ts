@@ -1,5 +1,4 @@
 import type { StreamSegment } from './render_types.js';
-import { appendThinkAwareHtml } from './think_html.js';
 import {
   _assistantBubbleEls,
   bubbleCtxs,
@@ -23,29 +22,50 @@ export function appendSegments(
   isStreaming: boolean = true,
 ) {
   let ctx = (bubbleCtxs.get(index) ?? {
-    inThink: false,
-    thinkBlock: null,
-    thinkCardEl: null,
-    thinkBody: null,
-    thinkToggleBtn: null,
-    thinkLoaderEl: null,
-    thinkChevronEl: null,
-    thinkLabelEl: null,
-    thinkKey: null,
-    thinkExpanded: false,
-    thinkToggleHandler: null,
     mdEl: null,
     mdContentEl: null,
     mdRawEl: null,
     mdText: '',
     lastKind: null,
-    codeMirrorWatching: false,
     externalButton: null,
   }) as any;
 
   for (const seg of segments) {
+    // #region agent log
+    if (seg.kind === 'text' && (seg.data.includes('<think') || seg.data.includes('&lt;think'))) {
+      fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'run-pre-fix',
+          hypothesisId: 'H9',
+          location: 'render_impl.ts:appendSegments',
+          message: 'incoming text segment with think',
+          data: { index, isStreaming, snippet: seg.data.slice(0, 160) },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    }
+    if (seg.kind === 'html' && (seg.data.includes('<think') || seg.data.includes('&lt;think'))) {
+      fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'run-pre-fix',
+          hypothesisId: 'H9',
+          location: 'render_impl.ts:appendSegments:html',
+          message: 'incoming html segment with think',
+          data: { index, isStreaming, snippet: seg.data.slice(0, 160) },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    }
+    // #endregion
+
     if (seg.kind === 'html') {
-      appendThinkAwareHtml(ctx, bubble, seg.data);
+      bubble.insertAdjacentHTML('beforeend', seg.data);
       ctx.lastKind = 'html';
     } else {
       ctx = ensureMarkdownContainer(ctx, bubble);
