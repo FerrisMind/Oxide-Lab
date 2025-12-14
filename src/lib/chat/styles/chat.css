@@ -45,6 +45,8 @@
 
   /* Mobile padding */
   padding: var(--message-padding-mobile); /* 16px 24px */
+  padding-right: calc(var(--space-4) + var(--space-2)); /* подвинуть скроллбар внутрь */
+  scrollbar-gutter: stable;
 
   flex: 1 1 auto;
   max-width: var(--chat-max-width); /* 800px */
@@ -64,6 +66,7 @@
 @media (min-width: 768px) {
   .messages {
     padding: var(--message-padding-desktop); /* 24px 32px */
+    padding-right: calc(var(--space-5) + var(--space-2)); /* +8px справа для скроллбара */
     padding-bottom: calc(160px + var(--space-5)); /* 160px + 32px */
   }
 }

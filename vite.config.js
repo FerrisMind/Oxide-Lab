@@ -29,19 +29,18 @@ export default defineConfig(async () => ({
       // 3. tell Vite to ignore watching `src-tauri` and documentation files
       // @ts-ignore - chokidar supports function in ignored
       ignored: (path) => {
-        // Ignore src-tauri
-        if (path.includes('src-tauri')) return true;
-        // Ignore example directory
-        if (path.includes('example')) return true;
-        // Ignore documentation files in root (but allow markdown in src/ for content)
-        const rootDocFiles = ['ROADMAP', 'README', 'LICENSE', 'THIRD_PARTY_LICENSES'];
-        const isRootDocFile = rootDocFiles.some(
-          (name) => path.includes(name) && !path.includes('src/'),
-        );
-        if (isRootDocFile) return true;
-        // Standard ignores
-        if (path.includes('.git') || path.includes('node_modules')) return true;
-        return false;
+        const normalized = path.replace(/\\/g, '/');
+        const isUi =
+          normalized.includes('/src/') ||
+          normalized.endsWith('/src') ||
+          normalized.includes('/static/') ||
+          normalized.endsWith('/static');
+
+        // Allow HMR только для UI-кода
+        if (isUi) return false;
+
+        // Всё остальное игнорируем, чтобы UI не перезагружался
+        return true;
       },
     },
   },
