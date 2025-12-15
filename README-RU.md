@@ -197,7 +197,7 @@ Oxide Lab умеет подгружать только проверенные м
 - Визуализация «размышлений» ИИ
 
 <p align="center">
-  <img src=".github/assets/screenshots/chat-dark.png" alt="Oxide Lab Chat UI (Dark)" width="720" />
+  <img src=".github/assets/screenshots/chat-dark.png" alt="Oxide Lab Chat UI (Dark)" width="900" />
 </p>
 
 ### ⚡ **Быстрые действия**

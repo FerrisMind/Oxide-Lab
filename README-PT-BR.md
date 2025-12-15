@@ -182,7 +182,7 @@ Baixe um modelo no formato `.gguf` e o arquivo `tokenizer.json`:
 - Exibição visual do pensamento da IA
 
 <p align="center">
-  <img src=".github/assets/screenshots/chat-dark.png" alt="Interface de Chat Oxide Lab (Escuro)" width="720" />
+  <img src=".github/assets/screenshots/chat-dark.png" alt="Interface de Chat Oxide Lab (Escuro)" width="900" />
 </p>
 
 ### ⚡ **Ações Rápidas**
