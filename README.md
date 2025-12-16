@@ -1,4 +1,4 @@
-[![English](https://img.shields.io/badge/English-Active-success)](README.md) [![Русский](https://img.shields.io/badge/Русский-Inactive-lightgrey)](README-RU.md) [![Português](https://img.shields.io/badge/Português-Inactive-lightgrey)](README-PT-BR.md) ![Oxide Lab](https://img.shields.io/badge/Status-Active-brightgreen) ![Platform](https://img.shields.io/badge/Platform-Windows-blue) ![License](https://img.shields.io/badge/License-MIT-yellow)
+[![English](https://img.shields.io/badge/English-Active-success)](README.md) [![Русский](https://img.shields.io/badge/Русский-Inactive-lightgrey)](README-RU.md) [![Português](https://img.shields.io/badge/Português-Inactive-lightgrey)](README-PT-BR.md)
 
 <br />
 
@@ -11,6 +11,7 @@
 
 > **Private, powerful and easy-to-use AI chat right on your computer**
 
+![Oxide Lab](https://img.shields.io/badge/Status-Active-brightgreen) ![Platform](https://img.shields.io/badge/Platform-Windows-blue) ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ![GitHub Stars](https://img.shields.io/github/stars/FerrisMind/Oxide-Lab?style=social) [![Awesome Tauri](https://awesome.re/mentioned-badge.svg)](https://github.com/tauri-apps/awesome-tauri) [![Awesome Svelte](https://awesome.re/mentioned-badge.svg)](https://github.com/TheComputerM/awesome-svelte)
 
