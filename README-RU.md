@@ -4,7 +4,7 @@
 
 <!-- Логотип проекта -->
 <p align="center">
-  <img src=".github/assets/logo.svg" alt="Логотип Oxide Lab" width="512" />
+  <img src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/logo.svg" alt="Логотип Oxide Lab" width="512" />
 </p>
 
 <br />
@@ -17,7 +17,7 @@
 
 
 <p align="center">
-  <img src=".github/assets/screenshots/chat-dark.png" alt="Oxide Lab Chat UI (Dark)" width="900" />
+  <img src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/screenshots/chat-dark.png" alt="Oxide Lab Chat UI (Dark)" width="900" />
 </p>
 
 
