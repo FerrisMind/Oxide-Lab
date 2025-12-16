@@ -9,6 +9,7 @@
       html,
       body {
         height: 100%;
+        background: #f5f7fb;
       }
       body {
         min-height: 100dvh;
@@ -56,6 +57,10 @@
 
       /* Темная тема */
       @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background: #1a1f2e;
+        }
         ::-webkit-scrollbar-thumb {
           background: rgba(91, 124, 153, 0.6);
           background-clip: content-box;

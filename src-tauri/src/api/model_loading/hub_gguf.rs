@@ -1,4 +1,4 @@
-use super::emit_load_progress;
+use super::{LoadDebugCtx, emit_load_progress_debug};
 use crate::core::state::ModelState;
 use crate::core::tokenizer::{
     extract_chat_template, find_chat_template_in_metadata, mark_special_chat_tokens,
@@ -22,7 +22,9 @@ pub fn load_hub_gguf_model(
     context_length: usize,
     _device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
-    emit_load_progress(
+    let dbg = LoadDebugCtx::new();
+    emit_load_progress_debug(
+        &dbg,
         app,
         "start",
         0,
@@ -38,11 +40,12 @@ pub fn load_hub_gguf_model(
 
     // Скачиваем GGUF-файл в кэш и открываем
     let model_path = api.get(&filename).map_err(|e| {
-        emit_load_progress(app, "hub_get", 10, None, false, Some(&e.to_string()));
+        emit_load_progress_debug(&dbg, app, "hub_get", 10, None, false, Some(&e.to_string()));
         format!("hf_hub get {} failed: {}", filename, e)
     })?;
     log_hub!("gguf cached at {}", model_path.display());
-    emit_load_progress(
+    emit_load_progress_debug(
+        &dbg,
         app,
         "hub_get",
         15,
@@ -53,10 +56,11 @@ pub fn load_hub_gguf_model(
     let mut file = File::open(&model_path).map_err(|e| e.to_string())?;
     let content = gguf_file::Content::read(&mut file).map_err(|e| {
         let msg = e.with_path(model_path.clone()).to_string();
-        emit_load_progress(app, "read_header", 25, None, false, Some(&msg));
+        emit_load_progress_debug(&dbg, app, "read_header", 25, None, false, Some(&msg));
         msg
     })?;
-    emit_load_progress(
+    emit_load_progress_debug(
+        &dbg,
         app,
         "read_header",
         30,
@@ -65,7 +69,15 @@ pub fn load_hub_gguf_model(
         None,
     );
     if CANCEL_LOADING.load(Ordering::SeqCst) {
-        emit_load_progress(app, "cancel", 32, Some("Отменено"), true, Some("cancelled"));
+        emit_load_progress_debug(
+            &dbg,
+            app,
+            "cancel",
+            32,
+            Some("Отменено"),
+            true,
+            Some("cancelled"),
+        );
         return Err("cancelled".into());
     }
 
@@ -91,22 +103,31 @@ pub fn load_hub_gguf_model(
         }
         None => log_template!("not found in tokenizer.json"),
     }
-    emit_load_progress(app, "tokenizer", 40, Some("Инициализирован"), false, None);
+    emit_load_progress_debug(
+        &dbg,
+        app,
+        "tokenizer",
+        40,
+        Some("Инициализирован"),
+        false,
+        None,
+    );
     let arch = detect_arch(&content.metadata).ok_or_else(|| {
         let err = "Unsupported GGUF architecture".to_string();
-        emit_load_progress(app, "detect_arch", 45, None, false, Some(&err));
+        emit_load_progress_debug(&dbg, app, "detect_arch", 45, None, false, Some(&err));
         err
     })?;
 
     // Проверяем наличие неподдерживаемых типов данных в тензорах
     check_supported_dtypes(&content).map_err(|dtype_error| {
         let error_msg = format!("Unsupported quantization types: {}", dtype_error);
-        emit_load_progress(app, "dtype_check", 45, None, false, Some(&error_msg));
+        emit_load_progress_debug(&dbg, app, "dtype_check", 45, None, false, Some(&error_msg));
         log::error!("Model loading blocked: {}", dtype_error);
         error_msg
     })?;
 
-    emit_load_progress(
+    emit_load_progress_debug(
+        &dbg,
         app,
         "detect_arch",
         50,
@@ -115,7 +136,15 @@ pub fn load_hub_gguf_model(
         None,
     );
     if CANCEL_LOADING.load(Ordering::SeqCst) {
-        emit_load_progress(app, "cancel", 52, Some("Отменено"), true, Some("cancelled"));
+        emit_load_progress_debug(
+            &dbg,
+            app,
+            "cancel",
+            52,
+            Some("Отменено"),
+            true,
+            Some("cancelled"),
+        );
         return Err("cancelled".into());
     }
 
@@ -148,7 +177,7 @@ pub fn load_hub_gguf_model(
     }
 
     // Use the model factory to build the model
-    emit_load_progress(app, "build_model", 60, None, false, None);
+    emit_load_progress_debug(&dbg, app, "build_model", 60, None, false, None);
     // Build model
     let mut model_backend = get_model_factory()
         .build_from_gguf(
@@ -160,7 +189,7 @@ pub fn load_hub_gguf_model(
             false,
         )
         .map_err(|e| {
-            emit_load_progress(app, "build_model", 65, None, false, Some(&e));
+            emit_load_progress_debug(&dbg, app, "build_model", 65, None, false, Some(&e));
             format!("Failed to build model: {}", e)
         })?;
 
@@ -169,7 +198,8 @@ pub fn load_hub_gguf_model(
         && let Ok(cfg_val) = serde_json::from_str::<serde_json::Value>(gg)
     {
         if let Err(e) = model_backend.apply_config(&cfg_val) {
-            emit_load_progress(
+            emit_load_progress_debug(
+                &dbg,
                 app,
                 "apply_config",
                 75,
@@ -178,7 +208,8 @@ pub fn load_hub_gguf_model(
                 Some(&format!("Model apply_config failed: {}", e)),
             );
         } else {
-            emit_load_progress(
+            emit_load_progress_debug(
+                &dbg,
                 app,
                 "apply_config",
                 75,
@@ -188,7 +219,8 @@ pub fn load_hub_gguf_model(
             );
         }
     }
-    emit_load_progress(
+    emit_load_progress_debug(
+        &dbg,
         app,
         "build_model_done",
         85,
@@ -197,7 +229,15 @@ pub fn load_hub_gguf_model(
         None,
     );
     if CANCEL_LOADING.load(Ordering::SeqCst) {
-        emit_load_progress(app, "cancel", 90, Some("Отменено"), true, Some("cancelled"));
+        emit_load_progress_debug(
+            &dbg,
+            app,
+            "cancel",
+            90,
+            Some("Отменено"),
+            true,
+            Some("cancelled"),
+        );
         return Err("cancelled".into());
     }
 
@@ -217,7 +257,8 @@ pub fn load_hub_gguf_model(
         "hub gguf loaded, context_length={}, tokenizer_source=embedded/bpe",
         guard.context_length
     );
-    emit_load_progress(
+    emit_load_progress_debug(
+        &dbg,
         app,
         "finalize",
         95,
@@ -225,7 +266,7 @@ pub fn load_hub_gguf_model(
         false,
         None,
     );
-    emit_load_progress(app, "complete", 100, Some("Готово"), true, None);
+    emit_load_progress_debug(&dbg, app, "complete", 100, Some("Готово"), true, None);
 
     Ok(())
 }

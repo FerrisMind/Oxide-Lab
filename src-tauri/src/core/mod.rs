@@ -11,3 +11,6 @@ pub mod types;
 pub mod weights;
 // Убрали мультимодальность: vision/audio/multimodal/attachments/attachment_router удалены
 pub mod attachments_text;
+pub mod background_mode;
+pub mod rayon_pool;
+pub mod thread_priority;

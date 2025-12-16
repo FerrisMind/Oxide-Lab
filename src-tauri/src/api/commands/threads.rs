@@ -5,6 +5,13 @@ use tauri::AppHandle;
 
 const RAYON_ENV_VAR: &str = "RAYON_NUM_THREADS";
 
+pub(crate) fn default_rayon_thread_limit() -> usize {
+    let cpus = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1);
+    cpus.saturating_sub(1).max(1)
+}
+
 pub(crate) fn apply_rayon_thread_limit(limit: Option<usize>) {
     unsafe {
         match limit {

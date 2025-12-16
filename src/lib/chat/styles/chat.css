@@ -11,6 +11,7 @@
   height: 100%;
   width: 100%;
   position: relative;
+  background: #1a1f2e;
 }
 
 .chat {
@@ -136,7 +137,8 @@
 .message.user .bubble {
   background: var(--panel-bg);
   color: var(--text);
-  border-radius: var(--message-border-radius); /* 12px */
+  border-radius: var(--message-border-radius); /* 12px базовый радиус */
+  border-top-right-radius: 0; /* убираем скругление правого верхнего угла для пользовательских сообщений */
   max-width: var(--message-content-max-width); /* 736px */
 }
 
@@ -261,7 +263,7 @@
   min-height: 0;
   padding: var(--space-3); /* 16px */
   box-sizing: border-box;
-  background: transparent;
+  background: #1a1f2e;
   border-radius: var(--radius-lg); /* 16px */
   margin: 0;
 }

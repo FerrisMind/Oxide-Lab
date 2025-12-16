@@ -125,9 +125,9 @@ fn test_prompt_builder_functionality() {
     ];
 
     let prompt = builder.build_fallback_prompt(messages.clone());
-    assert!(prompt.contains("\u{1f60a}user"));
-    assert!(prompt.contains("\u{1f60a}assistant"));
-    assert!(prompt.ends_with("\u{1f60a}assistant\n"));
+    assert!(prompt.contains("user\nHello, how are you?"));
+    assert!(prompt.contains("assistant\nI'm doing well, thank you!"));
+    assert!(prompt.ends_with("assistant\n"));
 
     // Test prompt builder with template
     let template = "{% for message in messages %}{{ message.role }}: {{ message.content }}\n{% endfor %}{% if add_generation_prompt %}assistant:{% endif %}";

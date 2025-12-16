@@ -879,6 +879,11 @@
     flex-direction: row;
     align-items: stretch;
     height: 100%;
+    background: #1a1f2e;
+  }
+
+  :global(main.wrap) {
+    padding: 0 !important;
   }
 
   /* Левая колонка (сообщения+композер) занимает всё доступное */

@@ -16,6 +16,14 @@ import { t } from '$lib/i18n';
 export function createActions(ctx: ChatControllerCtx) {
   const stream = createStreamListener(ctx);
 
+  function isModelLoadDebugEnabled() {
+    try {
+      return localStorage.getItem('oxide.debugModelLoad') === '1';
+    } catch {
+      return false;
+    }
+  }
+
   // Реальный прогресс загрузки из Rust
   type LoadProgressEvent = {
     stage: string;
@@ -25,11 +33,18 @@ export function createActions(ctx: ChatControllerCtx) {
     error?: string;
   };
   let loadUnlisten: UnlistenFn | null = null;
+  let lastLoadProgressAt = 0;
   async function ensureLoadProgressListener() {
     if (loadUnlisten) return;
     try {
       loadUnlisten = await listen<LoadProgressEvent>('load_progress', async (e) => {
         const p = e.payload || ({} as any);
+        if (isModelLoadDebugEnabled()) {
+          const now = performance.now();
+          const delta = lastLoadProgressAt ? Math.round(now - lastLoadProgressAt) : 0;
+          lastLoadProgressAt = now;
+          console.debug('[load_progress]', { deltaMs: delta, ...p });
+        }
         if (typeof p.progress === 'number')
           ctx.loadingProgress = Math.max(0, Math.min(100, Math.floor(p.progress)));
         if (typeof p.stage === 'string') ctx.loadingStage = p.stage;
@@ -130,6 +145,19 @@ export function createActions(ctx: ChatControllerCtx) {
     ctx.busy = true;
     ctx.isLoaded = false;
     ctx.errorText = '';
+    let stallTimer: ReturnType<typeof setInterval> | null = null;
+    if (isModelLoadDebugEnabled()) {
+      const intervalMs = 250;
+      let expected = performance.now() + intervalMs;
+      stallTimer = setInterval(() => {
+        const now = performance.now();
+        const drift = now - expected;
+        expected = now + intervalMs;
+        if (drift > 500) {
+          console.warn('[ui-stall] event loop blocked', { driftMs: Math.round(drift) });
+        }
+      }, intervalMs);
+    }
     try {
       await ensureLoadProgressListener();
       await stream.ensureListener();
@@ -212,6 +240,7 @@ export function createActions(ctx: ChatControllerCtx) {
         await message(err, { title: get(t)('chat.errors.loadFailed'), kind: 'error' });
       } catch {}
     } finally {
+      if (stallTimer) clearInterval(stallTimer);
       // Управление состоянием происходит через события load_progress
     }
   }

@@ -29,8 +29,8 @@ build/
 .out/
 .turbo/
 .cursor/
-# /example/
-# Logs
+/example/
+Logs
 logs/
 *.log
 npm-debug.log*
@@ -38,7 +38,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .github/copilot-instructions.md
-
+/.kiro/
 # Env files (keep examples)
 .env
 .env.*
@@ -47,6 +47,7 @@ pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+/scripts/
 
 # Lint/Test artifacts
 .eslintcache
@@ -65,7 +66,7 @@ desktop.ini
 # Tauri
 src-tauri/target/
 src-tauri/gen/
-# **/example/
+**/example/
 # Ignore example folder (examples from upstream, not checked by linters)
 
 # License compliance reports

@@ -1,9 +1,8 @@
 <script lang="ts">
   import Stop from "phosphor-svelte/lib/Stop";
-  import Package from "phosphor-svelte/lib/Package";
-  import _TextT from "phosphor-svelte/lib/TextT";
-import CheckCircle from "phosphor-svelte/lib/CheckCircle";
+  import CheckCircle from "phosphor-svelte/lib/CheckCircle";
   import Lightbulb from "phosphor-svelte/lib/Lightbulb";
+  import { Spinner } from '$lib/components/ui/spinner';
   import { t } from '$lib/i18n';
   
   interface Props {
@@ -45,7 +44,8 @@ import CheckCircle from "phosphor-svelte/lib/CheckCircle";
       {:else if loadingStage === "complete"}
         <span class="stage-icon"><CheckCircle size={16} weight="bold" /></span> {$t('chat.loading.complete')}
       {:else}
-        <span class="stage-icon"><Package size={16} weight="bold" /></span> {stageText(loadingStage)}
+        <span class="stage-icon"><Spinner size={16} testId="model-loading-spinner" /></span>
+        {stageText(loadingStage)}
       {/if}
     </div>
     {#if !isCancelling}

@@ -65,7 +65,10 @@ fn test_prompt_builder_pythonic_methods_are_normalized() {
     }];
 
     let result = builder.render_prompt(messages);
-    assert!(result.is_ok(), "Template with pythonic methods should render");
+    assert!(
+        result.is_ok(),
+        "Template with pythonic methods should render"
+    );
     let prompt = result.unwrap();
     assert!(
         prompt.contains("SYS") && prompt.contains("END"),

@@ -3,12 +3,15 @@ use tauri::Emitter;
 #[cfg(debug_assertions)]
 use tauri::Manager;
 
-use crate::api::commands::threads::apply_rayon_thread_limit;
+use crate::api::commands::threads::{apply_rayon_thread_limit, default_rayon_thread_limit};
 use crate::core::device::select_device;
 use crate::core::performance::StartupTracker;
+use crate::core::rayon_pool::init_global_low_priority_pool;
 use crate::core::state::{ModelState, SharedState};
+use crate::core::thread_priority::set_current_thread_above_normal;
 use crate::core::types::DevicePreference;
 use crate::i18n;
+use crate::log_load_warn;
 use crate::models::common::model::ModelBackend;
 use tauri_plugin_sql::{Builder, Migration, MigrationKind};
 
@@ -62,11 +65,10 @@ pub fn run() {
         guard.performance_monitor.clone()
     };
 
-    let migrations = vec![
-        Migration {
-            version: 1,
-            description: "create sessions and messages tables",
-            sql: "
+    let migrations = vec![Migration {
+        version: 1,
+        description: "create sessions and messages tables",
+        sql: "
                 CREATE TABLE IF NOT EXISTS sessions (
                     id TEXT PRIMARY KEY,
                     title TEXT NOT NULL,
@@ -87,9 +89,8 @@ pub fn run() {
                 );
                 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
             ",
-            kind: MigrationKind::Up,
-        },
-    ];
+        kind: MigrationKind::Up,
+    }];
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -155,10 +156,24 @@ pub fn run() {
             crate::api::set_locale,
         ])
         .setup(move |app| {
+            // Hybrid responsiveness: keep the window/event-loop thread slightly prioritized on Windows,
+            // while compute threads run at lower priority via the Rayon start handler.
+            let _ = set_current_thread_above_normal();
+
             let handle = app.handle();
             match ModelState::<Box<dyn ModelBackend + Send>>::load_thread_limit(handle) {
                 Ok(limit) => {
-                    apply_rayon_thread_limit(limit);
+                    // Leave 1 core free by default to keep UI responsive during heavy loads.
+                    // If user explicitly configured a limit, always respect it.
+                    let effective_limit = limit.or_else(|| Some(default_rayon_thread_limit()));
+                    apply_rayon_thread_limit(effective_limit);
+                    if let Some(threads) = effective_limit {
+                        match init_global_low_priority_pool(threads) {
+                            Ok(true) => {}
+                            Ok(false) => log_load_warn!("global rayon pool already initialized; low-priority start handler not applied"),
+                            Err(e) => log_load_warn!("failed to initialize global rayon pool: {}", e),
+                        }
+                    }
                     if let Ok(mut guard) = shared.lock() {
                         guard.rayon_thread_limit = limit;
                     }

@@ -14,7 +14,14 @@ static INIT: Once = Once::new();
 /// Вызывается автоматически при первом использовании макросов логирования.
 pub fn init() {
     INIT.call_once(|| {
-        env_logger::Builder::from_default_env()
+        let mut builder = env_logger::Builder::from_default_env();
+
+        // Respect RUST_LOG when provided; otherwise default to INFO.
+        if std::env::var("RUST_LOG").is_err() {
+            builder.filter_level(LevelFilter::Info);
+        }
+
+        builder
             .format(|buf, record| {
                 use std::io::Write;
 
@@ -39,7 +46,6 @@ pub fn init() {
                     record.args()
                 )
             })
-            .filter_level(LevelFilter::Info)
             .init();
     });
 }

@@ -33,6 +33,7 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
   import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
   import { modelSelectorSearchEnabled } from '$lib/stores/ui-preferences';
   import { Button } from '$lib/components/ui/button';
+  import { Spinner } from '$lib/components/ui/spinner';
   import * as Popover from '$lib/components/ui/popover';
   import * as Command from '$lib/components/ui/command';
   import * as Tabs from '$lib/components/ui/tabs';
@@ -75,6 +76,8 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
   );
   const currentModelPath = derived(chatState, ($chatState) => $chatState.modelPath);
   const pendingModelPath = derived(chatState, ($chatState) => $chatState.pendingModelPath);
+  const isModelLoading = derived(chatState, ($chatState) => $chatState.isLoadingModel);
+  const modelLoadingStage = derived(chatState, ($chatState) => $chatState.loadingStage);
   const currentModel = derived(
     [quickModels, currentModelPath],
     ([$quickModels, $currentModelPath]) =>
@@ -294,9 +297,27 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
     // initial sync
     setTimeout(syncHeights, 120);
 
+    // Screenshot mode: Ctrl+Shift+S to scale UI for screenshots
+    let screenshotMode = false;
+    const handleScreenshot = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === 'S') {
+        event.preventDefault();
+        
+        if (!screenshotMode) {
+          document.documentElement.classList.add('screenshot-mode');
+          screenshotMode = true;
+        } else {
+          document.documentElement.classList.remove('screenshot-mode');
+          screenshotMode = false;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleScreenshot);
+
     return () => {
       if (unlistenHolder.fn) unlistenHolder.fn();
       window.removeEventListener('resize', debounced);
+      window.removeEventListener('keydown', handleScreenshot);
       ro.disconnect();
     };
   });
@@ -325,7 +346,16 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
                     aria-haspopup="listbox"
                     type="button"
                   >
-                    <span class="model-combobox-label">{$currentDisplayName}</span>
+                    <span class="model-combobox-body">
+                      {#if $isModelLoading}
+                        <Spinner
+                          size={14}
+                          class="model-combobox-spinner"
+                          label={$t(`chat.loading.stages.${$modelLoadingStage || 'model'}`)}
+                        />
+                      {/if}
+                      <span class="model-combobox-label">{$currentDisplayName}</span>
+                    </span>
                     <CaretDown size={14} />
                   </Button>
                 {/snippet}
@@ -554,6 +584,7 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
     height: 100vh;
     overflow: hidden;
     position: relative;
+    background: #1a1f2e;
   }
 
   .app-header-wrapper {
@@ -618,9 +649,24 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
   :global(.model-combobox-label) {
     font-size: 0.95rem;
     color: inherit;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.model-combobox-body) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2); /* 8px */
     flex: 1;
-    text-align: center;
-    display: block;
+    min-width: 0;
+  }
+
+  :global(.model-combobox-spinner) {
+    opacity: 0.85;
+    flex: 0 0 auto;
   }
 
   :global(.model-combobox-content) {
@@ -802,6 +848,7 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
     left: 0;
     right: 0;
     bottom: 0;
+    background: #1a1f2e;
   }
 
   .app-main {
@@ -811,6 +858,7 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
     overflow: hidden;
     padding: 0 var(--content-gap) var(--content-gap);
     padding-top: var(--space-8); /* 56px */
+    background: #1a1f2e;
   }
 
   .app-main.models-compact {
@@ -843,6 +891,7 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
       opacity 0.15s ease-in-out,
       visibility 0.15s ease-in-out;
     overflow: auto;
+    background: #1a1f2e;
   }
 
   /* Активная страница видима */

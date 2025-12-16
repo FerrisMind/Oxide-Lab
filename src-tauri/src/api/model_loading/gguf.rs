@@ -1,4 +1,4 @@
-use super::emit_load_progress;
+use super::{LoadDebugCtx, emit_load_progress_debug};
 use crate::core::device::{device_label, select_device};
 use crate::core::performance::ModelLoadTracker;
 use crate::core::state::ModelState;
@@ -9,7 +9,7 @@ use crate::core::tokenizer::{
 use crate::generate::cancel::CANCEL_LOADING;
 use crate::models::common::model::ModelBackend;
 use crate::models::registry::{detect_arch, get_model_factory};
-use crate::{log_load, log_template};
+use crate::{log_load, log_template, log_template_error};
 use candle::quantized::gguf_file;
 use std::collections::HashSet;
 use std::fs::File;
@@ -24,13 +24,22 @@ pub fn load_gguf_model(
     context_length: usize,
     device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
+    let dbg = LoadDebugCtx::new();
     // Создаём трекер загрузки модели
     let tracker_result = tokio::runtime::Runtime::new()
         .map_err(|e| e.to_string())?
         .block_on(async { ModelLoadTracker::new(guard.performance_monitor.clone()).await });
     let mut tracker = tracker_result;
 
-    emit_load_progress(app, "start", 0, Some("Начало загрузки GGUF"), false, None);
+    emit_load_progress_debug(
+        &dbg,
+        app,
+        "start",
+        0,
+        Some("Начало загрузки GGUF"),
+        false,
+        None,
+    );
     tracker.start_stage("device_selection");
 
     let dev = select_device(device_pref);
@@ -40,7 +49,8 @@ pub fn load_gguf_model(
         kcfg.apply_for_device(&guard.device);
     }
     log_load!("device selected: {}", device_label(&guard.device));
-    emit_load_progress(
+    emit_load_progress_debug(
+        &dbg,
         app,
         "device",
         5,
@@ -50,17 +60,27 @@ pub fn load_gguf_model(
     );
 
     let mut file = File::open(&model_path).map_err(|e| {
-        emit_load_progress(app, "open_file", 8, None, false, Some(&e.to_string()));
+        emit_load_progress_debug(&dbg, app, "open_file", 8, None, false, Some(&e.to_string()));
         e.to_string()
     })?;
     tracker.start_stage("file_opening");
-    emit_load_progress(app, "open_file", 10, Some("Файл открыт"), false, None);
+    emit_load_progress_debug(&dbg, app, "open_file", 10, Some("Файл открыт"), false, None);
     if CANCEL_LOADING.load(Ordering::SeqCst) {
-        emit_load_progress(app, "cancel", 12, Some("Отменено"), true, Some("cancelled"));
+        emit_load_progress_debug(
+            &dbg,
+            app,
+            "cancel",
+            12,
+            Some("Отменено"),
+            true,
+            Some("cancelled"),
+        );
         return Err("cancelled".into());
     }
 
     tracker.start_stage("read_header");
+    dbg.stage_begin("read_header");
+    let read_header_start = std::time::Instant::now();
     let content = gguf_file::Content::read(&mut file).map_err(|e| {
         let error_msg = e.with_path(PathBuf::from(model_path.clone())).to_string();
 
@@ -71,10 +91,12 @@ pub fn load_gguf_model(
             error_msg
         };
 
-        emit_load_progress(app, "read_header", 20, None, false, Some(&enhanced_msg));
+        emit_load_progress_debug(&dbg, app, "read_header", 20, None, false, Some(&enhanced_msg));
         enhanced_msg
     })?;
-    emit_load_progress(
+    dbg.stage_end("read_header", read_header_start.elapsed());
+    emit_load_progress_debug(
+        &dbg,
         app,
         "read_header",
         25,
@@ -83,7 +105,15 @@ pub fn load_gguf_model(
         None,
     );
     if CANCEL_LOADING.load(Ordering::SeqCst) {
-        emit_load_progress(app, "cancel", 28, Some("Отменено"), true, Some("cancelled"));
+        emit_load_progress_debug(
+            &dbg,
+            app,
+            "cancel",
+            28,
+            Some("Отменено"),
+            true,
+            Some("cancelled"),
+        );
         return Err("cancelled".into());
     }
 
@@ -102,6 +132,20 @@ pub fn load_gguf_model(
     mark_special_chat_tokens(&mut tokenizer);
     let chat_tpl = extract_chat_template(&tokenizer)
         .or_else(|| find_chat_template_in_metadata(&content.metadata));
+    // Не отключаем шаблон даже при ошибке — логируем, но сохраняем сырой вариант (рендер сам уйдёт в fallback)
+    let chat_tpl = match chat_tpl {
+        Some(raw) => {
+            if let Err(e) = crate::core::prompt::normalize_and_validate(&raw) {
+                log_template_error!(
+                    "chat_template validation failed; keeping raw. reason={}; head=<<<{}>>>",
+                    e,
+                    raw.chars().take(180).collect::<String>()
+                );
+            }
+            Some(raw)
+        }
+        None => None,
+    };
     match &chat_tpl {
         Some(tpl) => {
             let head: String = tpl.chars().take(120).collect();
@@ -109,23 +153,32 @@ pub fn load_gguf_model(
         }
         None => log_template!("not found in tokenizer.json"),
     }
-    emit_load_progress(app, "tokenizer", 35, Some("Инициализирован"), false, None);
+    emit_load_progress_debug(
+        &dbg,
+        app,
+        "tokenizer",
+        35,
+        Some("Инициализирован"),
+        false,
+        None,
+    );
 
     // Модальности теперь определяются строго по архитектуре
     let arch = detect_arch(&content.metadata).ok_or_else(|| {
         let err = "Unsupported GGUF architecture".to_string();
-        emit_load_progress(app, "detect_arch", 38, None, false, Some(&err));
+        emit_load_progress_debug(&dbg, app, "detect_arch", 38, None, false, Some(&err));
         err
     })?;
 
     // Проверяем наличие неподдерживаемых типов данных в тензорах
     check_supported_dtypes(&content).map_err(|dtype_error| {
         let error_msg = format!("Unsupported quantization types: {}", dtype_error);
-        emit_load_progress(app, "dtype_check", 35, None, false, Some(&error_msg));
+        emit_load_progress_debug(&dbg, app, "dtype_check", 35, None, false, Some(&error_msg));
         log::error!("Model loading blocked: {}", dtype_error);
         error_msg
     })?;
-    emit_load_progress(
+    emit_load_progress_debug(
+        &dbg,
         app,
         "detect_arch",
         40,
@@ -137,7 +190,15 @@ pub fn load_gguf_model(
     // Persist detected architecture in state
     guard.arch = Some(arch.clone());
     if CANCEL_LOADING.load(Ordering::SeqCst) {
-        emit_load_progress(app, "cancel", 42, Some("Отменено"), true, Some("cancelled"));
+        emit_load_progress_debug(
+            &dbg,
+            app,
+            "cancel",
+            42,
+            Some("Отменено"),
+            true,
+            Some("cancelled"),
+        );
         return Err("cancelled".into());
     }
 
@@ -166,9 +227,17 @@ pub fn load_gguf_model(
 
     tracker.start_stage("model_building");
     // Use the model factory to build the model
-    emit_load_progress(app, "build_model", 50, None, false, None);
+    emit_load_progress_debug(&dbg, app, "build_model", 50, None, false, None);
     if CANCEL_LOADING.load(Ordering::SeqCst) {
-        emit_load_progress(app, "cancel", 50, Some("Отменено"), true, Some("cancelled"));
+        emit_load_progress_debug(
+            &dbg,
+            app,
+            "cancel",
+            50,
+            Some("Отменено"),
+            true,
+            Some("cancelled"),
+        );
         return Err("cancelled".into());
     }
     // Если в метаданных присутствует конфигурация модели, попробуем распарсить и применить её
@@ -186,7 +255,8 @@ pub fn load_gguf_model(
         Some(s) => match serde_json::from_str(s) {
             Ok(v) => Some(v),
             Err(e) => {
-                emit_load_progress(
+                emit_load_progress_debug(
+                    &dbg,
                     app,
                     "build_model",
                     55,
@@ -203,6 +273,8 @@ pub fn load_gguf_model(
         None => None,
     };
 
+    dbg.stage_begin("build_model_backend");
+    let build_start = std::time::Instant::now();
     let mut model_backend = get_model_factory()
         .build_from_gguf(
             arch,
@@ -213,14 +285,16 @@ pub fn load_gguf_model(
             false,
         )
         .map_err(|e| {
-            emit_load_progress(app, "build_model", 60, None, false, Some(&e));
+            emit_load_progress_debug(&dbg, app, "build_model", 60, None, false, Some(&e));
             format!("Failed to build model: {}", e)
         })?;
+    dbg.stage_end("build_model_backend", build_start.elapsed());
 
-    // Если модель предоставляет возможность применения конфигурации — применим
+    // Если модель предоставляет возможность применения конфигурации - применим
     if let Some(cfg) = config_value.as_ref() {
         if let Err(e) = model_backend.apply_config(cfg) {
-            emit_load_progress(
+            emit_load_progress_debug(
+                &dbg,
                 app,
                 "apply_config",
                 70,
@@ -229,7 +303,8 @@ pub fn load_gguf_model(
                 Some(&format!("Model apply_config failed: {}", e)),
             );
         } else {
-            emit_load_progress(
+            emit_load_progress_debug(
+                &dbg,
                 app,
                 "apply_config",
                 70,
@@ -239,7 +314,8 @@ pub fn load_gguf_model(
             );
         }
     }
-    emit_load_progress(
+    emit_load_progress_debug(
+        &dbg,
         app,
         "build_model_done",
         85,
@@ -249,7 +325,15 @@ pub fn load_gguf_model(
     );
 
     if CANCEL_LOADING.load(Ordering::SeqCst) {
-        emit_load_progress(app, "cancel", 90, Some("Отменено"), true, Some("cancelled"));
+        emit_load_progress_debug(
+            &dbg,
+            app,
+            "cancel",
+            90,
+            Some("Отменено"),
+            true,
+            Some("cancelled"),
+        );
         return Err("cancelled".into());
     }
     guard.gguf_model = Some(model_backend);
@@ -269,7 +353,8 @@ pub fn load_gguf_model(
         guard.context_length,
         tokenizer_source
     );
-    emit_load_progress(
+    emit_load_progress_debug(
+        &dbg,
         app,
         "finalize",
         95,
@@ -301,7 +386,7 @@ pub fn load_gguf_model(
     // Отправляем метрики на фронтенд
     let _ = app.emit("model_load_metrics", &metrics);
 
-    emit_load_progress(app, "complete", 100, Some("Готово"), true, None);
+    emit_load_progress_debug(&dbg, app, "complete", 100, Some("Готово"), true, None);
 
     Ok(())
 }

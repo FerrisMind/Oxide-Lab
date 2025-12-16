@@ -1,6 +1,7 @@
 import { mount, unmount } from 'svelte';
 import { get } from 'svelte/store';
-import { renderMarkdownToSafeHtml } from '$lib/chat/markdown';
+import { renderMarkdownToSafeHtml, lastAutoClosedThink } from '$lib/chat/markdown';
+import { THINK_CLOSE_TOKEN } from '$lib/chat/parser/constants';
 // CodeMirror renderer removed — using Shiki-based StreamingCodeBlock for highlighting
 import { enableExternalLinks } from '$lib/chat/external-links';
 import { StreamingCodeBlock } from '$lib/components/streaming-code';
@@ -207,6 +208,22 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
 function mountThinkingComponents(container: HTMLElement) {
   const placeholders = container.querySelectorAll('.thinking-placeholder');
 
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: 'debug-session',
+      runId: 'run-pre-fix',
+      hypothesisId: 'H13',
+      location: 'markdown_block.ts:mountThinkingComponents:start',
+      message: 'mount thinking placeholders',
+      data: { count: placeholders.length },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   placeholders.forEach((placeholder) => {
     const element = placeholder as HTMLElement & { __thinkComponent?: any };
     const mountTarget = (element.querySelector('.thinking-mount') as HTMLElement | null) ?? element;
@@ -337,13 +354,28 @@ export function appendMarkdownText(
 
   if (ctx.mdContentEl) {
     // Render markdown with streaming code support
-    const newContent = renderMarkdownWithStreamingCode(ctx.mdText, isStreaming);
+    let newContent = renderMarkdownWithStreamingCode(ctx.mdText, isStreaming);
 
-    const needsFullRender = hasStreamingCodeBlocksChanged(ctx.mdContentEl, newContent);
-    const openCount = (ctx.mdText.match(/<think>/g) || []).length;
-    const closeCount = (ctx.mdText.match(/<\/think>/g) || []).length;
-    const openEscCount = (ctx.mdText.match(/&lt;think>/g) || []).length;
-    const closeEscCount = (ctx.mdText.match(/&lt;\/think>/g) || []).length;
+    let needsFullRender = hasStreamingCodeBlocksChanged(ctx.mdContentEl, newContent);
+    let openCount = (ctx.mdText.match(/<think>/g) || []).length;
+    let closeCount = (ctx.mdText.match(/<\/think>/g) || []).length;
+    let openEscCount = (ctx.mdText.match(/&lt;think>/g) || []).length;
+    let closeEscCount = (ctx.mdText.match(/&lt;\/think>/g) || []).length;
+    let placeholderCount = (newContent.match(/thinking-placeholder/g) || []).length;
+    let hasThinkInHtml = newContent.includes('<think>');
+    let hasEscThinkInHtml = newContent.includes('&lt;think');
+
+    // Если markdown-рендер автозакрыл think, а сырой поток всё ещё без закрытия,
+    // сохраняем закрывающий тег в буфере, чтобы последующий текст не попадал внутрь.
+    if (lastAutoClosedThink && openCount > closeCount) {
+      ctx.mdText += THINK_CLOSE_TOKEN;
+      closeCount += 1;
+      newContent = renderMarkdownWithStreamingCode(ctx.mdText, isStreaming);
+      needsFullRender = true;
+      placeholderCount = (newContent.match(/thinking-placeholder/g) || []).length;
+      hasThinkInHtml = newContent.includes('<think>');
+      hasEscThinkInHtml = newContent.includes('&lt;think');
+    }
 
     // #region agent log
     fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
@@ -363,6 +395,11 @@ export function appendMarkdownText(
           closeCount,
           openEscCount,
           closeEscCount,
+          thinkPlaceholdersInHtml: placeholderCount,
+          newContentLen: newContent.length,
+          hasThinkInHtml,
+          hasEscThinkInHtml,
+          newContentSnippet: newContent.slice(0, 200),
         },
         timestamp: Date.now(),
       }),

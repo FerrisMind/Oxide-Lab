@@ -2,6 +2,10 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js/lib/common';
 import { markedHighlight } from 'marked-highlight';
+import { THINK_CLOSE_TOKEN } from './parser/constants.js';
+
+// Флаг: в последнем вызове renderMarkdownToSafeHtml был вставлен авто-закрывающий </think>
+export let lastAutoClosedThink = false;
 
 // Глобальные настройки markdown-рендера:
 // - gfm: поддержка таблиц/списков/код-блоков/ссылок/задач;
@@ -32,6 +36,8 @@ marked.setOptions({
 
 // Простая обёртка для безопасного преобразования Markdown → HTML
 export function renderMarkdownToSafeHtml(markdownText: string): string {
+  let sanitized: string | null = null;
+  let wrapped: string | null = null;
   try {
     let input = markdownText ?? '';
     // Нормализуем переводы строк
@@ -70,6 +76,7 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
     const closeCountRaw = countThink(enhanced, '</think>');
     const openCountEscRaw = countThink(enhanced, '&lt;think>');
     const closeCountEscRaw = countThink(enhanced, '&lt;/think>');
+    const forceStreaming = openCountRaw > closeCountRaw;
     // #region agent log
     fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
       method: 'POST',
@@ -85,6 +92,27 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
       }),
     }).catch(() => {});
     // #endregion
+
+    if (forceStreaming && openCountRaw > closeCountRaw) {
+      // Автозакрытие незавершённого <think>, чтобы остальной текст не попадал внутрь
+      enhanced += THINK_CLOSE_TOKEN;
+      lastAutoClosedThink = true;
+      fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'run-pre-fix',
+          hypothesisId: 'H5',
+          location: 'markdown.ts:renderMarkdownToSafeHtml:auto-close',
+          message: 'appended THINK_CLOSE_TOKEN to balance',
+          data: { openCountRaw, closeCountRaw, enhancedLen: enhanced.length },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    } else {
+      lastAutoClosedThink = false;
+    }
 
     const dirty = (
       typeof (marked as any).parse === 'function'
@@ -118,7 +146,7 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
     }).catch(() => {});
     // #endregion
     // Разрешаем типичные теги Markdown, остальное вычищаем
-    const sanitized =
+    const sanitizedLocal =
       typeof window !== 'undefined'
         ? DOMPurify.sanitize(dirty, {
             ALLOWED_TAGS: [
@@ -308,17 +336,144 @@ export function renderMarkdownToSafeHtml(markdownText: string): string {
             ],
           })
         : dirty;
-    return wrapThinkBlocks(sanitized);
-  } catch {
-    return DOMPurify.sanitize(markdownText ?? '');
+
+    sanitized = sanitizedLocal;
+
+    const openCountSanitized = countThink(sanitizedLocal, '<think>');
+    const closeCountSanitized = countThink(sanitizedLocal, '</think>');
+    const openCountEscSanitized = countThink(sanitizedLocal, '&lt;think>');
+    const closeCountEscSanitized = countThink(sanitizedLocal, '&lt;/think>');
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: 'H5',
+        location: 'markdown.ts:renderMarkdownToSafeHtml:sanitized',
+        message: 'sanitized think counters',
+        data: {
+          openCountSanitized,
+          closeCountSanitized,
+          openCountEscSanitized,
+          closeCountEscSanitized,
+          len: sanitizedLocal.length,
+          snippet: sanitizedLocal.slice(0, 120),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    const wrappedLocal = wrapThinkBlocks(sanitizedLocal, forceStreaming);
+    wrapped = wrappedLocal;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: 'H5',
+        location: 'markdown.ts:renderMarkdownToSafeHtml:wrapped',
+        message: 'wrapped think summary',
+        data: {
+          openCountWrapped: countThink(wrappedLocal, '<think'),
+          closeCountWrapped: countThink(wrappedLocal, '</think'),
+          openCountEscWrapped: countThink(wrappedLocal, '&lt;think'),
+          closeCountEscWrapped: countThink(wrappedLocal, '&lt;/think'),
+          placeholders: (wrappedLocal.match(/thinking-placeholder/g) || []).length,
+          len: wrappedLocal.length,
+          snippet: wrappedLocal.slice(0, 120),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    return wrappedLocal;
+  } catch (err: any) {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: 'H14',
+        location: 'markdown.ts:renderMarkdownToSafeHtml:catch',
+        message: 'markdown render failed',
+        data: {
+          error: err?.message ?? String(err),
+          sanitizedLen: sanitized?.length ?? null,
+          wrappedLen: wrapped?.length ?? null,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    const fallback = DOMPurify.sanitize(markdownText ?? '');
+    wrapped = fallback;
+    return fallback;
+  } finally {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: 'H15',
+        location: 'markdown.ts:renderMarkdownToSafeHtml:finally',
+        message: 'markdown render final state',
+        data: {
+          sanitizedLen: sanitized?.length ?? null,
+          wrappedLen: wrapped?.length ?? null,
+          sanitizedHasThink: sanitized?.includes('<think>') ?? null,
+          sanitizedHasEscThink: sanitized?.includes('&lt;think') ?? null,
+          wrappedPlaceholderCount:
+            typeof wrapped === 'string'
+              ? (wrapped.match(/thinking-placeholder/g) || []).length
+              : null,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
   }
 }
 
 // Оборачиваем завершённые блоки <think>...</think> в плейсхолдеры под аккордеон
-function wrapThinkBlocks(html: string): string {
+function wrapThinkBlocks(html: string, forceStreaming: boolean = false): string {
   const OPEN = '<think>';
   const CLOSE = '</think>';
-  if (!html.includes(OPEN)) return html;
+  if (!html.includes(OPEN)) {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'run-pre-fix',
+        hypothesisId: 'H14',
+        location: 'markdown.ts:wrapThinkBlocks:no-open',
+        message: 'no think tags after sanitize',
+        data: {
+          htmlLen: html.length,
+          hasEscThink: html.includes('&lt;think'),
+          snippet: html.slice(0, 160),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    return html;
+  }
 
   let out = '';
   let cursor = 0;
@@ -331,8 +486,10 @@ function wrapThinkBlocks(html: string): string {
       break;
     }
     const end = html.indexOf(CLOSE, start + OPEN.length);
-    const streaming = end === -1;
-    const endPos = streaming ? html.length : end;
+    const hasClose = end !== -1;
+    const streaming = !hasClose; // управление break/обрезкой
+    const placeholderStreaming = streaming || forceStreaming; // UI держим открытым, если закрытие авто
+    const endPos = hasClose ? end : html.length;
 
     const before = html.slice(cursor, start);
     const inner = html.slice(start + OPEN.length, endPos);
@@ -351,12 +508,15 @@ function wrapThinkBlocks(html: string): string {
         data: {
           key,
           streaming,
+          placeholderStreaming,
+          hasClose,
           start,
           end,
           endPos,
           innerLen: inner.length,
           htmlLen: html.length,
           snippet: html.slice(start, Math.min(html.length, start + 80)),
+          forceStreaming,
         },
         timestamp: Date.now(),
       }),
@@ -364,7 +524,7 @@ function wrapThinkBlocks(html: string): string {
     // #endregion
 
     out += before;
-    out += `<div class="thinking-placeholder" data-think-id="${key}" data-streaming="${streaming}">`;
+    out += `<div class="thinking-placeholder" data-think-id="${key}" data-streaming="${placeholderStreaming}">`;
     out += `<div class="thinking-content" data-think-slot>${inner}</div>`;
     out += `<div class="thinking-mount"></div>`;
     out += `</div>`;
@@ -379,7 +539,7 @@ function wrapThinkBlocks(html: string): string {
         hypothesisId: streaming ? 'H1' : 'H2',
         location: 'markdown.ts:wrapThinkBlocks',
         message: 'wrap think block',
-        data: { key, streaming, innerLen: inner.length },
+        data: { key, streaming, placeholderStreaming, innerLen: inner.length },
         timestamp: Date.now(),
       }),
     }).catch(() => {});
