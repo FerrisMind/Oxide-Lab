@@ -15,6 +15,11 @@
 
 ![GitHub Stars](https://img.shields.io/github/stars/FerrisMind/Oxide-Lab?style=social) [![Awesome Tauri](https://awesome.re/mentioned-badge.svg)](https://github.com/tauri-apps/awesome-tauri) [![Awesome Svelte](https://awesome.re/mentioned-badge.svg)](https://github.com/TheComputerM/awesome-svelte)
 
+
+<p align="center">
+  <img src=".github/assets/screenshots/chat-dark.png" alt="Oxide Lab Chat UI (Dark)" width="900" />
+</p>
+
 ---
 
 ## 📚 Índice
@@ -180,10 +185,6 @@ Baixe um modelo no formato `.gguf` e o arquivo `tokenizer.json`:
 - Progresso de carregamento do modelo com estágios detalhados
 - Indicadores de status de geração
 - Exibição visual do pensamento da IA
-
-<p align="center">
-  <img src=".github/assets/screenshots/chat-dark.png" alt="Interface de Chat Oxide Lab (Escuro)" width="900" />
-</p>
 
 ### ⚡ **Ações Rápidas**
 

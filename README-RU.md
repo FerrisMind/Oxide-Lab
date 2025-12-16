@@ -15,6 +15,12 @@
 
 ![GitHub Stars](https://img.shields.io/github/stars/FerrisMind/Oxide-Lab?style=social) [![Awesome Tauri](https://awesome.re/mentioned-badge.svg)](https://github.com/tauri-apps/awesome-tauri) [![Awesome Svelte](https://awesome.re/mentioned-badge.svg)](https://github.com/TheComputerM/awesome-svelte)
 
+
+<p align="center">
+  <img src=".github/assets/screenshots/chat-dark.png" alt="Oxide Lab Chat UI (Dark)" width="900" />
+</p>
+
+
 ---
 
 ## 📚 Содержание
@@ -222,10 +228,6 @@ Oxide Lab умеет подгружать только проверенные м
 - Прогресс загрузки модели с этапами
 - Статусы генерации
 - Визуализация «размышлений» ИИ
-
-<p align="center">
-  <img src=".github/assets/screenshots/chat-dark.png" alt="Oxide Lab Chat UI (Dark)" width="900" />
-</p>
 
 ### ⚡ **Быстрые действия**
 
