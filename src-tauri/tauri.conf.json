@@ -37,6 +37,9 @@
     "active": true,
     "targets": "nsis",
     "publisher": "FerrisMind",
+    "resources": [
+      "whisper/*"
+    ],
     "icon": [
       "icons/icon.png",
       "icons/128x128@2x.png",
@@ -44,17 +47,7 @@
       "icons/64x64.png",
       "icons/32x32.png",
       "icons/icon.ico",
-      "icons/icon.icns",
-      "icons/Square310x310Logo.png",
-      "icons/Square284x284Logo.png",
-      "icons/Square150x150Logo.png",
-      "icons/Square142x142Logo.png",
-      "icons/Square107x107Logo.png",
-      "icons/Square89x89Logo.png",
-      "icons/Square71x71Logo.png",
-      "icons/Square44x44Logo.png",
-      "icons/Square30x30Logo.png",
-      "icons/StoreLogo.png"
+      "icons/icon.icns"
     ]
   }
 }

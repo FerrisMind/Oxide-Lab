@@ -56,5 +56,31 @@
   "language": {
     "title": "Language",
     "description": "Select the interface language. Changes will be applied immediately."
+  },
+  "stt": {
+    "title": "Voice Input (Whisper)",
+    "description": "Configure the Whisper model used for voice input.",
+    "loading": "Loading voice settings...",
+    "sources": {
+      "bundled": "Use bundled tiny model",
+      "custom": "Use custom model folder"
+    },
+    "customPathEmpty": "Custom model folder not selected",
+    "chooseFolder": "Choose folder",
+    "download": {
+      "title": "Download Whisper model",
+      "repoId": "Repo id",
+      "revision": "Revision",
+      "modelFile": "Model file",
+      "tokenizerFile": "Tokenizer file",
+      "configFile": "Config file",
+      "button": "Download and use",
+      "loading": "Downloading...",
+      "success": "Model downloaded and selected",
+      "error": "Failed to download model"
+    },
+    "errors": {
+      "customDirRequired": "Select a custom model folder first"
+    }
   }
 }

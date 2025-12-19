@@ -122,18 +122,69 @@ pub fn mark_special_chat_tokens(tokenizer: &mut Tokenizer) {
 pub fn tokenizer_from_gguf_metadata(
     md: &HashMap<String, gguf_file::Value>,
 ) -> Result<Tokenizer, String> {
+    // Локальный helper: частично нормализовать tokenizer.json, если там используются
+    // декодеры, которых текущая версия `tokenizers` не знает (например, новые варианты Gemma3).
+    fn sanitize_tokenizer_json_for_compat(raw: &str) -> Option<String> {
+        let mut v: serde_json::Value = serde_json::from_str(raw).ok()?;
+        if let Some(obj) = v.as_object_mut() {
+            match obj.get_mut("decoder") {
+                Some(dec) => {
+                    if let Some(dec_obj) = dec.as_object_mut() {
+                        // Принудительно подставляем совместимый тип декодера.
+                        // Остальные поля (add_prefix_space и т.п.) сохраняем.
+                        dec_obj.insert(
+                            "type".to_string(),
+                            serde_json::Value::String("ByteLevel".to_string()),
+                        );
+                    } else {
+                        *dec = serde_json::json!({ "type": "ByteLevel" });
+                    }
+                }
+                None => {
+                    obj.insert(
+                        "decoder".to_string(),
+                        serde_json::json!({ "type": "ByteLevel" }),
+                    );
+                }
+            }
+        }
+        serde_json::to_string(&v).ok()
+    }
+
+    // 1) Пытаемся использовать embedded tokenizer.json, если он есть.
+    //    Но если `tokenizers` не умеет такой формат (как в случае некоторых Gemma3),
+    //    не падаем сразу, а переходим к эвристикам реконструкции.
     if let Some(json) = find_tokenizer_json_in_metadata(md) {
-        return Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string());
+        match Tokenizer::from_bytes(json.as_bytes()) {
+            Ok(tok) => return Ok(tok),
+            Err(_) => {
+                // Пробуем слегка переписать JSON под совместимый вид (в частности decoder).
+                if let Some(sanitized) = sanitize_tokenizer_json_for_compat(&json)
+                    && let Ok(tok) = Tokenizer::from_bytes(sanitized.as_bytes())
+                {
+                    return Ok(tok);
+                }
+            }
+        }
     }
-    // Если не нашли полноценный JSON, пробуем реконструировать BPE (только если поля BPE действительно есть)
-    if let Some(json) = try_reconstruct_tokenizer_from_bpe(md) {
-        return Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string());
+
+    // 2) Если не нашли полноценный JSON или он не парсится, пробуем реконструировать BPE
+    //    (только если поля BPE действительно есть).
+    if let Some(json) = try_reconstruct_tokenizer_from_bpe(md)
+        && let Ok(tok) = Tokenizer::from_bytes(json.as_bytes())
+    {
+        return Ok(tok);
     }
-    // Если BPE реконструкция невозможна, попробуем собрать простой WordLevel токенизатор из списка токенов
-    if let Some(json) = try_build_wordlevel_tokenizer_from_tokens(md) {
-        return Tokenizer::from_bytes(json.as_bytes()).map_err(|e| e.to_string());
+
+    // 3) Если BPE реконструкция невозможна или тоже не парсится, пробуем собрать
+    //    простой WordLevel токенизатор из списка токенов.
+    if let Some(json) = try_build_wordlevel_tokenizer_from_tokens(md)
+        && let Ok(tok) = Tokenizer::from_bytes(json.as_bytes())
+    {
+        return Ok(tok);
     }
-    Err("GGUF: embedded tokenizer.json не найден; реконструкция невозможна".into())
+
+    Err("GGUF: embedded tokenizer.json не найден или не поддерживается; реконструкция невозможна".into())
 }
 
 /// Построить минимальный JSON для `tokenizers` на основе массива токенов в метаданных.

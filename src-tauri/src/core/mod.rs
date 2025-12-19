@@ -9,6 +9,7 @@ pub mod token_output_stream;
 pub mod tokenizer;
 pub mod types;
 pub mod weights;
+pub mod stt_whisper;
 // Убрали мультимодальность: vision/audio/multimodal/attachments/attachment_router удалены
 pub mod attachments_text;
 pub mod background_mode;

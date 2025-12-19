@@ -26,7 +26,12 @@
     },
     "voice": {
       "startRecording": "Начать запись голоса",
-      "stopRecording": "Остановить запись"
+      "stopRecording": "Остановить запись",
+      "transcribing": "Распознавание...",
+      "captureFailed": "Не удалось начать запись голоса",
+      "transcriptionFailed": "Не удалось распознать речь",
+      "errorTitle": "Ошибка голосового ввода",
+      "error": "Ошибка голосового ввода"
     }
   },
   "messages": {

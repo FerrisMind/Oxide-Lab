@@ -26,7 +26,12 @@
     },
     "voice": {
       "startRecording": "Start voice recording",
-      "stopRecording": "Stop recording"
+      "stopRecording": "Stop recording",
+      "transcribing": "Transcribing...",
+      "captureFailed": "Failed to start voice recording",
+      "transcriptionFailed": "Voice transcription failed",
+      "errorTitle": "Voice input error",
+      "error": "Voice input error"
     }
   },
   "messages": {

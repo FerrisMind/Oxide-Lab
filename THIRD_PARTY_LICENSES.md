@@ -19,7 +19,7 @@ All Rust dependencies use permissive licenses compatible with the MIT license.
 This project includes npm packages licensed under various permissive licenses:
 
 - **MIT**: Majority of packages (including Svelte, Vite, TypeScript, etc.)
-- **Apache-2.0**: ESLint packages, TypeScript
+- **Apache-2.0**: ESLint packages, TypeScript, Whisper
 - **BSD-2-Clause/BSD-3-Clause**: Several utility packages
 - **ISC**: System packages
 - **CC0-1.0**: MDN data

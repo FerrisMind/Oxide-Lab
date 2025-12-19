@@ -94,3 +94,25 @@ pub struct Attachment {
     pub path: Option<String>,
     pub bytes_b64: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum SttModelSource {
+    Bundled,
+    Custom,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SttSettings {
+    pub source: SttModelSource,
+    pub custom_dir: Option<String>,
+}
+
+impl Default for SttSettings {
+    fn default() -> Self {
+        Self {
+            source: SttModelSource::Bundled,
+            custom_dir: None,
+        }
+    }
+}

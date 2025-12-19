@@ -1,10 +1,13 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
+  import { open, message } from '@tauri-apps/plugin-dialog';
   import type { PrecisionPolicy } from '$lib/types';
   import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   import { modelSelectorSearchEnabled } from '$lib/stores/ui-preferences';
+  import { downloadSttModel, getSttSettings, setSttSettings } from '$lib/services/stt-service';
+  import type { SttModelSource, SttSettings } from '$lib/types/stt';
   import { t } from '$lib/i18n';
   import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 
@@ -23,6 +26,18 @@
   let threadLimitLoading = $state(true);
   let threadLimitError = $state<string | null>(null);
 
+  let sttSettings: SttSettings = { source: 'bundled', custom_dir: null };
+  let sttLoading = $state(true);
+  let sttError = $state<string | null>(null);
+  let sttSource = $state<SttModelSource>('bundled');
+  let sttCustomDir = $state<string>('');
+  let sttRepoId = $state('lmz/candle-whisper');
+  let sttRevision = $state('main');
+  let sttModelFilename = $state('model-tiny-q80.gguf');
+  let sttTokenizerFilename = $state('tokenizer-tiny.json');
+  let sttConfigFilename = $state('config-tiny.json');
+  let sttDownloadLoading = $state(false);
+
   // Local reactive variable for experimental features checkbox
   let experimentalFeaturesEnabled = $state(false);
   let modelSearchEnabled = $state(true);
@@ -30,6 +45,7 @@
   onMount(async () => {
     await loadPrecisionPolicy();
     await loadThreadLimit();
+    await loadStt();
   });
 
   // Sync local variable with store when experimental features are initialized
@@ -195,6 +211,82 @@
       return String(currentPolicy).includes(policyType);
     }
   }
+
+  async function loadStt() {
+    sttLoading = true;
+    sttError = null;
+    try {
+      sttSettings = await getSttSettings();
+      sttSource = sttSettings.source;
+      sttCustomDir = sttSettings.custom_dir ?? '';
+    } catch (err) {
+      sttError = `Failed to load STT settings: ${err}`;
+      console.error(err);
+    } finally {
+      sttLoading = false;
+    }
+  }
+
+  async function updateSttSettings(next: SttSettings) {
+    sttError = null;
+    try {
+      await setSttSettings(next);
+      sttSettings = next;
+      sttSource = next.source;
+      sttCustomDir = next.custom_dir ?? '';
+    } catch (err) {
+      sttError = `Failed to save STT settings: ${err}`;
+      console.error(err);
+    }
+  }
+
+  async function setSttSource(nextSource: SttModelSource) {
+    if (nextSource === 'custom' && !sttCustomDir) {
+      sttError = $t('settings.stt.errors.customDirRequired');
+      return;
+    }
+    await updateSttSettings({
+      source: nextSource,
+      custom_dir: nextSource === 'custom' ? sttCustomDir : null,
+    });
+  }
+
+  async function pickSttDirectory() {
+    const selected = await open({ directory: true, multiple: false });
+    if (typeof selected === 'string' && selected.length > 0) {
+      sttCustomDir = selected;
+      await updateSttSettings({ source: 'custom', custom_dir: selected });
+    }
+  }
+
+  async function handleSttDownload() {
+    sttDownloadLoading = true;
+    sttError = null;
+    try {
+      const response = await downloadSttModel({
+        repo_id: sttRepoId,
+        revision: sttRevision || null,
+        model_filename: sttModelFilename,
+        tokenizer_filename: sttTokenizerFilename,
+        config_filename: sttConfigFilename,
+      });
+      sttCustomDir = response.model_dir;
+      await updateSttSettings({ source: 'custom', custom_dir: response.model_dir });
+      await message($t('settings.stt.download.success'), {
+        title: $t('settings.stt.download.title'),
+        kind: 'info',
+      });
+    } catch (err) {
+      sttError = `Failed to download STT model: ${err}`;
+      console.error(err);
+      await message($t('settings.stt.download.error'), {
+        title: $t('settings.stt.download.title'),
+        kind: 'error',
+      });
+    } finally {
+      sttDownloadLoading = false;
+    }
+  }
 </script>
 
 <div class="settings-page">
@@ -326,6 +418,88 @@
     {#if threadLimitError}
       <div class="error-message">
         {threadLimitError}
+      </div>
+    {/if}
+  </div>
+
+  <div class="settings-section">
+    <h2>{$t('settings.stt.title')}</h2>
+    <p class="settings-description">
+      {$t('settings.stt.description')}
+    </p>
+
+    {#if sttLoading}
+      <div class="loading">{$t('settings.stt.loading')}</div>
+    {:else}
+      <div class="stt-source-row">
+        <label class="stt-radio">
+          <input
+            type="radio"
+            name="stt-source"
+            value="bundled"
+            checked={sttSource === 'bundled'}
+            onchange={() => setSttSource('bundled')}
+          />
+          <span>{$t('settings.stt.sources.bundled')}</span>
+        </label>
+        <label class="stt-radio">
+          <input
+            type="radio"
+            name="stt-source"
+            value="custom"
+            checked={sttSource === 'custom'}
+            onchange={() => setSttSource('custom')}
+          />
+          <span>{$t('settings.stt.sources.custom')}</span>
+        </label>
+      </div>
+
+      <div class="stt-path-row">
+        <div class="stt-path-text">
+          {sttCustomDir || $t('settings.stt.customPathEmpty')}
+        </div>
+        <button class="stt-button" onclick={pickSttDirectory}>
+          {$t('settings.stt.chooseFolder')}
+        </button>
+      </div>
+
+      <div class="stt-download">
+        <h3>{$t('settings.stt.download.title')}</h3>
+        <div class="stt-grid">
+          <label class="stt-field">
+            <span>{$t('settings.stt.download.repoId')}</span>
+            <input class="stt-input" bind:value={sttRepoId} />
+          </label>
+          <label class="stt-field">
+            <span>{$t('settings.stt.download.revision')}</span>
+            <input class="stt-input" bind:value={sttRevision} />
+          </label>
+          <label class="stt-field">
+            <span>{$t('settings.stt.download.modelFile')}</span>
+            <input class="stt-input" bind:value={sttModelFilename} />
+          </label>
+          <label class="stt-field">
+            <span>{$t('settings.stt.download.tokenizerFile')}</span>
+            <input class="stt-input" bind:value={sttTokenizerFilename} />
+          </label>
+          <label class="stt-field">
+            <span>{$t('settings.stt.download.configFile')}</span>
+            <input class="stt-input" bind:value={sttConfigFilename} />
+          </label>
+        </div>
+        <div class="stt-actions">
+          <button class="stt-button" onclick={handleSttDownload} disabled={sttDownloadLoading}>
+            {sttDownloadLoading
+              ? $t('settings.stt.download.loading')
+              : $t('settings.stt.download.button')}
+          </button>
+        </div>
+      </div>
+    {/if}
+
+    {#if sttError}
+      <div class="error-message">
+        {sttError}
       </div>
     {/if}
   </div>
@@ -643,6 +817,100 @@
   .status-disabled {
     color: var(--muted);
     font-weight: var(--font-weight-medium);
+  }
+
+  .stt-source-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+
+  .stt-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-base);
+    color: var(--text);
+  }
+
+  .stt-path-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+  }
+
+  .stt-path-text {
+    font-size: var(--font-size-sm);
+    color: var(--muted);
+    word-break: break-all;
+  }
+
+  .stt-download {
+    margin-top: var(--space-4);
+    padding: var(--space-3);
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+  }
+
+  .stt-download h3 {
+    margin: 0 0 var(--space-3) 0;
+    font-size: var(--font-size-base);
+    color: var(--text);
+  }
+
+  .stt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-3);
+  }
+
+  .stt-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    color: var(--muted);
+  }
+
+  .stt-input {
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--card);
+    color: var(--text);
+    font-size: var(--font-size-sm);
+  }
+
+  .stt-actions {
+    margin-top: var(--space-3);
+  }
+
+  .stt-button {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--card);
+    color: var(--text);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: background-color var(--duration-slow) var(--ease-default);
+  }
+
+  .stt-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .stt-button:hover:not(:disabled) {
+    background: var(--surface);
   }
 
   /* Responsive styles */

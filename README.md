@@ -60,6 +60,7 @@
 - Modern and intuitive design
 - Real-time streaming responses
 - Support for text and code formatting
+- Voice input powered by local Whisper
 
 ### 🧠 **Thinking Mode**
 

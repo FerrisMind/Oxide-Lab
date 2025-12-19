@@ -14,6 +14,7 @@
   import { Separator } from '$lib/components/ui/separator';
   import { cn } from '$lib/utils.js';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
+  import { startVoiceCapture as startVoiceCaptureSession, type VoiceCapture } from '$lib/services/voice-input';
   import { t } from '$lib/i18n';
 
   type AttachDetail = {
@@ -55,6 +56,7 @@
     onStop?: () => void;
     onClear?: () => void;
     onAttach?: (detail: AttachDetail) => void;
+    onVoiceTranscribe?: (samples: Float32Array) => Promise<void>;
     onToggleLoaderPanel?: () => void;
     onToggleChatHistory?: () => void;
   }
@@ -76,6 +78,7 @@
     onStop,
     onClear,
     onAttach,
+    onVoiceTranscribe,
     onToggleLoaderPanel,
     onToggleChatHistory: _onToggleChatHistory,
   }: Props = $props();
@@ -84,9 +87,13 @@
   let textareaElement: HTMLTextAreaElement | null = $state(null);
   const MAX_FILE_SIZE = 20 * 1024 * 1024;
   let attachError: string | null = $state(null);
+  let voiceError: string | null = $state(null);
   let errorTimer: ReturnType<typeof setTimeout> | null = null;
+  let voiceErrorTimer: ReturnType<typeof setTimeout> | null = null;
   let accept = $derived(buildAccept());
   let attachedFiles: AttachDetail[] = $state([]);
+  let voiceCapture: VoiceCapture | null = $state(null);
+  let isTranscribing = $state(false);
 
   let textareaHeight = $state(38);
   const MIN_HEIGHT = 38;
@@ -103,19 +110,22 @@
   }
 
   function triggerClear() {
-    if (!prompt && !attachError) return;
+    if (!prompt && !attachError && !voiceError) return;
     prompt = '';
     attachError = null;
+    voiceError = null;
     clearErrorTimer();
+    clearVoiceErrorTimer();
     onClear?.();
   }
 
   function triggerVoiceInput() {
+    if (isTranscribing) return;
     if (isRecording) {
-      isRecording = false;
+      void endVoiceCapture();
       return;
     }
-    isRecording = true;
+    void beginVoiceCapture();
   }
 
   function triggerSettings() {
@@ -153,6 +163,53 @@
       attachError = null;
       errorTimer = null;
     }, 4000);
+  }
+
+  function clearVoiceErrorTimer() {
+    if (voiceErrorTimer) {
+      clearTimeout(voiceErrorTimer);
+      voiceErrorTimer = null;
+    }
+  }
+
+  function setVoiceError(message: string) {
+    voiceError = message;
+    clearVoiceErrorTimer();
+    voiceErrorTimer = setTimeout(() => {
+      voiceError = null;
+      voiceErrorTimer = null;
+    }, 4000);
+  }
+
+  async function beginVoiceCapture() {
+    try {
+      voiceCapture = await startVoiceCaptureSession();
+      isRecording = true;
+      voiceError = null;
+      clearVoiceErrorTimer();
+    } catch (err) {
+      console.error('Failed to start voice capture', err);
+      setVoiceError($t('chat.composer.voice.captureFailed'));
+    }
+  }
+
+  async function endVoiceCapture() {
+    if (!voiceCapture) {
+      isRecording = false;
+      return;
+    }
+    isTranscribing = true;
+    isRecording = false;
+    try {
+      const samples = await voiceCapture.stop();
+      voiceCapture = null;
+      await onVoiceTranscribe?.(samples);
+    } catch (err) {
+      console.error('Failed to transcribe voice input', err);
+      setVoiceError($t('chat.composer.voice.transcriptionFailed'));
+    } finally {
+      isTranscribing = false;
+    }
   }
 
   async function handleFileChange(event: Event) {
@@ -274,13 +331,12 @@
   });
 </script>
 
-<div
-  class={cn(
-    'absolute left-1/2 w-[640px] max-w-[calc(100%-2rem)] -translate-x-1/2 px-0 transition-[top,bottom,transform] duration-300',
-    hasMessages ? 'bottom-6 pb-0 bg-transparent' : 'top-1/2 -translate-y-1/2',
-    !isLoaded && 'hidden',
-  )}
->
+  <div
+    class={cn(
+      'absolute left-1/2 w-[640px] max-w-[calc(100%-2rem)] -translate-x-1/2 px-0 transition-[top,bottom,transform] duration-300',
+      hasMessages ? 'bottom-6 pb-0 bg-transparent' : 'top-1/2 -translate-y-1/2',
+    )}
+  >
   <div
     class="rounded-2xl border bg-card/80 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-card/70"
   >
@@ -322,7 +378,6 @@
           style={`height:${textareaHeight}px; margin-top:var(--space-1); margin-bottom:calc(-1 * var(--space-2)); background-color: hsl(var(--card) / 0.8);`}
           onkeydown={handleKeydown}
           oninput={handleTextareaInput}
-          disabled={!isLoaded}
         />
 
         <Separator class="bg-transparent opacity-0" />
@@ -376,12 +431,12 @@
               size="icon-sm"
               class={cn('composer-icon-btn rounded-full', isRecording && 'text-destructive')}
               onclick={triggerVoiceInput}
-              disabled={busy || !isLoaded || !experimentalReady}
+              disabled={busy || isTranscribing}
               aria-label={isRecording
                 ? $t('chat.composer.voice.stopRecording')
                 : $t('chat.composer.voice.startRecording')}
               aria-pressed={isRecording}
-              title={experimentalStatusMessage ?? undefined}
+              title={isTranscribing ? $t('chat.composer.voice.transcribing') : undefined}
             >
               {#if isRecording}
                 <Stop size={16} weight="bold" />
@@ -411,10 +466,14 @@
         </div>
       </div>
 
-      {#if attachError}
+      {#if attachError || voiceError}
         <Alert variant="destructive" class="text-sm">
-          <AlertTitle>{$t('chat.composer.errors.attachmentError')}</AlertTitle>
-          <AlertDescription>{attachError}</AlertDescription>
+          <AlertTitle>
+            {voiceError
+              ? $t('chat.composer.voice.errorTitle')
+              : $t('chat.composer.errors.attachmentError')}
+          </AlertTitle>
+          <AlertDescription>{voiceError ?? attachError}</AlertDescription>
         </Alert>
       {/if}
     </div>

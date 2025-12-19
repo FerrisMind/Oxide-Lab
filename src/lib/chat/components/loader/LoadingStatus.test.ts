@@ -1,6 +1,7 @@
-import { render } from '@testing-library/svelte/svelte5';
+import { render } from '@testing-library/svelte';
+import { asClassComponent } from 'svelte/legacy';
 
-import { vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const MockIcon = () => {};
 
@@ -12,7 +13,7 @@ const { default: LoadingStatus } = await import('./LoadingStatus.svelte');
 
 describe('LoadingStatus', () => {
   it('renders a spinner while model is loading', () => {
-    const { getByTestId } = render(LoadingStatus, {
+    const { getByTestId } = render(asClassComponent(LoadingStatus), {
       props: {
         isLoadingModel: true,
         isCancelling: false,

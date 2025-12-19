@@ -7,6 +7,7 @@ pub mod metadata;
 pub mod model;
 pub mod precision;
 pub mod prompts;
+pub mod stt;
 pub mod threads;
 
 pub use device::*;
@@ -18,4 +19,5 @@ pub use metadata::*;
 pub use model::*;
 pub use precision::*;
 pub use prompts::*;
+pub use stt::*;
 pub use threads::*;

@@ -1,9 +1,7 @@
-import Root, { type Props as SpinnerProps } from './spinner.svelte';
+import Root from './spinner.svelte';
 
 export {
   Root,
-  type SpinnerProps,
   //
   Root as Spinner,
 };
-

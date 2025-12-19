@@ -751,6 +751,18 @@
   let isChatHistoryVisible = $derived(!!$showChatHistory);
   let hasMessages = $derived((messages?.length ?? 0) > 0);
   let canStopGeneration = $derived(busy && isLoaded);
+  let showComposer = $derived(isLoaded || hasMessages);
+
+  async function handleVoiceTranscribe(samples: Float32Array) {
+    try {
+      const text = await controller.transcribeVoice(samples);
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      prompt = prompt ? `${prompt}\n${trimmed}` : trimmed;
+    } catch (err) {
+      console.error('Voice transcription failed', err);
+    }
+  }
 
   // Очищаем слушатели событий при размонтировании
   onDestroy(() => {
@@ -789,24 +801,27 @@
         bind:messagesEl
         showModelNotice={!isLoaded && messages.length === 0}
       />
-      <Composer
-        bind:prompt
-        {busy}
-        {isLoaded}
-        canStop={canStopGeneration}
-        {supports_text}
-        {supports_image}
-        {supports_audio}
-        {supports_video}
-        {isLoaderPanelVisible}
-        {isChatHistoryVisible}
-        {hasMessages}
-        onSend={sendMessage}
-        onStop={stopGenerate}
-        onAttach={attachFileToPrompt}
-        onToggleLoaderPanel={toggleLoaderPanelVisibility}
-        onToggleChatHistory={toggleChatHistoryVisibility}
-      />
+      {#if showComposer}
+        <Composer
+          bind:prompt
+          {busy}
+          {isLoaded}
+          canStop={canStopGeneration}
+          {supports_text}
+          {supports_image}
+          {supports_audio}
+          {supports_video}
+          {isLoaderPanelVisible}
+          {isChatHistoryVisible}
+          {hasMessages}
+          onSend={sendMessage}
+          onStop={stopGenerate}
+          onAttach={attachFileToPrompt}
+          onVoiceTranscribe={handleVoiceTranscribe}
+          onToggleLoaderPanel={toggleLoaderPanelVisibility}
+          onToggleChatHistory={toggleChatHistoryVisibility}
+        />
+      {/if}
     </section>
 
     <Sheet.Root bind:open={isLoaderPanelVisible}>
