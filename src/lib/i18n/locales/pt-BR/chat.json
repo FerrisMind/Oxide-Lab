@@ -1,10 +1,11 @@
 {
   "placeholder": {
     "title": "Modelo nao carregado",
-    "description": "Carregue um modelo GGUF para comecar a conversar"
+    "description": "Carregue um modelo para comecar a conversar"
   },
   "composer": {
     "placeholder": "Escreva uma mensagem...",
+    "placeholderNotLoaded": "Carregue um modelo para comecar a conversar",
     "hideHistory": "Ocultar historico de chat",
     "showHistory": "Mostrar historico de chat",
     "loaderSettings": "Configuracoes do painel de carregamento",

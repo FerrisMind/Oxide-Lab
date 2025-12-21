@@ -1,7 +1,9 @@
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, Sample, SampleFormat, SizedSample, Stream, StreamConfig};
+use tauri::{AppHandle, Emitter};
 
 pub struct AudioCaptureState {
     capture: Mutex<Option<AudioCapture>>,
@@ -14,7 +16,7 @@ impl AudioCaptureState {
         }
     }
 
-    pub fn start(&self) -> Result<(), String> {
+    pub fn start(&self, app: AppHandle) -> Result<(), String> {
         let mut guard = self
             .capture
             .lock()
@@ -22,7 +24,7 @@ impl AudioCaptureState {
         if guard.is_some() {
             return Err("Recording already in progress".to_string());
         }
-        let mut capture = AudioCapture::new()?;
+        let mut capture = AudioCapture::new(app)?;
         capture.start()?;
         *guard = Some(capture);
         Ok(())
@@ -63,10 +65,11 @@ struct AudioCapture {
     sample_format: SampleFormat,
     buffer: Arc<Mutex<Vec<f32>>>,
     stream: Option<Stream>,
+    rms_emitter: Option<Arc<Mutex<RmsEmitter>>>,
 }
 
 impl AudioCapture {
-    fn new() -> Result<Self, String> {
+    fn new(app: AppHandle) -> Result<Self, String> {
         let host = cpal::default_host();
         let device = host
             .default_input_device()
@@ -74,22 +77,31 @@ impl AudioCapture {
         let config = device
             .default_input_config()
             .map_err(|e| format!("Failed to query input config: {e}"))?;
+        let rms_emitter = Arc::new(Mutex::new(RmsEmitter::new(app)));
         Ok(Self {
             device,
             config: config.clone().into(),
             sample_format: config.sample_format(),
             buffer: Arc::new(Mutex::new(Vec::new())),
             stream: None,
+            rms_emitter: Some(rms_emitter),
         })
     }
 
     fn start(&mut self) -> Result<(), String> {
         let channels = self.config.channels;
         let buffer = Arc::clone(&self.buffer);
+        let rms_emitter = self.rms_emitter.clone();
         let stream = match self.sample_format {
-            SampleFormat::F32 => build_stream::<f32>(&self.device, &self.config, channels, buffer)?,
-            SampleFormat::I16 => build_stream::<i16>(&self.device, &self.config, channels, buffer)?,
-            SampleFormat::U16 => build_stream::<u16>(&self.device, &self.config, channels, buffer)?,
+            SampleFormat::F32 => {
+                build_stream::<f32>(&self.device, &self.config, channels, buffer, rms_emitter)?
+            }
+            SampleFormat::I16 => {
+                build_stream::<i16>(&self.device, &self.config, channels, buffer, rms_emitter)?
+            }
+            SampleFormat::U16 => {
+                build_stream::<u16>(&self.device, &self.config, channels, buffer, rms_emitter)?
+            }
             _ => return Err("Unsupported audio sample format".to_string()),
         };
         stream
@@ -115,40 +127,60 @@ fn build_stream<T: SizedSample + Send + Sync + 'static>(
     config: &StreamConfig,
     channels: u16,
     buffer: Arc<Mutex<Vec<f32>>>,
+    rms_emitter: Option<Arc<Mutex<RmsEmitter>>>,
 ) -> Result<Stream, String>
 where
     f32: FromSample<T>,
 {
     let err_fn = |err| log::error!("Audio input stream error: {err}");
+    let rms_emitter = rms_emitter.clone();
     device
         .build_input_stream(
             config,
-            move |data: &[T], _| push_input_data(data, channels, &buffer),
+            move |data: &[T], _| {
+                let rms = push_input_data(data, channels, &buffer);
+                if let (Some(rms), Some(emitter)) = (rms, rms_emitter.as_ref())
+                    && let Ok(mut guard) = emitter.lock()
+                {
+                    guard.maybe_emit(rms);
+                }
+            },
             err_fn,
             None,
         )
         .map_err(|e| format!("Failed to build input stream: {e}"))
 }
 
-fn push_input_data<T: Sample>(data: &[T], channels: u16, buffer: &Arc<Mutex<Vec<f32>>>)
+fn push_input_data<T: Sample>(
+    data: &[T],
+    channels: u16,
+    buffer: &Arc<Mutex<Vec<f32>>>,
+) -> Option<f32>
 where
     f32: FromSample<T>,
 {
     let channels = channels as usize;
     if channels == 0 {
-        return;
+        return None;
     }
     let mut mono = Vec::with_capacity(data.len() / channels);
+    let mut sum_sq = 0.0f32;
     for frame in data.chunks(channels) {
         let mut sum = 0.0f32;
         for sample in frame {
             sum += sample.to_sample::<f32>();
         }
-        mono.push(sum / channels as f32);
+        let mono_sample = sum / channels as f32;
+        mono.push(mono_sample);
+        sum_sq += mono_sample * mono_sample;
     }
     if let Ok(mut guard) = buffer.lock() {
         guard.extend_from_slice(&mono);
     }
+    if mono.is_empty() {
+        return None;
+    }
+    Some((sum_sq / mono.len() as f32).sqrt())
 }
 
 pub fn resample_linear(input: &[f32], input_rate: u32, output_rate: u32) -> Vec<f32> {
@@ -172,6 +204,32 @@ pub fn resample_linear(input: &[f32], input_rate: u32, output_rate: u32) -> Vec<
         *value = (1.0 - frac) * input[index] + frac * input[next];
     }
     output
+}
+
+struct RmsEmitter {
+    app: AppHandle,
+    last_emit: Instant,
+    interval: Duration,
+}
+
+impl RmsEmitter {
+    fn new(app: AppHandle) -> Self {
+        Self {
+            app,
+            last_emit: Instant::now(),
+            interval: Duration::from_millis(80),
+        }
+    }
+
+    fn maybe_emit(&mut self, rms: f32) {
+        if self.last_emit.elapsed() < self.interval {
+            return;
+        }
+        if let Err(err) = self.app.emit("voice_rms", rms) {
+            log::error!("Failed to emit voice RMS: {err}");
+        }
+        self.last_emit = Instant::now();
+    }
 }
 
 #[cfg(test)]

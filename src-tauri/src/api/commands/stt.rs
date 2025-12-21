@@ -14,8 +14,11 @@ pub async fn transcribe_audio(app: AppHandle, req: TranscribeRequest) -> Result<
 }
 
 #[tauri::command]
-pub fn start_voice_recording(state: State<'_, AudioCaptureState>) -> Result<(), String> {
-    state.start()
+pub fn start_voice_recording(
+    app: AppHandle,
+    state: State<'_, AudioCaptureState>,
+) -> Result<(), String> {
+    state.start(app)
 }
 
 #[tauri::command]
@@ -27,6 +30,7 @@ pub fn cancel_voice_recording(state: State<'_, AudioCaptureState>) -> Result<(),
 pub async fn stop_voice_recording_and_transcribe(
     app: AppHandle,
     state: State<'_, AudioCaptureState>,
+    language: Option<String>,
 ) -> Result<String, String> {
     let (samples, sample_rate) = state.stop()?;
     let samples = if sample_rate == TARGET_SAMPLE_RATE {
@@ -37,6 +41,7 @@ pub async fn stop_voice_recording_and_transcribe(
     let req = TranscribeRequest {
         samples,
         sample_rate: TARGET_SAMPLE_RATE,
+        language,
     };
     tauri::async_runtime::spawn_blocking(move || crate::core::stt_whisper::transcribe(&app, req))
         .await

@@ -7,11 +7,17 @@
   import SlidersHorizontal from 'phosphor-svelte/lib/SlidersHorizontal';
   import File from 'phosphor-svelte/lib/File';
   import X from 'phosphor-svelte/lib/X';
+  import CaretDown from 'phosphor-svelte/lib/CaretDown';
+  import Check from 'phosphor-svelte/lib/Check';
+  import { onDestroy, onMount } from 'svelte';
+  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
   import { Textarea } from '$lib/components/ui/textarea';
-  import { Button } from '$lib/components/ui/button';
+  import { Button, buttonVariants } from '$lib/components/ui/button';
+  import { Spinner } from '$lib/components/ui/spinner';
   import { Badge } from '$lib/components/ui/badge';
   import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
   import { Separator } from '$lib/components/ui/separator';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import { cn } from '$lib/utils.js';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   import { startVoiceCapture as startVoiceCaptureSession, type VoiceCapture } from '$lib/services/voice-input';
@@ -38,6 +44,45 @@
   const AUDIO_EXTENSIONS = ['wav', 'mp3', 'ogg', 'flac', 'm4a'];
   const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'mkv'];
   const DEFAULT_TEXT_ACCEPT = TEXT_EXTENSIONS.map((ext) => `.${ext}`).join(',');
+  const STT_LANGUAGE_STORAGE_KEY = 'oxide-stt-language';
+  const RMS_BAR_SEEDS = [0.42, 0.6, 0.82, 0.68, 0.5, 0.74, 0.56];
+
+  type SttLanguage =
+    | 'auto'
+    | 'en'
+    | 'ru'
+    | 'es'
+    | 'fr'
+    | 'de'
+    | 'it'
+    | 'pt'
+    | 'uk'
+    | 'pl'
+    | 'tr'
+    | 'ja'
+    | 'ko'
+    | 'zh'
+    | 'hi'
+    | 'ar';
+
+  const STT_LANGUAGE_OPTIONS: { value: SttLanguage; label: string }[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: 'en', label: 'English' },
+    { value: 'ru', label: 'Russian' },
+    { value: 'es', label: 'Spanish' },
+    { value: 'fr', label: 'French' },
+    { value: 'de', label: 'German' },
+    { value: 'it', label: 'Italian' },
+    { value: 'pt', label: 'Portuguese' },
+    { value: 'uk', label: 'Ukrainian' },
+    { value: 'pl', label: 'Polish' },
+    { value: 'tr', label: 'Turkish' },
+    { value: 'ja', label: 'Japanese' },
+    { value: 'ko', label: 'Korean' },
+    { value: 'zh', label: 'Chinese' },
+    { value: 'hi', label: 'Hindi' },
+    { value: 'ar', label: 'Arabic' },
+  ];
 
   interface Props {
     prompt?: string;
@@ -94,13 +139,27 @@
   let attachedFiles: AttachDetail[] = $state([]);
   let voiceCapture: VoiceCapture | null = $state(null);
   let isTranscribing = $state(false);
+  let sttLanguage = $state<SttLanguage>('auto');
+  let voiceRms = $state(0);
+  let rmsPhase = $state(0);
+  let rmsUnlisten: UnlistenFn | null = null;
+  let rmsTimer: ReturnType<typeof setInterval> | null = null;
+  let lastRmsAt = $state(0);
 
   let textareaHeight = $state(38);
   const MIN_HEIGHT = 38;
   const MAX_HEIGHT = 120;
+  const RMS_BAR_COUNT = 6;
+
+  const isVoiceActive = $derived(isRecording || isTranscribing);
+  const sendDisabled = $derived(!isLoaded || isVoiceActive || (!busy && !prompt.trim()));
+  const languageLabel = $derived(
+    STT_LANGUAGE_OPTIONS.find((option) => option.value === sttLanguage)?.label ?? 'Auto',
+  );
+  const rmsBars = $derived(buildRmsBars(voiceRms, rmsPhase));
 
   function triggerSend() {
-    if (busy || !isLoaded || !prompt.trim()) return;
+    if (busy || !isLoaded || !prompt.trim() || isVoiceActive) return;
     onSend?.();
   }
 
@@ -182,12 +241,19 @@
   }
 
   async function beginVoiceCapture() {
+    if (isRecording || voiceCapture) return;
     try {
       voiceCapture = await startVoiceCaptureSession();
+      voiceRms = 0;
       isRecording = true;
       voiceError = null;
       clearVoiceErrorTimer();
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('Recording already in progress')) {
+        isRecording = true;
+        return;
+      }
       console.error('Failed to start voice capture', err);
       setVoiceError($t('chat.composer.voice.captureFailed'));
     }
@@ -201,7 +267,8 @@
     isTranscribing = true;
     isRecording = false;
     try {
-      const text = await voiceCapture.stop();
+      const language = sttLanguage === 'auto' ? null : sttLanguage;
+      const text = await voiceCapture.stop(language);
       voiceCapture = null;
       await onVoiceTranscribe?.(text);
     } catch (err) {
@@ -209,6 +276,7 @@
       setVoiceError($t('chat.composer.voice.transcriptionFailed'));
     } finally {
       isTranscribing = false;
+      voiceRms = 0;
     }
   }
 
@@ -289,6 +357,7 @@
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
+      if (isVoiceActive) return;
       triggerSend();
     }
   }
@@ -327,6 +396,83 @@
       setTimeout(() => {
         adjustTextareaHeight();
       }, 0);
+    }
+  });
+
+  $effect(() => {
+    if (!isVoiceActive) {
+      voiceRms = 0;
+    }
+  });
+
+  onMount(async () => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STT_LANGUAGE_STORAGE_KEY);
+        if (saved && STT_LANGUAGE_OPTIONS.some((option) => option.value === saved)) {
+          sttLanguage = saved as SttLanguage;
+        }
+      } catch (err) {
+        console.error('Failed to load STT language preference', err);
+      }
+    }
+
+    try {
+      rmsUnlisten = await listen<number>('voice_rms', (event) => {
+        const next = Math.min(1, Math.max(0, event.payload ?? 0));
+        voiceRms = next;
+        lastRmsAt = Date.now();
+        rmsPhase = Math.random() * Math.PI * 2;
+      });
+    } catch (err) {
+      console.error('Failed to listen for voice RMS', err);
+    }
+  });
+
+  onDestroy(() => {
+    if (rmsUnlisten) {
+      rmsUnlisten();
+      rmsUnlisten = null;
+    }
+    if (rmsTimer) {
+      clearInterval(rmsTimer);
+      rmsTimer = null;
+    }
+  });
+
+  function updateSttLanguage(next: SttLanguage) {
+    sttLanguage = next;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(STT_LANGUAGE_STORAGE_KEY, next);
+      } catch (err) {
+        console.error('Failed to persist STT language preference', err);
+      }
+    }
+  }
+
+  function buildRmsBars(level: number, phase: number) {
+    const intensity = Math.sqrt(Math.min(1, Math.max(0, level)));
+    return RMS_BAR_SEEDS.slice(0, RMS_BAR_COUNT).map((seed, index) => {
+      const jitter = 0.4 + 0.6 * (Math.sin(phase + index * 1.6) * 0.5 + 0.5);
+      return Math.min(1, intensity * (0.5 + seed * jitter));
+    });
+  }
+
+  $effect(() => {
+    if (isVoiceActive && !rmsTimer) {
+      rmsTimer = setInterval(() => {
+        if (!isRecording) return;
+        const now = Date.now();
+        if (now - lastRmsAt > 200) {
+          voiceRms = 0.35 + Math.random() * 0.45;
+          rmsPhase = Math.random() * Math.PI * 2;
+        }
+      }, 120);
+    }
+    if (!isVoiceActive && rmsTimer) {
+      clearInterval(rmsTimer);
+      rmsTimer = null;
     }
   });
 </script>
@@ -382,87 +528,164 @@
 
         <Separator class="bg-transparent opacity-0" />
 
-        <div class="flex flex-wrap items-start justify-between gap-2 px-3 -mt-2">
-          <div
-            class="flex min-w-0 flex-1 items-center gap-1.5 translate-x-1.5 [&>*]:-translate-y-1.5"
-          >
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              class="composer-icon-btn rounded-full"
-              onclick={triggerAttach}
-              disabled={busy || !isLoaded || !experimentalReady}
-              aria-label={$t('chat.composer.attach')}
-              title={experimentalStatusMessage ?? undefined}
+        <div class="flex items-center justify-between gap-2 px-3 -mt-2">
+          {#if isVoiceActive}
+            <div class="flex-1"></div>
+            <div
+              class="ml-auto flex flex-shrink-0 items-center gap-1.5 -translate-x-1.5 [&>*]:-translate-y-1.5"
             >
-              <Paperclip size={16} weight="bold" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              class={cn('composer-icon-btn rounded-full', isLoaderPanelVisible && 'text-primary')}
-              onclick={triggerSettings}
-              disabled={!isLoaded || busy}
-              aria-label={$t('chat.composer.loaderSettings')}
+              {#if isTranscribing}
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  class="composer-icon-btn rounded-full"
+                  disabled={true}
+                  aria-label={$t('chat.composer.voice.transcribing')}
+                >
+                  <Spinner
+                    size={14}
+                    class="model-combobox-spinner"
+                    label={$t('chat.composer.voice.transcribing')}
+                  />
+                </Button>
+              {:else}
+                <div class="voice-spectrum" aria-hidden="true">
+                  {#each rmsBars as bar, index (index)}
+                    <span class="voice-bar" style={`height:${10 + bar * 16}px`}></span>
+                  {/each}
+                </div>
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger
+                    class={cn(
+                      buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
+                      'composer-icon-btn rounded-full',
+                    )}
+                    aria-label="Select voice language"
+                  >
+                    <CaretDown size={14} weight="bold" />
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Content align="end" class="w-48">
+                    {#each STT_LANGUAGE_OPTIONS as option}
+                      <DropdownMenu.Item
+                        class={cn(
+                          'flex items-center justify-between',
+                          sttLanguage === option.value && 'bg-accent',
+                        )}
+                        onclick={() => updateSttLanguage(option.value)}
+                      >
+                        <span>{option.label}</span>
+                        {#if sttLanguage === option.value}
+                          <Check size={14} weight="bold" class="text-accent-foreground" />
+                        {/if}
+                      </DropdownMenu.Item>
+                    {/each}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
+              {/if}
+              {#if isRecording && !isTranscribing}
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  class="composer-icon-btn rounded-full text-destructive"
+                  onclick={triggerVoiceInput}
+                  aria-label={$t('chat.composer.voice.stopRecording')}
+                >
+                  <Stop size={16} weight="bold" />
+                </Button>
+              {/if}
+              <Button
+                variant="default"
+                size="icon-sm"
+                class="rounded-full"
+                onclick={busy ? triggerStop : triggerSend}
+                disabled={sendDisabled}
+                aria-label={$t('chat.composer.send')}
+              >
+                <ArrowUp size={16} weight="bold" />
+                <span class="sr-only">{$t('chat.composer.send')}</span>
+              </Button>
+            </div>
+          {:else}
+            <div
+              class="flex min-w-0 flex-1 items-center gap-1.5 translate-x-1.5 [&>*]:-translate-y-1.5"
             >
-              <SlidersHorizontal size={16} weight="bold" />
-            </Button>
-
-            {#if prompt || attachError}
               <Button
                 variant="ghost"
                 size="icon-sm"
                 class="composer-icon-btn rounded-full"
-                onclick={triggerClear}
-                disabled={busy || !isLoaded}
-                aria-label={$t('chat.composer.clear')}
+                onclick={triggerAttach}
+                disabled={busy || !isLoaded || !experimentalReady}
+                aria-label={$t('chat.composer.attach')}
+                title={experimentalStatusMessage ?? undefined}
               >
-                <Broom size={16} weight="bold" />
+                <Paperclip size={16} weight="bold" />
               </Button>
-            {/if}
-          </div>
 
-          <div
-            class="flex flex-shrink-0 items-center gap-1.5 -translate-x-1.5 [&>*]:-translate-y-1.5"
-          >
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              class={cn('composer-icon-btn rounded-full', isRecording && 'text-destructive')}
-              onclick={triggerVoiceInput}
-              disabled={busy || isTranscribing}
-              aria-label={isRecording
-                ? $t('chat.composer.voice.stopRecording')
-                : $t('chat.composer.voice.startRecording')}
-              aria-pressed={isRecording}
-              title={isTranscribing ? $t('chat.composer.voice.transcribing') : undefined}
-            >
-              {#if isRecording}
-                <Stop size={16} weight="bold" />
-              {:else}
-                <Microphone size={16} weight="bold" />
-              {/if}
-            </Button>
-
-            <Button
-              variant="default"
-              size="icon-sm"
-              class="rounded-full"
-              onclick={busy ? triggerStop : triggerSend}
-              disabled={!isLoaded || (!busy && !prompt.trim())}
-              aria-label={busy ? $t('chat.composer.stop') : $t('chat.composer.send')}
-            >
-              {#if busy}
-                <Stop size={16} weight="bold" />
-              {:else}
-                <ArrowUp size={16} weight="bold" />
-              {/if}
-              <span class="sr-only"
-                >{busy ? $t('chat.composer.stop') : $t('chat.composer.send')}</span
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class={cn('composer-icon-btn rounded-full', isLoaderPanelVisible && 'text-primary')}
+                onclick={triggerSettings}
+                disabled={!isLoaded || busy}
+                aria-label={$t('chat.composer.loaderSettings')}
               >
-            </Button>
-          </div>
+                <SlidersHorizontal size={16} weight="bold" />
+              </Button>
+
+              {#if prompt || attachError}
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  class="composer-icon-btn rounded-full"
+                  onclick={triggerClear}
+                  aria-label={$t('chat.composer.clear')}
+                >
+                  <Broom size={16} weight="bold" />
+                </Button>
+              {/if}
+            </div>
+
+            <div
+              class="flex flex-shrink-0 items-center gap-1.5 -translate-x-1.5 [&>*]:-translate-y-1.5"
+            >
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class={cn('composer-icon-btn rounded-full', isRecording && 'text-destructive')}
+                onclick={triggerVoiceInput}
+                disabled={busy || isTranscribing}
+                aria-label={isRecording
+                  ? $t('chat.composer.voice.stopRecording')
+                  : $t('chat.composer.voice.startRecording')}
+                aria-pressed={isRecording}
+                title={isTranscribing ? $t('chat.composer.voice.transcribing') : undefined}
+              >
+                {#if isRecording}
+                  <Stop size={16} weight="bold" />
+                {:else}
+                  <Microphone size={16} weight="bold" />
+                {/if}
+              </Button>
+
+              <Button
+                variant="default"
+                size="icon-sm"
+                class="rounded-full"
+                onclick={busy ? triggerStop : triggerSend}
+                disabled={sendDisabled}
+                aria-label={busy ? $t('chat.composer.stop') : $t('chat.composer.send')}
+              >
+                {#if busy}
+                  <Stop size={16} weight="bold" />
+                {:else}
+                  <ArrowUp size={16} weight="bold" />
+                {/if}
+                <span class="sr-only"
+                  >{busy ? $t('chat.composer.stop') : $t('chat.composer.send')}</span
+                >
+              </Button>
+            </div>
+          {/if}
         </div>
       </div>
 
@@ -513,4 +736,25 @@
   :global(button.composer-icon-btn:focus-visible) {
     border-color: hsl(var(--border)) !important;
   }
+
+  .voice-spectrum {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    height: 28px;
+    min-width: 64px;
+    flex-shrink: 0;
+  }
+
+  .voice-bar {
+    display: inline-block;
+    width: 4px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    transition: height 120ms ease;
+  }
+
+
 </style>

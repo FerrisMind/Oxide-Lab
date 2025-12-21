@@ -34,6 +34,7 @@ struct WhisperState {
 pub struct TranscribeRequest {
     pub samples: Vec<f32>,
     pub sample_rate: u32,
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,14 +113,19 @@ pub fn transcribe(app: &AppHandle, req: TranscribeRequest) -> Result<String, Str
     )
     .map_err(|e| format!("Failed to build mel tensor: {e}"))?;
 
-    let language_token = detect_language(&mut state.model, &state.tokenizer, &mel)
-        .map_err(|e| format!("Failed to detect language: {e}"))?;
+    let language_token = match req.language.as_deref() {
+        None | Some("auto") => Some(
+            detect_language(&mut state.model, &state.tokenizer, &mel)
+                .map_err(|e| format!("Failed to detect language: {e}"))?,
+        ),
+        Some(language) => Some(language_token(&state.tokenizer, language)?),
+    };
     decode_greedy(
         &mut state.model,
         &state.tokenizer,
         &state.config,
         &mel,
-        Some(language_token),
+        language_token,
     )
     .map_err(|e| format!("Failed to decode audio: {e}"))
 }
@@ -295,6 +301,14 @@ fn token_id(tokenizer: &Tokenizer, token: &str) -> Result<u32, String> {
         .token_to_id(token)
         .ok_or_else(|| format!("Token not found: {token}"))?;
     Ok(token)
+}
+
+fn language_token(tokenizer: &Tokenizer, language: &str) -> Result<u32, String> {
+    let supported = LANGUAGES.iter().any(|(code, _)| *code == language);
+    if !supported {
+        return Err(format!("Unsupported STT language: {language}"));
+    }
+    token_id(tokenizer, &format!("<|{language}|>"))
 }
 
 fn decode_greedy(

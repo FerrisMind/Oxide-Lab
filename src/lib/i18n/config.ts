@@ -36,13 +36,11 @@ const config: Config = {
     {
       locale: 'en',
       key: 'settings',
-      routes: ['/settings'],
       loader: async () => (await import('./locales/en/settings.json')).default,
     },
     {
       locale: 'en',
       key: 'models',
-      routes: ['/models'],
       loader: async () => (await import('./locales/en/models.json')).default,
     },
     {
@@ -76,13 +74,11 @@ const config: Config = {
     {
       locale: 'ru',
       key: 'settings',
-      routes: ['/settings'],
       loader: async () => (await import('./locales/ru/settings.json')).default,
     },
     {
       locale: 'ru',
       key: 'models',
-      routes: ['/models'],
       loader: async () => (await import('./locales/ru/models.json')).default,
     },
     {
@@ -116,13 +112,11 @@ const config: Config = {
     {
       locale: 'pt-BR',
       key: 'settings',
-      routes: ['/settings'],
       loader: async () => (await import('./locales/pt-BR/settings.json')).default,
     },
     {
       locale: 'pt-BR',
       key: 'models',
-      routes: ['/models'],
       loader: async () => (await import('./locales/pt-BR/models.json')).default,
     },
     {

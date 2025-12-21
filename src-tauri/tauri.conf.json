@@ -15,10 +15,10 @@
         "title": "Oxide Lab",
         "decorations": false,
         "transparent": true,
-        "width": 2180,
-        "height": 1152,
+        "width": 1280,
+        "height": 800,
         "minWidth": 640,
-        "minHeight": 360,
+        "minHeight": 400,
         "label": "main"
       }
     ],

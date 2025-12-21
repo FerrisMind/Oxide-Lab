@@ -1,10 +1,11 @@
 {
   "placeholder": {
     "title": "Model not loaded",
-    "description": "Load a GGUF model to start chatting"
+    "description": "Load a model to start chatting"
   },
   "composer": {
     "placeholder": "Write a message...",
+    "placeholderNotLoaded": "Load a model to start chatting...",
     "hideHistory": "Hide chat history",
     "showHistory": "Show chat history",
     "loaderSettings": "Loader panel settings",

@@ -1,10 +1,11 @@
 {
   "placeholder": {
     "title": "Модель не загружена",
-    "description": "Загрузите GGUF модель, чтобы начать общение"
+    "description": "Загрузите модель, чтобы начать общение"
   },
   "composer": {
     "placeholder": "Напишите сообщение...",
+    "placeholderNotLoaded": "Загрузите модель, чтобы начать чат",
     "hideHistory": "Скрыть историю чатов",
     "showHistory": "Показать историю чатов",
     "loaderSettings": "Настройки панели загрузки",

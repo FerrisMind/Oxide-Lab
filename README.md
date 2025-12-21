@@ -61,6 +61,7 @@
 - Real-time streaming responses
 - Support for text and code formatting
 - Voice input powered by local Whisper
+- Voice input meter with language selection
 
 ### 🧠 **Thinking Mode**
 
