@@ -108,21 +108,6 @@
       const parsed = raw ? JSON.parse(raw) : {};
       parsed[index] = metrics;
       localStorage.setItem(key, JSON.stringify(parsed));
-      // #region agent log
-      void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: 'debug-session',
-          runId: 'run2',
-          hypothesisId: 'H8',
-          location: 'Chat.svelte:saveMetrics',
-          message: 'persist metrics',
-          data: { sessionId, index },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     } catch {}
   }
 
@@ -133,21 +118,6 @@
       if (!raw) return new Map();
       const parsed = JSON.parse(raw) as Record<string, InferenceMetrics>;
       const entries = Object.entries(parsed).map(([k, v]) => [Number(k), v] as [number, InferenceMetrics]);
-      // #region agent log
-      void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: 'debug-session',
-          runId: 'run2',
-          hypothesisId: 'H9',
-          location: 'Chat.svelte:loadMetrics',
-          message: 'restore metrics from storage',
-          data: { sessionId, restored: entries.length },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       return new Map(entries);
     } catch {
       return new Map();
@@ -700,25 +670,6 @@
   // Загрузка сообщений при переключении сессии
   $effect(() => {
     if ($currentSession && $currentSession.id !== lastSessionId) {
-      // #region agent log
-      void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: 'debug-session',
-          runId: 'run2',
-          hypothesisId: 'H5',
-          location: 'Chat.svelte:$effect',
-          message: 'load currentSession into view',
-          data: {
-            sessionId: $currentSession.id,
-            messagesCount: $currentSession.messages.length,
-            roles: $currentSession.messages.map((m) => m.role),
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       // isLoadingFromHistory = true; // Удалено
       messages = [...$currentSession.messages]; // Создаем новый массив для триггера реактивности
       lastSessionId = $currentSession.id;
@@ -753,15 +704,10 @@
   let canStopGeneration = $derived(busy && isLoaded);
   let showComposer = $derived(isLoaded || hasMessages);
 
-  async function handleVoiceTranscribe(samples: Float32Array) {
-    try {
-      const text = await controller.transcribeVoice(samples);
-      const trimmed = text.trim();
-      if (!trimmed) return;
-      prompt = prompt ? `${prompt}\n${trimmed}` : trimmed;
-    } catch (err) {
-      console.error('Voice transcription failed', err);
-    }
+  async function handleVoiceTranscribe(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    prompt = prompt ? `${prompt}\n${trimmed}` : trimmed;
   }
 
   // Очищаем слушатели событий при размонтировании

@@ -44,46 +44,12 @@
       if (!bubble) return;
       if (bubble.textContent && bubble.textContent.trim().length > 0) return;
 
-      // #region agent log
-      void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: 'debug-session',
-          runId: 'run2',
-          hypothesisId: 'H6',
-          location: 'MessageList.svelte:rehydrate',
-          message: 'rehydrate assistant bubble',
-          data: {
-            index: i,
-            contentLength: m.content.length,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-
       appendSegments(i, bubble as HTMLDivElement, [{ kind: 'text', data: m.content }], false);
       finalizeStreaming(i);
 
       // Проверим наличие метрик после ре-гидратации (H7)
       const metrics = metricsMap.get(i);
       if (!metrics) {
-        // #region agent log
-        void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: 'debug-session',
-            runId: 'run2',
-            hypothesisId: 'H7',
-            location: 'MessageList.svelte:metricsMissing',
-            message: 'no metrics for assistant after rehydrate',
-            data: { index: i, contentLength: m.content.length },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
       }
     });
   });

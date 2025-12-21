@@ -4,6 +4,7 @@ use tauri::Emitter;
 use tauri::Manager;
 
 use crate::api::commands::threads::{apply_rayon_thread_limit, default_rayon_thread_limit};
+use crate::core::audio_capture::AudioCaptureState;
 use crate::core::device::select_device;
 use crate::core::performance::StartupTracker;
 use crate::core::rayon_pool::init_global_low_priority_pool;
@@ -103,6 +104,7 @@ pub fn run() {
                 .build(),
         )
         .manage(shared.clone())
+        .manage(AudioCaptureState::new())
         .invoke_handler(tauri::generate_handler![
             crate::api::greet,
             get_app_info,
@@ -134,6 +136,9 @@ pub fn run() {
             crate::api::performance_api::get_startup_metrics,
             crate::api::performance_api::get_system_usage,
             crate::api::transcribe_audio,
+            crate::api::start_voice_recording,
+            crate::api::stop_voice_recording_and_transcribe,
+            crate::api::cancel_voice_recording,
             crate::api::get_stt_settings,
             crate::api::set_stt_settings,
             crate::api::download_stt_model,

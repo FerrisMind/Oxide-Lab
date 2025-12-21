@@ -55,8 +55,8 @@ pub fn load_settings(app: &AppHandle) -> Result<SttSettings, String> {
     if !path.exists() {
         return Ok(SttSettings::default());
     }
-    let data = fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read STT settings: {e}"))?;
+    let data =
+        fs::read_to_string(&path).map_err(|e| format!("Failed to read STT settings: {e}"))?;
     serde_json::from_str(&data).map_err(|e| format!("Failed to parse STT settings: {e}"))
 }
 
@@ -103,7 +103,11 @@ pub fn transcribe(app: &AppHandle, req: TranscribeRequest) -> Result<String, Str
     let mel_len = mel.len();
     let mel = Tensor::from_vec(
         mel,
-        (1, state.config.num_mel_bins, mel_len / state.config.num_mel_bins),
+        (
+            1,
+            state.config.num_mel_bins,
+            mel_len / state.config.num_mel_bins,
+        ),
         &device,
     )
     .map_err(|e| format!("Failed to build mel tensor: {e}"))?;
@@ -120,7 +124,10 @@ pub fn transcribe(app: &AppHandle, req: TranscribeRequest) -> Result<String, Str
     .map_err(|e| format!("Failed to decode audio: {e}"))
 }
 
-pub async fn download_model(app: &AppHandle, req: DownloadRequest) -> Result<DownloadResponse, String> {
+pub async fn download_model(
+    app: &AppHandle,
+    req: DownloadRequest,
+) -> Result<DownloadResponse, String> {
     use hf_hub::api::tokio::ApiBuilder;
     use hf_hub::{Repo, RepoType};
     use tokio::task;
@@ -176,8 +183,7 @@ pub async fn download_model(app: &AppHandle, req: DownloadRequest) -> Result<Dow
     task::spawn_blocking(move || -> Result<(), String> {
         for (src, name) in copies {
             let dest = repo_dir_clone.join(name);
-            fs::copy(&src, &dest)
-                .map_err(|e| format!("Failed to copy downloaded file: {e}"))?;
+            fs::copy(&src, &dest).map_err(|e| format!("Failed to copy downloaded file: {e}"))?;
         }
         Ok(())
     })
@@ -199,10 +205,10 @@ fn load_model(app: &AppHandle, settings: &SttSettings) -> Result<WhisperState, S
         return Err("STT model files are missing".to_string());
     }
 
-    let config_data = fs::read_to_string(&config_path)
-        .map_err(|e| format!("Failed to read STT config: {e}"))?;
-    let config: Config =
-        serde_json::from_str(&config_data).map_err(|e| format!("Failed to parse STT config: {e}"))?;
+    let config_data =
+        fs::read_to_string(&config_path).map_err(|e| format!("Failed to read STT config: {e}"))?;
+    let config: Config = serde_json::from_str(&config_data)
+        .map_err(|e| format!("Failed to parse STT config: {e}"))?;
 
     let tokenizer = Tokenizer::from_file(&tokenizer_path)
         .map_err(|e| format!("Failed to load STT tokenizer: {e}"))?;
@@ -500,6 +506,6 @@ fn detect_language(
         .map_err(|e| format!("{e}"))?;
     let mut probs = LANGUAGES.iter().zip(probs.iter()).collect::<Vec<_>>();
     probs.sort_by(|(_, p1), (_, p2)| p2.total_cmp(p1));
-    let language = token_id(tokenizer, &format!("<|{}|>", probs[0].0 .0))?;
+    let language = token_id(tokenizer, &format!("<|{}|>", probs[0].0.0))?;
     Ok(language)
 }

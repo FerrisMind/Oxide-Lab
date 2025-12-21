@@ -402,8 +402,16 @@ fn test_inspect_gemma_metadata() {
                 println!("  {} (String): {}", key, preview);
             }
             candle::quantized::gguf_file::Value::Array(arr) => {
-                println!("  {} (Array[{}]): {:?}", key, arr.len(), 
-                    if arr.len() <= 5 { format!("{:?}", arr) } else { format!("[first 5 of {} items]", arr.len()) });
+                println!(
+                    "  {} (Array[{}]): {:?}",
+                    key,
+                    arr.len(),
+                    if arr.len() <= 5 {
+                        format!("{:?}", arr)
+                    } else {
+                        format!("[first 5 of {} items]", arr.len())
+                    }
+                );
             }
             candle::quantized::gguf_file::Value::U32(n) => {
                 println!("  {} (U32): {}", key, n);

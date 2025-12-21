@@ -208,22 +208,6 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
 function mountThinkingComponents(container: HTMLElement) {
   const placeholders = container.querySelectorAll('.thinking-placeholder');
 
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      sessionId: 'debug-session',
-      runId: 'run-pre-fix',
-      hypothesisId: 'H13',
-      location: 'markdown_block.ts:mountThinkingComponents:start',
-      message: 'mount thinking placeholders',
-      data: { count: placeholders.length },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   placeholders.forEach((placeholder) => {
     const element = placeholder as HTMLElement & { __thinkComponent?: any };
     const mountTarget = (element.querySelector('.thinking-mount') as HTMLElement | null) ?? element;
@@ -231,22 +215,6 @@ function mountThinkingComponents(container: HTMLElement) {
     const innerHtml = contentEl?.innerHTML ?? '';
     const key = element.dataset.thinkId || 'thinking';
     const streaming = element.dataset.streaming === 'true';
-
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: 'debug-session',
-        runId: 'run-pre-fix',
-        hypothesisId: 'H3',
-        location: 'markdown_block.ts:mountThinkingComponents:before',
-        message: 'mount think start',
-        data: { key, streaming, innerLen: innerHtml.length },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     // remove stash content to avoid double render
     if (contentEl) {
@@ -264,21 +232,6 @@ function mountThinkingComponents(container: HTMLElement) {
         existing.setOpen?.(open);
         existing.setStreaming?.(streaming);
 
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: 'debug-session',
-            runId: 'run-pre-fix',
-            hypothesisId: 'H3',
-            location: 'markdown_block.ts:mountThinkingComponents:reuse',
-            message: 'reuse think component',
-            data: { key, streaming, stored, open },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         return;
       }
 
@@ -303,22 +256,6 @@ function mountThinkingComponents(container: HTMLElement) {
       component.setStreaming?.(streaming);
 
       element.__thinkComponent = component;
-
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: 'debug-session',
-          runId: 'run-pre-fix',
-          hypothesisId: 'H3',
-          location: 'markdown_block.ts:mountThinkingComponents:new',
-          message: 'new think component',
-          data: { key, streaming, stored, open },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     } catch (error) {
       console.error('Failed to mount ThinkingAccordion:', error);
     }
@@ -359,11 +296,6 @@ export function appendMarkdownText(
     let needsFullRender = hasStreamingCodeBlocksChanged(ctx.mdContentEl, newContent);
     let openCount = (ctx.mdText.match(/<think>/g) || []).length;
     let closeCount = (ctx.mdText.match(/<\/think>/g) || []).length;
-    let openEscCount = (ctx.mdText.match(/&lt;think>/g) || []).length;
-    let closeEscCount = (ctx.mdText.match(/&lt;\/think>/g) || []).length;
-    let placeholderCount = (newContent.match(/thinking-placeholder/g) || []).length;
-    let hasThinkInHtml = newContent.includes('<think>');
-    let hasEscThinkInHtml = newContent.includes('&lt;think');
 
     // Если markdown-рендер автозакрыл think, а сырой поток всё ещё без закрытия,
     // сохраняем закрывающий тег в буфере, чтобы последующий текст не попадал внутрь.
@@ -372,39 +304,7 @@ export function appendMarkdownText(
       closeCount += 1;
       newContent = renderMarkdownWithStreamingCode(ctx.mdText, isStreaming);
       needsFullRender = true;
-      placeholderCount = (newContent.match(/thinking-placeholder/g) || []).length;
-      hasThinkInHtml = newContent.includes('<think>');
-      hasEscThinkInHtml = newContent.includes('&lt;think');
     }
-
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: 'debug-session',
-        runId: 'run-pre-fix',
-        hypothesisId: 'H4',
-        location: 'markdown_block.ts:appendMarkdownText',
-        message: 'render markdown chunk',
-        data: {
-          isStreaming,
-          needsFullRender,
-          mdTextLen: ctx.mdText.length,
-          openCount,
-          closeCount,
-          openEscCount,
-          closeEscCount,
-          thinkPlaceholdersInHtml: placeholderCount,
-          newContentLen: newContent.length,
-          hasThinkInHtml,
-          hasEscThinkInHtml,
-          newContentSnippet: newContent.slice(0, 200),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     if (needsFullRender) {
       cleanupStreamingCodeComponents(ctx.mdContentEl);

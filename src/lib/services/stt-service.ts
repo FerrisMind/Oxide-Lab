@@ -29,14 +29,3 @@ export async function downloadSttModel(
     throw error;
   }
 }
-
-export async function transcribeAudio(samples: Float32Array): Promise<string> {
-  try {
-    return await invoke<string>('transcribe_audio', {
-      req: { samples: Array.from(samples), sample_rate: 16_000 },
-    });
-  } catch (error) {
-    console.error('Failed to transcribe audio:', error);
-    throw error;
-  }
-}

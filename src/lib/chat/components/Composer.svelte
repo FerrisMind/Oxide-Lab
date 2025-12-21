@@ -56,7 +56,7 @@
     onStop?: () => void;
     onClear?: () => void;
     onAttach?: (detail: AttachDetail) => void;
-    onVoiceTranscribe?: (samples: Float32Array) => Promise<void>;
+    onVoiceTranscribe?: (text: string) => Promise<void>;
     onToggleLoaderPanel?: () => void;
     onToggleChatHistory?: () => void;
   }
@@ -201,9 +201,9 @@
     isTranscribing = true;
     isRecording = false;
     try {
-      const samples = await voiceCapture.stop();
+      const text = await voiceCapture.stop();
       voiceCapture = null;
-      await onVoiceTranscribe?.(samples);
+      await onVoiceTranscribe?.(text);
     } catch (err) {
       console.error('Failed to transcribe voice input', err);
       setVoiceError($t('chat.composer.voice.transcriptionFailed'));

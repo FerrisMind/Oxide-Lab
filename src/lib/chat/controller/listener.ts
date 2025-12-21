@@ -13,51 +13,9 @@ export function createStreamListener(ctx: ChatControllerCtx) {
   const streamParser = createStreamParser();
 
   function flushStream(streamingFlag: boolean) {
-    // #region agent log
-    void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: 'debug-session',
-        runId: 'run-pre-fix',
-        hypothesisId: 'H11',
-        location: 'listener.ts:flushStream:before-parse',
-        message: 'before parse',
-        data: { streamingFlag, streamBufLen: streamBuf.length, snippet: streamBuf.slice(0, 120) },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
     const { segments, remainder } = streamParser.parse(streamBuf);
     streamBuf = remainder;
     if (segments.length === 0) return;
-
-    // #region agent log
-    const hasThinkSeg = segments.some(
-      (s) => s.data && (s.data.includes('<think') || s.data.includes('&lt;think')),
-    );
-    void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: 'debug-session',
-        runId: 'run-pre-fix',
-        hypothesisId: 'H11',
-        location: 'listener.ts:flushStream:after-parse',
-        message: 'after parse',
-        data: {
-          streamingFlag,
-          segmentsCount: segments.length,
-          hasThinkSeg,
-          remainderLen: remainder.length,
-          firstSegKind: segments[0]?.kind ?? null,
-          firstSegSnippet: segments[0]?.data?.slice(0, 120) ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     const msgs = ctx.messages;
     const last = msgs[msgs.length - 1];
@@ -144,25 +102,6 @@ export function createStreamListener(ctx: ChatControllerCtx) {
               const msgs = ctx.messages;
               const last = msgs[msgs.length - 1];
               if (last && last.role === 'assistant') {
-                // #region agent log
-                void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    sessionId: 'debug-session',
-                    runId: 'run1',
-                    hypothesisId: 'H1',
-                    location: 'listener.ts:[DONE]',
-                    message: 'saving assistant message',
-                    data: {
-                      sessionId: state.currentSessionId,
-                      contentLength: last.content?.length ?? 0,
-                      hasContent: !!last.content,
-                    },
-                    timestamp: Date.now(),
-                  }),
-                }).catch(() => {});
-                // #endregion
                 await chatHistory.saveAssistantMessage(state.currentSessionId, last.content);
               }
             }
@@ -182,24 +121,6 @@ export function createStreamListener(ctx: ChatControllerCtx) {
           }
           return;
         }
-
-        // #region agent log
-        if (token.includes('<think') || token.includes('&lt;think')) {
-          void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sessionId: 'debug-session',
-              runId: 'run-pre-fix',
-              hypothesisId: 'H10',
-              location: 'listener.ts:token',
-              message: 'raw token with think',
-              data: { snippet: token.slice(0, 200) },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-        }
-        // #endregion
 
         streamBuf += token;
         scheduleFlush();

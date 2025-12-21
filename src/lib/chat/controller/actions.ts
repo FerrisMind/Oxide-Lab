@@ -12,7 +12,6 @@ import { createStreamListener } from './listener';
 import { buildPromptWithChatTemplate } from '$lib/chat/prompts';
 import { get } from 'svelte/store';
 import { t } from '$lib/i18n';
-import { transcribeAudio } from '$lib/services/stt-service';
 
 export function createActions(ctx: ChatControllerCtx) {
   const stream = createStreamListener(ctx);
@@ -428,17 +427,6 @@ export function createActions(ctx: ChatControllerCtx) {
     } catch {}
   }
 
-  async function transcribeVoice(samples: Float32Array): Promise<string> {
-    try {
-      return await transcribeAudio(samples);
-    } catch (e) {
-      const err = String(e ?? 'Unknown error');
-      try {
-        await message(err, { title: get(t)('chat.composer.voice.error'), kind: 'error' });
-      } catch {}
-      throw e;
-    }
-  }
 
   async function pickModel() {
     if (ctx.format === 'gguf') {
@@ -469,7 +457,6 @@ export function createActions(ctx: ChatControllerCtx) {
     handleAttachFile: _handleAttachFile,
     generateFromHistory,
     stopGenerate,
-    transcribeVoice,
     pickModel,
     destroy,
     refreshDeviceInfo,

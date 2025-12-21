@@ -184,7 +184,10 @@ pub fn tokenizer_from_gguf_metadata(
         return Ok(tok);
     }
 
-    Err("GGUF: embedded tokenizer.json не найден или не поддерживается; реконструкция невозможна".into())
+    Err(
+        "GGUF: embedded tokenizer.json не найден или не поддерживается; реконструкция невозможна"
+            .into(),
+    )
 }
 
 /// Построить минимальный JSON для `tokenizers` на основе массива токенов в метаданных.

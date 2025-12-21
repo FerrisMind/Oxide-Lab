@@ -315,41 +315,11 @@ export function createStreamParser() {
 
       // Потоковые размышления: передаем теги как есть, без спец-парсинга
       if (rest.startsWith(THINK_OPEN_TOKEN)) {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: 'debug-session',
-            runId: 'run-pre-fix',
-            hypothesisId: 'H12',
-            location: 'parser.impl.ts:parse',
-            message: 'THINK_OPEN_TOKEN encountered',
-            data: { index: i, bufSnippet: rest.slice(0, 80) },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         appendPlain(THINK_OPEN_TOKEN);
         i += THINK_OPEN_TOKEN.length;
         continue;
       }
       if (rest.startsWith(THINK_CLOSE_TOKEN)) {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: 'debug-session',
-            runId: 'run-pre-fix',
-            hypothesisId: 'H12',
-            location: 'parser.impl.ts:parse',
-            message: 'THINK_CLOSE_TOKEN encountered',
-            data: { index: i, bufSnippet: rest.slice(0, 80) },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         appendPlain(THINK_CLOSE_TOKEN);
         i += THINK_CLOSE_TOKEN.length;
         continue;

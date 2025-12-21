@@ -42,27 +42,6 @@ function createChatHistoryStore() {
       ? message.content.substring(0, 50).split('\n')[0]
       : sessionSnapshot?.title;
 
-    // #region agent log
-    void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'H1',
-        location: 'chat-history.ts:insertMessage',
-        message: 'insertMessage attempt',
-        data: {
-          role: message.role,
-          targetSessionId,
-          currentSessionId: state.currentSessionId,
-          hasDb: !!state.db,
-          snapshotMessages: sessionSnapshot?.messages?.length ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     await state.db.execute(
       'INSERT INTO messages (session_id, role, content, created_at) VALUES ($1, $2, $3, $4)',
@@ -81,25 +60,6 @@ function createChatHistoryStore() {
       targetSessionId,
     ]);
 
-      // #region agent log
-      void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'H2',
-          location: 'chat-history.ts:insertMessage',
-          message: 'insertMessage persisted',
-          data: {
-            role: message.role,
-            sessionId: targetSessionId,
-            titleFromMessage: titleFromMessage ?? null,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
 
     update((s) => {
       const sessions = s.sessions.map((sess) => {
@@ -213,24 +173,6 @@ function createChatHistoryStore() {
           currentSessionId: null,
         }));
 
-        // #region agent log
-        void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'H3',
-            location: 'chat-history.ts:init',
-            message: 'init completed',
-            data: {
-              sessionsCount: sessions.length,
-              selectedSessionId: sessions.length > 0 ? sessions[0].id : null,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
       } catch (err) {
         console.error('Failed to init chat database:', err);
       }
@@ -275,25 +217,6 @@ function createChatHistoryStore() {
 
     loadSession: (sessionId: string) => {
       update((s) => {
-        // #region agent log
-        void fetch('http://127.0.0.1:7243/ingest/772f9f1b-e203-482c-aa15-3d8d8eb57ac6', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: 'debug-session',
-            runId: 'run2',
-            hypothesisId: 'H4',
-            location: 'chat-history.ts:loadSession',
-            message: 'loadSession invoked',
-            data: {
-              requestedSessionId: sessionId,
-              sessionsInStore: s.sessions.length,
-              hasDb: !!s.db,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
 
         return { ...s, currentSessionId: sessionId };
       });
