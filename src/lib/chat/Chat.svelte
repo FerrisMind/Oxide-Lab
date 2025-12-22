@@ -4,6 +4,11 @@
   import LoaderPanel from '$lib/chat/components/LoaderPanel.svelte';
   import MessageList from '$lib/chat/components/MessageList.svelte';
   import Composer from '$lib/chat/components/Composer.svelte';
+  import {
+    Conversation,
+    ConversationContent,
+    ConversationScrollButton,
+  } from '$lib/components/ai-elements/conversation';
   import * as Sheet from '$lib/components/ui/sheet/index.js';
   // Chat styles are loaded globally from layout to avoid UI changes when navigating between pages
   // Убрали переключатель «сырого» Markdown
@@ -28,7 +33,7 @@
   let hubGgufFilename = $state<string>('');
   let prompt = $state('');
   let messages = $state<ChatMessage[]>([]);
-  let messagesEl = $state<HTMLDivElement | null>(null);
+  // Note: messagesEl removed - scroll is now handled by ChatContainerContext
   let busy = $state(false);
   let format = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>('gguf');
   let pendingModelPath = $state('');
@@ -117,7 +122,9 @@
       const raw = localStorage.getItem(key);
       if (!raw) return new Map();
       const parsed = JSON.parse(raw) as Record<string, InferenceMetrics>;
-      const entries = Object.entries(parsed).map(([k, v]) => [Number(k), v] as [number, InferenceMetrics]);
+      const entries = Object.entries(parsed).map(
+        ([k, v]) => [Number(k), v] as [number, InferenceMetrics],
+      );
       return new Map(entries);
     } catch {
       return new Map();
@@ -200,9 +207,7 @@
     set messages(v) {
       messages = v;
     },
-    get messagesEl() {
-      return messagesEl;
-    },
+    // Note: messagesEl removed - scroll is now handled by ChatContainerContext
     get busy() {
       return busy;
     },
@@ -742,11 +747,12 @@
   <div class="chat-container">
     <!-- удалено дублирование заголовка -->
     <section class="chat">
-      <MessageList
-        bind:messages
-        bind:messagesEl
-        showModelNotice={!isLoaded && messages.length === 0}
-      />
+      <Conversation class="messages-wrapper">
+        <ConversationContent class="messages-content">
+          <MessageList bind:messages showModelNotice={!isLoaded && messages.length === 0} />
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
       {#if showComposer}
         <Composer
           bind:prompt
@@ -855,6 +861,20 @@
     flex-direction: column;
     align-items: center;
     position: relative;
+  }
+
+  /* ChatContainerRoot wrapper styles */
+  .chat :global(.messages-wrapper) {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    max-width: var(--chat-max-width, 800px);
+    flex-direction: column;
+  }
+
+  /* ChatContainerContent styles */
+  .chat :global(.messages-content) {
+    padding-bottom: calc(160px + var(--space-5, 32px));
   }
 
   .loader-sheet-body :global(.loader) {

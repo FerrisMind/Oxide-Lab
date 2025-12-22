@@ -15,45 +15,70 @@
 
   /* --- Core 8pt Grid Units --- */
   --grid-unit: 8px;
-  --baseline: 4px; /* Baseline grid для типографики */
+  --baseline: 4px;
+  /* Baseline grid для типографики */
 
   /* --- 8pt Grid Spacing Scale --- */
   --space-0: 0px;
-  --space-1: 4px; /* 0.5 unit - baseline */
-  --space-2: 8px; /* 1 unit */
-  --space-3: 16px; /* 2 units */
-  --space-4: 24px; /* 3 units */
-  --space-5: 32px; /* 4 units */
-  --space-6: 40px; /* 5 units */
-  --space-7: 48px; /* 6 units */
-  --space-8: 56px; /* 7 units */
-  --space-9: 64px; /* 8 units */
-  --space-10: 72px; /* 9 units */
-  --space-11: 80px; /* 10 units */
-  --space-12: 96px; /* 12 units */
+  --space-1: 4px;
+  /* 0.5 unit - baseline */
+  --space-2: 8px;
+  /* 1 unit */
+  --space-3: 16px;
+  /* 2 units */
+  --space-4: 24px;
+  /* 3 units */
+  --space-5: 32px;
+  /* 4 units */
+  --space-6: 40px;
+  /* 5 units */
+  --space-7: 48px;
+  /* 6 units */
+  --space-8: 56px;
+  /* 7 units */
+  --space-9: 64px;
+  /* 8 units */
+  --space-10: 72px;
+  /* 9 units */
+  --space-11: 80px;
+  /* 10 units */
+  --space-12: 96px;
+  /* 12 units */
 
   /* --- Legacy Spacing Aliases (backwards compat) --- */
   --spacing-unit: var(--space-2);
-  --spacing-xs: var(--space-1); /* 4px */
-  --spacing-sm: var(--space-2); /* 8px */
-  --spacing-md: var(--space-3); /* 16px */
-  --spacing-lg: var(--space-4); /* 24px */
-  --spacing-xl: var(--space-5); /* 32px */
-  --spacing-2xl: var(--space-7); /* 48px */
-  --spacing-3xl: var(--space-9); /* 64px */
+  --spacing-xs: var(--space-1);
+  /* 4px */
+  --spacing-sm: var(--space-2);
+  /* 8px */
+  --spacing-md: var(--space-3);
+  /* 16px */
+  --spacing-lg: var(--space-4);
+  /* 24px */
+  --spacing-xl: var(--space-5);
+  /* 32px */
+  --spacing-2xl: var(--space-7);
+  /* 48px */
+  --spacing-3xl: var(--space-9);
+  /* 64px */
 
   /* --- Layout Grid System --- */
   /* 8-column modular grid: 1440px container, 1200px content area */
   --container-max: 1440px;
   --content-max: 1200px;
   --column-count: 8;
-  --column-width: 120px; /* 1200px / 8 columns - gutters */
-  --gutter: var(--space-3); /* 16px gutters между колонками */
-  --margin-desktop: var(--space-4); /* 24px маржины */
-  --margin-mobile: var(--space-3); /* 16px маржины на мобильных */
+  --column-width: 120px;
+  /* 1200px / 8 columns - gutters */
+  --gutter: var(--space-3);
+  /* 16px gutters между колонками */
+  --margin-desktop: var(--space-4);
+  /* 24px маржины */
+  --margin-mobile: var(--space-3);
+  /* 16px маржины на мобильных */
 
   /* --- Content Gaps (8pt aligned) --- */
-  --content-gap: var(--space-2); /* 8px default gap */
+  --content-gap: var(--space-2);
+  /* 8px default gap */
   --content-gap-top: var(--space-2);
 
   /* --- Color System (Monochromatic with 8% lightness steps) --- */
@@ -77,11 +102,16 @@
   --shadow-hover: 0 8px 32px rgb(0 0 0 / 0.12);
 
   /* --- Border Radius (8pt aligned) --- */
-  --radius-sm: 4px; /* 0.5 unit */
-  --radius: 8px; /* 1 unit */
-  --radius-md: 12px; /* 1.5 units */
-  --radius-lg: 16px; /* 2 units */
-  --radius-xl: 24px; /* 3 units */
+  --radius-sm: 4px;
+  /* 0.5 unit */
+  --radius: 8px;
+  /* 1 unit */
+  --radius-md: 12px;
+  /* 1.5 units */
+  --radius-lg: 16px;
+  /* 2 units */
+  --radius-xl: 24px;
+  /* 3 units */
   --radius-full: 9999px;
 
   /* =================================================================
@@ -97,21 +127,34 @@
   --font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
 
   /* --- Font Sizes (кратны 4px) --- */
-  --font-size-xs: 12px; /* 3 baseline units */
-  --font-size-sm: 14px; /* 3.5 baseline units (exception for readability) */
-  --font-size-base: 16px; /* 4 baseline units */
-  --font-size-lg: 20px; /* 5 baseline units */
-  --font-size-xl: 24px; /* 6 baseline units */
-  --font-size-2xl: 32px; /* 8 baseline units */
-  --font-size-3xl: 40px; /* 10 baseline units */
-  --font-size-4xl: 48px; /* 12 baseline units */
+  --font-size-xs: 12px;
+  /* 3 baseline units */
+  --font-size-sm: 14px;
+  /* 3.5 baseline units (exception for readability) */
+  --font-size-base: 16px;
+  /* 4 baseline units */
+  --font-size-lg: 20px;
+  /* 5 baseline units */
+  --font-size-xl: 24px;
+  /* 6 baseline units */
+  --font-size-2xl: 32px;
+  /* 8 baseline units */
+  --font-size-3xl: 40px;
+  /* 10 baseline units */
+  --font-size-4xl: 48px;
+  /* 12 baseline units */
 
   /* --- Line Heights (1.5× для baseline alignment) --- */
-  --line-height-tight: 1.2; /* Для заголовков */
-  --line-height-snug: 1.375; /* Компактный текст */
-  --line-height-normal: 1.5; /* Основной текст - 24px при 16px */
-  --line-height-relaxed: 1.625; /* Расслабленный */
-  --line-height-loose: 1.75; /* Свободный */
+  --line-height-tight: 1.2;
+  /* Для заголовков */
+  --line-height-snug: 1.375;
+  /* Компактный текст */
+  --line-height-normal: 1.5;
+  /* Основной текст - 24px при 16px */
+  --line-height-relaxed: 1.625;
+  /* Расслабленный */
+  --line-height-loose: 1.75;
+  /* Свободный */
 
   /* --- Font Weights --- */
   --font-weight-normal: 400;
@@ -120,9 +163,12 @@
   --font-weight-bold: 700;
 
   /* --- Paragraph Spacing (8pt aligned) --- */
-  --paragraph-spacing: var(--space-3); /* 16px */
-  --heading-spacing-top: var(--space-5); /* 32px */
-  --heading-spacing-bottom: var(--space-3); /* 16px */
+  --paragraph-spacing: var(--space-3);
+  /* 16px */
+  --heading-spacing-top: var(--space-5);
+  /* 32px */
+  --heading-spacing-bottom: var(--space-3);
+  /* 16px */
 
   /* =================================================================
      ANIMATION SYSTEM
@@ -133,16 +179,21 @@
   /* --- Duration Scale (кратно 50ms) --- */
   --duration-instant: 50ms;
   --duration-fast: 100ms;
-  --duration-normal: 200ms; /* Основная длительность */
+  --duration-normal: 200ms;
+  /* Основная длительность */
   --duration-slow: 300ms;
   --duration-slower: 400ms;
-  --duration-default: 500ms; /* For longer animations */
+  --duration-default: 500ms;
+  /* For longer animations */
   --duration-slowest: 500ms;
-  --duration-1000: 1000ms; /* 1 second */
-  --duration-2000: 2000ms; /* 2 seconds */
+  --duration-1000: 1000ms;
+  /* 1 second */
+  --duration-2000: 2000ms;
+  /* 2 seconds */
 
   /* --- Easing Functions --- */
-  --ease-default: cubic-bezier(0.4, 0, 0.2, 1); /* Material Design standard */
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Material Design standard */
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
@@ -163,24 +214,33 @@
      ================================================================= */
 
   /* Message Container Padding (24px 32px) */
-  --message-padding-desktop: var(--space-4) var(--space-5); /* 24px 32px */
-  --message-padding-mobile: var(--space-3) var(--space-4); /* 16px 24px */
+  --message-padding-desktop: var(--space-4) var(--space-5);
+  /* 24px 32px */
+  --message-padding-mobile: var(--space-3) var(--space-4);
+  /* 16px 24px */
 
   /* Spacing Between Messages */
 
   /* Layout Constraints (6 колонок = 720-800px для чата) */
-  --chat-max-width: 800px; /* ~6.67 колонок */
+  --chat-max-width: 800px;
+  /* ~6.67 колонок */
   --chat-container-width: 100%;
 
   /* Message Elements */
-  --message-content-max-width: 736px; /* 800px - 64px padding, кратно 8 */
-  --message-border-radius: var(--radius-md); /* 12px */
-  --message-gap: 0; /* без расстояния */
+  --message-content-max-width: 736px;
+  /* 800px - 64px padding, кратно 8 */
+  --message-border-radius: var(--radius-md);
+  /* 12px */
+  --message-gap: 0;
+  /* без расстояния */
 
   /* Composer (высота кратна 8) */
-  --composer-height-desktop: 56px; /* 7 units */
-  --composer-height-mobile: 48px; /* 6 units */
-  --composer-max-height: 200px; /* 25 units */
+  --composer-height-desktop: 56px;
+  /* 7 units */
+  --composer-height-mobile: 48px;
+  /* 6 units */
+  --composer-max-height: 200px;
+  /* 25 units */
 
   /* Scrollbar colors */
   --scrollbar-thumb: rgb(107 122 142 / 0.35);
@@ -209,9 +269,12 @@
   --sidebar-accent-foreground: var(--text);
   --sidebar-border: var(--border-color);
   --sidebar-ring: var(--accent);
-  --sidebar-width: 240px; /* 30 units (240px кратно 8) */
-  --sidebar-width-icon: 56px; /* 7 units */
-  --sidebar-width-mobile: 280px; /* 35 units */
+  --sidebar-width: 240px;
+  /* 30 units (240px кратно 8) */
+  --sidebar-width-icon: 56px;
+  /* 7 units */
+  --sidebar-width-mobile: 280px;
+  /* 35 units */
   --sidebar-collapsed-bg: var(--bg);
 
   /* Tooltip styling */
@@ -275,23 +338,35 @@
 /* Улучшенные стили для скроллбаров (src/styles/scrollbar.css) */
 
 ::-webkit-scrollbar {
-  width: var(--space-3); /* 16px */
-  height: var(--space-3); /* 16px */
+  width: var(--space-3);
+  /* 16px */
+  height: var(--space-3);
+  /* 16px */
 }
 
 ::-webkit-scrollbar-track {
   background: transparent;
-  border-radius: var(--radius-lg); /* 16px */
+  border-radius: var(--radius-lg);
+  /* 16px */
   margin: 2px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: var(--radius-lg); /* 16px */
+  background: transparent;
+  border-radius: var(--radius-lg);
+  /* 16px */
   border: 2px solid transparent;
   background-clip: content-box;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+}
+
+/* Show scrollbar on hover or when actively scrolling */
+*:hover> ::-webkit-scrollbar-thumb,
+*:active> ::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb);
+  background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -319,12 +394,14 @@
 }
 
 ::-webkit-scrollbar:horizontal {
-  height: var(--space-2); /* 8px */
+  height: var(--space-2);
+  /* 8px */
 }
 
 ::-webkit-scrollbar-thumb:horizontal {
   background: linear-gradient(90deg, var(--scrollbar-thumb), var(--scrollbar-thumb-fade));
-  border-radius: var(--radius-lg); /* 16px */
+  border-radius: var(--radius-lg);
+  /* 16px */
   border: 1px solid transparent;
   background-clip: content-box;
 }
@@ -334,10 +411,32 @@
   background-clip: content-box;
 }
 
+/* Scrollbar Auto-hide Utility */
+.scrollbar-auto-hide {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease;
+}
+
+.scrollbar-auto-hide:hover {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* For Webkit/Blink */
+.scrollbar-auto-hide::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.scrollbar-auto-hide:hover::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+}
+
 @media (width <=768px) {
   ::-webkit-scrollbar {
-    width: var(--space-2); /* 8px */
-    height: var(--space-2); /* 8px */
+    width: var(--space-2);
+    /* 8px */
+    height: var(--space-2);
+    /* 8px */
   }
 
   ::-webkit-scrollbar-thumb {
@@ -345,10 +444,13 @@
   }
 }
 
-@media (min-device-pixel-ratio: 2), (resolution >=192dpi) {
+@media (min-device-pixel-ratio: 2),
+(resolution >=192dpi) {
   ::-webkit-scrollbar {
-    width: var(--space-3); /* 16px → 14px closest */
-    height: var(--space-3); /* 16px → 14px closest */
+    width: var(--space-3);
+    /* 16px → 14px closest */
+    height: var(--space-3);
+    /* 16px → 14px closest */
   }
 
   ::-webkit-scrollbar-thumb {
@@ -371,8 +473,10 @@ body {
   height: 100%;
   min-height: 100%;
   font-family: var(--font-sans);
-  font-size: var(--font-size-base); /* 16px */
-  line-height: var(--line-height-normal); /* 1.5 = 24px line-height */
+  font-size: var(--font-size-base);
+  /* 16px */
+  line-height: var(--line-height-normal);
+  /* 1.5 = 24px line-height */
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;
@@ -382,7 +486,8 @@ body {
 
 /* Container with 24px margins, 16px content gap */
 .wrap {
-  padding: var(--space-3); /* 16px */
+  padding: var(--space-3);
+  /* 16px */
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -404,9 +509,12 @@ h5,
 h6 {
   color: var(--text);
   font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight); /* 1.2 для заголовков */
-  margin-top: var(--space-5); /* 32px */
-  margin-bottom: var(--space-3); /* 16px */
+  line-height: var(--line-height-tight);
+  /* 1.2 для заголовков */
+  margin-top: var(--space-5);
+  /* 32px */
+  margin-bottom: var(--space-3);
+  /* 16px */
 }
 
 h1:first-child,
@@ -419,37 +527,45 @@ h6:first-child {
 }
 
 h1 {
-  font-size: var(--font-size-2xl); /* 32px */
+  font-size: var(--font-size-2xl);
+  /* 32px */
 }
 
 h2 {
-  font-size: var(--font-size-xl); /* 24px */
+  font-size: var(--font-size-xl);
+  /* 24px */
 }
 
 h3 {
-  font-size: var(--font-size-lg); /* 20px */
+  font-size: var(--font-size-lg);
+  /* 20px */
 }
 
 h4 {
-  font-size: var(--font-size-base); /* 16px */
+  font-size: var(--font-size-base);
+  /* 16px */
   font-weight: var(--font-weight-semibold);
 }
 
 h5 {
-  font-size: var(--font-size-sm); /* 14px */
+  font-size: var(--font-size-sm);
+  /* 14px */
   font-weight: var(--font-weight-semibold);
 }
 
 h6 {
-  font-size: var(--font-size-xs); /* 12px */
+  font-size: var(--font-size-xs);
+  /* 12px */
   font-weight: var(--font-weight-medium);
   color: var(--muted);
 }
 
 p {
   color: var(--text);
-  line-height: var(--line-height-normal); /* 1.5 */
-  margin-bottom: var(--space-3); /* 16px */
+  line-height: var(--line-height-normal);
+  /* 1.5 */
+  margin-bottom: var(--space-3);
+  /* 16px */
 }
 
 p:last-child {
@@ -457,21 +573,25 @@ p:last-child {
 }
 
 /* Mobile typography adjustments */
-@media (width <= 768px) {
+@media (width <=768px) {
   .wrap {
-    padding: var(--space-3); /* 16px */
+    padding: var(--space-3);
+    /* 16px */
   }
 
   h1 {
-    font-size: var(--font-size-xl); /* 24px */
+    font-size: var(--font-size-xl);
+    /* 24px */
   }
 
   h2 {
-    font-size: var(--font-size-lg); /* 20px */
+    font-size: var(--font-size-lg);
+    /* 20px */
   }
 
   h3 {
-    font-size: var(--font-size-base); /* 16px */
+    font-size: var(--font-size-base);
+    /* 16px */
   }
 }
 
@@ -482,9 +602,12 @@ p:last-child {
 button {
   cursor: default;
   border: none;
-  border-radius: var(--radius); /* 8px */
-  padding: var(--space-2) var(--space-3); /* 8px 16px */
-  font-size: var(--font-size-sm); /* 14px */
+  border-radius: var(--radius);
+  /* 8px */
+  padding: var(--space-2) var(--space-3);
+  /* 8px 16px */
+  font-size: var(--font-size-sm);
+  /* 14px */
   font-weight: var(--font-weight-medium);
   transition: var(--transition-all);
   background: var(--accent);
@@ -516,9 +639,12 @@ input,
 textarea,
 select {
   border: 1px solid var(--border-color);
-  border-radius: var(--radius); /* 8px */
-  padding: var(--space-2) var(--space-3); /* 8px 16px */
-  font-size: var(--font-size-sm); /* 14px */
+  border-radius: var(--radius);
+  /* 8px */
+  padding: var(--space-2) var(--space-3);
+  /* 8px 16px */
+  font-size: var(--font-size-sm);
+  /* 14px */
   font-family: var(--font-sans);
   line-height: var(--line-height-normal);
   background: var(--card);
@@ -537,8 +663,10 @@ select:focus {
 .card {
   background: var(--card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg); /* 16px */
-  padding: var(--space-4); /* 24px */
+  border-radius: var(--radius-lg);
+  /* 16px */
+  padding: var(--space-4);
+  /* 24px */
   box-shadow: var(--shadow);
   transition: var(--transition-shadow);
 }
@@ -547,9 +675,10 @@ select:focus {
   box-shadow: var(--shadow-hover);
 }
 
-@media (width <= 768px) {
+@media (width <=768px) {
   .card {
-    padding: var(--space-3); /* 16px */
+    padding: var(--space-3);
+    /* 16px */
   }
 }
 
@@ -559,11 +688,13 @@ select:focus {
 
 .checkbox-label {
   position: relative;
-  padding-left: var(--space-5); /* 32px → 30px closest */
+  padding-left: var(--space-5);
+  /* 32px → 30px closest */
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
-  font-size: var(--font-size-sm); /* 14px */
+  font-size: var(--font-size-sm);
+  /* 14px */
   color: var(--text);
   transition: color 0.2s ease;
 }
@@ -573,21 +704,25 @@ select:focus {
   position: absolute;
   left: 0;
   top: 2px;
-  width: var(--space-3); /* 16px → 18px closest */
-  height: var(--space-3); /* 16px → 18px closest */
+  width: var(--space-3);
+  /* 16px → 18px closest */
+  height: var(--space-3);
+  /* 16px → 18px closest */
   border: 2px solid var(--border-color);
-  border-radius: var(--radius-lg); /* 16px */
+  border-radius: var(--radius-lg);
+  /* 16px */
   background-color: var(--card);
   transition: all 0.2s ease;
 }
 
-.checkbox-input:checked + .checkbox-label::before {
+.checkbox-input:checked+.checkbox-label::before {
   background-color: var(--accent);
   border-color: var(--accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
   content: '✓';
   color: white;
-  font-size: var(--font-size-sm); /* 14px */
+  font-size: var(--font-size-sm);
+  /* 14px */
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -601,17 +736,22 @@ select:focus {
 
 @media (width <=768px) {
   .checkbox-label {
-    padding-left: var(--space-5); /* 32px */
-    font-size: var(--font-size-base); /* 16px */
+    padding-left: var(--space-5);
+    /* 32px */
+    font-size: var(--font-size-base);
+    /* 16px */
   }
 
   .checkbox-label::before {
-    width: var(--space-3); /* 16px → 20px closest */
-    height: var(--space-3); /* 16px → 20px closest */
+    width: var(--space-3);
+    /* 16px → 20px closest */
+    height: var(--space-3);
+    /* 16px → 20px closest */
   }
 
-  .checkbox-input:checked + .checkbox-label::before {
-    font-size: var(--font-size-base); /* 16px */
+  .checkbox-input:checked+.checkbox-label::before {
+    font-size: var(--font-size-base);
+    /* 16px */
   }
 }
 
@@ -640,6 +780,7 @@ select:focus {
 }
 
 @keyframes scrollbarPulse {
+
   0%,
   100% {
     opacity: 0.6;
@@ -665,7 +806,8 @@ select:focus {
 .loading-button {
   display: flex;
   align-items: center;
-  gap: var(--space-2); /* 8px */
+  gap: var(--space-2);
+  /* 8px */
 }
 
 .loading-text {
@@ -719,11 +861,13 @@ select:focus {
 
 /* Override collapsed sidebar width */
 [data-state='collapsed'] [data-slot='sidebar-container'] {
-  width: var(--space-8) !important; /* 56px */
+  width: var(--space-8) !important;
+  /* 56px */
 }
 
 [data-state='collapsed'] [data-slot='sidebar-gap'] {
-  width: var(--space-8) !important; /* 56px */
+  width: var(--space-8) !important;
+  /* 56px */
 }
 
 /* =================================================================
@@ -781,4 +925,36 @@ html.screenshot-mode {
 html.screenshot-mode body {
   height: calc(100vh / 1.25);
   overflow: hidden;
+}
+
+/* =================================================================
+   CHAT SCROLLBAR POSITIONING
+   Scrollbar at window right edge, content centered
+   ================================================================= */
+
+/* Chat container fills available space */
+.chat-container {
+  width: 100% !important;
+}
+
+/* Scroll container takes full width - scrollbar at right edge */
+.chat-container .messages-wrapper,
+.chat-container [role="log"] {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Scrollable content area - full width */
+.chat-container .messages-content {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Inner content wrapper - centered with max-width */
+.chat-container .messages-inner {
+  max-width: var(--chat-max-width, 800px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 100% !important;
+  padding-right: var(--space-3) !important;
 }

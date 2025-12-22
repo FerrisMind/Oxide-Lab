@@ -4,7 +4,7 @@ try {
   (globalThis as any).__invoke = invoke;
 
   (globalThis as any).__probeCuda = () => invoke('probe_cuda');
-} catch {}
+} catch { }
 import { open, message } from '@tauri-apps/plugin-dialog';
 import type { ChatControllerCtx } from './types';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
@@ -105,7 +105,7 @@ export function createActions(ctx: ChatControllerCtx) {
       ctx.f16c = !!info?.f16c;
       // CPU по умолчанию; если включён тумблер и CUDA доступна — активируем GPU
       ctx.use_gpu = ctx.cuda_available && ctx.current_device === 'CUDA';
-    } catch {}
+    } catch { }
   }
 
   async function setDeviceByToggle(desired?: boolean) {
@@ -135,7 +135,7 @@ export function createActions(ctx: ChatControllerCtx) {
     // Сигнал на бэкенд — реальная отмена загрузки
     try {
       void invoke('cancel_model_loading');
-    } catch {}
+    } catch { }
   }
 
   async function loadGGUF() {
@@ -238,7 +238,7 @@ export function createActions(ctx: ChatControllerCtx) {
       ctx.errorText = err;
       try {
         await message(err, { title: get(t)('chat.errors.loadFailed'), kind: 'error' });
-      } catch {}
+      } catch { }
     } finally {
       if (stallTimer) clearInterval(stallTimer);
       // Управление состоянием происходит через события load_progress
@@ -319,12 +319,7 @@ export function createActions(ctx: ChatControllerCtx) {
     ctx.messages = msgs;
 
     ctx.prompt = '';
-    queueMicrotask(() => {
-      const c = ctx.messagesEl;
-      if (!c) return;
-      const atBottom = c.scrollTop + c.clientHeight >= c.scrollHeight - 32;
-      if (atBottom) c.scrollTop = c.scrollHeight;
-    });
+    // Note: Auto-scroll is handled by ChatContainerContext via MutationObserver
     await generateFromHistory();
   }
 
@@ -405,7 +400,7 @@ export function createActions(ctx: ChatControllerCtx) {
       }
       try {
         await message(err, { title: get(t)('chat.errors.generationFailed'), kind: 'error' });
-      } catch {}
+      } catch { }
     } finally {
       ctx.busy = false;
     }
@@ -424,7 +419,7 @@ export function createActions(ctx: ChatControllerCtx) {
           await chatHistory.saveAssistantMessage(state.currentSessionId, last.content);
         }
       }
-    } catch {}
+    } catch { }
   }
 
 

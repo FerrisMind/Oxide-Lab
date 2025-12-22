@@ -13,7 +13,7 @@ vi.mock('$lib/stores/chat-history', () => ({
   chatHistory: {
     subscribe: vi.fn((fn) => {
       fn({ currentSessionId: 'test-session-id' }); // Fake state
-      return () => {};
+      return () => { };
     }),
     saveAssistantMessage: vi.fn(),
   },
@@ -49,7 +49,7 @@ describe('Listener Controller', () => {
   it('should call saveAssistantMessage with accumulated content on [DONE]', async () => {
     const ctx: any = {
       messages: [],
-      messagesEl: null,
+      // Note: messagesEl removed - scroll is now handled by ChatContainerContext
     };
     const listener = createStreamListener(ctx);
     await listener.ensureListener();

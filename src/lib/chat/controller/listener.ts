@@ -22,10 +22,6 @@ export function createStreamListener(ctx: ChatControllerCtx) {
     if (last && last.role === 'assistant') {
       const idx = msgs.length - 1;
       const el = getAssistantBubbleEl(idx);
-      // Capture whether the user was pinned to bottom BEFORE DOM updates
-      const container = ctx.messagesEl;
-      const wasPinnedToBottom =
-        !!container && container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
 
       if (el) appendSegments(idx, el, segments, streamingFlag);
       const onlyText = segments
@@ -36,18 +32,7 @@ export function createStreamListener(ctx: ChatControllerCtx) {
         last.content += onlyText;
         ctx.messages = msgs;
       }
-      // Scroll after DOM commit; use one or two rAFs to account for async mounts (e.g., streaming code blocks)
-      if (wasPinnedToBottom) {
-        requestAnimationFrame(() => {
-          const c1 = ctx.messagesEl;
-          if (c1) c1.scrollTop = c1.scrollHeight;
-          // Schedule a second frame in case nested components expand after first paint
-          requestAnimationFrame(() => {
-            const c2 = ctx.messagesEl;
-            if (c2) c2.scrollTop = c2.scrollHeight;
-          });
-        });
-      }
+      // Note: Auto-scroll is now handled by ChatContainerContext via MutationObserver
     }
   }
 
@@ -105,19 +90,7 @@ export function createStreamListener(ctx: ChatControllerCtx) {
                 await chatHistory.saveAssistantMessage(state.currentSessionId, last.content);
               }
             }
-
-            // Ensure proper scroll position after generation completes
-            const container = ctx.messagesEl;
-            if (container) {
-              // Always scroll to bottom when generation completes
-              requestAnimationFrame(() => {
-                container.scrollTop = container.scrollHeight;
-                // Schedule a second frame to ensure scroll position is properly set
-                requestAnimationFrame(() => {
-                  container.scrollTop = container.scrollHeight;
-                });
-              });
-            }
+            // Note: Auto-scroll is handled by ChatContainerContext via MutationObserver
           }
           return;
         }
@@ -146,7 +119,7 @@ export function createStreamListener(ctx: ChatControllerCtx) {
     if (unlisten) {
       try {
         unlisten();
-      } catch {}
+      } catch { }
       unlisten = null;
     }
     if (rafId !== null) {

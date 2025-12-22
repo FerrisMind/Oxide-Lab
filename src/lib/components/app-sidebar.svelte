@@ -2,8 +2,10 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
+  import { cn } from '$lib/utils';
   import * as Sidebar from '$lib/components/ui/sidebar/index';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index';
+  import { mergeProps } from 'bits-ui';
 
   // Icons
   import SidebarSimple from 'phosphor-svelte/lib/SidebarSimple';
@@ -27,7 +29,7 @@
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   import { t } from '$lib/i18n';
   import { chatHistory, sortedSessions, currentSession } from '$lib/stores/chat-history';
-import { showChatHistory } from '$lib/stores/sidebar';
+  import { showChatHistory } from '$lib/stores/sidebar';
 
   // Navigation items с переводами
   const baseNavigationItems = $derived([
@@ -195,7 +197,7 @@ import { showChatHistory } from '$lib/stores/sidebar';
     {/if}
   </Sidebar.Header>
 
-  <Sidebar.Content class="app-sidebar__content gap-0">
+  <Sidebar.Content class="app-sidebar__content gap-0 overflow-hidden">
     <!-- "New Chat" shortcut when collapsed or main action -->
     <Sidebar.Group>
       <Sidebar.Menu>
@@ -233,77 +235,80 @@ import { showChatHistory } from '$lib/stores/sidebar';
 
     <!-- Chats History Group (hidden when collapsed) -->
     {#if sidebar.state !== 'collapsed'}
-      <Sidebar.Group class="flex-1 min-h-0">
-        <Sidebar.GroupLabel class="chats-label">Chats</Sidebar.GroupLabel>
-        <Sidebar.Menu class="gap-0.5">
-          {#each $sortedSessions as session (session.id)}
-            <Sidebar.MenuItem>
-              {#if editingSessionId === session.id}
-                <div class="px-2 py-1">
-                  <input
-                    class="w-full bg-sidebar-input rounded-md px-2 py-1 text-sm text-sidebar-foreground border border-sidebar-border focus:outline-none focus:ring-1 focus:ring-sidebar-ring"
-                    bind:value={editingTitle}
-                    onblur={() => handleRenameSession(session.id, editingTitle)}
-                    onkeydown={(e) => {
-                      if (e.key === 'Enter') handleRenameSession(session.id, editingTitle);
-                      if (e.key === 'Escape') cancelEdit();
-                    }}
-                    use:focusOnMount
-                  />
-                </div>
-              {:else}
-                <Sidebar.MenuButton
-                  isActive={$currentSession?.id === session.id}
-                  class="group/item chat-session-button"
-                >
-                  {#snippet child({ props })}
-                    <div class="flex w-full items-center justify-between gap-2 overflow-hidden">
+      <Sidebar.Group class="flex-1 min-h-0 flex flex-col p-0">
+        <Sidebar.GroupLabel class="chats-label px-2 pt-2">Chats</Sidebar.GroupLabel>
+        <Sidebar.GroupContent
+          class="flex-1 min-h-0 overflow-y-auto scroll-smooth scrollbar-auto-hide pb-2"
+        >
+          <Sidebar.Menu class="gap-0.5">
+            {#each $sortedSessions as session (session.id)}
+              <Sidebar.MenuItem>
+                {#if editingSessionId === session.id}
+                  <div class="px-2 py-1">
+                    <input
+                      class="w-full bg-sidebar-input rounded-md px-2 py-1 text-sm text-sidebar-foreground border border-sidebar-border focus:outline-none focus:ring-1 focus:ring-sidebar-ring"
+                      bind:value={editingTitle}
+                      onblur={() => handleRenameSession(session.id, editingTitle)}
+                      onkeydown={(e) => {
+                        if (e.key === 'Enter') handleRenameSession(session.id, editingTitle);
+                        if (e.key === 'Escape') cancelEdit();
+                      }}
+                      use:focusOnMount
+                    />
+                  </div>
+                {:else}
+                  <Sidebar.MenuButton
+                    isActive={$currentSession?.id === session.id}
+                    class="chat-session-button"
+                  >
+                    {#snippet child({ props })}
                       <button
                         {...props}
                         onclick={() => handleLoadSession(session.id)}
-                        class="flex-1 overflow-hidden text-left truncate"
+                        class={cn(props.class as any, 'flex-1 overflow-hidden text-left truncate')}
                       >
                         <span>{session.title || 'Untitled Chat'}</span>
                       </button>
+                    {/snippet}
+                  </Sidebar.MenuButton>
 
-                      <!-- Actions Dropdown -->
-                      <div
-                        class="chat-session-actions opacity-0 transition-opacity group-hover/item:opacity-100 focus-within:opacity-100"
-                        data-no-drag
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                      {#snippet child({ props: triggerProps })}
+                        <Sidebar.MenuAction
+                          showOnHover={$currentSession?.id !== session.id}
+                          class={cn(
+                            $currentSession?.id === session.id ? '!opacity-100' : '',
+                            '!bg-transparent',
+                          )}
+                        >
+                          {#snippet child({ props: actionProps })}
+                            <button {...mergeProps(triggerProps, actionProps)}>
+                              <DotsThree size={16} weight="bold" />
+                            </button>
+                          {/snippet}
+                        </Sidebar.MenuAction>
+                      {/snippet}
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content align="end">
+                      <DropdownMenu.Item onclick={() => startEditing(session)}>
+                        <PencilSimple class="mr-2 h-3.5 w-3.5" />
+                        <span>Rename</span>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        onclick={() => handleDeleteSession(session.id)}
+                        class="text-destructive focus:text-destructive"
                       >
-                        <DropdownMenu.Root>
-                          <DropdownMenu.Trigger>
-                            {#snippet child({ props: triggerProps })}
-                              <button
-                                {...triggerProps}
-                                class="h-6 w-6 flex items-center justify-center rounded-md hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-primary"
-                              >
-                                <DotsThree size={16} weight="bold" />
-                              </button>
-                            {/snippet}
-                          </DropdownMenu.Trigger>
-                          <DropdownMenu.Content align="end">
-                            <DropdownMenu.Item onclick={() => startEditing(session)}>
-                              <PencilSimple class="mr-2 h-3.5 w-3.5" />
-                              <span>Rename</span>
-                            </DropdownMenu.Item>
-                            <DropdownMenu.Item
-                              onclick={() => handleDeleteSession(session.id)}
-                              class="text-destructive focus:text-destructive"
-                            >
-                              <Trash class="mr-2 h-3.5 w-3.5" />
-                              <span>Delete</span>
-                            </DropdownMenu.Item>
-                          </DropdownMenu.Content>
-                        </DropdownMenu.Root>
-                      </div>
-                    </div>
-                  {/snippet}
-                </Sidebar.MenuButton>
-              {/if}
-            </Sidebar.MenuItem>
-          {/each}
-        </Sidebar.Menu>
+                        <Trash class="mr-2 h-3.5 w-3.5" />
+                        <span>Delete</span>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Root>
+                {/if}
+              </Sidebar.MenuItem>
+            {/each}
+          </Sidebar.Menu>
+        </Sidebar.GroupContent>
       </Sidebar.Group>
     {/if}
   </Sidebar.Content>
@@ -457,40 +462,14 @@ import { showChatHistory } from '$lib/stores/sidebar';
     flex: 1;
   }
 
-  /* История чатов: выравниваем ширину и ховер с остальными пунктами */
-  :global(.chat-session-button [data-slot='menu-button-trigger']) {
-    width: 100%;
+  :global(.chat-session-button) {
+    width: 100% !important;
   }
 
-  :global(.chat-session-button [data-slot='menu-button-trigger'] > div) {
-    width: 100%;
-  }
-
-  :global(.chat-session-button button) {
-    width: 100%;
-  }
-
-  :global(.chat-session-actions) {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.25rem;
-    width: auto;
-    margin-left: auto;
-  }
-
-  /* Ховер/фон у пункта истории на всю ширину */
-  :global(.chat-session-button [data-slot='menu-button']) {
-    width: 100%;
-  }
-
-  /* Видимость кнопки с тремя точками внутри пункта */
-  :global(.chat-session-actions button) {
-    color: var(--sidebar-foreground);
-  }
-
-  :global(.chat-session-actions button:hover) {
-    color: var(--sidebar-primary);
+  /* Keep highlight active when hovering anywhere in the item (including action buttons) */
+  :global([data-slot='sidebar-menu-item']:hover .chat-session-button) {
+    background-color: var(--sidebar-accent) !important;
+    color: var(--sidebar-accent-foreground) !important;
   }
 
   :global(.app-sidebar__menu) {

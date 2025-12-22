@@ -1,92 +1,14 @@
 /* =================================================================
-   THINKING BLOCK (8pt Grid)
-   Padding: 16px, Border-radius: 8px
+   THINKING BLOCK - ai-elements/reasoning styles
+   Minimal CSS - основные стили в компоненте ThinkingBlock.svelte
    ================================================================= */
 
-.thinking-block {
+/* Placeholder container used by markdown_block.ts */
+.thinking-placeholder {
   width: 100%;
-  margin: var(--space-3) 0; /* 16px */
 }
 
-.thinking-card {
-  border: 1px dashed rgb(148 163 184);
-  border-radius: var(--radius); /* 8px */
-  background: var(--panel-bg, rgb(148 163 184 / 0.08));
-  padding: var(--space-3); /* 16px */
-  transition: var(--transition-colors);
-}
-
-.thinking-card.is-loading {
-  border-style: solid;
-  border-color: var(--accent-color, rgb(96 165 250));
-  background: rgb(96 165 250);
-}
-
-.thinking-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2); /* 8px */
-}
-
-.thinking-loader {
-  width: var(--space-3); /* 16px = 2 units */
-  height: var(--space-3);
-  border-radius: var(--radius-full);
-  border: 2px solid rgb(148 163 184);
-  border-top-color: transparent;
-  animation: thinking-spin 800ms linear infinite; /* 800ms кратно 50ms */
-}
-
-.thinking-loader.is-hidden {
-  display: none;
-}
-
-.thinking-toggle {
-  border: none;
-  background: none;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2); /* 8px */
-  padding: var(--space-1) 0; /* 4px */
-  font: inherit;
-  color: inherit;
-  cursor: default;
-  transition: var(--transition-colors);
-}
-
-.thinking-toggle:focus-visible {
-  outline: 2px solid var(--accent-color, rgb(96 165 250));
-  outline-offset: 2px;
-}
-
-.thinking-chevron {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1em;
-  font-weight: var(--font-weight-semibold);
-}
-
-.thinking-title {
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary, rgb(226 232 240));
-}
-
-.thinking-card:not(.is-expanded) .thinking-body {
-  display: none;
-}
-
-.thinking-body {
-  margin-top: var(--space-2); /* 8px */
-  padding-left: var(--space-4); /* 24px */
-  padding-right: var(--space-3); /* 16px */
-  color: var(--muted, rgb(148 163 184));
-  font-size: var(--font-size-sm); /* 14px */
-  line-height: var(--line-height-relaxed); /* 1.625 */
-}
-
-@keyframes thinking-spin {
-  to {
-    transform: rotate(360deg);
-  }
+/* Override any full-width trigger styles */
+.thinking-trigger {
+  width: auto !important;
 }

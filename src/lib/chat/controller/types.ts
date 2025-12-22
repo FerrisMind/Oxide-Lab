@@ -15,7 +15,7 @@ export type ChatControllerCtx = {
   set prompt(v: string);
   get messages(): ChatMessage[];
   set messages(v: ChatMessage[]);
-  get messagesEl(): HTMLDivElement | null;
+  // Note: messagesEl removed - scroll is now handled by ChatContainerContext
   get busy(): boolean;
   set busy(v: boolean);
   get isLoaded(): boolean;

@@ -5,7 +5,7 @@ import { THINK_CLOSE_TOKEN } from '$lib/chat/parser/constants';
 // CodeMirror renderer removed — using Shiki-based StreamingCodeBlock for highlighting
 import { enableExternalLinks } from '$lib/chat/external-links';
 import { StreamingCodeBlock } from '$lib/components/streaming-code';
-import ThinkingAccordion from '../components/ThinkingAccordion.svelte';
+import ThinkingBlock from '$lib/chat/components/ThinkingBlock.svelte';
 import { t } from '$lib/i18n';
 
 const thinkState = new Map<string, boolean>();
@@ -67,7 +67,7 @@ function cleanupThinkingComponents(container: HTMLElement) {
     if (component) {
       try {
         unmount(component);
-      } catch {}
+      } catch { }
       delete element.__thinkComponent;
     }
   });
@@ -174,7 +174,7 @@ function mountStreamingCodeComponents(container: HTMLElement, _isStreaming: bool
           // If update fails, fall back to re-mount
           try {
             unmount(existing);
-          } catch {}
+          } catch { }
         }
         return;
       }
@@ -235,7 +235,7 @@ function mountThinkingComponents(container: HTMLElement) {
         return;
       }
 
-      const component = mount(ThinkingAccordion, {
+      const component = mount(ThinkingBlock, {
         target: mountTarget,
         props: {
           value: key,
@@ -257,7 +257,7 @@ function mountThinkingComponents(container: HTMLElement) {
 
       element.__thinkComponent = component;
     } catch (error) {
-      console.error('Failed to mount ThinkingAccordion:', error);
+      console.error('Failed to mount ThinkingBlock:', error);
     }
   });
 }
