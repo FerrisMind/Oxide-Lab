@@ -17,9 +17,10 @@
         "transparent": true,
         "width": 1280,
         "height": 800,
-        "minWidth": 640,
-        "minHeight": 400,
-        "label": "main"
+        "minWidth": 1024,
+        "minHeight": 720,
+        "label": "main",
+        "center": true
       }
     ],
     "security": {

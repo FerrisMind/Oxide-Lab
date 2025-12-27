@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn, type WithElementRef, type WithoutChildren } from "$lib/utils.js";
+	import { cn, type WithElementRef, type WithoutChildren } from "$lib/components/ai-elements/markdown/utils/utils";
 	import type { HTMLAttributes } from "svelte/elements";
 
 	let {

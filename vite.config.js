@@ -20,17 +20,22 @@ export default defineConfig(async () => ({
     host: host || false,
     hmr: host
       ? {
-          protocol: 'ws',
-          host,
-          port: 1421,
-        }
+        protocol: 'ws',
+        host,
+        port: 1421,
+      }
       : undefined,
+    fs: {
+      allow: ['.'],
+    },
     watch: {
       // 3. tell Vite to ignore watching `src-tauri` and documentation files
       // @ts-ignore - chokidar supports function in ignored
       ignored: (path) => {
         const normalized = path.replace(/\\/g, '/');
         const isUi =
+          normalized.includes('/src/') ||
+          normalized.endsWith('/src') ||
           normalized.includes('/src/') ||
           normalized.endsWith('/src') ||
           normalized.includes('/static/') ||

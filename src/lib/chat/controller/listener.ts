@@ -1,4 +1,9 @@
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+/**
+ * Stream Listener
+ * 
+ * Handles token stream events from the Tauri backend.
+ */
+
 import { createStreamParser } from '$lib/chat/parser';
 import { appendSegments, finalizeStreaming, getAssistantBubbleEl } from '$lib/chat/stream_render';
 import { get } from 'svelte/store';
@@ -6,127 +11,155 @@ import { chatHistory } from '$lib/stores/chat-history';
 import type { ChatControllerCtx } from './types';
 
 export function createStreamListener(ctx: ChatControllerCtx) {
-  let unlisten: UnlistenFn | null = null;
-  let streamBuf = '';
-  let rafId: number | null = null;
-  let isStreaming = false;
-  const streamParser = createStreamParser();
+    let unlisten: (() => void) | null = null;
+    let streamBuf = '';
+    let rafId: number | null = null;
+    let isStreaming = false;
+    const streamParser = createStreamParser();
 
-  function flushStream(streamingFlag: boolean) {
-    const { segments, remainder } = streamParser.parse(streamBuf);
-    streamBuf = remainder;
-    if (segments.length === 0) return;
+    function flushStream(streamingFlag: boolean) {
+        const { segments, remainder } = streamParser.parse(streamBuf);
+        streamBuf = remainder;
+        if (segments.length === 0) return;
 
-    const msgs = ctx.messages;
-    const last = msgs[msgs.length - 1];
-    if (last && last.role === 'assistant') {
-      const idx = msgs.length - 1;
-      const el = getAssistantBubbleEl(idx);
+        // Debug: log segments
+        console.log('[flushStream] segments:', segments.map(s => ({ kind: s.kind, len: s.data.length })));
 
-      if (el) appendSegments(idx, el, segments, streamingFlag);
-      const onlyText = segments
-        .filter((s) => s.kind === 'text')
-        .map((s) => s.data)
-        .join('');
-      if (onlyText) {
-        last.content += onlyText;
-        ctx.messages = msgs;
-      }
-      // Note: Auto-scroll is now handled by ChatContainerContext via MutationObserver
-    }
-  }
-
-  function scheduleFlush() {
-    if (rafId !== null) return;
-    rafId = requestAnimationFrame(() => {
-      rafId = null;
-      flushStream(isStreaming);
-    });
-  }
-
-  async function ensureListener() {
-    if (!unlisten) {
-      unlisten = await listen<string>('token', async (event) => {
-        const token = event.payload ?? '';
-        if (token === '') {
-          // Start of new stream
-          const msgs = ctx.messages;
-          const last = msgs[msgs.length - 1];
-          if (!last || last.role !== 'assistant' || last.content !== '') {
-            msgs.push({ role: 'assistant', content: '', html: '' } as any);
-            ctx.messages = msgs;
-          }
-          if (rafId !== null) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
-          }
-          streamBuf = '';
-          streamParser.reset();
-          isStreaming = true;
-          return;
-        }
-
-        if (token === '[DONE]') {
-          // End of stream
-          if (rafId !== null) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
-          }
-          isStreaming = false;
-          flushStream(false);
-          streamParser.reset();
-          streamBuf = '';
-          const msgs = ctx.messages;
-          if (msgs.length > 0) {
+        const msgs = ctx.messages;
+        const last = msgs[msgs.length - 1];
+        if (last && last.role === 'assistant') {
             const idx = msgs.length - 1;
-            finalizeStreaming(idx);
+            const el = getAssistantBubbleEl(idx);
 
-            // Persist the complete assistant message to SQLite
-            const state = get(chatHistory);
-            if (state.currentSessionId) {
-              const msgs = ctx.messages;
-              const last = msgs[msgs.length - 1];
-              if (last && last.role === 'assistant') {
-                await chatHistory.saveAssistantMessage(state.currentSessionId, last.content);
-              }
+            if (el) appendSegments(idx, el, segments, streamingFlag);
+
+            // Process segments for content and thinking
+            let hasUpdates = false;
+            for (const segment of segments) {
+                if (segment.kind === 'text') {
+                    last.content += segment.data;
+                    hasUpdates = true;
+                } else if (segment.kind === 'think_start') {
+                    console.log('[flushStream] think_start - setting isThinking=true');
+                    last.isThinking = true;
+                    if (!last.thinking) last.thinking = '';
+                    hasUpdates = true;
+                } else if (segment.kind === 'think_content') {
+                    console.log('[flushStream] think_content - adding', segment.data.length, 'chars');
+                    if (!last.thinking) last.thinking = '';
+                    last.thinking += segment.data;
+                    hasUpdates = true;
+                } else if (segment.kind === 'think_end') {
+                    console.log('[flushStream] think_end - setting isThinking=false, total thinking:', last.thinking?.length);
+                    last.isThinking = false;
+                    hasUpdates = true;
+                }
             }
-            // Note: Auto-scroll is handled by ChatContainerContext via MutationObserver
-          }
-          return;
+
+            if (hasUpdates) {
+                ctx.messages = msgs;
+            }
         }
-
-        streamBuf += token;
-        scheduleFlush();
-
-        // Optimistic update for UI stores (debounced slightly by scheduleFlush logic,
-        // but here we might want to update the store less frequently or just rely on flushStream)
-        // flushStream updates ctx.messages[last].content.
-        // We should sync that to chatHistory store optimistically so UI bound to store updates too
-        // But ctx.messages is currently the source of truth for the chat view.
-        // So maybe we don't need updateLastMessageOptimistic if the view uses ctx.messages?
-        // Let's check if the view uses ctx.messages or chatHistory store.
-        // Typically current view uses ctx.messages array locally.
-        // So persistLastMessage at the end is the critical part for persistence.
-        // I will add persistLastMessage and skip optimistic updates to store to avoid double reactivity overhead
-        // unless other components need to see the stream in real-time from the store.
-        // Given complexity, saving at the end is the requirement "messages will be saved... after generation completes".
-        // So just the [DONE] block change is sufficient.
-      });
     }
-  }
 
-  function destroy() {
-    if (unlisten) {
-      try {
-        unlisten();
-      } catch { }
-      unlisten = null;
+    function scheduleFlush() {
+        if (rafId !== null) return;
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
+            flushStream(isStreaming);
+        });
     }
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-    }
-  }
 
-  return { ensureListener, destroy };
+    async function ensureListener() {
+        if (!unlisten) {
+            // TODO: Integrate with Tauri backend
+            // Command: listen('token', callback)
+            const { listen } = await import('@tauri-apps/api/event');
+
+            unlisten = await listen<string>('token', async (event) => {
+                const token = event.payload ?? '';
+                if (token === '') {
+                    // Start of new stream
+                    const msgs = ctx.messages;
+                    const last = msgs[msgs.length - 1];
+
+                    // Always start in think mode for Qwen/thinking models
+                    // Parser will detect </think> and switch to content mode
+                    const startsInThinkMode = true;
+
+                    if (!last || last.role !== 'assistant' || last.content !== '') {
+                        msgs.push({
+                            role: 'assistant',
+                            content: '',
+                            html: '',
+                            thinking: '',
+                            isThinking: startsInThinkMode
+                        });
+                        ctx.messages = msgs;
+                    } else {
+                        // Message already exists, update thinking state
+                        last.thinking = '';
+                        last.isThinking = startsInThinkMode;
+                        ctx.messages = msgs;
+                    }
+
+                    if (rafId !== null) {
+                        cancelAnimationFrame(rafId);
+                        rafId = null;
+                    }
+                    streamBuf = '';
+                    streamParser.reset();
+                    streamParser.setInThinkBlock(true);
+
+                    isStreaming = true;
+                    return;
+                }
+
+                if (token === '[DONE]') {
+                    // End of stream
+                    if (rafId !== null) {
+                        cancelAnimationFrame(rafId);
+                        rafId = null;
+                    }
+                    isStreaming = false;
+                    flushStream(false);
+                    streamParser.reset();
+                    streamBuf = '';
+                    const msgs = ctx.messages;
+                    if (msgs.length > 0) {
+                        const idx = msgs.length - 1;
+                        finalizeStreaming(idx);
+
+                        // Persist the complete assistant message to SQLite
+                        const state = get(chatHistory);
+                        if (state.currentSessionId) {
+                            const last = msgs[msgs.length - 1];
+                            if (last && last.role === 'assistant') {
+                                await chatHistory.saveAssistantMessage(state.currentSessionId, last.content);
+                            }
+                        }
+                    }
+                    return;
+                }
+
+                streamBuf += token;
+                scheduleFlush();
+            });
+        }
+    }
+
+    function destroy() {
+        if (unlisten) {
+            try {
+                unlisten();
+            } catch { /* ignore */ }
+            unlisten = null;
+        }
+        if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
+    }
+
+    return { ensureListener, destroy };
 }

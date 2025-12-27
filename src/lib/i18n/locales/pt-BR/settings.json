@@ -1,86 +1,115 @@
 {
-  "title": "Configuracoes do Aplicativo",
-  "precisionPolicy": {
-    "title": "Politica de Precisao (Precision Policy)",
-    "description": "Selecione a politica de precisao para carregar e executar modelos. Isso afeta o uso de memoria e o desempenho.",
-    "warning": "Atencao: o parametro precision afeta apenas modelos nao quantizados (float32/float16). Para modelos quantizados (4-bit/8-bit), a precisao dos pesos e fixa, a configuracao afeta apenas os calculos intermediarios.",
-    "loading": "Carregando configuracoes...",
-    "options": {
-      "default": {
-        "title": "Padrao",
-        "specs": "CPU: F32, GPU: BF16",
-        "description": "Equilibrio ideal entre desempenho e precisao"
-      },
-      "memoryEfficient": {
-        "title": "Economia de Memoria",
-        "specs": "CPU: F32, GPU: F16",
-        "description": "Menor uso de memoria, precisao ligeiramente menor"
-      },
-      "maximumPrecision": {
-        "title": "Precisao Maxima",
-        "specs": "CPU: F32, GPU: F32",
-        "description": "Maior precisao, maior uso de memoria"
-      }
-    }
-  },
-  "threadLimit": {
-    "title": "Limite Manual de Threads da CPU",
-    "description": "Se voce precisar limitar o numero de threads que o candle pode usar atraves do rayon, ative o limite manual. O controle deslizante permite selecionar o numero de threads, apos o qual o aplicativo aplicara a variavel de ambiente RAYON_NUM_THREADS.",
-    "loading": "Carregando limite predefinido...",
-    "maxThreads": "Maximo de threads: {count}",
-    "useSystem": "Usar valor do sistema ({count} threads)",
-    "currentMode": "Modo atual: {mode} ({count} threads)",
-    "modes": {
-      "automatic": "automatico",
-      "manual": "manual"
-    }
-  },
-  "experimental": {
-    "title": "Recursos Experimentais",
-    "description": "Ative recursos experimentais para testar novas capacidades. Esses recursos podem ser instaveis e conter bugs.",
-    "enable": "Ativar recursos experimentais",
-    "enabled": "? Recursos experimentais ativados",
-    "disabled": "? Recursos experimentais desativados"
-  },
-  "modelSelector": {
-    "title": "Lista Suspensa de Modelos",
-    "description": "Configure a pesquisa dentro da lista suspensa principal de modelos. Se voce desativar a opcao, a lista sera exibida sem uma linha de filtro.",
-    "enableSearch": "Ativar pesquisa de modelos",
-    "enabledDescription": "A pesquisa ajudara voce a encontrar rapidamente os modelos necessarios.",
-    "disabledDescription": "A pesquisa esta oculta - a lista mostra todos os modelos como estao."
-  },
-  "performance": {
-    "title": "Monitoramento de Desempenho",
-    "description": "Rastreamento do desempenho do aplicativo, incluindo tempo de inicializacao, uso de memoria e velocidade dos modelos."
-  },
-  "language": {
-    "title": "Idioma",
-    "description": "Selecione o idioma da interface. As alteracoes serao aplicadas imediatamente."
-  },
-  "stt": {
-    "title": "Entrada de Voz (Whisper)",
-    "description": "Configure o modelo Whisper usado para entrada de voz.",
-    "loading": "Carregando configuracoes de voz...",
-    "sources": {
-      "bundled": "Usar modelo tiny embutido",
-      "custom": "Usar pasta personalizada do modelo"
+    "title": "Configurações",
+    "precision": {
+        "title": "Política de Precisão",
+        "description": "Configure a precisão do modelo para desempenho ideal",
+        "default": "Padrão",
+        "balanced": "Equilibrado",
+        "memoryEfficient": "Eficiente em Memória",
+        "lowerRam": "Menos RAM",
+        "maximumPrecision": "Precisão Máxima",
+        "bestQuality": "Melhor qualidade",
+        "warning": "Nota: o parâmetro de precisão afeta apenas modelos não quantizados (float32/float16)."
     },
-    "customPathEmpty": "Pasta personalizada do modelo nao selecionada",
-    "chooseFolder": "Escolher pasta",
-    "download": {
-      "title": "Baixar modelo Whisper",
-      "repoId": "Repo id",
-      "revision": "Revisao",
-      "modelFile": "Arquivo do modelo",
-      "tokenizerFile": "Arquivo do tokenizador",
-      "configFile": "Arquivo de configuracao",
-      "button": "Baixar e usar",
-      "loading": "Baixando...",
-      "success": "Modelo baixado e selecionado",
-      "error": "Falha ao baixar o modelo"
+    "threads": {
+        "title": "Limite de Threads",
+        "description": "Configure o número de threads da CPU para inferência",
+        "maxThreads": "Máx. Threads",
+        "available": "Disponível",
+        "useSystem": "Usar padrão do sistema",
+        "automatic": "Automático",
+        "manual": "Manual"
     },
-    "errors": {
-      "customDirRequired": "Selecione primeiro a pasta do modelo personalizado"
+    "language": {
+        "title": "Idioma",
+        "description": "Selecione o idioma da interface"
+    },
+    "experimental": {
+        "title": "Recursos Experimentais",
+        "description": "Habilite recursos experimentais (podem ser instáveis)",
+        "enable": "Habilitar recursos experimentais",
+        "warning": "Recursos experimentais podem ser instáveis e conter bugs. Use por sua conta e risco."
+    },
+    "precisionPolicy": {
+        "title": "Política de Precisão",
+        "description": "Selecione a política de precisão para carregar e executar modelos.",
+        "warning": "Nota: o parâmetro de precisão afeta apenas modelos não quantizados (float32/float16).",
+        "loading": "Carregando configurações...",
+        "options": {
+            "default": {
+                "title": "Padrão",
+                "specs": "CPU: F32, GPU: BF16",
+                "description": "Equilíbrio ideal entre desempenho e precisão"
+            },
+            "memoryEfficient": {
+                "title": "Eficiente em Memória",
+                "specs": "CPU: F32, GPU: F16",
+                "description": "Menos uso de memória, precisão ligeiramente menor"
+            },
+            "maximumPrecision": {
+                "title": "Precisão Máxima",
+                "specs": "CPU: F32, GPU: F32",
+                "description": "Maior precisão, mais uso de memória"
+            }
+        }
+    },
+    "threadLimit": {
+        "title": "Limite Manual de Threads da CPU",
+        "description": "Se você precisar limitar o número de threads que o candle pode usar através do rayon.",
+        "loading": "Carregando limite...",
+        "maxThreads": "Máx. threads: {count}",
+        "useSystem": "Usar valor do sistema ({count} threads)",
+        "currentMode": "Modo atual: {mode} ({count} threads)",
+        "modes": {
+            "automatic": "automático",
+            "manual": "manual"
+        }
+    },
+    "modelSelector": {
+        "title": "Dropdown de Modelos",
+        "description": "Configure a busca no dropdown de modelos.",
+        "enableSearch": "Habilitar busca de modelos",
+        "enabledDescription": "A busca ajudará a encontrar rapidamente os modelos que você precisa.",
+        "disabledDescription": "Busca oculta — a lista mostra todos os modelos."
+    },
+    "performance": {
+        "title": "Monitoramento de Desempenho",
+        "description": "Rastreamento do desempenho da aplicação.",
+        "monitor": "Monitor de Desempenho",
+        "realtime": "Tempo real",
+        "loadError": "Falha ao carregar dados",
+        "noData": "Sem dados de desempenho",
+        "cpuUsage": "Uso de CPU",
+        "memory": "Memória",
+        "speed": "Velocidade",
+        "inferenceTime": "Tempo de Inferência",
+        "avgSpeed": "Velocidade Média",
+        "modelLoad": "Carregamento do Modelo"
+    },
+    "stt": {
+        "title": "Entrada de Voz (Whisper)",
+        "description": "Configure o modelo Whisper para entrada de voz.",
+        "loading": "Carregando configurações de voz...",
+        "sources": {
+            "bundled": "Usar modelo tiny incluído",
+            "custom": "Usar pasta de modelo personalizada"
+        },
+        "customPathEmpty": "Pasta do modelo não selecionada",
+        "chooseFolder": "Escolher pasta",
+        "download": {
+            "title": "Baixar modelo Whisper",
+            "repoId": "Repo id",
+            "revision": "Revisão",
+            "modelFile": "Arquivo do modelo",
+            "tokenizerFile": "Arquivo do tokenizer",
+            "configFile": "Arquivo de configuração",
+            "button": "Baixar e usar",
+            "loading": "Baixando...",
+            "success": "Modelo baixado e selecionado",
+            "error": "Falha ao baixar modelo"
+        },
+        "errors": {
+            "customDirRequired": "Selecione uma pasta de modelo primeiro"
+        }
     }
-  }
 }

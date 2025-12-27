@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { cn } from '$lib/utils';
+  import { cn } from '$lib/components/ai-elements/markdown/utils/utils.js';
   import type { ButtonProps } from '$lib/components/ui/button/index.js';
 
   export interface ConversationScrollButtonProps extends ButtonProps {}
@@ -11,7 +11,7 @@
   import { getStickToBottomContext } from './stick-to-bottom-context.svelte.js';
   import { fade, fly, scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  
+
   let { class: className, onclick, ...restProps }: ConversationScrollButtonProps = $props();
 
   const context = getStickToBottomContext();
@@ -40,7 +40,7 @@
       y: 10,
       easing: backOut,
     }}
-    class="absolute bottom-28 left-[50%] translate-x-[-50%] z-20"
+    class="absolute bottom-4 left-[50%] translate-x-[-50%] z-10"
   >
     <Button
       class={cn(
@@ -53,7 +53,7 @@
       variant="outline"
       {...restProps}
     >
-      <ArrowDown class="size-4" />
+      <ArrowDown class="size-4" weight="bold" />
     </Button>
   </div>
 {/if}

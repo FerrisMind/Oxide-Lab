@@ -1,22 +1,19 @@
 <script lang="ts">
-  import Sparkle from "phosphor-svelte/lib/Sparkle";
+  /**
+   * Chat Placeholder Component
+   * 
+   * Displays when no model is loaded.
+   */
+  import { ConversationEmptyState } from '$lib/components/ai-elements/conversation';
+  import Sparkle from 'phosphor-svelte/lib/Sparkle';
   import { t } from '$lib/i18n';
-
-  interface Props {
-    variant?: 'full' | 'inline';
-  }
-
-  let { variant = 'full' }: Props = $props();
 </script>
 
-<section class="chat-placeholder" class:compact={variant === 'inline'}>
-  <div class="placeholder-content">
-    <Sparkle size={48} weight="duotone" style="color: var(--muted);" />
-    <div class="placeholder-text">
-      <h3>{$t('chat.placeholder.title')}</h3>
-      <p>{$t('chat.placeholder.description')}</p>
-    </div>
-  </div>
-</section>
-
-
+<ConversationEmptyState
+  title={$t('chat.placeholder.title')}
+  description={$t('chat.placeholder.description')}
+>
+  {#snippet icon()}
+    <Sparkle size={48} weight="duotone" class="text-muted-foreground" />
+  {/snippet}
+</ConversationEmptyState>

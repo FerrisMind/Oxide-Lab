@@ -1,6 +1,6 @@
 <script lang="ts">
 	import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-	import { cn, type WithElementRef } from "$lib/utils.js";
+	import { cn, type WithElementRef } from "$lib/components/ai-elements/markdown/utils/utils.js";
 	import type { HTMLAttributes } from "svelte/elements";
 	import {
 		SIDEBAR_COOKIE_MAX_AGE,
@@ -42,7 +42,7 @@
 		data-slot="sidebar-wrapper"
 		style="--sidebar-width: {SIDEBAR_WIDTH}; --sidebar-width-icon: {SIDEBAR_WIDTH_ICON}; {style}"
 		class={cn(
-			"group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
+			"group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-[calc(100vh-4.09rem)] w-full",
 			className
 		)}
 		bind:this={ref}

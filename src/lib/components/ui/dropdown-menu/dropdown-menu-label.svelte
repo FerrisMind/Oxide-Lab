@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn, type WithElementRef } from "$lib/utils.js";
+	import { cn, type WithElementRef } from "$lib/components/ai-elements/markdown/utils/utils";
 	import type { HTMLAttributes } from "svelte/elements";
 
 	let {
@@ -17,7 +17,7 @@
 	bind:this={ref}
 	data-slot="dropdown-menu-label"
 	data-inset={inset}
-	class={cn("px-2 py-1.5 text-sm font-semibold data-[inset]:ps-8", className)}
+	class={cn("px-2 py-1.5 text-sm font-semibold data-[inset]:pl-8", className)}
 	{...restProps}
 >
 	{@render children?.()}

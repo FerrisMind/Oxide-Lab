@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "$lib/utils.js";
+	import { cn } from "$lib/components/ai-elements/markdown/utils/utils";
 	import { Popover as PopoverPrimitive } from "bits-ui";
 
 	let {

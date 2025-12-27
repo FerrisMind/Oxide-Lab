@@ -1,13 +1,21 @@
 <script lang="ts">
+  /**
+   * Download Manager Modal
+   * 
+   * Draggable, resizable modal for managing active downloads.
+   * Features: progress bars, pause/resume/cancel, speed & ETA display.
+   */
   import { onMount } from 'svelte';
-  import XCircle from 'phosphor-svelte/lib/XCircle';
+  import * as Card from '$lib/components/ui/card';
+  import { Button } from '$lib/components/ui/button';
+  import { Badge } from '$lib/components/ui/badge';
+  import X from 'phosphor-svelte/lib/X';
   import Pause from 'phosphor-svelte/lib/Pause';
   import Play from 'phosphor-svelte/lib/Play';
-  import X from 'phosphor-svelte/lib/X';
+  import XCircle from 'phosphor-svelte/lib/XCircle';
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
   import Speedometer from 'phosphor-svelte/lib/Speedometer';
   import Timer from 'phosphor-svelte/lib/Timer';
-
   import {
     activeDownloads,
     downloadsLoaded,
@@ -26,236 +34,21 @@
   let { onClose }: Props = $props();
 
   let modalElement: HTMLDivElement | undefined;
-  let isDragging = false;
-  let dragOffset = { x: 0, y: 0 };
-  let modalPosition = { x: 0, y: 0 };
+  let isDragging = $state(false);
+  let dragOffset = $state({ x: 0, y: 0 });
+  let modalPosition = $state({ x: 0, y: 0 });
 
-  // Resize functionality
-  let isResizing = false;
-  let resizeDirection = '';
-  let initialSize = { width: 720, height: 0 };
-  let initialMousePos = { x: 0, y: 0 };
-  let minWidth = 400;
-  let minHeight = 300;
+  // Resize state
+  let isResizing = $state(false);
+  let resizeDirection = $state('');
+  let initialSize = $state({ width: 600, height: 400 });
+  let initialMousePos = $state({ x: 0, y: 0 });
+  const minWidth = 400;
+  const minHeight = 300;
 
-  function getResizeDirection(event: MouseEvent): string {
-    if (!modalElement) return '';
-
-    const rect = modalElement.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const width = rect.width;
-    const height = rect.height;
-    const borderSize = 8; // Размер границы для resize
-
-    // Определяем направление resize
-    const isLeft = x < borderSize;
-    const isRight = x > width - borderSize;
-    const isTop = y < borderSize;
-    const isBottom = y > height - borderSize;
-
-    if (isTop && isRight) return 'ne-resize';
-    if (isBottom && isLeft) return 'sw-resize';
-    if (isBottom && isRight) return 'se-resize';
-    if (isBottom) return 's-resize';
-    if (isRight) return 'e-resize';
-
-    return '';
-  }
-
-  function handleMouseDown(event: MouseEvent) {
-    if (!modalElement) return;
-
-    const direction = getResizeDirection(event);
-
-    if (direction) {
-      // Начинаем resize
-      isResizing = true;
-      resizeDirection = direction;
-      initialMousePos = { x: event.clientX, y: event.clientY };
-      const rect = modalElement.getBoundingClientRect();
-      initialSize = { width: rect.width, height: rect.height };
-      modalElement.style.cursor = direction;
-    } else if ((event.target as HTMLElement).closest('.modal-header')) {
-      // Начинаем drag
-      isDragging = true;
-      dragOffset.x = event.clientX - modalPosition.x;
-      dragOffset.y = event.clientY - modalPosition.y;
-    }
-  }
-
-  function handleResize(event: MouseEvent) {
-    if (!isResizing || !modalElement) return;
-
-    const deltaX = event.clientX - initialMousePos.x;
-    const deltaY = event.clientY - initialMousePos.y;
-
-    let newWidth = initialSize.width;
-    let newHeight = initialSize.height;
-    let newLeft = modalPosition.x;
-    let newTop = modalPosition.y;
-
-    // Логика как у обычного окна - расширяемся в направлении тяги
-    if (resizeDirection.includes('e')) {
-      // Восток (правая сторона) - расширяемся вправо
-      newWidth = Math.max(minWidth, initialSize.width + deltaX);
-    }
-    if (resizeDirection.includes('s')) {
-      // Юг (нижняя сторона) - расширяемся вниз
-      newHeight = Math.max(minHeight, initialSize.height + deltaY);
-    }
-    if (resizeDirection.includes('w')) {
-      // Запад (левая сторона) - расширяемся влево, НО не двигаем окно
-      newWidth = Math.max(minWidth, initialSize.width - deltaX);
-      // Позиция остаётся той же - окно не двигается при ресайзе слева
-    }
-    if (resizeDirection.includes('n')) {
-      // Север (верхняя сторона) - расширяемся вверх, НО не двигаем окно
-      newHeight = Math.max(minHeight, initialSize.height - deltaY);
-      // Позиция остаётся той же - окно не двигается при ресайзе сверху
-    }
-
-    // Ограничиваем размеры в пределах окна браузера
-    const maxWidth = window.innerWidth - newLeft;
-    const maxHeight = window.innerHeight - newTop;
-    newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
-    newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
-
-    modalElement.style.width = `${newWidth}px`;
-    modalElement.style.height = `${newHeight}px`;
-    modalElement.style.transform = `translate(${newLeft}px, ${newTop}px)`;
-
-    modalPosition.x = newLeft;
-    modalPosition.y = newTop;
-  }
-
-  function handleMouseMove(event: MouseEvent) {
-    if (isResizing) {
-      handleResize(event);
-    } else if (isDragging && modalElement) {
-      modalPosition.x = event.clientX - dragOffset.x;
-      modalPosition.y = event.clientY - dragOffset.y;
-
-      // Ограничиваем позицию в пределах окна
-      const rect = modalElement.getBoundingClientRect();
-      const maxX = window.innerWidth - rect.width;
-      const maxY = window.innerHeight - rect.height;
-
-      modalPosition.x = Math.max(0, Math.min(modalPosition.x, maxX));
-      modalPosition.y = Math.max(0, Math.min(modalPosition.y, maxY));
-
-      modalElement.style.transform = `translate(${modalPosition.x}px, ${modalPosition.y}px)`;
-    } else if (!isDragging && !isResizing && modalElement) {
-      // Показываем курсор resize при наведении на края
-      const direction = getResizeDirection(event);
-      modalElement.style.cursor = direction || 'default';
-    }
-  }
-
-  function handleMouseUp() {
-    if (isDragging && modalElement) {
-      isDragging = false;
-      modalElement.style.cursor = '';
-    }
-    if (isResizing && modalElement) {
-      isResizing = false;
-      resizeDirection = '';
-      modalElement.classList.remove('resizing');
-    }
-  }
-
-  onMount(() => {
-    void ensureDownloadManager();
-    // Центрируем окно при открытии
-    if (modalElement) {
-      const rect = modalElement.getBoundingClientRect();
-      modalPosition.x = (window.innerWidth - rect.width) / 2;
-      modalPosition.y = (window.innerHeight - rect.height) / 2;
-      modalElement.style.transform = `translate(${modalPosition.x}px, ${modalPosition.y}px)`;
-    }
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  });
-
-  function handleClose() {
-    onClose?.();
-  }
-
-  function stopPropagation(event: MouseEvent) {
-    event.stopPropagation();
-  }
-
-  function formatBytes(value?: number | null): string {
-    if (!value || value <= 0) return '—';
-    const units = [
-      $t('common.downloads.units.bytes'),
-      $t('common.downloads.units.kilobytes'),
-      $t('common.downloads.units.megabytes'),
-      $t('common.downloads.units.gigabytes'),
-      $t('common.downloads.units.terabytes'),
-    ];
-    let size = value;
-    let index = 0;
-    while (size >= 1024 && index < units.length - 1) {
-      size /= 1024;
-      index += 1;
-    }
-    const formatted = index === 0 ? size.toFixed(0) : size.toFixed(2);
-    return `${formatted} ${units[index]}`;
-  }
-
-  function formatSpeed(bytesPerSec?: number | null): string {
-    if (!bytesPerSec || bytesPerSec <= 0) return `0 ${$t('common.downloads.units.bytesPerSec')}`;
-    const units = [
-      $t('common.downloads.units.bytesPerSec'),
-      $t('common.downloads.units.kilobytesPerSec'),
-      $t('common.downloads.units.megabytesPerSec'),
-      $t('common.downloads.units.gigabytesPerSec'),
-    ];
-    let speed = bytesPerSec;
-    let index = 0;
-    while (speed >= 1024 && index < units.length - 1) {
-      speed /= 1024;
-      index += 1;
-    }
-    const formatted = index === 0 ? speed.toFixed(0) : speed.toFixed(1);
-    return `${formatted} ${units[index]}`;
-  }
-
-  function formatTime(seconds?: number | null): string {
-    if (!seconds || seconds <= 0) return '—';
-    if (seconds < 60) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    if (minutes < 60) return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return `${hours}:${remainingMinutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-
-  function calculateGroupSpeed(group: DownloadGroup): number | null {
-    const activeJobs = group.jobs.filter((job) => job.status === 'downloading');
-    if (activeJobs.length === 0) return null;
-
-    const totalSpeed = activeJobs.reduce((sum, job) => sum + (job.speed_bytes_per_sec ?? 0), 0);
-    return totalSpeed > 0 ? totalSpeed : null;
-  }
-
-  function calculateGroupEta(group: DownloadGroup): number | null {
-    const speed = calculateGroupSpeed(group);
-    if (!speed || speed <= 0 || group.totalBytes === null) return null;
-
-    const remainingBytes = group.totalBytes - group.downloadedBytes;
-    if (remainingBytes <= 0) return 0;
-
-    return Math.ceil(remainingBytes / speed);
-  }
+  // ─────────────────────────────────────────────────────────────
+  // Download Group Types
+  // ─────────────────────────────────────────────────────────────
 
   type DownloadStatus = DownloadJob['status'];
 
@@ -318,26 +111,138 @@
 
   let groupedActiveDownloads = $derived(groupActiveDownloadsList($activeDownloads));
 
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      handleClose();
+  // ─────────────────────────────────────────────────────────────
+  // Formatting Utils
+  // ─────────────────────────────────────────────────────────────
+
+  function formatBytes(value?: number | null): string {
+    if (!value || value <= 0) return '—';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let size = value;
+    let index = 0;
+    while (size >= 1024 && index < units.length - 1) {
+      size /= 1024;
+      index += 1;
     }
-    if (event.key === 'Tab' && modalElement) {
-      const focusables = modalElement.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+    return index === 0 ? `${size.toFixed(0)} ${units[index]}` : `${size.toFixed(2)} ${units[index]}`;
+  }
+
+  function formatSpeed(bytesPerSec?: number | null): string {
+    if (!bytesPerSec || bytesPerSec <= 0) return '0 B/s';
+    const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+    let speed = bytesPerSec;
+    let index = 0;
+    while (speed >= 1024 && index < units.length - 1) {
+      speed /= 1024;
+      index += 1;
+    }
+    return index === 0 ? `${speed.toFixed(0)} ${units[index]}` : `${speed.toFixed(1)} ${units[index]}`;
+  }
+
+  function formatTime(seconds?: number | null): string {
+    if (!seconds || seconds <= 0) return '—';
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}:${remainingMinutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  function calculateGroupSpeed(group: DownloadGroup): number | null {
+    const activeJobs = group.jobs.filter((job) => job.status === 'downloading');
+    if (activeJobs.length === 0) return null;
+    const totalSpeed = activeJobs.reduce((sum, job) => sum + (job.speed_bytes_per_sec ?? 0), 0);
+    return totalSpeed > 0 ? totalSpeed : null;
+  }
+
+  function calculateGroupEta(group: DownloadGroup): number | null {
+    const speed = calculateGroupSpeed(group);
+    if (!speed || speed <= 0 || group.totalBytes === null) return null;
+    const remainingBytes = group.totalBytes - group.downloadedBytes;
+    if (remainingBytes <= 0) return 0;
+    return Math.ceil(remainingBytes / speed);
+  }
+
+  function groupProgressPercent(group: DownloadGroup): number | null {
+    if (group.totalBytes === null || group.totalBytes <= 0) return null;
+    return Math.min(100, Math.round((group.downloadedBytes / group.totalBytes) * 100));
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Drag & Resize
+  // ─────────────────────────────────────────────────────────────
+
+  function getResizeDirection(event: MouseEvent): string {
+    if (!modalElement) return '';
+    const rect = modalElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const borderSize = 8;
+
+    const isRight = x > rect.width - borderSize;
+    const isBottom = y > rect.height - borderSize;
+
+    if (isBottom && isRight) return 'se-resize';
+    if (isBottom) return 's-resize';
+    if (isRight) return 'e-resize';
+    return '';
+  }
+
+  function handleMouseDown(event: MouseEvent) {
+    if (!modalElement) return;
+    const direction = getResizeDirection(event);
+
+    if (direction) {
+      isResizing = true;
+      resizeDirection = direction;
+      initialMousePos = { x: event.clientX, y: event.clientY };
+      const rect = modalElement.getBoundingClientRect();
+      initialSize = { width: rect.width, height: rect.height };
+    } else if ((event.target as HTMLElement).closest('.modal-header')) {
+      isDragging = true;
+      dragOffset = { x: event.clientX - modalPosition.x, y: event.clientY - modalPosition.y };
     }
   }
+
+  function handleMouseMove(event: MouseEvent) {
+    if (isResizing && modalElement) {
+      const deltaX = event.clientX - initialMousePos.x;
+      const deltaY = event.clientY - initialMousePos.y;
+
+      let newWidth = initialSize.width;
+      let newHeight = initialSize.height;
+
+      if (resizeDirection.includes('e')) {
+        newWidth = Math.max(minWidth, initialSize.width + deltaX);
+      }
+      if (resizeDirection.includes('s')) {
+        newHeight = Math.max(minHeight, initialSize.height + deltaY);
+      }
+
+      modalElement.style.width = `${newWidth}px`;
+      modalElement.style.height = `${newHeight}px`;
+    } else if (isDragging && modalElement) {
+      modalPosition = {
+        x: Math.max(0, Math.min(event.clientX - dragOffset.x, window.innerWidth - modalElement.offsetWidth)),
+        y: Math.max(0, Math.min(event.clientY - dragOffset.y, window.innerHeight - modalElement.offsetHeight)),
+      };
+      modalElement.style.transform = `translate(${modalPosition.x}px, ${modalPosition.y}px)`;
+    } else if (modalElement) {
+      modalElement.style.cursor = getResizeDirection(event) || 'default';
+    }
+  }
+
+  function handleMouseUp() {
+    isDragging = false;
+    isResizing = false;
+    resizeDirection = '';
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Actions
+  // ─────────────────────────────────────────────────────────────
 
   async function handleGroupPause(group: DownloadGroup) {
     await Promise.all(
@@ -359,352 +264,149 @@
     await Promise.all(group.jobs.map((job) => cancelDownload(job)));
   }
 
-  function groupProgressPercent(group: DownloadGroup): number | null {
-    if (group.totalBytes === null || group.totalBytes <= 0) {
-      return null;
-    }
-    return Math.min(100, Math.round((group.downloadedBytes / group.totalBytes) * 100));
+  function handleClose() {
+    onClose?.();
   }
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      handleClose();
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Lifecycle
+  // ─────────────────────────────────────────────────────────────
+
+  onMount(() => {
+    void ensureDownloadManager();
+
+    // Center modal on open
+    if (modalElement) {
+      const rect = modalElement.getBoundingClientRect();
+      modalPosition = {
+        x: (window.innerWidth - rect.width) / 2,
+        y: (window.innerHeight - rect.height) / 2,
+      };
+      modalElement.style.transform = `translate(${modalPosition.x}px, ${modalPosition.y}px)`;
+    }
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  });
 </script>
 
 <div
-  class="download-modal"
+  class="fixed z-[9999] w-[90vw] sm:w-[600px] min-w-[320px] sm:min-w-[400px] min-h-[300px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] bg-card border rounded-xl shadow-xl flex flex-col overflow-hidden select-none"
   role="dialog"
   aria-modal="false"
   aria-labelledby="download-manager-title"
   tabindex="-1"
   bind:this={modalElement}
   onmousedown={handleMouseDown}
-  onclick={stopPropagation}
   onkeydown={handleKeydown}
 >
-  <header class="modal-header">
-    <h2 id="download-manager-title">{$t('common.downloads.title')}</h2>
-    <button class="icon-button" aria-label={$t('common.downloads.close')} onclick={handleClose}>
-      <X size={18} weight="bold" />
-    </button>
+  <!-- Header -->
+  <header class="modal-header flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b bg-muted/30 cursor-move shrink-0">
+    <h2 id="download-manager-title" class="font-semibold text-sm sm:text-base flex items-center gap-2">
+      <DownloadSimple class="size-4 sm:size-5" />
+      {$t('common.downloads.title') || 'Downloads'}
+    </h2>
+    <Button variant="ghost" size="icon" class="size-7 sm:size-8" onclick={handleClose}>
+      <X class="size-4" weight="bold" />
+    </Button>
   </header>
 
-  <section class="modal-section">
-    <div class="downloads-content">
-      <div class="active-section">
-        {#if $downloadsLoaded && !groupedActiveDownloads.length}
-          <p class="empty">{$t('common.downloads.noActiveDownloads')}</p>
-        {:else if !$downloadsLoaded}
-          <p class="empty">{$t('common.downloads.loading')}</p>
-        {:else}
-          <ul class="download-list">
-            {#each groupedActiveDownloads as group (group.id)}
-              <li class="download-item">
-                <div class="item-title">
-                  <strong>{group.title}</strong>
-                </div>
-                <div class="item-progress-row">
-                  <div class="progress">
-                    {#if groupProgressPercent(group) !== null}
-                      <div class="progress-bar">
-                        <div
-                          class="progress-fill"
-                          style={`width: ${groupProgressPercent(group)}%`}
-                        ></div>
-                      </div>
-                    {:else}
-                      <div class="progress-bar indeterminate">
-                        <div class="progress-fill"></div>
-                      </div>
-                    {/if}
-                  </div>
-                  <div class="actions">
-                    {#if group.jobs.some((job) => job.status === 'downloading' || job.status === 'queued')}
-                      <button
-                        class="icon-button"
-                        title={$t('common.downloads.pause')}
-                        onclick={() => handleGroupPause(group)}
-                      >
-                        <Pause size={16} />
-                      </button>
-                    {/if}
-                    {#if group.jobs.some((job) => job.status === 'paused' || job.status === 'error')}
-                      <button
-                        class="icon-button"
-                        title={$t('common.downloads.resume')}
-                        onclick={() => handleGroupResume(group)}
-                      >
-                        <Play size={16} />
-                      </button>
-                    {/if}
-                    <button
-                      class="icon-button"
-                      title={$t('common.downloads.cancel')}
-                      onclick={() => handleGroupCancel(group)}
-                    >
-                      <XCircle size={16} />
-                    </button>
-                  </div>
-                </div>
-                <div class="progress-meta">
-                  <span class="meta-item">
-                    <DownloadSimple size={14} weight="bold" />
-                    {formatBytes(group.downloadedBytes)}
-                    {group.totalBytes !== null
-                      ? ` ${$t('common.downloads.of')} ${formatBytes(group.totalBytes)}`
-                      : ''}
-                  </span>
-                  <span class="meta-item">
-                    <Speedometer size={14} weight="bold" />
-                    {formatSpeed(calculateGroupSpeed(group))}
-                  </span>
-                  <span class="meta-item">
-                    <Timer size={14} weight="bold" />
-                    {formatTime(calculateGroupEta(group))}
-                  </span>
-                </div>
-              </li>
-            {/each}
-          </ul>
-        {/if}
+  <!-- Content -->
+  <section class="flex-1 overflow-auto p-3 sm:p-4 custom-scrollbar">
+    {#if !$downloadsLoaded}
+      <div class="flex items-center justify-center h-full text-muted-foreground">
+        {$t('common.downloads.loading') || 'Loading...'}
       </div>
-    </div>
+    {:else if groupedActiveDownloads.length === 0}
+      <div class="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+        <DownloadSimple class="size-12 opacity-30" />
+        <p>{$t('common.downloads.noActiveDownloads') || 'No active downloads'}</p>
+      </div>
+    {:else}
+      <div class="space-y-3">
+        {#each groupedActiveDownloads as group (group.id)}
+          <Card.Root class="p-4">
+            <!-- Title -->
+            <div class="flex items-center justify-between mb-3">
+              <strong class="text-sm truncate max-w-[70%]">{group.title}</strong>
+              <Badge variant={group.status === 'downloading' ? 'default' : 'secondary'} class="text-xs">
+                {group.status}
+              </Badge>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="flex items-center gap-3 mb-3">
+              <div class="flex-1">
+                {#if groupProgressPercent(group) !== null}
+                  <div class="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      class="h-full bg-gradient-to-r from-primary to-blue-400 transition-all duration-300"
+                      style="width: {groupProgressPercent(group)}%"
+                    ></div>
+                  </div>
+                {:else}
+                  <div class="h-2 rounded-full bg-muted overflow-hidden">
+                    <div class="h-full w-[40%] bg-gradient-to-r from-primary to-blue-400 animate-pulse"></div>
+                  </div>
+                {/if}
+              </div>
+
+              <!-- Actions -->
+              <div class="flex gap-1">
+                {#if group.jobs.some((job) => job.status === 'downloading' || job.status === 'queued')}
+                  <Button variant="ghost" size="icon" class="size-7" title={$t('common.downloads.pause') || 'Pause'} onclick={() => handleGroupPause(group)}>
+                    <Pause class="size-4" />
+                  </Button>
+                {/if}
+                {#if group.jobs.some((job) => job.status === 'paused' || job.status === 'error')}
+                  <Button variant="ghost" size="icon" class="size-7" title={$t('common.downloads.resume') || 'Resume'} onclick={() => handleGroupResume(group)}>
+                    <Play class="size-4" />
+                  </Button>
+                {/if}
+                <Button variant="ghost" size="icon" class="size-7 text-destructive" title={$t('common.downloads.cancel') || 'Cancel'} onclick={() => handleGroupCancel(group)}>
+                  <XCircle class="size-4" />
+                </Button>
+              </div>
+            </div>
+
+            <!-- Meta -->
+            <div class="flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <span class="flex items-center gap-1 px-2 py-0.5 rounded border bg-muted/30">
+                <DownloadSimple class="size-3" weight="bold" />
+                {formatBytes(group.downloadedBytes)}
+                {group.totalBytes !== null ? ` / ${formatBytes(group.totalBytes)}` : ''}
+              </span>
+              <span class="flex items-center gap-1 px-2 py-0.5 rounded border bg-muted/30">
+                <Speedometer class="size-3" weight="bold" />
+                {formatSpeed(calculateGroupSpeed(group))}
+              </span>
+              <span class="flex items-center gap-1 px-2 py-0.5 rounded border bg-muted/30">
+                <Timer class="size-3" weight="bold" />
+                {formatTime(calculateGroupEta(group))}
+              </span>
+            </div>
+          </Card.Root>
+        {/each}
+      </div>
+    {/if}
   </section>
+
+  <!-- Resize Handle (visual indicator) -->
+  <div class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize opacity-50 hover:opacity-100 transition-opacity">
+    <svg class="size-4 text-muted-foreground" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M14 14H10L14 10V14Z" />
+      <path d="M14 8H6L14 0V8Z" opacity="0.5" />
+    </svg>
+  </div>
 </div>
-
-<style>
-  /* Убрано: менеджер загрузок теперь перетаскиваемое окно внутри основного UI */
-
-  .download-modal {
-    position: absolute;
-    width: calc(var(--space-12) * 7 + var(--space-7)); /* 720px = 90 units */
-    min-width: calc(var(--space-12) * 4 + var(--space-3)); /* 400px = 50 units */
-    min-height: calc(var(--space-12) * 3 + var(--space-1)); /* 300px = fixed modal min-height */
-    max-width: calc(100vw - var(--space-5));
-    max-height: calc(100vh - var(--space-5));
-    background: var(--card);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-hover);
-    display: flex;
-    flex-direction: column;
-    outline: none;
-    overflow: hidden;
-    z-index: 1000;
-    cursor: default;
-    user-select: none;
-    resize: none;
-  }
-
-  .modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-3) var(--space-4);
-    height: var(--space-7);
-    border-bottom: 1px solid var(--border-color);
-    background: var(--panel-bg);
-    cursor: default;
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    flex-shrink: 0;
-  }
-
-  .modal-header:active {
-    cursor: default;
-  }
-
-  .modal-header h2 {
-    font-size: var(--font-size-base); /* 16px */
-    margin: 0;
-  }
-
-  .modal-section {
-    padding: var(--space-4) var(--space-4);
-    overflow-y: auto;
-    border-bottom: 1px solid var(--border-color);
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .modal-section:last-of-type {
-    border-bottom: none;
-  }
-
-  .downloads-content {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  .active-section {
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    flex: 1;
-  }
-
-  .download-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .download-item {
-    padding: var(--space-3);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    background: var(--card);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    box-shadow: var(--shadow);
-    transition: box-shadow 0.2s ease;
-  }
-
-  .download-item:hover {
-    box-shadow: var(--shadow-hover);
-  }
-
-  .item-title {
-    font-size: var(--font-size-sm);
-  }
-
-  .item-progress-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-  }
-
-  .item-progress-row .progress {
-    flex: 1;
-  }
-
-  .actions {
-    display: flex;
-    gap: var(--space-2);
-    align-items: center;
-  }
-
-  .icon-button {
-    border: none;
-    background: none;
-    padding: var(--space-2);
-    border-radius: var(--radius);
-    cursor: default;
-    color: var(--text);
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .icon-button:hover {
-    background: rgba(59, 130, 246, 0.12);
-    transform: none;
-  }
-
-  .icon-button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
-  .progress {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .progress-bar {
-    height: var(--space-2);
-    border-radius: var(--radius-full);
-    background: var(--panel-bg);
-    overflow: hidden;
-    border: 1px solid var(--border-color);
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    transition: width 0.3s ease;
-  }
-
-  .progress-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-    font-size: var(--font-size-xs);
-    color: var(--muted, #6b7280);
-  }
-
-  .meta-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-1) var(--space-3);
-    border: 1px solid var(--border-color, #e2e8f0);
-    border-radius: var(--radius-lg);
-    background: color-mix(in srgb, var(--accent, #3498db) 5%, transparent 95%);
-    white-space: nowrap;
-  }
-
-  .progress-bar.indeterminate .progress-fill {
-    width: 40%;
-    animation: progress-indeterminate 1.2s linear infinite;
-  }
-
-  @keyframes progress-indeterminate {
-    from {
-      transform: translateX(-100%);
-    }
-    to {
-      transform: translateX(250%);
-    }
-  }
-
-  .empty {
-    margin: var(--space-2) 0 0;
-    color: var(--muted);
-    font-size: var(--font-size-sm);
-    text-align: center;
-    padding: var(--space-4);
-    background: var(--card);
-    border-radius: var(--radius-lg);
-  }
-
-  /* Resize handles - курсоры меняются автоматически при наведении на края */
-
-  /* Полностью отключаем выделение текста */
-  .download-modal,
-  .download-modal * {
-    user-select: none !important;
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-  }
-
-  /* Курсоры для resize и drag */
-  .download-modal {
-    cursor: default;
-  }
-
-  .modal-header {
-    cursor: default;
-  }
-
-  .modal-header:active {
-    cursor: default;
-  }
-
-  @media (max-width: 640px) {
-    .download-modal {
-      width: calc(100vw - var(--space-3));
-      max-height: calc(100vh - var(--space-3));
-      border-radius: var(--radius-lg);
-    }
-  }
-</style>

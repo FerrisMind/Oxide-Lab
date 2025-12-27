@@ -1,45 +1,50 @@
-// Store для хранения метрик inference по индексам сообщений
+/**
+ * Inference Metrics Store
+ * 
+ * Manages inference metrics per message index for displaying performance stats.
+ */
+
 import { writable } from 'svelte/store';
 import type { InferenceMetrics } from '$lib/types/performance';
 
 type InferenceMetricsMap = Map<number, InferenceMetrics>;
 
 function createInferenceMetricsStore() {
-  const { subscribe, set, update } = writable<InferenceMetricsMap>(new Map());
+    const { subscribe, set, update } = writable<InferenceMetricsMap>(new Map());
 
-  return {
-    subscribe,
-    set,
-    update,
+    return {
+        subscribe,
+        set,
+        update,
 
-    // Добавить метрики для конкретного индекса сообщения
-    setMetrics(messageIndex: number, metrics: InferenceMetrics) {
-      update((map) => {
-        // ВАЖНО: Создаём новый Map для триггера реактивности Svelte!
-        const newMap = new Map(map);
-        newMap.set(messageIndex, metrics);
-        return newMap;
-      });
-    },
+        // Add metrics for a specific message index
+        setMetrics(messageIndex: number, metrics: InferenceMetrics) {
+            update((map) => {
+                // Create new Map for Svelte reactivity
+                const newMap = new Map(map);
+                newMap.set(messageIndex, metrics);
+                return newMap;
+            });
+        },
 
-    // Получить метрики для конкретного индекса
-    getMetrics(messageIndex: number, currentMap: InferenceMetricsMap): InferenceMetrics | null {
-      return currentMap.get(messageIndex) || null;
-    },
+        // Get metrics for a specific index
+        getMetrics(messageIndex: number, currentMap: InferenceMetricsMap): InferenceMetrics | null {
+            return currentMap.get(messageIndex) || null;
+        },
 
-    // Очистить все метрики
-    clear() {
-      set(new Map());
-    },
+        // Clear all metrics
+        clear() {
+            set(new Map());
+        },
 
-    // Удалить метрики для конкретного индекса
-    removeMetrics(messageIndex: number) {
-      update((map) => {
-        map.delete(messageIndex);
-        return map;
-      });
-    },
-  };
+        // Remove metrics for a specific index
+        removeMetrics(messageIndex: number) {
+            update((map) => {
+                map.delete(messageIndex);
+                return map;
+            });
+        },
+    };
 }
 
 export const inferenceMetricsStore = createInferenceMetricsStore();

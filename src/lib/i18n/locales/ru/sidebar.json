@@ -1,16 +1,29 @@
 {
-  "navigation": {
-    "chat": "Чат с моделью",
-    "models": "Менеджер моделей",
+    "chat": "Чат",
+    "models": "Модели",
     "settings": "Настройки",
-    "api": "API работа",
-    "performance": "Производительность"
-  },
-  "footer": {
     "downloads": "Загрузки",
-    "about": "О программе"
-  },
-  "brand": {
-    "home": "Домой"
-  }
+    "about": "О программе",
+    "home": "Главная",
+    "newChat": "Новый чат",
+    "chats": "Чаты",
+    "rename": "Переименовать",
+    "delete": "Удалить",
+    "api": "API",
+    "performance": "Производительность",
+    "navigation": {
+        "title": "Навигация",
+        "chat": "Чат с моделью",
+        "models": "Менеджер моделей",
+        "settings": "Настройки",
+        "api": "API",
+        "performance": "Производительность"
+    },
+    "footer": {
+        "downloads": "Загрузки",
+        "about": "О программе"
+    },
+    "brand": {
+        "home": "Главная"
+    }
 }

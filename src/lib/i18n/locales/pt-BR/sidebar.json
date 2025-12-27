@@ -1,16 +1,29 @@
 {
-  "navigation": {
-    "chat": "Chat com Modelo",
-    "models": "Gerenciador de Modelos",
+    "chat": "Chat",
+    "models": "Modelos",
     "settings": "Configurações",
-    "api": "Trabalho com API",
-    "performance": "Desempenho"
-  },
-  "footer": {
     "downloads": "Downloads",
-    "about": "Sobre"
-  },
-  "brand": {
-    "home": "Início"
-  }
+    "about": "Sobre",
+    "home": "Início",
+    "newChat": "Novo Chat",
+    "chats": "Chats",
+    "rename": "Renomear",
+    "delete": "Excluir",
+    "api": "API",
+    "performance": "Desempenho",
+    "navigation": {
+        "title": "Navegação",
+        "chat": "Chat com modelo",
+        "models": "Gerenciador de modelos",
+        "settings": "Configurações",
+        "api": "API",
+        "performance": "Desempenho"
+    },
+    "footer": {
+        "downloads": "Downloads",
+        "about": "Sobre"
+    },
+    "brand": {
+        "home": "Início"
+    }
 }

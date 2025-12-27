@@ -1,31 +1,31 @@
 {
-  "common": {
-    "unknown": "Ocorreu um erro desconhecido",
-    "network": "Erro de rede",
-    "timeout": "Tempo limite da solicitação excedido",
-    "notFound": "Recurso não encontrado",
-    "unauthorized": "Acesso não autorizado",
-    "forbidden": "Acesso proibido",
-    "serverError": "Erro do servidor"
-  },
-  "model": {
-    "loadFailed": "Falha ao carregar modelo",
-    "unloadFailed": "Falha ao descarregar modelo",
-    "notLoaded": "Modelo não está carregado",
-    "invalidPath": "Caminho do modelo inválido",
-    "unsupportedFormat": "Formato de modelo não suportado"
-  },
-  "settings": {
-    "loadFailed": "Falha ao carregar configurações",
-    "saveFailed": "Falha ao salvar configurações"
-  },
-  "download": {
-    "failed": "Falha no download",
-    "cancelled": "Download cancelado",
-    "networkError": "Erro de rede durante o download"
-  },
-  "file": {
-    "tooLarge": "Arquivo muito grande. Tamanho máximo é 20 MB.",
-    "removeFile": "Remover arquivo"
-  }
+    "common": {
+        "unknown": "Ocorreu um erro desconhecido",
+        "network": "Erro de rede",
+        "timeout": "Tempo limite da solicitação excedido",
+        "notFound": "Recurso não encontrado",
+        "unauthorized": "Acesso não autorizado",
+        "forbidden": "Acesso proibido",
+        "serverError": "Erro do servidor"
+    },
+    "model": {
+        "loadFailed": "Falha ao carregar modelo",
+        "unloadFailed": "Falha ao descarregar modelo",
+        "notLoaded": "Modelo não está carregado",
+        "invalidPath": "Caminho do modelo inválido",
+        "unsupportedFormat": "Formato de modelo não suportado"
+    },
+    "settings": {
+        "loadFailed": "Falha ao carregar configurações",
+        "saveFailed": "Falha ao salvar configurações"
+    },
+    "download": {
+        "failed": "Falha no download",
+        "cancelled": "Download cancelado",
+        "networkError": "Erro de rede durante o download"
+    },
+    "file": {
+        "tooLarge": "Arquivo muito grande. Tamanho máximo é 20 MB.",
+        "removeFile": "Remover arquivo"
+    }
 }

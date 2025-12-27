@@ -1,11 +1,8 @@
 <script lang="ts">
-  // Chat монтируется постоянно в layout. Этот маршрут не рендерит контент.
+  /**
+   * Home Page - Chat Interface
+   */
+  import { Chat } from '$lib/chat';
 </script>
 
-<div class="page-shell"></div>
-
-<style>
-  .page-shell { display: contents; }
-</style>
-
-
+<Chat />

@@ -1,17 +1,32 @@
 <script lang="ts">
+  /**
+   * Models Page
+   *
+   * Manage local and remote GGUF models.
+   */
   import { onMount, onDestroy } from 'svelte';
-  import LocalModelsPanel from '$lib/components/model-manager/LocalModelsPanel.svelte';
-  import RemoteModelsPanel from '$lib/components/model-manager/RemoteModelsPanel.svelte';
+  import * as Tabs from '$lib/components/ui/tabs';
+  import HardDrive from 'phosphor-svelte/lib/HardDrive';
+  import Globe from 'phosphor-svelte/lib/Globe';
+  import Star from 'phosphor-svelte/lib/Star';
+  import { t } from '$lib/i18n';
   import { folderPath, scanFolder } from '$lib/stores/local-models';
   import { setPageTabs, clearPageTabs, activePageTab } from '$lib/stores/page-tabs.svelte';
-  import { t } from '$lib/i18n';
+  import LocalModelsPanel from '$lib/components/model-manager/LocalModelsPanel.svelte';
+  import RemoteModelsPanel from '$lib/components/model-manager/RemoteModelsPanel.svelte';
+  import RecommendationsPanel from '$lib/components/model-manager/RecommendationsPanel.svelte';
 
-  type TabId = 'local' | 'remote';
+  type TabId = 'local' | 'remote' | 'recommendations';
 
   let activeTab = $state<TabId>('local');
+
   const tabs = $derived([
-    { id: 'local' as TabId, label: $t('models.tabs.local') },
-    { id: 'remote' as TabId, label: $t('models.tabs.remote') },
+    { id: 'local' as TabId, label: $t('models.tabs.local') || 'Local Models' },
+    { id: 'remote' as TabId, label: $t('models.tabs.remote') || 'Remote Models' },
+    {
+      id: 'recommendations' as TabId,
+      label: $t('models.tabs.recommendations') || 'Recommendations',
+    },
   ]);
 
   onMount(() => {
@@ -26,60 +41,44 @@
   });
 
   $effect(() => {
-    activeTab = $activePageTab as TabId;
+    activeTab = ($activePageTab || 'local') as TabId;
   });
+
+  function handleTabChange(value: string) {
+    activeTab = value as TabId;
+    activePageTab.set(value);
+  }
 </script>
 
-<section class="models-page">
-  <div class="models-panel">
+<div class="h-full overflow-hidden p-4 flex flex-col">
+  <!-- Mobile tabs (shown only on small screens) -->
+  <div class="sm:hidden mb-4">
+    <Tabs.Root value={activeTab} onValueChange={handleTabChange}>
+      <Tabs.List class="w-full">
+        <Tabs.Trigger value="local" class="flex-1 gap-2">
+          <HardDrive class="size-4" />
+          {$t('models.tabs.local') || 'Local'}
+        </Tabs.Trigger>
+        <Tabs.Trigger value="remote" class="flex-1 gap-2">
+          <Globe class="size-4" />
+          {$t('models.tabs.remote') || 'Remote'}
+        </Tabs.Trigger>
+        <Tabs.Trigger value="recommendations" class="flex-1 gap-2">
+          <Star class="size-4" />
+          {$t('models.tabs.recommendations') || 'Rec'}
+        </Tabs.Trigger>
+      </Tabs.List>
+    </Tabs.Root>
+  </div>
+
+  <!-- Main Content -->
+  <div class="flex-1 min-h-0">
     {#if activeTab === 'local'}
       <LocalModelsPanel />
     {:else if activeTab === 'remote'}
       <RemoteModelsPanel />
+    {:else if activeTab === 'recommendations'}
+      <RecommendationsPanel />
     {/if}
   </div>
-</section>
-
-<style>
-  .models-page {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    padding: 0 1rem 1rem;
-    box-sizing: border-box;
-    background: transparent;
-  }
-
-  .models-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  :global(.tabs-content) {
-    padding: 0;
-    display: flex;
-    width: 100%;
-    background: transparent !important;
-  }
-
-  :global(.tabs-container) {
-    background: transparent !important;
-  }
-
-  :global(.tabs-list) {
-    background: transparent !important;
-  }
-
-  :global(.page-container.active > .models-page) {
-    max-width: none;
-    margin: 0;
-    width: 100%;
-  }
-</style>
+</div>

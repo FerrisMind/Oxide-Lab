@@ -1,18 +1,18 @@
 {
-  "title": "Sobre",
-  "description": "Oxide Lab é um aplicativo desktop para inferência LLM local baseado em tecnologias modernas.",
-  "technologies": "Tecnologias",
-  "techStack": "Tauri 2 + Svelte 5 + Rust + Candle ML",
-  "version": "Versão",
-  "translation": "Tradução para português brasileiro: Talita Maia Sousa",
-  "actions": {
-    "github": "GitHub",
-    "gitverse": "GitVerse",
-    "close": "Fechar"
-  },
-  "aria": {
-    "github": "Abrir repositório GitHub",
-    "gitverse": "Abrir repositório GitVerse",
-    "close": "Fechar janela sobre"
-  }
+    "title": "Sobre",
+    "description": "Oxide Lab é um aplicativo desktop para inferência LLM local baseado em tecnologias modernas.",
+    "technologies": "Tecnologias",
+    "techStack": "Tauri 2 + Svelte 5 + Rust + Candle ML",
+    "version": "Versão",
+    "translation": "Tradução para português brasileiro: Talita Maia Sousa",
+    "actions": {
+        "github": "GitHub",
+        "gitverse": "GitVerse",
+        "close": "Fechar"
+    },
+    "aria": {
+        "github": "Abrir repositório GitHub",
+        "gitverse": "Abrir repositório GitVerse",
+        "close": "Fechar janela sobre"
+    }
 }

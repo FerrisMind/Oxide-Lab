@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { cn } from '$lib/utils';
+  import { cn } from '$lib/components/ai-elements/markdown/utils/utils.js';
   import { CollapsibleTrigger } from '$lib/components/ui/collapsible/index.js';
   import { getReasoningContext } from './reasoning-context.svelte.js';
-  import BrainIcon from 'phosphor-svelte/lib/Brain';
-  import CaretDownIcon from 'phosphor-svelte/lib/CaretDown';
+  import Brain from 'phosphor-svelte/lib/Brain';
+  import CaretDown from 'phosphor-svelte/lib/CaretDown';
 
   interface Props {
     class?: string;
@@ -29,7 +29,7 @@
 
 <CollapsibleTrigger
   class={cn(
-    'text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors',
+    'text-muted-foreground hover:text-foreground flex w-full items-center gap-2 text-sm transition-colors',
     className,
   )}
   {...props}
@@ -37,10 +37,11 @@
   {#if children}
     {@render children()}
   {:else}
-    <BrainIcon class="size-4" />
+    <Brain class="size-4" weight="regular" />
     <p>{getThinkingMessage}</p>
-    <CaretDownIcon
+    <CaretDown
       class={cn('size-4 transition-transform', reasoningContext.isOpen ? 'rotate-180' : 'rotate-0')}
+      weight="bold"
     />
   {/if}
 </CollapsibleTrigger>

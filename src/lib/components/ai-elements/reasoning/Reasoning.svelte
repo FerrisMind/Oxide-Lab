@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "$lib/utils";
+	import { cn } from "$lib/components/ai-elements/markdown/utils/utils";
 	import { watch } from "runed";
 	import { Collapsible } from "$lib/components/ui/collapsible/index.js";
 	import { ReasoningContext, setReasoningContext } from "./reasoning-context.svelte";

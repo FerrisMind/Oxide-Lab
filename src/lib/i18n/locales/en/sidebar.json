@@ -1,16 +1,29 @@
 {
-  "navigation": {
-    "chat": "Chat with Model",
-    "models": "Model Manager",
+    "chat": "Chat",
+    "models": "Models",
     "settings": "Settings",
-    "api": "API Work",
-    "performance": "Performance"
-  },
-  "footer": {
     "downloads": "Downloads",
-    "about": "About"
-  },
-  "brand": {
-    "home": "Home"
-  }
+    "about": "About",
+    "home": "Home",
+    "newChat": "New Chat",
+    "chats": "Chats",
+    "rename": "Rename",
+    "delete": "Delete",
+    "api": "API",
+    "performance": "Performance",
+    "navigation": {
+        "title": "Navigation",
+        "chat": "Chat with Model",
+        "models": "Model Manager",
+        "settings": "Settings",
+        "api": "API",
+        "performance": "Performance"
+    },
+    "footer": {
+        "downloads": "Downloads",
+        "about": "About"
+    },
+    "brand": {
+        "home": "Home"
+    }
 }

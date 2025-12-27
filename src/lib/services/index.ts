@@ -1,0 +1,25 @@
+/**
+ * Services Module - Central export for all services
+ *
+ * This module re-exports all service classes and functions used throughout the application.
+ */
+
+// Backend integration
+export { initializeBackend, cleanupBackend, isBackendInitialized } from './backend';
+
+// Local models service
+export { LocalModelsService } from './local-models';
+
+// Model cards service
+export { ModelCardsService } from './model-cards';
+
+// Performance service
+export { PerformanceService, performanceService } from './performance-service';
+
+// STT service
+export { getSttSettings, setSttSettings, downloadSttModel } from './stt-service';
+
+// Voice input service
+export { startVoiceCapture } from './voice-input';
+export type { VoiceCapture } from './voice-input';
+

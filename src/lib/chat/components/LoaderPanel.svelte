@@ -1,10 +1,48 @@
 <script lang="ts">
-  import DeviceSelector from './loader/DeviceSelector.svelte';
-  import ContextLengthSelector from './loader/ContextLengthSelector.svelte';
-  import HubModelForm from './loader/HubModelForm.svelte';
-  import LoadingStatus from './loader/LoadingStatus.svelte';
-  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-  import { onMount, onDestroy } from 'svelte';
+  /**
+   * Loader Panel Component
+   *
+   * Model loading settings and status display in a Sheet panel.
+   */
+  import { t } from '$lib/i18n';
+  import { Label } from '$lib/components/ui/label';
+  import { Badge } from '$lib/components/ui/badge';
+  import { Progress } from '$lib/components/ui/progress';
+  import { Checkbox } from '$lib/components/ui/checkbox';
+  import { cn } from '../../utils';
+  import Cpu from 'phosphor-svelte/lib/Cpu';
+  import GpuCard from 'phosphor-svelte/lib/GraphicsCard';
+  import Check from 'phosphor-svelte/lib/Check';
+
+  interface Props {
+    format?: 'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors';
+    modelPath?: string;
+    repoId?: string;
+    revision?: string;
+    hubGgufFilename?: string;
+    ctx_limit_value?: number;
+    isLoadingModel?: boolean;
+    isUnloadingModel?: boolean;
+    isCancelling?: boolean;
+    loadingStage?: string;
+    loadingProgress?: number;
+    unloadingProgress?: number;
+    errorText?: string;
+    busy?: boolean;
+    isLoaded?: boolean;
+    use_gpu?: boolean;
+    cuda_available?: boolean;
+    cuda_build?: boolean;
+    avx?: boolean;
+    neon?: boolean;
+    simd128?: boolean;
+    f16c?: boolean;
+    split_prompt?: boolean;
+    verbose_prompt?: boolean;
+    tracing?: boolean;
+    onDeviceToggle?: () => void;
+    class?: string;
+  }
 
   let {
     format = $bindable('gguf'),
@@ -32,196 +70,173 @@
     split_prompt = $bindable(false),
     verbose_prompt = $bindable(false),
     tracing = $bindable(false),
-    supports_text: _supports_text = false,
-    supports_image: _supports_image = false,
-    supports_audio: _supports_audio = false,
-    supports_video: _supports_video = false,
-    onMainAction: _onMainAction = undefined,
     onDeviceToggle,
     class: className = '',
-    children,
-  } = $props();
-  let tokensDump = $state('');
-  let dumpUnlisten: UnlistenFn | null = null;
-  onMount(async () => {
-    try {
-      dumpUnlisten = await listen<string>('prompt_tokens_dump', (e) => {
-        tokensDump = String(e.payload || '');
-      });
-    } catch {}
-  });
-  onDestroy(() => {
-    if (dumpUnlisten) dumpUnlisten();
-    dumpUnlisten = null;
-  });
+  }: Props = $props();
+
+  function toggleDevice() {
+    if (onDeviceToggle) {
+      onDeviceToggle();
+    } else {
+      use_gpu = !use_gpu;
+    }
+  }
+
+  const contextOptions = [2048, 4096, 8192, 16384, 32768];
 </script>
 
-<section class={`loader ${className}`}>
-  <!-- format selection buttons removed (GGUF / HF Hub) — upload controls moved to header -->
-  <!-- Панель индикаторов модальностей удалена по требованию -->
+<section class={cn('loader-panel space-y-6', className)}>
+  <!-- Device Selector -->
+  <div class="space-y-3">
+    <Label class="text-sm font-medium">{$t('common.loader.device') || 'Device'}</Label>
+    <div class="flex gap-2">
+      <button
+        type="button"
+        class={cn(
+          'flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-all',
+          !use_gpu
+            ? 'border-primary bg-primary/10 text-primary'
+            : 'border-border hover:border-muted-foreground',
+        )}
+        onclick={() => {
+          use_gpu = false;
+        }}
+      >
+        <Cpu class="size-5" />
+        <span>CPU</span>
+        {#if !use_gpu}
+          <Check class="size-4 ml-auto" />
+        {/if}
+      </button>
+      <button
+        type="button"
+        class={cn(
+          'flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-all',
+          !cuda_available && !cuda_build && 'opacity-50 cursor-not-allowed',
+          use_gpu
+            ? 'border-primary bg-primary/10 text-primary'
+            : 'border-border hover:border-muted-foreground',
+        )}
+        onclick={toggleDevice}
+        disabled={!cuda_available && !cuda_build}
+      >
+        <GpuCard class="size-5" />
+        <span>GPU</span>
+        {#if use_gpu}
+          <Check class="size-4 ml-auto" />
+        {/if}
+      </button>
+    </div>
+    {#if !cuda_available && !cuda_build}
+      <p class="text-xs text-muted-foreground">
+        {$t('common.loader.gpuNotAvailable') || 'GPU not available (CUDA not detected)'}
+      </p>
+    {/if}
+  </div>
 
-  {#if format === 'gguf' || format === 'local_safetensors'}
-    <DeviceSelector bind:use_gpu bind:cuda_available bind:cuda_build {onDeviceToggle} />
+  <!-- Context Length -->
+  <div class="space-y-3">
+    <Label class="text-sm font-medium"
+      >{$t('common.loader.contextLength') || 'Context Length'}</Label
+    >
+    <div class="flex flex-wrap gap-2">
+      {#each contextOptions as option}
+        <button
+          type="button"
+          class={cn(
+            'px-3 py-1.5 rounded-md text-sm border transition-all',
+            ctx_limit_value === option
+              ? 'border-primary bg-primary/10 text-primary font-medium'
+              : 'border-border hover:border-muted-foreground',
+          )}
+          onclick={() => {
+            ctx_limit_value = option;
+          }}
+        >
+          {option.toLocaleString()}
+        </button>
+      {/each}
+    </div>
+  </div>
 
-    <!-- thinking toggle removed -->
+  <!-- CPU Features -->
+  <div class="space-y-3">
+    <Label class="text-sm font-medium">{$t('common.loader.cpuFeatures') || 'CPU Features'}</Label>
+    <div class="flex flex-wrap gap-2">
+      <Badge variant={avx ? 'default' : 'outline'} class={cn(!avx && 'opacity-50')}>AVX</Badge>
+      <Badge variant={neon ? 'default' : 'outline'} class={cn(!neon && 'opacity-50')}>NEON</Badge>
+      <Badge variant={simd128 ? 'default' : 'outline'} class={cn(!simd128 && 'opacity-50')}>
+        SIMD128
+      </Badge>
+      <Badge variant={f16c ? 'default' : 'outline'} class={cn(!f16c && 'opacity-50')}>F16C</Badge>
+    </div>
+  </div>
 
-    <ContextLengthSelector bind:ctx_limit_value />
-
-    <div class="param">
-      <div class="row">
-        <input id="opt-split" type="checkbox" bind:checked={split_prompt} />
-        <label for="opt-split">Split prompt</label>
+  <!-- Advanced Options -->
+  <div class="space-y-3">
+    <Label class="text-sm font-medium"
+      >{$t('common.loader.advancedOptions') || 'Advanced Options'}</Label
+    >
+    <div class="space-y-3">
+      <div class="flex items-center gap-2">
+        <Checkbox id="split-prompt" bind:checked={split_prompt} />
+        <Label for="split-prompt" class="text-sm cursor-pointer">
+          {$t('common.loader.splitPrompt') || 'Split prompt'}
+        </Label>
+      </div>
+      <div class="flex items-center gap-2">
+        <Checkbox id="verbose-prompt" bind:checked={verbose_prompt} />
+        <Label for="verbose-prompt" class="text-sm cursor-pointer">
+          {$t('common.loader.verbosePrompt') || 'Verbose prompt'}
+        </Label>
+      </div>
+      <div class="flex items-center gap-2">
+        <Checkbox id="tracing" bind:checked={tracing} />
+        <Label for="tracing" class="text-sm cursor-pointer">
+          {$t('common.loader.chromeTracing') || 'Chrome tracing'}
+        </Label>
       </div>
     </div>
+  </div>
 
-    <div class="param">
-      <div class="row">
-        <input id="opt-verbose" type="checkbox" bind:checked={verbose_prompt} />
-        <label for="opt-verbose">Verbose prompt</label>
+  <!-- Loading Status -->
+  {#if isLoadingModel || isUnloadingModel}
+    <div class="space-y-3 p-4 rounded-lg border bg-muted/50">
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-medium">
+          {#if isLoadingModel}
+            {$t('common.loader.loading') || 'Loading model...'}
+          {:else}
+            {$t('common.loader.unloading') || 'Unloading model...'}
+          {/if}
+        </span>
+        {#if loadingStage}
+          <Badge variant="outline">{loadingStage}</Badge>
+        {/if}
       </div>
+      <Progress value={isLoadingModel ? loadingProgress : unloadingProgress} class="h-2" />
+      {#if isCancelling}
+        <p class="text-xs text-muted-foreground">
+          {$t('common.loader.cancelling') || 'Cancelling...'}
+        </p>
+      {/if}
     </div>
-
-    <div class="param">
-      <div class="row">
-        <input id="opt-tracing" type="checkbox" bind:checked={tracing} />
-        <label for="opt-tracing">Chrome tracing</label>
-      </div>
-    </div>
-
-    <div class="param">
-      <div class="row" style="gap: var(--space-2); flex-wrap: wrap;">
-        <span>CPU:</span>
-        <span class="chip" class:active={avx}>AVX</span>
-        <span class="chip" class:active={neon}>NEON</span>
-        <span class="chip" class:active={simd128}>SIMD128</span>
-        <span class="chip" class:active={f16c}>F16C</span>
-      </div>
-    </div>
-
-    <LoadingStatus
-      bind:isLoadingModel
-      bind:isCancelling
-      bind:loadingStage
-      bind:loadingProgress
-      bind:errorText
-    />
-  {:else if format === 'hub_gguf'}
-    <DeviceSelector bind:use_gpu bind:cuda_available bind:cuda_build {onDeviceToggle} />
-
-    <HubModelForm bind:repoId bind:revision bind:hubGgufFilename />
-
-    <ContextLengthSelector bind:ctx_limit_value />
-
-    <div class="param">
-      <div class="row">
-        <input id="opt-split" type="checkbox" bind:checked={split_prompt} />
-        <label for="opt-split">Split prompt</label>
-      </div>
-    </div>
-
-    <div class="param">
-      <div class="row">
-        <input id="opt-verbose" type="checkbox" bind:checked={verbose_prompt} />
-        <label for="opt-verbose">Verbose prompt</label>
-      </div>
-    </div>
-
-    <div class="param">
-      <div class="row">
-        <input id="opt-tracing" type="checkbox" bind:checked={tracing} />
-        <label for="opt-tracing">Chrome tracing</label>
-      </div>
-    </div>
-
-    <div class="param">
-      <div class="row" style="gap: var(--space-2); flex-wrap: wrap;">
-        <span>CPU:</span>
-        <span class="chip" class:active={avx}>AVX</span>
-        <span class="chip" class:active={neon}>NEON</span>
-        <span class="chip" class:active={simd128}>SIMD128</span>
-        <span class="chip" class:active={f16c}>F16C</span>
-      </div>
-    </div>
-
-    <LoadingStatus
-      bind:isLoadingModel
-      bind:isCancelling
-      bind:loadingStage
-      bind:loadingProgress
-      bind:errorText
-    />
-  {:else}
-    <DeviceSelector bind:use_gpu bind:cuda_available bind:cuda_build {onDeviceToggle} />
-
-    <HubModelForm bind:repoId bind:revision isSafetensors={true} />
-
-    <ContextLengthSelector bind:ctx_limit_value />
-
-    <div class="param">
-      <div class="row">
-        <input id="opt-split" type="checkbox" bind:checked={split_prompt} />
-        <label for="opt-split">Split prompt</label>
-      </div>
-    </div>
-
-    <div class="param">
-      <div class="row">
-        <input id="opt-verbose" type="checkbox" bind:checked={verbose_prompt} />
-        <label for="opt-verbose">Verbose prompt</label>
-      </div>
-    </div>
-
-    <div class="param">
-      <div class="row">
-        <input id="opt-tracing" type="checkbox" bind:checked={tracing} />
-        <label for="opt-tracing">Chrome tracing</label>
-      </div>
-    </div>
-
-    <div class="param">
-      <div class="row" style="gap: var(--space-2); flex-wrap: wrap;">
-        <span>CPU:</span>
-        <span class="chip" class:active={avx}>AVX</span>
-        <span class="chip" class:active={neon}>NEON</span>
-        <span class="chip" class:active={simd128}>SIMD128</span>
-        <span class="chip" class:active={f16c}>F16C</span>
-      </div>
-    </div>
-
-    <LoadingStatus
-      bind:isLoadingModel
-      bind:isCancelling
-      bind:loadingStage
-      bind:loadingProgress
-      bind:errorText
-    />
   {/if}
-  {@render children?.default?.()}
-  {#if verbose_prompt && tokensDump}
-    <div class="param">
-      <div class="head">Prompt tokens</div>
-      <pre class="dump">{tokensDump}</pre>
+
+  <!-- Error Display -->
+  {#if errorText}
+    <div class="p-4 rounded-lg border border-destructive/50 bg-destructive/10">
+      <p class="text-sm text-destructive">{errorText}</p>
+    </div>
+  {/if}
+
+  <!-- Model Info -->
+  {#if isLoaded && modelPath}
+    <div class="p-4 rounded-lg border bg-muted/30">
+      <div class="flex items-center gap-2 mb-2">
+        <Badge variant="default">{$t('common.loader.loaded') || 'Loaded'}</Badge>
+      </div>
+      <p class="text-xs text-muted-foreground truncate">{modelPath}</p>
     </div>
   {/if}
 </section>
-
-<style>
-  .chip {
-    padding: 2px var(--space-2); /* intentional 2px vertical for compact chips */
-    border-radius: var(--radius); /* 8px */
-    border: 1px solid #777;
-    color: #777;
-    font-size: var(--font-size-base); /* 16px */
-  }
-  .chip.active {
-    border-color: #2a7;
-    color: #2a7;
-  }
-  .dump {
-    max-height: calc(var(--space-12) + var(--space-9)); /* 160px = 20 units */
-    overflow: auto;
-    background: #1114;
-    padding: var(--space-2); /* 8px */
-    border-radius: var(--radius-lg); /* 16px */
-  }
-</style>

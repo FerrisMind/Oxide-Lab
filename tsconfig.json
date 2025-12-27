@@ -9,11 +9,17 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "types": ["vitest"],
+    "types": [
+      "vitest"
+    ],
     "moduleResolution": "bundler",
     "allowArbitraryExtensions": true
   },
-  "exclude": ["node_modules", "example"]
+  "exclude": [
+    "node_modules",
+    "example",
+    "src-ref"
+  ]
   // Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
   // except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
   //

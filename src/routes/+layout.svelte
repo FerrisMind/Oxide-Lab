@@ -1,73 +1,66 @@
 <script lang="ts">
+  /**
+   * Root Layout
+   *
+   * Main application shell with sidebar, header with model picker, and window controls.
+   */
   import '../app.css';
-  import '$lib/chat/Chat.css';
-  // Тема для highlight.js (легкая)
-  import 'highlight.js/styles/github.css';
+  import 'highlight.js/styles/github-dark.css';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { onMount, tick } from 'svelte';
   import type { UnlistenFn } from '@tauri-apps/api/event';
   import { getCurrentWindow } from '@tauri-apps/api/window';
-import Minus from 'phosphor-svelte/lib/Minus';
+  import { openUrl } from '@tauri-apps/plugin-opener';
+  import { derived } from 'svelte/store';
+
+  // Phosphor Icons
+  import Minus from 'phosphor-svelte/lib/Minus';
   import ArrowsIn from 'phosphor-svelte/lib/ArrowsIn';
   import ArrowsOut from 'phosphor-svelte/lib/ArrowsOut';
   import X from 'phosphor-svelte/lib/X';
   import CaretDown from 'phosphor-svelte/lib/CaretDown';
-import Check from 'phosphor-svelte/lib/CheckCircle';
-  import AppSidebar from '$lib/components/app-sidebar.svelte';
-  import { ensureGlobalChatStream } from '$lib/chat/global-stream';
-  import Chat from '$lib/chat/Chat.svelte';
-  import DownloadManagerModal from '$lib/components/DownloadManagerModal.svelte';
-  import * as SidebarUI from '$lib/components/ui/sidebar/index';
-  import { openUrl } from '@tauri-apps/plugin-opener';
+  import Check from 'phosphor-svelte/lib/CheckCircle';
   import GithubLogo from 'phosphor-svelte/lib/GithubLogo';
-  import { locale } from '$lib/i18n';
+  import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
 
+  // UI Components
+  import AppSidebar from '$lib/components/app-sidebar.svelte';
+  import * as SidebarUI from '$lib/components/ui/sidebar/index';
+  import { Button } from '$lib/components/ui/button';
+  import { Spinner } from '$lib/components/ui/spinner';
+  import * as Popover from '$lib/components/ui/popover';
+  import * as Command from '$lib/components/ui/command';
+  import * as Tabs from '$lib/components/ui/tabs';
+  import DownloadManagerModal from '$lib/components/DownloadManagerModal.svelte';
+
+  // Core
+  import { cn } from '../lib/utils';
+  import { t, locale, initI18n } from '$lib/i18n';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   import { pageTabsList, activePageTab } from '$lib/stores/page-tabs.svelte';
   import type { TabId } from '$lib/stores/page-tabs.svelte';
   import { chatState } from '$lib/stores/chat';
   import { folderPath, models, scanFolder } from '$lib/stores/local-models';
   import type { ModelInfo } from '$lib/types/local-models';
-  import { derived } from 'svelte/store';
-  import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
-  import { modelSelectorSearchEnabled } from '$lib/stores/ui-preferences';
-  import { Button } from '$lib/components/ui/button';
-  import { Spinner } from '$lib/components/ui/spinner';
-  import * as Popover from '$lib/components/ui/popover';
-  import * as Command from '$lib/components/ui/command';
-  import * as Tabs from '$lib/components/ui/tabs';
-  import { cn } from '$lib/utils';
-  import { t } from '$lib/i18n';
 
-  // Импортируем все страницы для постоянного монтирования
-  import ApiPage from './api/+page.svelte';
-  import ModelsPage from './models/+page.svelte';
-  import PerformancePage from './performance/+page.svelte';
-  import SettingsPage from './settings/+page.svelte';
+  // Pages for mount-all pattern
+  import Chat from '$lib/chat/Chat.svelte';
 
   const { children } = $props();
 
-  // Redirect to home if trying to access experimental pages when experimental features are disabled
-  $effect(() => {
-    if (experimentalFeatures.initialized && !experimentalFeatures.enabled) {
-      const experimentalPaths = ['/api', '/performance'];
-      if (experimentalPaths.includes($page.url.pathname)) {
-        goto('/');
-      }
-    }
-  });
-
-  const _appIcon = '/icon.svg';
   let isMaximized = $state(false);
-  const appWindow = getCurrentWindow();
+  let isSidebarOpen = $state(true);
   let isModelPickerOpen = $state(false);
   let comboboxTrigger = $state<HTMLButtonElement | null>(null);
   let showDownloadManager = $state(false);
   let showAbout = $state(false);
-  let appVersion = $state('0.13.0');
+  let appVersion = $state('0.13.1');
   let modalElement = $state<HTMLDivElement | null>(null);
-  let isSidebarOpen = $state(false);
+
+  const appWindow = getCurrentWindow();
+
+  // Derived stores for model picker
   const quickModels = derived(models, ($models) =>
     $models.filter(
       (model: ModelInfo) =>
@@ -89,31 +82,36 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
   const isReloadAvailable = derived([pendingModelPath, currentModelPath], ([$pending, $current]) =>
     Boolean($pending && $pending !== $current),
   );
-  const modelSearchEnabled = derived(modelSelectorSearchEnabled, ($value) => $value);
+
+  // Redirect experimental pages when features disabled
+  $effect(() => {
+    if (experimentalFeatures.initialized && !experimentalFeatures.enabled) {
+      // TODO: Add experimental routes when implemented (e.g., '/api', '/performance')
+      const experimentalPaths: string[] = [];
+      if (experimentalPaths.includes(page.url.pathname)) {
+        goto('/');
+      }
+    }
+  });
 
   function currentHeaderTabValue(): TabId | '' {
     return $activePageTab || $pageTabsList[0]?.id || '';
   }
 
   function handleHeaderTabsChange(nextValue: string) {
-    if (!nextValue || nextValue === $activePageTab) {
-      return;
-    }
+    if (!nextValue || nextValue === $activePageTab) return;
     activePageTab.set(nextValue as TabId);
   }
 
   function formatModelLabel(model: ModelInfo | null | undefined) {
-    if (!model) return $t('common.model.selectModel');
+    if (!model) return $t('common.model.selectModel') || 'Select model';
     const publisher = model.metadata?.author ?? model.source_repo_id?.split('/')[0] ?? 'local';
-    const title = model.name ?? model.source_repo_name ?? 'Без имени';
+    const title = model.name ?? model.source_repo_name ?? 'Unnamed';
     return `${publisher}/${title}`;
   }
 
-  function _goHome() {
-    goto('/');
-  }
-
   function handleReloadModel() {
+    // TODO: Integrate with backend - this exposes the reload function
     const ox = (window as any).__oxide;
     if (ox?.reloadSelectedModel) {
       ox.reloadSelectedModel();
@@ -126,9 +124,10 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
   }
 
   function handleSelectModel(model: ModelInfo) {
+    // TODO: Integrate with backend
     const ox = (window as any).__oxide;
     if (!ox?.loadModelFromManager) {
-      console.warn('Модель пока не готова к загрузке; попробуйте позже.');
+      console.warn('Model loading not ready yet');
       closeModelPicker();
       return;
     }
@@ -169,11 +168,12 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
       const appInfo = (await invoke('get_app_info')) as { version: string };
       appVersion = appInfo.version;
     } catch (error) {
-      console.warn('Не удалось получить версию приложения:', error);
-      appVersion = '0.13.0';
+      console.warn('Failed to get app version:', error);
+      appVersion = '0.13.1';
     }
   }
 
+  // Focus trap for About modal
   $effect(() => {
     if (!showAbout || !modalElement) return;
 
@@ -193,9 +193,7 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
         return;
       }
 
-      if (event.key !== 'Tab' || focusableElements.length === 0) {
-        return;
-      }
+      if (event.key !== 'Tab' || focusableElements.length === 0) return;
 
       const activeElement = document.activeElement as HTMLElement | null;
 
@@ -211,23 +209,13 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
     };
 
     node.addEventListener('keydown', handleKeydown);
+    firstElement?.focus() ?? node.focus();
 
-    if (firstElement) {
-      firstElement.focus();
-    } else {
-      node.focus();
-    }
-
-    return () => {
-      node.removeEventListener('keydown', handleKeydown);
-    };
+    return () => node.removeEventListener('keydown', handleKeydown);
   });
 
-  // Make the entire header draggable
   async function startDragging(event: MouseEvent) {
-    // Only start dragging if we're not clicking on an interactive element
     const target = event.target as HTMLElement;
-    // Проверяем, не кликнули ли мы на кнопку, input, или элемент внутри них
     if (target.closest('button, input, textarea, select, a, [data-no-drag]')) {
       event.stopPropagation();
       return;
@@ -235,102 +223,54 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
     await appWindow.startDragging();
   }
 
-  onMount(() => {
-    // Initialize experimental features store
+  let unlistenFn: UnlistenFn | null = null;
+
+  onMount(async () => {
+    // Initialize i18n
+    initI18n(page.url.pathname);
+
+    // Load experimental features
     void experimentalFeatures.loadState();
 
+    // Initialize backend connections (download manager, model cards, performance listeners)
+    const { initializeBackend } = await import('$lib/services/backend');
+    void initializeBackend().catch((err) => console.warn('Backend initialization failed:', err));
+
+    // Scan local models if folder is set
     if ($folderPath) {
-      void scanFolder($folderPath).catch((err) =>
-        console.warn('Не удалось просканировать локальные модели при старте', err),
-      );
+      void scanFolder($folderPath).catch((err) => console.warn('Failed to scan local models', err));
     }
 
-    // Ensure background chat stream listener is active across pages
-    void ensureGlobalChatStream();
-    // Проверяем начальное состояние окна и слушаем resize через Tauri
-    const unlistenHolder: { fn: UnlistenFn | null } = { fn: null };
-    (async () => {
-      isMaximized = await appWindow.isMaximized();
-
-      // Слушаем изменения состояния окна
-      unlistenHolder.fn = await appWindow.onResized(() => {
-        appWindow.isMaximized().then((maximized: boolean) => {
-          isMaximized = maximized;
-        });
+    // Setup window state
+    isMaximized = await appWindow.isMaximized();
+    unlistenFn = await appWindow.onResized(() => {
+      appWindow.isMaximized().then((maximized: boolean) => {
+        isMaximized = maximized;
       });
-    })();
+    });
+  });
 
-    // Sync heights between chat and loader panels to avoid visual mismatch
-    const syncHeights = () => {
-      try {
-        const wrap = document.querySelector('main.wrap');
-        if (!wrap) return;
-        const chat = wrap.querySelector('.chat');
-        const loader = wrap.querySelector('.loader');
-        if (chat && loader) {
-          // reset loader explicit height first
-          if (loader instanceof HTMLElement) {
-            loader.style.height = '';
-            loader.style.minHeight = '';
-          }
+  import { onDestroy } from 'svelte';
+  onDestroy(() => {
+    if (unlistenFn) unlistenFn();
 
-          // compute available height inside wrap
-          const wrapRect = wrap.getBoundingClientRect();
-          const header = document.querySelector('.app-header');
-          const _headerH = header ? header.getBoundingClientRect().height : 0;
-          const _targetH = wrapRect.height;
-
-          // don't force loader height here — let CSS/flex handle sizing and allow loader internal scroll
-        }
-      } catch {
-        // ignore
-      }
-    };
-
-    const debounced = () => {
-      setTimeout(syncHeights, 50);
-    };
-    window.addEventListener('resize', debounced);
-    const ro = new ResizeObserver(debounced);
-    const wrapEl = document.querySelector('main.wrap');
-    if (wrapEl) ro.observe(wrapEl);
-    // initial sync
-    setTimeout(syncHeights, 120);
-
-    // Screenshot mode: Ctrl+Shift+S to scale UI for screenshots
-    let screenshotMode = false;
-    const handleScreenshot = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.shiftKey && event.key === 'S') {
-        event.preventDefault();
-        
-        if (!screenshotMode) {
-          document.documentElement.classList.add('screenshot-mode');
-          screenshotMode = true;
-        } else {
-          document.documentElement.classList.remove('screenshot-mode');
-          screenshotMode = false;
-        }
-      }
-    };
-    window.addEventListener('keydown', handleScreenshot);
-
-    return () => {
-      if (unlistenHolder.fn) unlistenHolder.fn();
-      window.removeEventListener('resize', debounced);
-      window.removeEventListener('keydown', handleScreenshot);
-      ro.disconnect();
-    };
+    // Cleanup backend connections
+    import('$lib/services/backend').then(({ cleanupBackend }) => {
+      cleanupBackend();
+    });
   });
 </script>
 
 <SidebarUI.Provider bind:open={isSidebarOpen}>
   <AppSidebar onOpenDownloads={() => (showDownloadManager = true)} onOpenAbout={toggleAbout} />
+
   <SidebarUI.Inset class="app-shell">
-    <div class="app-header-wrapper" onmousedown={startDragging} role="toolbar" tabindex="0">
-      <header class="app-header">
-        <div class="header-center">
-          <!-- Model dropdown -->
-          {#if $page.url.pathname === '/' || $page.url.pathname === '/api'}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="app-header-wrapper" onmousedown={startDragging}>
+      <header class="flex items-center justify-between px-2 h-14 bg-background">
+        <div class="flex-1 flex items-center justify-start gap-2 sm:gap-4">
+          <!-- Model Picker -->
+          {#if page.url.pathname === '/'}
             <Popover.Root bind:open={isModelPickerOpen}>
               <Popover.Trigger bind:ref={comboboxTrigger} data-no-drag>
                 {#snippet child({ props })}
@@ -348,11 +288,7 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
                   >
                     <span class="model-combobox-body">
                       {#if $isModelLoading}
-                        <Spinner
-                          size={14}
-                          class="model-combobox-spinner"
-                          label={$t(`chat.loading.stages.${$modelLoadingStage || 'model'}`)}
-                        />
+                        <Spinner size={14} class="model-combobox-spinner" />
                       {/if}
                       <span class="model-combobox-label">{$currentDisplayName}</span>
                     </span>
@@ -362,16 +298,14 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
               </Popover.Trigger>
               <Popover.Content class="model-combobox-content" side="bottom" align="start">
                 <Command.Root>
-                  {#if $modelSearchEnabled}
-                    <Command.Input
-                      class="model-combobox-input"
-                      placeholder={$t('common.model.selectModel') + '...'}
-                      autofocus
-                    />
-                  {/if}
+                  <Command.Input
+                    class="model-combobox-input"
+                    placeholder={($t('common.model.selectModel') || 'Select model') + '...'}
+                    autofocus
+                  />
                   <Command.List class="model-combobox-list">
                     <Command.Empty class="model-combobox-empty">
-                      {$t('common.model.selectModel')}
+                      {$t('common.model.noModelsFound') || 'No models found'}
                     </Command.Empty>
                     <Command.Group>
                       {#each $quickModels as model (model.path)}
@@ -393,13 +327,13 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
                               {formatModelLabel(model)}
                             </span>
                             <span class="model-combobox-item-meta">
-                              {model.architecture ?? $t('common.model.unknownArchitecture')}
+                              {model.architecture ?? ($t('common.unknownArch') || 'Unknown')}
                             </span>
                           </div>
                           {#if model.path === $currentModelPath}
-                            <span class="model-combobox-item-badge"
-                              >{$t('common.model.current')}</span
-                            >
+                            <span class="model-combobox-item-badge">
+                              {$t('common.model.current') || 'Current'}
+                            </span>
                           {/if}
                         </Command.Item>
                       {/each}
@@ -408,27 +342,29 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
                 </Command.Root>
               </Popover.Content>
             </Popover.Root>
+
             {#if $isReloadAvailable}
               <button
                 type="button"
                 class="model-reload-btn"
                 onclick={handleReloadModel}
-                aria-label={$t('common.model.reloadModel')}
+                aria-label={$t('common.model.reloadModel') || 'Reload model'}
               >
                 <ArrowClockwise size={16} weight="bold" />
-                {$t('common.model.reloadModel')}
+                {$t('common.model.reloadModel') || 'Reload'}
               </button>
             {/if}
           {/if}
-          <!-- Page tabs -->
-          {#if $page.url.pathname === '/models' && $pageTabsList.length > 0}
+
+          <!-- Page Tabs (for /models) -->
+          {#if page.url.pathname === '/models' && $pageTabsList.length > 0}
             <div class="page-tabs" data-no-drag>
               <Tabs.Root
                 value={currentHeaderTabValue()}
                 class="page-tabs-root"
                 onValueChange={handleHeaderTabsChange}
               >
-                <Tabs.List class="page-tabs-list" aria-label="Вкладки страницы">
+                <Tabs.List class="page-tabs-list" aria-label="Page tabs">
                   {#each $pageTabsList as tab}
                     <Tabs.Trigger class="page-tab" value={tab.id}>
                       {tab.label}
@@ -439,66 +375,52 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
             </div>
           {/if}
         </div>
-        <div class="window-controls">
-          <button
-            type="button"
-            class="win-btn"
-            title={$t('common.windowControls.minimize')}
-            onclick={() => appWindow.minimize()}
-          >
+
+        <div class="flex items-center gap-1">
+          <Button variant="ghost" size="icon" class="win-btn" onclick={() => appWindow.minimize()}>
             <Minus size={16} weight="bold" />
-          </button>
-          <button
-            type="button"
-            class="win-btn"
-            title={isMaximized
-              ? $t('common.windowControls.restore')
-              : $t('common.windowControls.maximize')}
-            onclick={toggleMaximize}
-          >
+          </Button>
+          <Button variant="ghost" size="icon" class="win-btn" onclick={toggleMaximize}>
             {#if isMaximized}
               <ArrowsIn size={16} weight="bold" />
             {:else}
               <ArrowsOut size={16} weight="bold" />
             {/if}
-          </button>
-          <button
-            type="button"
-            class="win-btn close"
-            title={$t('common.windowControls.close')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="win-btn win-btn-close"
             onclick={() => appWindow.close()}
           >
             <X size={16} weight="bold" />
-          </button>
+          </Button>
         </div>
       </header>
     </div>
+
     <div class="app-body">
-      <main class="app-main" class:models-compact={$page.url.pathname === '/models'}>
+      <main class="app-main" class:models-compact={page.url.pathname === '/models'}>
         <div class="view-switch">
-          <!-- Все страницы постоянно смонтированы, переключение через CSS -->
-          <div class="page-container" class:active={$page.url.pathname === '/'}>
+          <!-- Chat page always mounted -->
+          <div class="page-container" class:active={page.url.pathname === '/'}>
             <Chat />
           </div>
-          {#if experimentalFeatures.enabled}
-            <div class="page-container" class:active={$page.url.pathname === '/api'}>
-              <ApiPage />
-            </div>
-            <div class="page-container" class:active={$page.url.pathname === '/performance'}>
-              <PerformancePage />
+
+          <!-- Other pages rendered via slot -->
+          {#if page.url.pathname !== '/'}
+            <div class="page-container active">
+              {@render children()}
             </div>
           {/if}
-          <div class="page-container" class:active={$page.url.pathname === '/models'}>
-            <ModelsPage />
-          </div>
-          <div class="page-container" class:active={$page.url.pathname === '/settings'}>
-            <SettingsPage />
-          </div>
         </div>
       </main>
     </div>
   </SidebarUI.Inset>
+
+  <!-- About Modal -->
   {#if showAbout}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       bind:this={modalElement}
       class="about-modal"
@@ -507,52 +429,30 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
       aria-labelledby="about-title"
       tabindex="-1"
       onclick={(event) => {
-        if (event.target === event.currentTarget) {
-          toggleAbout();
-        }
+        if (event.target === event.currentTarget) toggleAbout();
       }}
       onkeydown={handleBackdropKeydown}
     >
       <div class="about-content" role="document">
-        <h2 id="about-title">{$t('about.title')}</h2>
+        <h2 id="about-title">{$t('about.title') || 'About'}</h2>
         <div class="about-info">
           <p>
-            <strong>Oxide Lab</strong> — {$t('about.description')}
+            <strong>Oxide Lab</strong> — {$t('about.description') ||
+              'Local AI inference application'}
           </p>
-          <p><strong>{$t('about.technologies')}:</strong> {$t('about.techStack')}</p>
-          <p><strong>{$t('about.version')}:</strong> {appVersion}</p>
-          {#if locale.get() === 'pt-BR'}
-            <p class="translation-credit">{$t('about.translation')}</p>
-          {/if}
+          <p>
+            <strong>{$t('about.technologies') || 'Technologies'}:</strong> Tauri, Svelte, Candle
+          </p>
+          <p><strong>{$t('about.version') || 'Version'}:</strong> {appVersion}</p>
         </div>
         <div class="about-actions">
           <button
             class="github-btn"
             onclick={() => openUrl('https://github.com/FerrisMind/Oxide-Lab')}
-            aria-label={$t('about.aria.github')}
+            aria-label="GitHub"
           >
             <GithubLogo size={16} />
-            {$t('about.actions.github')}
-          </button>
-          <button
-            class="gitverse-btn"
-            onclick={() => openUrl('https://gitverse.ru/FerrisMind/Oxide-Lab')}
-            aria-label={$t('about.aria.gitverse')}
-          >
-            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
-              <path
-                d="m127.94,245.01c59.01,0,106.84-47.84,106.84-106.84,0-13.35-2.45-26.12-6.92-37.91l1.17-12.24c7.5,15.11,11.73,32.14,11.73,50.15,0,62.31-50.51,112.83-112.83,112.83S15.1,200.49,15.1,138.17c0-49.87,32.35-92.17,77.2-107.09-.33,2.32-.87,6.31-.91,6.66-41.02,14.93-70.31,54.25-70.31,100.43,0,59.01,47.84,106.84,106.84,106.84h.02Zm-5.32-213.55c1.76-.09,3.54-.12,5.32-.12,18.5,0,35.92,4.7,51.1,12.99.99-1.48,2.3-3.42,3.37-4.98-16.15-8.92-34.72-14-54.47-14-2.87,0-5.72.1-8.54.32l3.21,5.8h.01Z"
-                fill-rule="evenodd"
-              />
-              <path
-                d="m125.79,185.34c-12.15,1.1-23.13,2.11-31.34.46-27.18-5.48-47.39-26.77-47.39-26.77-.69-.47-.08-1.47.62-1.16,0,0,28.57,14.41,46.77,14.95,18.2.55,24.65-2.57,39.87-12.18,0,0-.47-.55-.77-.47-.63.17-1.41.48-2.39.87-5.26,2.06-16.09,6.31-36.7,3.09-17.76-2.78-34.36-10.88-42.11-15.1-2.9-1.58-4.65-4.61-4.74-7.93l-.15-5.04c0-.23.08-.39.23-.55l10.86-9.05c2.87-2.39,4.9-5.62,5.78-9.25l1.09-4.43c.83-3.36-1.77-6.58-5.23-6.5l-.84.02c-7.3.18-14.51-1.57-20.91-5.08l54.6-.74c2.12-.03,4.16-.8,5.77-2.16l29.13-24.7c6.26-5.32,14.21-8.23,22.42-8.23h14.71c2.44-3.46,5.15-7.62,8.04-12.06.84-1.29,5.51-10.26,6.38-11.59-14.21-7.65-35.39-12.26-52.67-12.26-.81,0-.5,7.94-1.3,7.96,3.37,7.28,6.32,14.95,8.51,21.37h-7.21c-8.53,0-16.83,2.79-23.63,7.95l-13.03,9.88c-.39.31-1.01,0-1.01-.47.34-5-4.92-10.58-4.7-15.75.24-5.56,1.94-21.8,1.94-21.8-37.28,14.78-67.47,57.01-67.47,99.56,0,39.49,24.13,76.71,57.22,93.23,12.74-5.2,22.26-13.14,28.48-18.32,10.03-8.35,19.54-16.27,38.58-20.69,18.37-4.26,33.46-3.97,44.62-2.21-19.18-8.75-42.18-6.65-62.04-4.84h.01Zm106.29-12.51c.79-5.09,4.87-29.76,4.87-35.07,0-7.65-2.08-21.66-3.7-28.82-.51,8.39-6.96,23.99-6.41,32.6.26,4.1,5.09,27.24,5.24,31.29Zm-41.27-113.42c7.17,5.73,13.54,12.41,18.91,19.87-1.63,7.27-3.12,12.64-3.12,12.64l-3.01-3.81c-5.47-6.94-11.84-13.12-18.95-18.37,0,0,2.53-4.71,6.15-10.33h.01Zm-59.75,33.35c-3.42,2.1-5.74,5.74-5.9,10.01-.31,6.9,5.04,12.72,11.95,13.03h.55c6.59,0,12.09-5.19,12.41-11.87.08-1.24-.08-2.4-.31-3.5-5.51-4.66-11.79-6.67-18.7-7.68Zm-37.49.59l32.08-25.68c2.29-1.81.93-2.92.32-2.92-6.29-.05-12.39,2.02-17.35,5.86l-30.81,23.88h12.53c1.18,0,2.33-.4,3.26-1.14h-.01Zm-58.78,32.61v6.17c0,5.92,1.94,11.67,5.51,16.4v-15.36l-5.51-7.21Zm0,0c0-.62-.23-.55,0,0Z"
-                fill-rule="evenodd"
-              />
-              <path
-                d="m240.76,134.06c-.42-12.37-2.9-24.04-7-35.1v-.1c-1.39-3.72-2.97-7.36-4.73-10.89v.05l-1.17,12.24v.02c-.38,3.63-.77,7.2-1.18,10.67-1.16,9.92-.5,20.26.16,30.56.55,8.51,1.09,17,.6,25.2-.36,6.21-1.33,12.24-3.33,18.02-17.31,35.67-53.86,60.26-96.18,60.26-18.79,0-36.45-4.86-51.79-13.38,12.8-5.51,20.79-12.16,28.48-18.56,10.03-8.35,19.54-16.27,38.58-20.69,5.74-1.33,11.16-2.22,16.25-2.76,11.17-1.18,20.69-.66,28.37.55-8.92-4.07-18.65-5.8-28.53-6.29-11.35-.57-22.88.48-33.51,1.45-12.15,1.12-23.13,2.12-31.35.46-14.47-2.92-26.98-10.32-35.49-16.6-3.51-2.58-6.33-4.98-8.36-6.79-1.97-1.78-3.18-3-3.47-3.3-.02-.02-.03-.03-.05-.05l-.02-.02c-.69-.47-.08-1.47.61-1.16,0,0,.03.02.11.06.07.03.16.08.28.14.66.33,2.12,1.04,4.17,1.97,2.46,1.13,5.76,2.6,9.54,4.12,9.77,3.95,22.75,8.36,32.67,8.65,8.72.26,14.75-.32,20.33-2.05,5.36-1.66,10.33-4.4,16.88-8.46.68-.42,1.38-.87,2.1-1.31h.02c.18-.11.36-.23.55-.35,0,0-.47-.55-.77-.47-.62.17-1.41.48-2.39.87-3.3,1.3-8.78,3.45-17.49,4.08-5.19.38-11.52.22-19.22-.99-17.76-2.78-34.36-10.88-42.11-15.11-2.9-1.58-4.65-4.61-4.74-7.93l-.15-5.04c0-.23.08-.39.23-.55l10.86-9.05c2.87-2.38,4.9-5.63,5.78-9.25l1.09-4.43c.66-2.66-.83-5.24-3.2-6.15-.63-.24-1.31-.36-2.03-.35l-.84.02c-7.3.18-14.51-1.57-20.91-5.08l54.6-.74c2.12-.03,4.16-.8,5.77-2.16l29.13-24.7c6.26-5.32,14.21-8.23,22.42-8.23h14.71c2.44-3.46,5.15-7.62,8.04-12.06,1.89-2.92,3.87-5.96,5.92-9.01.89-1.32,2.02-3,3.02-4.45.11-.17.24-.34.35-.51-1.7-.93-3.42-1.83-5.17-2.69-1.84-.9-3.71-1.74-5.6-2.54-.05-.02-.1-.05-.15-.06-.85-.35-1.71-.71-2.57-1.04-.25-.1-.51-.19-.76-.28-.66-.25-1.33-.5-1.99-.74-.33-.12-.67-.24-1-.35-.59-.2-1.18-.41-1.78-.6-.39-.13-.76-.25-1.15-.38-.55-.17-1.1-.34-1.65-.51-.42-.13-.83-.25-1.25-.38-.52-.15-1.06-.3-1.58-.44-.44-.13-.89-.24-1.33-.36-.51-.14-1.04-.26-1.55-.39-.46-.11-.92-.23-1.38-.34-.5-.11-.99-.22-1.49-.33-.99-.22-1.98-.42-2.97-.6-.41-.08-.81-.16-1.22-.23-.57-.1-1.14-.19-1.71-.28-.42-.07-.84-.14-1.26-.2-.57-.08-1.13-.16-1.7-.24-.43-.06-.87-.11-1.31-.17-.56-.07-1.13-.14-1.68-.19-.46-.05-.91-.09-1.36-.14-.55-.06-1.1-.1-1.65-.15-.48-.03-.97-.07-1.45-.1-.52-.03-1.06-.07-1.59-.1-.55-.03-1.09-.05-1.65-.07-.47-.02-.93-.05-1.41-.06-.89-.02-1.79-.03-2.68-.03h-.39c-.69,0-1.38.02-2.06.03h0c-2.16.02-4.3.12-6.43.27л3.21,5.8c3.55,6.88,6.8,14.63,9.38,21.6.74,1.98,1.41,3.91,2.04,5.73h-7.21c-8.53,0-16.83,2.79-23.63,7.95л-13.03,9.88c-.39.31-1.01,0-1.01-.47.02-.24.03-.49.05-.73v-.06c.09-1.43.18-2.88.25-4.33.02-.38.05-.74.06-1.12.16-3.02.28-6.08.42-9.13.34-7.99.68-15.95,1.46-23.05.05-.35.58-4.33.91-6.66v-.02c-2.06.68-4.11,1.42-6.12,2.22v.06C44.6,49.9,15.17,90.56,15.17,138.12c0,38.09,18.88,71.77,47.79,92.2լ6.1,4.02c17.15,10.52,37.33,16.6,58.93,16.6,57.96,0,105.71-43.72,112.09-99.97.07-.3.14-.6.2-.91.4-3.88.62-7.82.62-11.81,0-1.42-.03-2.84-.09-4.25լ-.05.06Zm-132.15-63.44c3.13-2.43,6.73-4.15,10.53-5.07.69-.17,1.39-.31,2.1-.42.72-.11,1.43-.21,2.16-.26h.03c.84-.07,1.69-.1,2.54-.09.59,0,1.84,1,0,2.65,0,0-.01.01-.02.02-.09.08-.18.16-.3.25л-32.08,25.68c-.92.74-2.07,1.14-3.26,1.14h-12.53լ30.81-23.88v-.02Zm-68.31,77.91c-2.85-3.76-4.66-8.19-5.27-12.82-.11-.84-.18-1.69-.22-2.53-.01-.34-.02-.69-.02-1.04v-6.17լ5.51,7.21v15.36h0Zm5.73,2.79c.25.26.52.52.8.77-.27.02-.54.07-.8.14v-.9h0Z"
-              />
-            </svg>
-            {$t('about.actions.gitverse')}
+            GitHub
           </button>
           <button
             class="close-btn"
@@ -560,95 +460,74 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
               e.stopPropagation();
               toggleAbout();
             }}
-            aria-label={$t('about.aria.close')}
+            aria-label={$t('common.buttons.close') || 'Close'}
           >
-            {$t('about.actions.close')}
+            {$t('common.buttons.close') || 'Close'}
           </button>
         </div>
       </div>
     </div>
   {/if}
+
+  <!-- Download Manager Modal -->
   {#if showDownloadManager}
     <DownloadManagerModal onClose={() => (showDownloadManager = false)} />
   {/if}
 
-  <!-- SvelteKit layout must expose a slot; hide it to avoid duplicate rendering -->
-  <div hidden>{@render children()}</div>
+  <!-- Hidden slot for SvelteKit routing -->
+  {#if page.url.pathname === '/'}
+    <div hidden>{@render children()}</div>
+  {/if}
 </SidebarUI.Provider>
 
 <style>
-  /* App shell & header */
   :global(.app-shell) {
     display: flex;
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
     position: relative;
-    background: #1a1f2e;
+    background: var(--background);
   }
 
+  /* ===== Header Wrapper (CSS for app-region drag) ===== */
   .app-header-wrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: var(--space-8); /* 56px */
+    position: relative;
+    height: 3.5rem;
     box-sizing: border-box;
-    -webkit-app-region: drag; /* Enable window dragging */
-    z-index: 200;
+    -webkit-app-region: drag;
+    z-index: 100;
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
   }
 
-  /* Disable dragging on interactive elements */
   .app-header-wrapper button {
     -webkit-app-region: no-drag;
   }
 
-  .app-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 var(--space-2) 0 var(--space-2); /* 16px */
-    height: var(--space-8); /* 56px */
-    background: var(--bg);
-    position: relative;
-    z-index: 100;
-  }
-  .header-center {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    position: relative;
-  }
-
-  :global(.header-trigger) {
-    -webkit-app-region: no-drag;
-  }
-
+  /* Model Combobox Styles */
   :global(.model-combobox-trigger) {
-    min-width: 224px; /* 28 units (кратно 8) */
-    justify-content: space-between;
-    gap: var(--space-2); /* 8px */
+    min-width: 14rem;
+    justify-content: center;
+    gap: 0.5rem;
     padding: 0.35rem 0.75rem;
-    background: var(--bg);
-    color: var(--text);
+    background: var(--background);
+    color: var(--foreground);
     border: 1px solid transparent;
-    border-radius: var(--radius); /* 8px */
+    border-radius: 0.5rem;
     -webkit-app-region: no-drag;
-    transition: var(--transition-colors);
+    transition: all 0.2s ease;
   }
 
   :global(.model-combobox-trigger:hover),
   :global(.model-combobox-trigger:focus-visible),
   :global(.model-combobox-trigger--active) {
-    background: color-mix(in srgb, var(--card) 75%, transparent 25%);
-    border-color: color-mix(in srgb, var(--border-color) 55%, transparent);
-    color: var(--text);
+    background: var(--accent);
+    border-color: var(--border);
   }
 
   :global(.model-combobox-label) {
     font-size: 0.95rem;
-    color: inherit;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -659,7 +538,7 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-2); /* 8px */
+    gap: 0.5rem;
     flex: 1;
     min-width: 0;
   }
@@ -670,12 +549,11 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
   }
 
   :global(.model-combobox-content) {
-    width: calc(var(--space-12) * 3 + var(--space-5)); /* 320px = 40 units */
-    padding: var(--space-2); /* 8px */
-    background: var(--card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg); /* 16px */
-    box-shadow: var(--shadow-lg);
+    width: 20rem;
+    padding: 0.5rem;
+    background: var(--popover);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
     z-index: 1200;
     -webkit-app-region: no-drag;
   }
@@ -683,37 +561,17 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
   :global(.model-combobox-input) {
     width: 100%;
     margin-bottom: 0.5rem;
-    border-radius: var(--radius-lg); /* 16px */
-    border: none;
-    background: var(--card);
-    color: var(--text);
-    font-size: var(--font-size-sm); /* 14px → 0.85rem */
-    outline: none;
-  }
-
-  :global([data-slot='command-input-wrapper'] > :first-child) {
-    margin-left: 0.4rem;
-    margin-bottom: 0.35rem;
-    margin-right: -0.8rem;
-  }
-
-  :global(.model-combobox-input:focus),
-  :global(.model-combobox-input:focus-visible) {
-    outline: none;
-    border: none;
-    box-shadow: none;
   }
 
   :global(.model-combobox-list) {
-    max-height: 320px; /* 40 units */
+    max-height: 20rem;
     overflow-y: auto;
-    margin-top: 0.5rem;
   }
 
   :global(.model-combobox-empty) {
     padding: 0.75rem;
     font-size: 0.85rem;
-    color: var(--muted);
+    color: var(--muted-foreground);
   }
 
   :global(.model-combobox-item) {
@@ -721,18 +579,17 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 0.5rem;
-    border-radius: var(--radius-lg); /* 16px */
-    transition: background var(--duration-fast) var(--ease-default);
+    border-radius: 0.5rem;
+    cursor: pointer;
   }
 
   :global(.model-combobox-item:hover) {
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    background: var(--accent);
   }
 
   :global(.model-combobox-check) {
-    color: var(--accent);
+    color: var(--primary);
     flex-shrink: 0;
-    transition: opacity var(--duration-normal) var(--ease-default);
   }
 
   :global(.model-combobox-check--hidden) {
@@ -748,134 +605,117 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
 
   :global(.model-combobox-item-name) {
     font-weight: 600;
-    color: var(--text);
     font-size: 0.9rem;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   :global(.model-combobox-item-meta) {
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 0.75rem;
   }
 
   :global(.model-combobox-item-badge) {
-    font-size: var(--font-size-xs); /* 12px → 0.7rem */
-    line-height: 1;
+    font-size: 0.7rem;
     padding: 0.2rem 0.5rem;
-    border-radius: var(--radius-full); /* 9999px */
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-    color: var(--accent);
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--primary) 18%, transparent);
+    color: var(--primary);
     flex-shrink: 0;
   }
 
   .model-reload-btn {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2); /* 8px */
-    padding: var(--space-1) var(--space-2); /* 4px 8px → aligned 4px 10px */
-    border-radius: var(--radius-lg); /* 16px */
-    border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
-    background: color-mix(in srgb, var(--card) 60%, transparent);
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    background: transparent;
     color: inherit;
-    font-size: var(--font-size-sm); /* 14px → 0.85rem */
+    font-size: 0.85rem;
     cursor: pointer;
-    transition: var(--transition-colors);
+    transition: all 0.2s ease;
   }
 
   .model-reload-btn:hover {
-    background: color-mix(in srgb, var(--card) 75%, transparent);
-    border-color: var(--border-color);
+    background: var(--accent);
+    border-color: var(--primary);
   }
 
+  /* Page Tabs */
   .page-tabs {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
     display: flex;
     align-items: center;
-    justify-content: center;
+    margin-left: 0.5rem;
     -webkit-app-region: no-drag;
   }
 
   :global(.page-tabs-root) {
     display: flex;
-    flex-direction: row;
-    gap: 0;
   }
 
   :global(.page-tabs-list) {
     display: flex;
-    align-items: center;
     gap: 0.5rem;
-    padding: 0;
-    margin: 0;
     background: transparent;
-    box-shadow: none;
   }
 
-  :global(.page-tabs .page-tab) {
-    flex: 0 0 auto;
-    height: auto;
+  :global(.page-tab) {
     padding: 0.4rem 0.9rem;
-    border: none;
     background: transparent;
-    color: var(--text);
-    cursor: default;
+    border-radius: 0.5rem;
     font-size: 0.9rem;
-    border-radius: var(--radius-lg); /* 16px */
-    transition: background var(--duration-normal) var(--ease-default);
-    -webkit-app-region: no-drag;
+    transition: background 0.2s ease;
   }
 
-  :global(.page-tabs .page-tab:hover) {
-    background: color-mix(in srgb, var(--card) 70%, transparent);
+  :global(.page-tab:hover) {
+    background: var(--accent);
   }
 
-  :global(.page-tabs .page-tab[data-state='active']) {
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  :global(.page-tab[data-state='active']) {
+    background: color-mix(in srgb, var(--primary) 16%, transparent);
     font-weight: 600;
   }
+
+  /* Window Controls */
+
+  :global(.win-btn) {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.375rem;
+  }
+
+  :global(.win-btn-close:hover) {
+    background: var(--destructive) !important;
+    color: var(--destructive-foreground) !important;
+  }
+
+  /* App Body */
   .app-body {
-    flex: 1 1 auto;
+    flex: 1;
     min-height: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--content-gap);
+    display: flex;
     overflow: hidden;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #1a1f2e;
+    background: var(--background);
   }
 
   .app-main {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 1;
     display: flex;
     overflow: hidden;
-    padding: 0 var(--content-gap) var(--content-gap);
-    padding-top: var(--space-8); /* 56px */
-    background: #1a1f2e;
+    padding: 0 0.5rem 0.5rem;
   }
 
-  .app-main.models-compact {
-    padding-top: var(--space-8); /* 56px */
-  }
-
-  /* Переключение страниц через CSS - все смонтированы одновременно */
   .view-switch {
     position: relative;
     display: flex;
-    flex: 1 1 auto;
+    flex: 1;
     min-height: 0;
     width: 100%;
     height: 100%;
   }
 
-  /* Все страницы смонтированы, но скрыты */
   .page-container {
     position: absolute;
     top: 0;
@@ -888,13 +728,12 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
     visibility: hidden;
     pointer-events: none;
     transition:
-      opacity 0.15s ease-in-out,
-      visibility 0.15s ease-in-out;
+      opacity 0.15s ease,
+      visibility 0.15s ease;
     overflow: auto;
-    background: #1a1f2e;
+    background: var(--background);
   }
 
-  /* Активная страница видима */
   .page-container.active {
     opacity: 1;
     visibility: visible;
@@ -902,204 +741,81 @@ import Check from 'phosphor-svelte/lib/CheckCircle';
     z-index: 1;
   }
 
-  /* Адаптивность контента страниц */
-  .page-container :global(> *) {
-    width: 100%;
-    max-width: 100%;
-    min-height: 0;
-  }
-  /* Гарантируем, что корневой main внутри страницы тянется и является flex-контейнером */
-  .page-container :global(main) {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-width: 0;
-    min-height: 0;
-    width: 100%;
-    max-width: none; /* переопределяем ограничение из медиазапроса */
-    margin: 0; /* убираем центрирование при больших ширинах */
-    box-sizing: border-box;
-  }
-  /* Секция внутри main занимает доступное пространство и всю ширину */
-  .page-container :global(main > section) {
-    flex: 1 1 auto;
-    min-width: 0;
-    min-height: 0;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  /* shift chat content slightly left and give it full height under header */
-  /* ensure main wrap fits under header */
-  :global(main.wrap) {
-    padding: 0;
-    height: 100%;
-    min-height: 0;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-  /* ensure chat area fills available vertical space */
-  :global(.chat) {
-    height: 100%;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .window-controls {
-    display: inline-flex;
-    gap: var(--baseline); /* 4px → 2px is not 8pt aligned */
-    align-items: center;
-    margin-left: auto;
-    
-  }
-  .win-btn {
-    width: var(--space-6); /* 40px → 36px closest is 40px */
-    height: var(--space-6); /* 24px → 28px closest is 24px */
-    padding: 0;
-    background: transparent;
-    border: none;
-    color: var(--text);
-    opacity: 0.8;
-    cursor: default;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius); /* 16px */
-    transition: var(--transition-all);
-  }
-  .win-btn:hover {
-    background: var(--panel-bg);
-    color: var(--text);
-  }
-  .win-btn.close:hover {
-    background: var(--danger);
-    color: #1a1f2e;
-  }
-
+  /* About Modal */
   .about-modal {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    backdrop-filter: blur(var(--baseline)); /* 4px → 2px is not aligned */
+    backdrop-filter: blur(4px);
   }
 
   .about-content {
     background: var(--card);
-    color: var(--text);
-    border: 1px solid var(--border-color, #e8e6e3);
-    border-radius: var(--radius-lg); /* 16px */
-    padding: var(--space-3); /* 16px */
-    width: min(520px, calc(100vw - var(--space-5))); /* 32px */
-    box-shadow: var(--shadow);
-    pointer-events: auto;
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    width: min(520px, calc(100vw - 2rem));
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.35);
+  }
+
+  .about-content h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
   }
 
   .about-info {
-    margin-top: var(--space-2); /* 8px */
+    margin-bottom: 1.5rem;
   }
 
   .about-info p {
-    margin: var(--space-1) 0; /* 4px → 6px closest is 4px or 8px */
-    line-height: var(--line-height-snug);
-  }
-
-  .translation-credit {
-    margin-top: var(--space-3); /* 16px */
-    padding-top: var(--space-3); /* 16px */
-    border-top: 1px solid var(--border-color);
-    font-size: var(--font-size-xs); /* 12px → 13px closest is 12px */
-    color: var(--muted);
-    font-style: italic;
+    margin: 0.5rem 0;
+    line-height: 1.5;
   }
 
   .about-actions {
-    margin-top: var(--space-3); /* 16px */
     display: flex;
     justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .github-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .github-btn:hover {
+    background: var(--accent);
+    border-color: var(--primary);
   }
 
   .close-btn {
-    background: var(--accent);
-    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
     border: none;
-    border-radius: var(--radius-lg); /* 16px */
-    padding: var(--space-2) var(--space-3); /* 8px 16px */
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-size: 0.875rem;
+    font-weight: 500;
     cursor: pointer;
-    font-size: var(--font-size-sm); /* 14px */
-    font-weight: var(--font-weight-medium);
-    transition: background-color var(--duration-normal) var(--ease-default);
-    min-width: var(--space-11); /* 80px */
+    transition: background 0.2s ease;
   }
 
   .close-btn:hover {
-    background: var(--accent-2, #2563eb);
-  }
-
-  .close-btn:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: var(--baseline); /* 4px → 2px closest is 4px */
-  }
-
-  .github-btn,
-  .gitverse-btn {
-    background: transparent;
-    color: var(--text);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg); /* 16px */
-    padding: var(--space-2) var(--space-3); /* 8px 16px */
-    cursor: pointer;
-    font-size: var(--font-size-sm); /* 14px */
-    font-weight: var(--font-weight-medium);
-    transition: var(--transition-all);
-    min-width: var(--space-11); /* 80px */
-    display: flex;
-    align-items: center;
-    gap: var(--space-2); /* 8px */
-    margin-right: var(--space-2); /* 8px */
-  }
-
-  .github-btn:hover,
-  .gitverse-btn:hover {
-    background: var(--panel-bg);
-    border-color: var(--accent);
-  }
-
-  .github-btn:focus,
-  .gitverse-btn:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: var(--baseline); /* 4px → 2px closest is 4px */
-  }
-
-  @media (max-width: 768px) {
-    .app-main {
-      padding: 0.5rem;
-      padding-top: 0.5rem;
-    }
-
-    .page-container {
-      padding: 0.5rem;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .app-main {
-      padding: 0.25rem;
-      padding-top: 0.25rem;
-    }
-
-    .page-container {
-      padding: 0.25rem;
-    }
-  }
-
-  /* Адаптивность контента для всех размеров */
-  @media (min-width: 1440px) {
-    .page-container :global(> *) {
-      max-width: 1400px;
-      margin: 0 auto;
-    }
+    opacity: 0.9;
   }
 </style>

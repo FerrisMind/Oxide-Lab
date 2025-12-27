@@ -1,83 +1,83 @@
 {
-  "placeholder": {
-    "title": "Modelo nao carregado",
-    "description": "Carregue um modelo para comecar a conversar"
-  },
-  "composer": {
-    "placeholder": "Escreva uma mensagem...",
-    "placeholderNotLoaded": "Carregue um modelo para comecar a conversar",
-    "hideHistory": "Ocultar historico de chat",
-    "showHistory": "Mostrar historico de chat",
-    "loaderSettings": "Configuracoes do painel de carregamento",
-    "clear": "Limpar",
-    "send": "Enviar",
-    "stop": "Parar",
-    "attach": "Anexar arquivo",
-    "experimental": {
-      "loading": "Recursos experimentais carregando...",
-      "disabled": "Recursos experimentais desativados"
+    "placeholder": {
+        "title": "Modelo não carregado",
+        "description": "Carregue um modelo para começar a conversar"
+    },
+    "composer": {
+        "placeholder": "Escreva uma mensagem...",
+        "placeholderNotLoaded": "Carregue um modelo para começar a conversar",
+        "hideHistory": "Ocultar histórico de chat",
+        "showHistory": "Mostrar histórico de chat",
+        "loaderSettings": "Configurações do painel de carregamento",
+        "clear": "Limpar",
+        "send": "Enviar",
+        "stop": "Parar",
+        "attach": "Anexar arquivo",
+        "experimental": {
+            "loading": "Recursos experimentais carregando...",
+            "disabled": "Recursos experimentais desativados"
+        },
+        "errors": {
+            "imageNotSupported": "O modelo não suporta imagens",
+            "audioNotSupported": "O modelo não suporta áudio",
+            "videoNotSupported": "O modelo não suporta vídeo",
+            "unsupportedFileType": "Tipo de arquivo não suportado",
+            "fileReadFailed": "Falha ao ler o arquivo",
+            "attachmentError": "Erro no anexo"
+        },
+        "voice": {
+            "startRecording": "Iniciar gravação de voz",
+            "stopRecording": "Parar gravação",
+            "transcribing": "Transcrevendo...",
+            "captureFailed": "Falha ao iniciar gravação de voz",
+            "transcriptionFailed": "Falha ao transcrever a voz",
+            "errorTitle": "Erro de entrada de voz",
+            "error": "Erro de entrada de voz"
+        }
+    },
+    "messages": {
+        "empty": "Nenhuma mensagem. Escreva algo..."
+    },
+    "loading": {
+        "stages": {
+            "start": "Inicializando carregamento...",
+            "device": "Selecionando dispositivo...",
+            "open_file": "Abrindo arquivo do modelo...",
+            "read_header": "Lendo metadados GGUF...",
+            "tokenizer": "Inicializando tokenizador...",
+            "detect_arch": "Detectando arquitetura...",
+            "build_model": "Construindo modelo...",
+            "build_model_done": "Modelo criado",
+            "hub_get": "Carregando do HF Hub...",
+            "hub_list": "Lendo lista de pesos...",
+            "hub_cache": "Armazenando pesos em cache...",
+            "scan_weights": "Verificando pesos...",
+            "config": "Lendo config.json...",
+            "finalize": "Finalizando...",
+            "complete": "Pronto",
+            "model": "Carregando modelo...",
+            "cancelling": "Cancelando carregamento...",
+            "cancel": "Carregamento cancelado",
+            "error": "Erro ao carregar",
+            "unload_start": "Iniciando descarregamento...",
+            "unload_model": "Liberando modelo...",
+            "unload_tokenizer": "Liberando tokenizador...",
+            "unload_complete": "Descarregado",
+            "default": "Estágio: {stage}"
+        },
+        "cancelling": "Cancelando carregamento...",
+        "complete": "Modelo e tokenizador prontos!",
+        "cancelHint": "Clique no botão novamente para cancelar o carregamento",
+        "unloadSuccess": "Modelo e tokenizador descarregados da memória com sucesso"
+    },
+    "thinking": {
+        "loading": "Raciocinando…",
+        "ready": "Pensamentos"
     },
     "errors": {
-      "imageNotSupported": "O modelo nao suporta imagens",
-      "audioNotSupported": "O modelo nao suporta audio",
-      "videoNotSupported": "O modelo nao suporta video",
-      "unsupportedFileType": "Tipo de arquivo nao suportado",
-      "fileReadFailed": "Falha ao ler o arquivo",
-      "attachmentError": "Erro no anexo"
-    },
-    "voice": {
-      "startRecording": "Iniciar gravacao de voz",
-      "stopRecording": "Parar gravacao",
-      "transcribing": "Transcrevendo...",
-      "captureFailed": "Falha ao iniciar gravacao de voz",
-      "transcriptionFailed": "Falha ao transcrever a voz",
-      "errorTitle": "Erro de entrada de voz",
-      "error": "Erro de entrada de voz"
+        "loadFailed": "Erro ao carregar modelo",
+        "generationFailed": "Erro de geração",
+        "modelNotLoaded": "Modelo não está carregado",
+        "loadModelFirst": "Carregue o modelo e o tokenizador primeiro"
     }
-  },
-  "messages": {
-    "empty": "Nenhuma mensagem. Escreva algo..."
-  },
-  "loading": {
-    "stages": {
-      "start": "Inicializando carregamento...",
-      "device": "Selecionando dispositivo...",
-      "open_file": "Abrindo arquivo do modelo...",
-      "read_header": "Lendo metadados GGUF...",
-      "tokenizer": "Inicializando tokenizador...",
-      "detect_arch": "Detectando arquitetura...",
-      "build_model": "Construindo modelo...",
-      "build_model_done": "Modelo criado",
-      "hub_get": "Carregando do HF Hub...",
-      "hub_list": "Lendo lista de pesos...",
-      "hub_cache": "Armazenando pesos em cache...",
-      "scan_weights": "Verificando pesos...",
-      "config": "Lendo config.json...",
-      "finalize": "Finalizando...",
-      "complete": "Pronto",
-      "model": "Carregando modelo...",
-      "cancelling": "Cancelando carregamento...",
-      "cancel": "Carregamento cancelado",
-      "error": "Erro ao carregar",
-      "unload_start": "Iniciando descarregamento...",
-      "unload_model": "Liberando modelo...",
-      "unload_tokenizer": "Liberando tokenizador...",
-      "unload_complete": "Descarregado",
-      "default": "Estagio: {stage}"
-    },
-    "cancelling": "Cancelando carregamento...",
-    "complete": "Modelo e tokenizador prontos!",
-    "cancelHint": "Clique no botao novamente para cancelar o carregamento",
-    "unloadSuccess": "Modelo e tokenizador descarregados da memoria com sucesso"
-  },
-  "thinking": {
-    "loading": "Raciocinando:",
-    "ready": "Pensamentos"
-  },
-  "errors": {
-    "loadFailed": "Erro ao carregar modelo",
-    "generationFailed": "Erro de geracao",
-    "modelNotLoaded": "Modelo nao esta carregado",
-    "loadModelFirst": "Carregue o modelo e o tokenizador primeiro"
-  }
 }

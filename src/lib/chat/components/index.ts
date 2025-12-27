@@ -1,0 +1,9 @@
+/**
+ * Chat Components - Central exports
+ */
+
+export { default as MessageList } from './MessageList.svelte';
+export { default as Composer } from './Composer.svelte';
+export { default as ChatPlaceholder } from './ChatPlaceholder.svelte';
+export { default as LoaderPanel } from './LoaderPanel.svelte';
+

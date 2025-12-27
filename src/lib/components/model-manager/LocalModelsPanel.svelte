@@ -1,41 +1,73 @@
 <script lang="ts">
+  /**
+   * Local Models Panel
+   *
+   * Full-featured panel for managing locally stored GGUF/safetensors models.
+   * Features: table view, detail sidebar, inline editing, GGUF metadata viewer.
+   */
   import { get } from 'svelte/store';
   import { onMount } from 'svelte';
+  import * as Card from '$lib/components/ui/card';
+  import { Button } from '$lib/components/ui/button';
+  import { Badge } from '$lib/components/ui/badge';
+  import { Input } from '$lib/components/ui/input';
+  import { Spinner } from '$lib/components/ui/spinner';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import * as ScrollArea from '$lib/components/ui/scroll-area';
+  import { Checkbox } from '$lib/components/ui/checkbox';
+  import { Label } from '$lib/components/ui/label';
+  import FolderOpen from 'phosphor-svelte/lib/FolderOpen';
+  import MagnifyingGlass from 'phosphor-svelte/lib/MagnifyingGlass';
+  import Play from 'phosphor-svelte/lib/Play';
+  import Trash from 'phosphor-svelte/lib/Trash';
+  import DotsThree from 'phosphor-svelte/lib/DotsThree';
+  import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+  import Check from 'phosphor-svelte/lib/Check';
+  import X from 'phosphor-svelte/lib/X';
+  import CaretDown from 'phosphor-svelte/lib/CaretDown';
+  import CaretUp from 'phosphor-svelte/lib/CaretUp';
+  import { t } from '$lib/i18n';
   import {
     folderPath,
     models,
     filteredModels,
     filterOptions,
-    scanFolder,
-    deleteModel,
     selectedModel,
     isLoading,
     error,
+    scanFolder,
+    deleteModel,
   } from '$lib/stores/local-models';
   import { LocalModelsService } from '$lib/services/local-models';
-  import type { FilterOptions, ModelInfo, ValidationLevel } from '$lib/types/local-models';
-  import Checkbox from '$lib/components/ui/Checkbox.svelte';
-  import Dropdown from '$lib/components/ui/Dropdown.svelte';
-  import { open } from '@tauri-apps/plugin-dialog';
-import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
-import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
-import Check from 'phosphor-svelte/lib/CheckCircle';
-import X from 'phosphor-svelte/lib/X';
-  import { t } from '$lib/i18n';
+  import type { ModelInfo, ValidationLevel } from '$lib/types/local-models';
 
-  const validationColors: Record<ValidationLevel, string> = {
-    ok: 'badge-success',
-    warning: 'badge-warning',
-    error: 'badge-error',
-  };
+  // ─────────────────────────────────────────────────────────────
+  // State
+  // ─────────────────────────────────────────────────────────────
 
   let metadataExpanded = $state(false);
   let editingModelPath = $state<string | null>(null);
   let editPublisher = $state('');
   let editName = $state('');
   let candleOnlyFilter = $state(false);
+  let searchQuery = $state('');
 
-  function startEditing(model: ModelInfo) {
+  // Validation badge variants
+  const validationVariants: Record<
+    ValidationLevel,
+    'default' | 'secondary' | 'destructive' | 'outline'
+  > = {
+    ok: 'default',
+    warning: 'secondary',
+    error: 'destructive',
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Editing functions
+  // ─────────────────────────────────────────────────────────────
+
+  function startEditing(model: ModelInfo, e: Event) {
+    e.stopPropagation();
     editingModelPath = model.path;
     editPublisher = model.metadata?.author ?? model.source_repo_id?.split('/')[0] ?? 'local';
     editName = model.format === 'safetensors' ? (model.source_repo_name ?? model.name) : model.name;
@@ -58,7 +90,7 @@ import X from 'phosphor-svelte/lib/X';
           const updated = { ...entry };
           updated.metadata = {
             ...entry.metadata,
-            author: editPublisher || entry.metadata.author,
+            author: editPublisher || entry.metadata?.author,
           };
           if (entry.format === 'safetensors') {
             updated.source_repo_name = editName || entry.source_repo_name;
@@ -75,17 +107,13 @@ import X from 'phosphor-svelte/lib/X';
     }
   }
 
-  onMount(async () => {
-    // Инициализируем значение из store
-    candleOnlyFilter = $filterOptions.candleOnly ?? false;
-
-    if ($folderPath) {
-      await scanFolder($folderPath);
-    }
-  });
+  // ─────────────────────────────────────────────────────────────
+  // Actions
+  // ─────────────────────────────────────────────────────────────
 
   async function handleSelectFolder() {
     try {
+      const { open } = await import('@tauri-apps/plugin-dialog');
       const selected = (await open({
         directory: true,
         multiple: false,
@@ -101,33 +129,50 @@ import X from 'phosphor-svelte/lib/X';
     }
   }
 
-  function updateFilter(partial: Partial<FilterOptions>) {
+  async function handleRescan() {
+    if ($folderPath) {
+      await scanFolder($folderPath, true);
+    }
+  }
+
+  function updateFilter(
+    partial: Parameters<typeof filterOptions.update>[0] extends (prev: infer P) => unknown
+      ? Partial<P>
+      : never,
+  ) {
     filterOptions.update((prev) => ({
       ...prev,
       ...partial,
     }));
   }
 
-  // Обработка изменения чекбокса пользователем
-  function handleCandleOnlyChange(newValue: boolean) {
-    // Обновляем store
-    // Локальное состояние уже обновлено через bind:checked
-    updateFilter({ candleOnly: newValue });
+  function handleSearchInput(e: Event) {
+    const value = (e.target as HTMLInputElement).value;
+    searchQuery = value;
+    updateFilter({ searchText: value });
+  }
+
+  function handleCandleOnlyChange(checked: boolean | 'indeterminate') {
+    const value = checked === true;
+    candleOnlyFilter = value;
+    updateFilter({ candleOnly: value });
   }
 
   async function handleDelete(model: ModelInfo) {
-    // Используем простую интерполяцию для confirm сообщения
     const confirmMessage = $t('models.local.details.deleteConfirm').replace('{name}', model.name);
     const confirmed = confirm(confirmMessage);
     if (!confirmed) return;
-
     await deleteModel(model.path);
   }
 
   function loadSelectedModel() {
     const model = get(selectedModel);
     if (!model) return;
-    const ox = (window as any).__oxide;
+    const ox = (
+      window as unknown as {
+        __oxide?: { loadModelFromManager?: (args: { path: string; format: string }) => void };
+      }
+    ).__oxide;
     if (!ox?.loadModelFromManager) return;
     ox.loadModelFromManager({
       path: model.path,
@@ -137,768 +182,428 @@ import X from 'phosphor-svelte/lib/X';
 
   function toggleModelSelection(model: ModelInfo) {
     if ($selectedModel?.path === model.path) {
-      // Если модель уже выбрана, отменяем выбор
       selectedModel.set(null);
     } else {
-      // Иначе выбираем новую модель
       selectedModel.set(model);
     }
   }
 
-  const menuItems = $derived([
-    {
-      label: $t('models.local.menu.selectFolder'),
-      onclick: handleSelectFolder,
-    },
-    {
-      label: $t('models.local.menu.rescan'),
-      onclick: () => $folderPath && scanFolder($folderPath, true),
-      disabled: !$folderPath,
-    },
-  ]);
+  // ─────────────────────────────────────────────────────────────
+  // Lifecycle
+  // ─────────────────────────────────────────────────────────────
+
+  onMount(async () => {
+    candleOnlyFilter = $filterOptions.candleOnly ?? false;
+    if ($folderPath) {
+      await scanFolder($folderPath);
+    }
+  });
 </script>
 
-<div class="local-models-panel">
-  <section class="controls">
-    <div class="controls-left">
-      <div class="path-group">
-        <span class="label">{$t('models.local.folderLabel')}</span>
-        <div class="path-display">
-          <span title={$folderPath || $t('models.local.folderNotSelected')}>
-            {$folderPath || $t('models.local.notSelected')}
-          </span>
-        </div>
+<div class="h-full flex flex-col gap-3 sm:gap-4">
+  <!-- Controls Bar -->
+  <div class="flex flex-wrap items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border bg-card">
+    <!-- Folder Path -->
+    <div class="flex items-center gap-2 min-w-0 flex-1">
+      <span class="text-xs text-muted-foreground whitespace-nowrap"
+        >{$t('models.local.folderLabel')}</span
+      >
+      <div
+        class="flex-1 min-w-0 px-2 py-1 rounded border bg-muted/30 font-mono text-xs truncate"
+        title={$folderPath || $t('models.local.folderNotSelected')}
+      >
+        {$folderPath || $t('models.local.notSelected')}
       </div>
-      <Dropdown items={menuItems} label="⋯" />
+
+      <!-- Menu -->
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger>
+          {#snippet child({ props })}
+            <Button {...props} variant="ghost" size="icon">
+              <DotsThree class="size-5" weight="bold" />
+            </Button>
+          {/snippet}
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content>
+          <DropdownMenu.Item onclick={handleSelectFolder}>
+            <FolderOpen class="size-4 mr-2" />
+            {$t('models.local.menu.selectFolder')}
+          </DropdownMenu.Item>
+          <DropdownMenu.Item onclick={handleRescan} disabled={!$folderPath}>
+            {$t('models.local.menu.rescan')}
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
     </div>
 
-    <div class="controls-right">
-      <div class="filter-group">
-        <label>
-          {$t('models.local.search')}
-          <input
-            type="search"
-            placeholder={$t('models.local.searchPlaceholder')}
-            value={$filterOptions.searchText ?? ''}
-            oninput={(event) => updateFilter({ searchText: event.currentTarget.value })}
-          />
-        </label>
-      </div>
-    </div>
-
-    <div class="checkbox-wrapper">
-      <Checkbox
-        id="candle-only"
-        label={$t('models.local.candleOnly')}
-        bind:checked={candleOnlyFilter}
-        onchange={handleCandleOnlyChange}
+    <!-- Search -->
+    <div class="relative min-w-[200px]">
+      <MagnifyingGlass
+        class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+      />
+      <Input
+        type="search"
+        placeholder={$t('models.local.searchPlaceholder')}
+        value={searchQuery}
+        class="pl-10"
+        oninput={handleSearchInput}
       />
     </div>
-  </section>
 
+    <!-- Candle Only Filter -->
+    <div class="flex items-center gap-2">
+      <Checkbox
+        id="candle-only"
+        checked={candleOnlyFilter}
+        onCheckedChange={handleCandleOnlyChange}
+      />
+      <Label for="candle-only" class="text-sm cursor-pointer">
+        {$t('models.local.candleOnly')}
+      </Label>
+    </div>
+  </div>
+
+  <!-- Error Banner -->
   {#if $error}
-    <div class="error-banner">
-      <span>{$error}</span>
-      <button class="btn secondary" onclick={() => $folderPath && scanFolder($folderPath, true)}>
+    <div
+      class="flex items-center justify-between gap-3 p-3 rounded-lg border border-destructive/30 bg-destructive/10"
+    >
+      <span class="text-sm text-destructive">{$error}</span>
+      <Button variant="outline" size="sm" onclick={handleRescan}>
         {$t('models.local.errors.retry')}
-      </button>
+      </Button>
     </div>
   {/if}
 
-  <div class:loading={$isLoading} class="content">
-    <div class="list">
-      {#if !$filteredModels.length && !$isLoading}
-        <div class="empty-state">
-          <p>{$t('models.local.noModels')}</p>
+  <!-- Main Content -->
+  <div
+    class="flex-1 min-h-0 grid gap-4"
+    class:grid-cols-1={!$selectedModel}
+    class:lg:grid-cols-[1fr_360px]={$selectedModel}
+  >
+    <!-- Models Table -->
+    <div class="border rounded-lg bg-card overflow-hidden flex flex-col min-h-0">
+      {#if $isLoading}
+        <div class="flex items-center justify-center py-12 gap-3 flex-1">
+          <Spinner class="size-6" />
+          <span class="text-muted-foreground">{$t('common.loading') || 'Loading...'}</span>
+        </div>
+      {:else if !$filteredModels.length}
+        <div class="flex flex-col items-center justify-center py-12 gap-4 flex-1">
+          <FolderOpen class="size-12 text-muted-foreground" weight="light" />
+          <p class="text-muted-foreground">{$t('models.local.noModels')}</p>
           {#if !$models.length}
-            <p>{$t('models.local.selectFolder')}</p>
+            <Button variant="outline" onclick={handleSelectFolder}>
+              <FolderOpen class="size-4 mr-2" />
+              {$t('models.local.selectFolder')}
+            </Button>
           {/if}
         </div>
-      {/if}
+      {:else}
+        <div class="flex-1 min-h-0 overflow-x-auto custom-scrollbar">
+          <div class="min-w-[800px] flex flex-col h-full">
+            <!-- Fixed Header -->
+            <table class="text-sm table-fixed w-full shrink-0">
+              <colgroup>
+                <col class="w-[12%]" />
+                <col class="w-[10%]" />
+                <col class="w-[10%]" />
+                <col class="w-[28%]" />
+                <col class="w-[12%]" />
+                <col class="w-[12%]" />
+                <col class="w-[10%]" />
+              </colgroup>
+              <thead>
+                <tr class="bg-muted">
+                  <th class="text-left px-3 py-2 font-medium">{$t('models.local.table.architecture')}</th>
+                  <th class="text-left px-3 py-2 font-medium">{$t('models.local.table.parameters')}</th>
+                  <th class="text-left px-3 py-2 font-medium">{$t('models.local.table.publisher')}</th>
+                  <th class="text-left px-3 py-2 font-medium">{$t('models.local.table.modelName')}</th>
+                  <th class="text-left px-3 py-2 font-medium">{$t('models.local.table.quant')}</th>
+                  <th class="text-left px-3 py-2 font-medium">{$t('models.local.table.size')}</th>
+                  <th class="text-left px-3 py-2 font-medium">{$t('models.local.table.format')}</th>
+                </tr>
+              </thead>
+            </table>
+            <!-- Scrollable Body -->
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+              <table class="text-sm table-fixed w-full">
+              <colgroup>
+                <col class="w-[12%]" />
+                <col class="w-[10%]" />
+                <col class="w-[10%]" />
+                <col class="w-[28%]" />
+                <col class="w-[12%]" />
+                <col class="w-[12%]" />
+                <col class="w-[10%]" />
+              </colgroup>
+              <tbody>
+                {#each $filteredModels as model (model.path)}
+                  {@const isSelected = $selectedModel?.path === model.path}
+                  <tr
+                    class="border-b border-border/50 cursor-pointer transition-colors hover:bg-primary/5 {isSelected
+                      ? 'bg-primary/10'
+                      : ''}"
+                    onclick={() => toggleModelSelection(model)}
+                  >
+                    <td class="px-3 py-2">{model.architecture ?? '—'}</td>
+                    <td class="px-3 py-2">{model.parameter_count ?? '—'}</td>
+                    <td class="px-3 py-2">
+                      <div class="flex items-center gap-1">
+                        <button
+                          type="button"
+                          class="p-1 rounded hover:bg-muted/50 opacity-60 hover:opacity-100 transition-opacity"
+                          onclick={(e) => startEditing(model, e)}
+                          aria-label={$t('models.local.details.edit.ariaLabel')}
+                        >
+                          <PencilSimple class="size-3.5" />
+                        </button>
+                        <span>
+                          {#if model.format === 'safetensors'}
+                            {model.metadata?.author ?? '—'}
+                          {:else if model.source_repo_id}
+                            {model.source_repo_id.split('/')[0]}
+                          {:else}
+                            {model.metadata?.author ?? '—'}
+                          {/if}
+                        </span>
+                      </div>
+                    </td>
+                    <td class="px-3 py-2">
+                      <div class="flex items-center gap-1">
+                        <button
+                          type="button"
+                          class="p-1 rounded hover:bg-muted/50 opacity-60 hover:opacity-100 transition-opacity"
+                          onclick={(e) => startEditing(model, e)}
+                          aria-label={$t('models.local.details.edit.ariaLabel')}
+                        >
+                          <PencilSimple class="size-3.5" />
+                        </button>
+                        <strong class="truncate max-w-[200px]" title={model.name}>
+                          {#if model.format === 'safetensors'}
+                            {model.source_repo_name ?? '—'}
+                          {:else}
+                            {model.name}
+                          {/if}
+                        </strong>
+                      </div>
+                    </td>
+                    <td class="px-3 py-2">
+                      {#if model.format === 'safetensors'}
+                        {model.source_quantization ?? '—'}
+                      {:else}
+                        {model.quantization ?? '—'}
+                      {/if}
+                    </td>
+                    <td class="px-3 py-2">{LocalModelsService.formatFileSize(model.file_size)}</td>
+                    <td class="px-3 py-2">
+                      <Badge variant="outline" class="uppercase text-[10px]">{model.format}</Badge>
+                    </td>
+                  </tr>
 
-      <table>
-        <thead>
-          <tr>
-            <th>{$t('models.local.table.architecture')}</th>
-            <th>{$t('models.local.table.parameters')}</th>
-            <th>{$t('models.local.table.publisher')}</th>
-            <th>{$t('models.local.table.modelName')}</th>
-            <th>{$t('models.local.table.quant')}</th>
-            <th>{$t('models.local.table.size')}</th>
-            <th>{$t('models.local.table.format')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each $filteredModels as model (model.path)}
-            <tr
-              class:selected={$selectedModel?.path === model.path}
-              onclick={() => toggleModelSelection(model)}
-            >
-              <td>{model.architecture ?? '—'}</td>
-              <td>{model.parameter_count ?? '—'}</td>
-              <td class="publisher-cell">
-                <button
-                  type="button"
-                  class="icon-btn"
-                  onclick={() => startEditing(model)}
-                  aria-label={$t('models.local.details.edit.ariaLabel')}
-                >
-                  <PencilSimple size={16} />
-                </button>
-                <span>
-                  {#if model.format === 'safetensors'}
-                    {model.metadata?.author ?? '—'}
-                  {:else if model.source_repo_id}
-                    {model.source_repo_id.split('/')[0]}
-                  {:else}
-                    {model.metadata?.author ?? '—'}
+                  <!-- Edit Row -->
+                  {#if editingModelPath === model.path}
+                    <tr class="bg-muted/30 border-b border-border/50">
+                      <td colspan="7" class="px-3 py-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                          <div class="space-y-1">
+                            <Label class="text-xs"
+                              >{$t('models.local.details.edit.publisher')}</Label
+                            >
+                            <Input
+                              type="text"
+                              placeholder={$t('models.local.details.edit.publisherPlaceholder')}
+                              bind:value={editPublisher}
+                              onclick={(e: Event) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div class="space-y-1">
+                            <Label class="text-xs">{$t('models.local.details.edit.name')}</Label>
+                            <Input
+                              type="text"
+                              placeholder={$t('models.local.details.edit.namePlaceholder')}
+                              bind:value={editName}
+                              onclick={(e: Event) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div class="flex gap-2 justify-end">
+                            <Button size="sm" onclick={() => saveEditing(model)}>
+                              <Check class="size-4 mr-1" />
+                              {$t('models.local.details.edit.save')}
+                            </Button>
+                            <Button variant="outline" size="sm" onclick={cancelEditing}>
+                              <X class="size-4 mr-1" />
+                              {$t('models.local.details.edit.cancel')}
+                            </Button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
                   {/if}
-                </span>
-              </td>
-              <td class="title-cell">
-                <button
-                  type="button"
-                  class="icon-btn"
-                  onclick={() => startEditing(model)}
-                  aria-label={$t('models.local.details.edit.ariaLabel')}
-                >
-                  <PencilSimple size={16} />
-                </button>
-                <div class="model-title">
-                  <strong title={model.name}>
-                    {#if model.format === 'safetensors'}
-                      {model.source_repo_name ?? '—'}
-                    {:else}
-                      {model.name}
-                    {/if}
-                  </strong>
-                </div>
-              </td>
-              <td>
-                {#if model.format === 'safetensors'}
-                  {model.source_quantization ?? '—'}
-                {:else}
-                  {model.quantization ?? '—'}
-                {/if}
-              </td>
-              <td>{LocalModelsService.formatFileSize(model.file_size)}</td>
-              <td class="format-cell">{model.format.toUpperCase()}</td>
-            </tr>
-            {#if editingModelPath === model.path}
-              <tr class="edit-row">
-                <td colspan="7">
-                  <div class="edit-grid">
-                    <label>
-                      {$t('models.local.details.edit.publisher')}
-                      <input
-                        type="text"
-                        placeholder={$t('models.local.details.edit.publisherPlaceholder')}
-                        bind:value={editPublisher}
-                      />
-                    </label>
-                    <label>
-                      {$t('models.local.details.edit.name')}
-                      <input
-                        type="text"
-                        placeholder={$t('models.local.details.edit.namePlaceholder')}
-                        bind:value={editName}
-                      />
-                    </label>
-                    <div class="edit-actions">
-                      <button type="button" class="btn" onclick={() => saveEditing(model)}>
-                        <Check size={16} />
-                        {$t('models.local.details.edit.save')}
-                      </button>
-                      <button type="button" class="btn secondary" onclick={cancelEditing}>
-                        <X size={16} />
-                        {$t('models.local.details.edit.cancel')}
-                      </button>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            {/if}
-          {/each}
-        </tbody>
-      </table>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {/if}
     </div>
 
+    <!-- Model Details Sidebar -->
     {#if $selectedModel}
-      <aside class="details">
-        <header>
-          <h3>{$selectedModel.name}</h3>
-          <div class="actions">
-            <button class="btn danger" onclick={() => handleDelete($selectedModel!)}>
+      <Card.Root class="flex flex-col min-h-0 overflow-hidden">
+        <Card.Header class="pb-2 shrink-0">
+          <Card.Title class="text-lg truncate">{$selectedModel.name}</Card.Title>
+          <div class="flex gap-2 pt-2">
+            <Button variant="destructive" size="sm" onclick={() => handleDelete($selectedModel!)}>
+              <Trash class="size-4 mr-1" />
               {$t('models.local.details.delete')}
-            </button>
-            <button class="btn primary" onclick={loadSelectedModel}>
-              <DownloadSimple size={16} />
+            </Button>
+            <Button size="sm" onclick={loadSelectedModel}>
+              <Play class="size-4 mr-1" />
               {$t('models.local.details.loadToChat')}
-            </button>
+            </Button>
           </div>
-        </header>
+        </Card.Header>
 
-        <dl class="properties">
-          <div>
-            <dt>{$t('models.local.details.path')}</dt>
-            <dd class="path">{$selectedModel.path}</dd>
-          </div>
-          <div>
-            <dt>{$t('models.local.details.size')}</dt>
-            <dd>{LocalModelsService.formatFileSize($selectedModel.file_size)}</dd>
-          </div>
-          <div>
-            <dt>{$t('models.local.details.date')}</dt>
-            <dd>{LocalModelsService.formatDate($selectedModel.created_at)}</dd>
-          </div>
-          <div>
-            <dt>{$t('models.local.details.architecture')}</dt>
-            <dd>{$selectedModel.architecture ?? '—'}</dd>
-          </div>
-          <div>
-            <dt>{$t('models.local.details.format')}</dt>
-            <dd class="format-cell">{$selectedModel.format.toUpperCase()}</dd>
-          </div>
-          <div>
-            <dt>{$t('models.local.details.detected')}</dt>
-            <dd>{$selectedModel.detected_architecture ?? '—'}</dd>
-          </div>
-          <div>
-            <dt>{$t('models.local.details.context')}</dt>
-            <dd>{$selectedModel.context_length ?? '—'}</dd>
-          </div>
-        </dl>
+        <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+          <Card.Content class="space-y-4">
+            <!-- Properties Grid -->
+            <dl class="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <dt class="text-xs text-muted-foreground">{$t('models.local.details.path')}</dt>
+                <dd class="font-mono text-xs break-all">{$selectedModel.path}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-muted-foreground">{$t('models.local.details.size')}</dt>
+                <dd>{LocalModelsService.formatFileSize($selectedModel.file_size)}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-muted-foreground">{$t('models.local.details.date')}</dt>
+                <dd>{LocalModelsService.formatDate($selectedModel.created_at)}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-muted-foreground">
+                  {$t('models.local.details.architecture')}
+                </dt>
+                <dd>{$selectedModel.architecture ?? '—'}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-muted-foreground">{$t('models.local.details.format')}</dt>
+                <dd class="uppercase">{$selectedModel.format}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-muted-foreground">{$t('models.local.details.detected')}</dt>
+                <dd>{$selectedModel.detected_architecture ?? '—'}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-muted-foreground">{$t('models.local.details.context')}</dt>
+                <dd>{$selectedModel.context_length ?? '—'}</dd>
+              </div>
+            </dl>
 
-        <section class="validation">
-          <h4>{$t('models.local.details.validation')}</h4>
-          <span class={`badge ${validationColors[$selectedModel.validation_status.level]}`}>
-            {$t(
-              `models.local.details.${$selectedModel.validation_status.level === 'ok' ? 'valid' : $selectedModel.validation_status.level}`,
-            )}
-          </span>
-          {#if $selectedModel.validation_status.messages.length}
-            <ul>
-              {#each $selectedModel.validation_status.messages as message}
-                <li>{message}</li>
-              {/each}
-            </ul>
-          {/if}
-        </section>
-
-        <section class="metadata">
-          <header>
-            <h4>GGUF метаданные</h4>
-            <button class="btn secondary" onclick={() => (metadataExpanded = !metadataExpanded)}>
-              {metadataExpanded ? 'Скрыть' : 'Показать все'}
-            </button>
-          </header>
-
-          <dl class="meta-grid">
-            <div>
-              <dt>Версия формата</dt>
-              <dd>{$selectedModel.metadata.format_version}</dd>
-            </div>
-            <div>
-              <dt>Tensor count</dt>
-              <dd>{$selectedModel.metadata.tensor_count}</dd>
-            </div>
-            <div>
-              <dt>Alignment</dt>
-              <dd>{$selectedModel.metadata.alignment}</dd>
-            </div>
-            <div>
-              <dt>Token count</dt>
-              <dd>
-                {$selectedModel.vocab_size ??
-                  $selectedModel.metadata.tokenizer_tokens?.length ??
-                  '—'}
-              </dd>
-            </div>
-          </dl>
-
-          {#if metadataExpanded}
-            <div class="meta-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Ключ</th>
-                    <th>Значение</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {#each $selectedModel.metadata.custom_metadata as entry (entry.key)}
-                    <tr>
-                      <td>{entry.key}</td>
-                      <td><pre>{JSON.stringify(entry.value, null, 2)}</pre></td>
-                    </tr>
+            <!-- Validation Status -->
+            <div class="space-y-2">
+              <h4 class="text-sm font-medium">{$t('models.local.details.validation')}</h4>
+              <Badge variant={validationVariants[$selectedModel.validation_status.level]}>
+                {$t(
+                  `models.local.details.${$selectedModel.validation_status.level === 'ok' ? 'valid' : $selectedModel.validation_status.level}`,
+                )}
+              </Badge>
+              {#if $selectedModel.validation_status.messages.length}
+                <ul class="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+                  {#each $selectedModel.validation_status.messages as message}
+                    <li>{message}</li>
                   {/each}
-                </tbody>
-              </table>
+                </ul>
+              {/if}
             </div>
-          {/if}
-        </section>
-      </aside>
+
+            <!-- GGUF Metadata -->
+            {#if $selectedModel.metadata}
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-sm font-medium">{$t('models.local.details.metadata.title')}</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="h-7 px-2 text-xs"
+                    onclick={() => (metadataExpanded = !metadataExpanded)}
+                  >
+                    {metadataExpanded
+                      ? $t('models.local.details.metadata.hide')
+                      : $t('models.local.details.metadata.showAll')}
+                    {#if metadataExpanded}
+                      <CaretUp class="size-3 ml-1" />
+                    {:else}
+                      <CaretDown class="size-3 ml-1" />
+                    {/if}
+                  </Button>
+                </div>
+
+                <dl class="grid grid-cols-2 gap-2 text-sm p-2 rounded border bg-muted/30">
+                  <div>
+                    <dt class="text-xs text-muted-foreground">
+                      {$t('models.local.details.metadata.formatVersion')}
+                    </dt>
+                    <dd class="font-semibold">{$selectedModel.metadata.format_version ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs text-muted-foreground">
+                      {$t('models.local.details.metadata.tensorCount')}
+                    </dt>
+                    <dd class="font-semibold">{$selectedModel.metadata.tensor_count ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs text-muted-foreground">
+                      {$t('models.local.details.metadata.alignment')}
+                    </dt>
+                    <dd class="font-semibold">{$selectedModel.metadata.alignment ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs text-muted-foreground">
+                      {$t('models.local.details.metadata.tokenCount')}
+                    </dt>
+                    <dd class="font-semibold">
+                      {$selectedModel.vocab_size ??
+                        $selectedModel.metadata.tokenizer_tokens?.length ??
+                        '—'}
+                    </dd>
+                  </div>
+                </dl>
+
+                {#if metadataExpanded && $selectedModel.metadata.custom_metadata?.length}
+                  <div class="border rounded overflow-hidden">
+                    <table class="w-full text-xs">
+                      <thead class="bg-muted/50">
+                        <tr>
+                          <th class="text-left px-2 py-1">Key</th>
+                          <th class="text-left px-2 py-1">Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {#each $selectedModel.metadata.custom_metadata as entry (entry.key)}
+                          <tr class="border-t border-border/50">
+                            <td class="px-2 py-1 font-mono">{entry.key}</td>
+                            <td class="px-2 py-1">
+                              <pre
+                                class="whitespace-pre-wrap break-all text-[10px]">{JSON.stringify(
+                                  entry.value,
+                                  null,
+                                  2,
+                                )}</pre>
+                            </td>
+                          </tr>
+                        {/each}
+                      </tbody>
+                    </table>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+        </Card.Content>
+        </div>
+      </Card.Root>
     {/if}
   </div>
 </div>
-
-<style>
-  .local-models-panel {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    height: 100%;
-    min-height: 0;
-    color: var(--text);
-  }
-
-  .controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    background: var(--card);
-    border-radius: var(--radius-lg);
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow);
-    flex-wrap: wrap;
-  }
-
-  .controls-left {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex: 1;
-    min-width: 0;
-  }
-
-  .controls-right {
-    display: flex;
-    align-items: center;
-    justify-items: center;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-  }
-
-  .path-group {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-width: 0;
-    flex: 0 1 250px;
-  }
-
-  .path-group .label {
-    font-size: var(--font-size-xs);
-    color: var(--muted);
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .path-display {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-family: var(--mono-font, 'JetBrains Mono', monospace);
-    font-size: var(--font-size-xs);
-    min-width: 0;
-    flex: 1;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: var(--space-1) var(--space-2);
-    background: var(--panel-bg);
-  }
-
-  .path-display span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .metrics {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    gap: var(--space-3);
-  }
-
-  .metric {
-    background: var(--panel-bg);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
-    padding: var(--space-3);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    box-shadow: var(--shadow);
-  }
-
-  .metric.ok {
-    border-color: color-mix(in srgb, var(--accent-2) 55%, transparent);
-  }
-  .metric.warn {
-    border-color: color-mix(in srgb, var(--warning) 55%, transparent);
-  }
-  .metric.error {
-    border-color: color-mix(in srgb, var(--danger) 55%, transparent);
-  }
-
-  .metric-title {
-    font-size: var(--font-size-xs);
-    color: var(--muted);
-  }
-
-  .metric-value {
-    font-weight: var(--font-weight-semibold);
-    font-size: var(--font-size-lg);
-  }
-
-  .filter-group {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    font-size: var(--font-size-xs);
-  }
-
-  .filter-group input {
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-color);
-    background: var(--panel-bg);
-    font-size: var(--font-size-xs);
-    min-width: 200px; /* fixed input width */
-  }
-
-  .checkbox-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .error-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-3) var(--space-3);
-    border-radius: var(--radius-md);
-    border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent 65%);
-    background: color-mix(in srgb, var(--danger) 12%, transparent 88%);
-    color: color-mix(in srgb, var(--danger) 85%, black 15%);
-  }
-
-  .content {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-3);
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .content:has(.details) {
-    grid-template-columns: 1fr minmax(320px, 360px);
-  }
-
-  .content.loading {
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
-  .list {
-    overflow: auto;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-color);
-    background: var(--card);
-    box-shadow: var(--shadow);
-    min-height: 0;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  thead {
-    background: var(--panel-bg);
-  }
-
-  th,
-  td {
-    padding: var(--space-2) var(--space-3);
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-    font-size: var(--font-size-sm);
-  }
-
-  td.format-cell {
-    font-weight: var(--font-weight-semibold);
-    text-transform: uppercase;
-  }
-
-  tbody tr {
-    cursor: default;
-    transition: background 0.15s ease;
-  }
-
-  tbody tr:hover {
-    background: color-mix(in srgb, var(--accent) 12%, transparent 88%);
-  }
-
-  tbody tr.selected {
-    background: color-mix(in srgb, var(--accent) 18%, transparent 82%);
-  }
-
-  .model-title {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-full);
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .badge-success {
-    background: color-mix(in srgb, var(--accent-2) 18%, transparent 82%);
-    color: color-mix(in srgb, var(--accent-2) 70%, var(--text) 30%);
-  }
-
-  .badge-warning {
-    background: color-mix(in srgb, var(--warning) 18%, transparent 82%);
-    color: color-mix(in srgb, var(--warning) 70%, var(--text) 30%);
-  }
-
-  .badge-error {
-    background: color-mix(in srgb, var(--danger) 18%, transparent 82%);
-    color: color-mix(in srgb, var(--danger) 70%, var(--text) 30%);
-  }
-
-  .badge-muted {
-    background: color-mix(in srgb, var(--muted) 16%, transparent 84%);
-    color: var(--muted);
-  }
-
-  .details {
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-color);
-    background: var(--card);
-    padding: var(--space-3) var(--space-4);
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    box-shadow: var(--shadow);
-    min-height: 0;
-  }
-
-  .details header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .details header .actions {
-    display: inline-flex;
-    gap: var(--space-2);
-  }
-
-  .details h3 {
-    margin: 0;
-    font-size: var(--font-size-lg);
-  }
-
-  .properties {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--space-3);
-  }
-
-  .properties div {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .properties dt {
-    font-size: var(--font-size-xs);
-    color: var(--muted);
-  }
-
-  .properties dd {
-    margin: 0;
-    font-weight: var(--font-weight-medium);
-  }
-
-  .properties dd.path {
-    font-family: var(--mono-font, 'JetBrains Mono', monospace);
-    font-size: var(--font-size-xs);
-    word-break: break-all;
-  }
-
-  .validation ul {
-    margin: var(--space-2) 0 0;
-    padding-left: var(--space-3);
-    font-size: var(--font-size-sm);
-  }
-
-  .metadata header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .meta-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: var(--space-2);
-    margin-top: var(--space-3);
-  }
-
-  .meta-grid div {
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-2);
-    border: 1px dashed var(--border-color);
-    border-radius: var(--radius-lg);
-    background: var(--panel-bg);
-  }
-
-  .meta-grid dt {
-    font-size: var(--font-size-xs);
-    color: var(--muted);
-  }
-
-  .meta-grid dd {
-    margin: 0;
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .meta-table {
-    margin-top: var(--space-3);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-  }
-
-  .meta-table table {
-    width: 100%;
-  }
-
-  .meta-table pre {
-    margin: 0;
-    font-size: var(--font-size-xs);
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: var(--mono-font, 'JetBrains Mono', monospace);
-  }
-
-  .placeholder,
-  .empty-state {
-    padding: var(--space-4);
-    text-align: center;
-    color: var(--muted);
-  }
-
-  .btn {
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-lg);
-    border: none;
-    background: var(--accent);
-    color: #ffffff;
-    cursor: default;
-    font-size: var(--font-size-xs);
-    transition: opacity 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    white-space: nowrap;
-  }
-
-  .btn.secondary {
-    background: color-mix(in srgb, var(--accent) 12%, transparent 88%);
-    color: var(--accent);
-  }
-
-  .btn.danger {
-    background: color-mix(in srgb, var(--danger) 85%, black 15%);
-  }
-
-  .btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .icon-btn {
-    background: transparent;
-    border: none;
-    color: var(--text);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: var(--space-1);
-    cursor: pointer;
-    opacity: 0.7;
-  }
-
-  .icon-btn:hover {
-    opacity: 1;
-  }
-
-  .publisher-cell,
-  .title-cell {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-  }
-
-  .edit-row {
-    background: color-mix(in srgb, var(--panel-bg) 70%, transparent 30%);
-    border-top: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
-  }
-
-  .edit-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--space-3);
-    align-items: end;
-  }
-
-  .edit-grid label {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    font-size: var(--font-size-xs);
-    color: var(--muted);
-  }
-
-  .edit-grid input {
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: var(--space-1) var(--space-2);
-    background: var(--panel-bg);
-    color: var(--text);
-  }
-
-  .edit-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    justify-content: flex-end;
-  }
-
-  @media (max-width: 1024px) {
-    .content {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto auto;
-    }
-
-    .details {
-      order: -1;
-    }
-  }
-</style>

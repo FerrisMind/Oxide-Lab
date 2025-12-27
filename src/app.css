@@ -1,960 +1,261 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Add Streamdown styles to your Tailwind build */
+@source "../node_modules/svelte-streamdown/**/*";
+
 @custom-variant dark (&:is(.dark *));
 
-/* Глобальные CSS переменные */
+@theme inline {
+    /* ===== Custom Breakpoints for UI Adaptation ===== */
+    /* 1024×720 - Minimum functional threshold */
+    --breakpoint-xs: 1024px;
+    /* 1280×720 - Standard transitional */
+    --breakpoint-sm: 1280px;
+    /* 1366×768 - Popular budget segment */
+    --breakpoint-md: 1366px;
+    /* 1536×864 - Modern notebooks */
+    --breakpoint-notebook: 1536px;
+    /* 1920×1080 - Full HD standard */
+    --breakpoint-lg: 1920px;
+    /* 2560×1440 - Premium QHD */
+    --breakpoint-xl: 2560px;
+    /* 3840×2160 - 4K Ultra HD */
+    --breakpoint-2xl: 3840px;
+
+    /* ===== Responsive Sidebar Widths ===== */
+    --sidebar-width-collapsed: 3rem;
+    --sidebar-width-xs: 280px;
+    --sidebar-width-sm: 260px;
+    --sidebar-width-md: 280px;
+    --sidebar-width-lg: 300px;
+    --sidebar-width-xl: 320px;
+    --sidebar-width-2xl: 400px;
+
+    /* ===== Responsive Chat Area ===== */
+    --chat-max-width-xs: 100%;
+    --chat-max-width-sm: 600px;
+    --chat-max-width-md: 640px;
+    --chat-max-width-lg: 720px;
+    --chat-max-width-xl: 800px;
+    --chat-max-width-2xl: 1000px;
+
+    /* ===== Responsive Message Bubble ===== */
+    --message-padding-xs: 10px;
+    --message-padding-sm: 14px;
+    --message-padding-md: 16px;
+    --message-padding-lg: 18px;
+    --message-padding-xl: 20px;
+    --message-padding-2xl: 24px;
+
+    /* ===== Responsive Typography ===== */
+    --text-message-xs: 14px;
+    --text-message-sm: 15px;
+    --text-message-md: 16px;
+    --text-message-lg: 16px;
+    --text-message-xl: 18px;
+    --text-message-2xl: 18px;
+
+    /* ===== Responsive Input Area ===== */
+    --input-height-xs: 48px;
+    --input-height-sm: 56px;
+    --input-height-md: 64px;
+    --input-height-lg: 72px;
+    --input-height-xl: 80px;
+    --input-height-2xl: 120px;
+
+    /* Default shadcn-svelte slate color palette */
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+
+    --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+}
 
 :root {
-  /* =================================================================
-     8pt GRID DESIGN SYSTEM
-     Все размеры, отступы и маржины кратны 8px для пиксельной точности
-     на экранах разной плотности и визуальной согласованности.
-     Baseline grid 4px для текста создаёт вертикальный ритм.
-     ================================================================= */
+    /* Default shadcn-svelte slate theme - Light */
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0.019 285.938);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0.019 285.938);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0.019 285.938);
+    --primary: oklch(0.205 0.026 285.938);
+    --primary-foreground: oklch(0.985 0.002 247.839);
+    --secondary: oklch(0.97 0.003 264.542);
+    --secondary-foreground: oklch(0.205 0.026 285.938);
+    --muted: oklch(0.97 0.003 264.542);
+    --muted-foreground: oklch(0.556 0.019 285.938);
+    --accent: oklch(0.97 0.003 264.542);
+    --accent-foreground: oklch(0.205 0.026 285.938);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.577 0.245 27.325);
+    --border: oklch(0.929 0.006 264.542);
+    --input: oklch(0.929 0.006 264.542);
+    --ring: oklch(0.708 0.165 254.624);
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --radius: 0.625rem;
 
-  /* --- Core 8pt Grid Units --- */
-  --grid-unit: 8px;
-  --baseline: 4px;
-  /* Baseline grid для типографики */
-
-  /* --- 8pt Grid Spacing Scale --- */
-  --space-0: 0px;
-  --space-1: 4px;
-  /* 0.5 unit - baseline */
-  --space-2: 8px;
-  /* 1 unit */
-  --space-3: 16px;
-  /* 2 units */
-  --space-4: 24px;
-  /* 3 units */
-  --space-5: 32px;
-  /* 4 units */
-  --space-6: 40px;
-  /* 5 units */
-  --space-7: 48px;
-  /* 6 units */
-  --space-8: 56px;
-  /* 7 units */
-  --space-9: 64px;
-  /* 8 units */
-  --space-10: 72px;
-  /* 9 units */
-  --space-11: 80px;
-  /* 10 units */
-  --space-12: 96px;
-  /* 12 units */
-
-  /* --- Legacy Spacing Aliases (backwards compat) --- */
-  --spacing-unit: var(--space-2);
-  --spacing-xs: var(--space-1);
-  /* 4px */
-  --spacing-sm: var(--space-2);
-  /* 8px */
-  --spacing-md: var(--space-3);
-  /* 16px */
-  --spacing-lg: var(--space-4);
-  /* 24px */
-  --spacing-xl: var(--space-5);
-  /* 32px */
-  --spacing-2xl: var(--space-7);
-  /* 48px */
-  --spacing-3xl: var(--space-9);
-  /* 64px */
-
-  /* --- Layout Grid System --- */
-  /* 8-column modular grid: 1440px container, 1200px content area */
-  --container-max: 1440px;
-  --content-max: 1200px;
-  --column-count: 8;
-  --column-width: 120px;
-  /* 1200px / 8 columns - gutters */
-  --gutter: var(--space-3);
-  /* 16px gutters между колонками */
-  --margin-desktop: var(--space-4);
-  /* 24px маржины */
-  --margin-mobile: var(--space-3);
-  /* 16px маржины на мобильных */
-
-  /* --- Content Gaps (8pt aligned) --- */
-  --content-gap: var(--space-2);
-  /* 8px default gap */
-  --content-gap-top: var(--space-2);
-
-  /* --- Color System (Monochromatic with 8% lightness steps) --- */
-  --bg: #f5f7fb;
-  --card: #ffffff;
-  --panel-bg: #f0f3f8;
-  --text: #1a1f2e;
-  --muted: #6b7a8e;
-  --border-color: #d5dce6;
-  --accent: #b87652;
-  --accent-2: #4a5a7a;
-  --warning: #d97b4a;
-  --danger: #d97b4a;
-  --panel-alt-bg: var(--panel-bg);
-
-  /* --- Shadows (глубина без агрессии) --- */
-  --shadow-sm: 0 2px 8px rgb(0 0 0 / 0.04);
-  --shadow: 0 4px 16px rgb(0 0 0 / 0.06);
-  --shadow-md: 0 6px 24px rgb(0 0 0 / 0.08);
-  --shadow-lg: 0 8px 32px rgb(0 0 0 / 0.1);
-  --shadow-hover: 0 8px 32px rgb(0 0 0 / 0.12);
-
-  /* --- Border Radius (8pt aligned) --- */
-  --radius-sm: 4px;
-  /* 0.5 unit */
-  --radius: 8px;
-  /* 1 unit */
-  --radius-md: 12px;
-  /* 1.5 units */
-  --radius-lg: 16px;
-  /* 2 units */
-  --radius-xl: 24px;
-  /* 3 units */
-  --radius-full: 9999px;
-
-  /* =================================================================
-     TYPOGRAPHY SYSTEM
-     Размеры кратны 4px: 12/16/20/24/32px
-     Line-height 1.5× для natural baseline 4px alignment
-     ================================================================= */
-
-  /* --- Font Family --- */
-  --font-sans:
-    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
-  --font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
-
-  /* --- Font Sizes (кратны 4px) --- */
-  --font-size-xs: 12px;
-  /* 3 baseline units */
-  --font-size-sm: 14px;
-  /* 3.5 baseline units (exception for readability) */
-  --font-size-base: 16px;
-  /* 4 baseline units */
-  --font-size-lg: 20px;
-  /* 5 baseline units */
-  --font-size-xl: 24px;
-  /* 6 baseline units */
-  --font-size-2xl: 32px;
-  /* 8 baseline units */
-  --font-size-3xl: 40px;
-  /* 10 baseline units */
-  --font-size-4xl: 48px;
-  /* 12 baseline units */
-
-  /* --- Line Heights (1.5× для baseline alignment) --- */
-  --line-height-tight: 1.2;
-  /* Для заголовков */
-  --line-height-snug: 1.375;
-  /* Компактный текст */
-  --line-height-normal: 1.5;
-  /* Основной текст - 24px при 16px */
-  --line-height-relaxed: 1.625;
-  /* Расслабленный */
-  --line-height-loose: 1.75;
-  /* Свободный */
-
-  /* --- Font Weights --- */
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-
-  /* --- Paragraph Spacing (8pt aligned) --- */
-  --paragraph-spacing: var(--space-3);
-  /* 16px */
-  --heading-spacing-top: var(--space-5);
-  /* 32px */
-  --heading-spacing-bottom: var(--space-3);
-  /* 16px */
-
-  /* =================================================================
-     ANIMATION SYSTEM
-     Transitions 200ms cubic-bezier(0.4, 0.0, 0.2, 1)
-     Все длительности кратны 50ms
-     ================================================================= */
-
-  /* --- Duration Scale (кратно 50ms) --- */
-  --duration-instant: 50ms;
-  --duration-fast: 100ms;
-  --duration-normal: 200ms;
-  /* Основная длительность */
-  --duration-slow: 300ms;
-  --duration-slower: 400ms;
-  --duration-default: 500ms;
-  /* For longer animations */
-  --duration-slowest: 500ms;
-  --duration-1000: 1000ms;
-  /* 1 second */
-  --duration-2000: 2000ms;
-  /* 2 seconds */
-
-  /* --- Easing Functions --- */
-  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
-  /* Material Design standard */
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-
-  /* --- Common Transitions --- */
-  --transition-colors:
-    color var(--duration-normal) var(--ease-default),
-    background-color var(--duration-normal) var(--ease-default),
-    border-color var(--duration-normal) var(--ease-default);
-  --transition-opacity: opacity var(--duration-normal) var(--ease-default);
-  --transition-transform: transform var(--duration-normal) var(--ease-default);
-  --transition-shadow: box-shadow var(--duration-normal) var(--ease-default);
-  --transition-all: all var(--duration-normal) var(--ease-default);
-
-  /* =================================================================
-     CHAT INTERFACE (8pt aligned)
-     ================================================================= */
-
-  /* Message Container Padding (24px 32px) */
-  --message-padding-desktop: var(--space-4) var(--space-5);
-  /* 24px 32px */
-  --message-padding-mobile: var(--space-3) var(--space-4);
-  /* 16px 24px */
-
-  /* Spacing Between Messages */
-
-  /* Layout Constraints (6 колонок = 720-800px для чата) */
-  --chat-max-width: 800px;
-  /* ~6.67 колонок */
-  --chat-container-width: 100%;
-
-  /* Message Elements */
-  --message-content-max-width: 736px;
-  /* 800px - 64px padding, кратно 8 */
-  --message-border-radius: var(--radius-md);
-  /* 12px */
-  --message-gap: 0;
-  /* без расстояния */
-
-  /* Composer (высота кратна 8) */
-  --composer-height-desktop: 56px;
-  /* 7 units */
-  --composer-height-mobile: 48px;
-  /* 6 units */
-  --composer-max-height: 200px;
-  /* 25 units */
-
-  /* Scrollbar colors */
-  --scrollbar-thumb: rgb(107 122 142 / 0.35);
-  --scrollbar-thumb-hover: rgb(107 122 142 / 0.55);
-  --scrollbar-thumb-active: rgb(107 122 142 / 0.7);
-  --scrollbar-thumb-fade: rgb(107 122 142 / 0.25);
-
-  /* ↓ Добавляем переменные цветовой схемы для кода/hljs, согласованные с UI */
-  --code-bg: var(--panel-bg);
-  --code-fg: var(--text);
-  --code-keyword: var(--accent-2);
-  --code-string: color-mix(in srgb, var(--accent) 35%, var(--text) 65%);
-  --code-title: var(--accent);
-  --code-number: var(--warning);
-  --code-variable: color-mix(in srgb, var(--accent-2) 60%, var(--text) 40%);
-  --code-tag: var(--accent-2);
-  --code-comment: var(--muted);
-  /* комментарии */
-
-  /* ↓ Специализированные токены для shadcn-svelte Sidebar (8pt aligned) */
-  --sidebar: var(--card);
-  --sidebar-foreground: var(--text);
-  --sidebar-primary: var(--accent);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--panel-bg);
-  --sidebar-accent-foreground: var(--text);
-  --sidebar-border: var(--border-color);
-  --sidebar-ring: var(--accent);
-  --sidebar-width: 240px;
-  /* 30 units (240px кратно 8) */
-  --sidebar-width-icon: 56px;
-  /* 7 units */
-  --sidebar-width-mobile: 280px;
-  /* 35 units */
-  --sidebar-collapsed-bg: var(--bg);
-
-  /* Tooltip styling */
-  --tooltip-bg: #1a1f2e;
-  --tooltip-fg: #e8eaf0;
-  --tooltip-border: rgb(0 0 0 / 0.25);
-  --tooltip-shadow: 0 10px 24px rgb(0 0 0 / 0.25);
+    --sidebar: oklch(0.985 0.002 247.839);
+    --sidebar-foreground: oklch(0.145 0.019 285.938);
+    --sidebar-primary: oklch(0.205 0.026 285.938);
+    --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
+    --sidebar-accent: oklch(0.97 0.003 264.542);
+    --sidebar-accent-foreground: oklch(0.205 0.026 285.938);
+    --sidebar-border: oklch(0.929 0.006 264.542);
+    --sidebar-ring: oklch(0.708 0.165 254.624);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1a1f2e;
-    /* Solid surfaces for dialogs/menus (avoid "see-through" UI) */
-    --card: color-mix(in srgb, var(--bg) 88%, white 12%);
-    --panel-bg: color-mix(in srgb, var(--bg) 84%, white 16%);
-    --text: #e8eaf0;
-    --muted: #9ba5b8;
-    --border-color: #6b7a8e;
-    --panel-alt-bg: color-mix(in srgb, var(--bg) 86%, white 14%);
-
-    --scrollbar-thumb: rgb(107 122 142 / 0.4);
-    --scrollbar-thumb-hover: rgb(107 122 142 / 0.6);
-    --scrollbar-thumb-active: rgb(107 122 142 / 0.75);
-    --scrollbar-thumb-fade: rgb(107 122 142 / 0.3);
-
-    /* ↓ Темные значения для подсветки синтаксиса */
-    --code-bg: var(--panel-bg);
-    --code-fg: var(--text);
-    --code-keyword: var(--accent);
-    /* светло-синий */
-    --code-string: color-mix(in srgb, var(--accent) 45%, var(--text) 55%);
-    /* светло-зелёный */
-    --code-title: var(--accent-2);
-    /* жёлтый для заголовков/имён */
-    --code-number: var(--warning);
-    /* персиковый для чисел */
-    --code-variable: color-mix(in srgb, var(--accent-2) 60%, var(--text) 40%);
-    /* сиреневый для переменных */
-    --code-tag: var(--accent-2);
-    /* голубой для тегов/мета */
-    --code-comment: var(--muted);
-    /* серый для комментариев */
-
-    --sidebar: var(--card);
-    --sidebar-foreground: var(--text);
-    --sidebar-primary: var(--accent);
-    --sidebar-primary-foreground: var(--text);
-    --sidebar-accent: var(--panel-bg);
-    --sidebar-accent-foreground: var(--text);
-    --sidebar-border: var(--border-color);
-    --sidebar-ring: var(--accent);
-    --sidebar-collapsed-bg: var(--bg);
-
-    --tooltip-bg: color-mix(in srgb, var(--bg) 80%, black 20%);
-    --tooltip-fg: var(--text);
-    --tooltip-border: color-mix(in srgb, var(--border-color) 60%, transparent);
-    --tooltip-shadow: 0 10px 24px rgb(0 0 0 / 0.45);
-  }
-}
-
-/* Улучшенные стили для скроллбаров (src/styles/scrollbar.css) */
-
-::-webkit-scrollbar {
-  width: var(--space-3);
-  /* 16px */
-  height: var(--space-3);
-  /* 16px */
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: var(--radius-lg);
-  /* 16px */
-  margin: 2px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: var(--radius-lg);
-  /* 16px */
-  border: 2px solid transparent;
-  background-clip: content-box;
-  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
-}
-
-/* Show scrollbar on hover or when actively scrolling */
-*:hover> ::-webkit-scrollbar-thumb,
-*:active> ::-webkit-scrollbar-thumb,
-::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb);
-  background-clip: content-box;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover);
-  background-clip: content-box;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
-}
-
-::-webkit-scrollbar-thumb:active {
-  background: var(--scrollbar-thumb-active);
-  background-clip: content-box;
-  transform: scale(1.1);
-  box-shadow: 0 6px 16px rgb(0 0 0 / 0.2);
-}
-
-::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) transparent;
-  scroll-behavior: smooth;
-}
-
-::-webkit-scrollbar:horizontal {
-  height: var(--space-2);
-  /* 8px */
-}
-
-::-webkit-scrollbar-thumb:horizontal {
-  background: linear-gradient(90deg, var(--scrollbar-thumb), var(--scrollbar-thumb-fade));
-  border-radius: var(--radius-lg);
-  /* 16px */
-  border: 1px solid transparent;
-  background-clip: content-box;
-}
-
-::-webkit-scrollbar-thumb:horizontal:hover {
-  background: linear-gradient(90deg, var(--scrollbar-thumb-hover), var(--scrollbar-thumb));
-  background-clip: content-box;
-}
-
-/* Scrollbar Auto-hide Utility */
-.scrollbar-auto-hide {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color 0.3s ease;
-}
-
-.scrollbar-auto-hide:hover {
-  scrollbar-color: var(--scrollbar-thumb) transparent;
-}
-
-/* For Webkit/Blink */
-.scrollbar-auto-hide::-webkit-scrollbar-thumb {
-  background: transparent;
-}
-
-.scrollbar-auto-hide:hover::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-}
-
-@media (width <=768px) {
-  ::-webkit-scrollbar {
-    width: var(--space-2);
-    /* 8px */
-    height: var(--space-2);
-    /* 8px */
-  }
-
-  ::-webkit-scrollbar-thumb {
-    border: 1px solid transparent;
-  }
-}
-
-@media (min-device-pixel-ratio: 2),
-(resolution >=192dpi) {
-  ::-webkit-scrollbar {
-    width: var(--space-3);
-    /* 16px → 14px closest */
-    height: var(--space-3);
-    /* 16px → 14px closest */
-  }
-
-  ::-webkit-scrollbar-thumb {
-    border: 3px solid transparent;
-  }
-}
-
-/* =================================================================
-   BASE STYLES (8pt Grid System)
-   ================================================================= */
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html,
-body {
-  height: 100%;
-  min-height: 100%;
-  font-family: var(--font-sans);
-  font-size: var(--font-size-base);
-  /* 16px */
-  line-height: var(--line-height-normal);
-  /* 1.5 = 24px line-height */
-  background: var(--bg);
-  color: var(--text);
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Container with 24px margins, 16px content gap */
-.wrap {
-  padding: var(--space-3);
-  /* 16px */
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  background: #1a1f2e;
-}
-
-/* =================================================================
-   TYPOGRAPHY (8pt Grid aligned)
-   Font sizes: 12/16/20/24/32px (кратны 4)
-   Line-height: 1.5× для baseline 4px alignment
-   Вертикальные отступы: 24/32/48px
-   ================================================================= */
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: var(--text);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-  /* 1.2 для заголовков */
-  margin-top: var(--space-5);
-  /* 32px */
-  margin-bottom: var(--space-3);
-  /* 16px */
-}
-
-h1:first-child,
-h2:first-child,
-h3:first-child,
-h4:first-child,
-h5:first-child,
-h6:first-child {
-  margin-top: 0;
-}
-
-h1 {
-  font-size: var(--font-size-2xl);
-  /* 32px */
-}
-
-h2 {
-  font-size: var(--font-size-xl);
-  /* 24px */
-}
-
-h3 {
-  font-size: var(--font-size-lg);
-  /* 20px */
-}
-
-h4 {
-  font-size: var(--font-size-base);
-  /* 16px */
-  font-weight: var(--font-weight-semibold);
-}
-
-h5 {
-  font-size: var(--font-size-sm);
-  /* 14px */
-  font-weight: var(--font-weight-semibold);
-}
-
-h6 {
-  font-size: var(--font-size-xs);
-  /* 12px */
-  font-weight: var(--font-weight-medium);
-  color: var(--muted);
-}
-
-p {
-  color: var(--text);
-  line-height: var(--line-height-normal);
-  /* 1.5 */
-  margin-bottom: var(--space-3);
-  /* 16px */
-}
-
-p:last-child {
-  margin-bottom: 0;
-}
-
-/* Mobile typography adjustments */
-@media (width <=768px) {
-  .wrap {
-    padding: var(--space-3);
-    /* 16px */
-  }
-
-  h1 {
-    font-size: var(--font-size-xl);
-    /* 24px */
-  }
-
-  h2 {
-    font-size: var(--font-size-lg);
-    /* 20px */
-  }
-
-  h3 {
-    font-size: var(--font-size-base);
-    /* 16px */
-  }
-}
-
-/* =================================================================
-   COMPONENT STYLES (8pt Grid System)
-   ================================================================= */
-
-button {
-  cursor: default;
-  border: none;
-  border-radius: var(--radius);
-  /* 8px */
-  padding: var(--space-2) var(--space-3);
-  /* 8px 16px */
-  font-size: var(--font-size-sm);
-  /* 14px */
-  font-weight: var(--font-weight-medium);
-  transition: var(--transition-all);
-  background: var(--accent);
-  color: white;
-}
-
-button:hover {
-  background: var(--accent-2);
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: default;
-  transform: none;
-}
-
-a {
-  color: var(--accent);
-  text-decoration: none;
-  transition: var(--transition-colors);
-}
-
-a:hover {
-  color: var(--accent-2);
-  text-decoration: underline;
-}
-
-input,
-textarea,
-select {
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  /* 8px */
-  padding: var(--space-2) var(--space-3);
-  /* 8px 16px */
-  font-size: var(--font-size-sm);
-  /* 14px */
-  font-family: var(--font-sans);
-  line-height: var(--line-height-normal);
-  background: var(--card);
-  color: var(--text);
-  transition: var(--transition-colors), var(--transition-shadow);
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
-}
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  /* 16px */
-  padding: var(--space-4);
-  /* 24px */
-  box-shadow: var(--shadow);
-  transition: var(--transition-shadow);
-}
-
-.card:hover {
-  box-shadow: var(--shadow-hover);
-}
-
-@media (width <=768px) {
-  .card {
-    padding: var(--space-3);
-    /* 16px */
-  }
-}
-
-.checkbox-input {
-  display: none;
-}
-
-.checkbox-label {
-  position: relative;
-  padding-left: var(--space-5);
-  /* 32px → 30px closest */
-  cursor: pointer;
-  -webkit-user-select: none;
-  user-select: none;
-  font-size: var(--font-size-sm);
-  /* 14px */
-  color: var(--text);
-  transition: color 0.2s ease;
-}
-
-.checkbox-label::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 2px;
-  width: var(--space-3);
-  /* 16px → 18px closest */
-  height: var(--space-3);
-  /* 16px → 18px closest */
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  /* 16px */
-  background-color: var(--card);
-  transition: all 0.2s ease;
-}
-
-.checkbox-input:checked+.checkbox-label::before {
-  background-color: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
-  content: '✓';
-  color: white;
-  font-size: var(--font-size-sm);
-  /* 14px */
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.checkbox-label:hover::before {
-  border-color: var(--accent-2);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-2) 25%, transparent);
-}
-
-@media (width <=768px) {
-  .checkbox-label {
-    padding-left: var(--space-5);
-    /* 32px */
-    font-size: var(--font-size-base);
-    /* 16px */
-  }
-
-  .checkbox-label::before {
-    width: var(--space-3);
-    /* 16px → 20px closest */
-    height: var(--space-3);
-    /* 16px → 20px closest */
-  }
-
-  .checkbox-input:checked+.checkbox-label::before {
-    font-size: var(--font-size-base);
-    /* 16px */
-  }
-}
-
-/* Анимации и утилиты (src/styles/animations.css) */
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes scrollbarFadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes scrollbarPulse {
-
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-
-  50% {
-    opacity: 1;
-  }
-}
-
-::-webkit-scrollbar-thumb {
-  animation: scrollbarFadeIn 0.3s ease-out;
-}
-
-::-webkit-scrollbar-thumb:active {
-  animation: scrollbarPulse 1s ease-in-out infinite;
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-.loading-button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  /* 8px */
-}
-
-.loading-text {
-  white-space: nowrap;
-}
-
-/* Tailwind theme bridge */
-
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-background: var(--bg);
-  --color-foreground: var(--text);
-  --color-card: var(--card);
-  --color-card-foreground: var(--text);
-  --color-popover: var(--card);
-  --color-popover-foreground: var(--text);
-  --color-primary: var(--accent);
-  --color-primary-foreground: #ffffff;
-  --color-secondary: var(--panel-bg);
-  --color-secondary-foreground: var(--text);
-  --color-muted: var(--panel-bg);
-  --color-muted-foreground: var(--muted);
-  --color-accent: var(--accent-2);
-  --color-accent-foreground: #ffffff;
-  --color-destructive: var(--danger);
-  --color-border: var(--border-color);
-  --color-input: var(--border-color);
-  --color-ring: var(--accent);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+.dark {
+    /* Default shadcn-svelte slate theme - Dark */
+    --background: oklch(0.145 0.019 285.938);
+    --foreground: oklch(0.985 0.002 247.839);
+    --card: oklch(0.145 0.019 285.938);
+    --card-foreground: oklch(0.985 0.002 247.839);
+    --popover: oklch(0.145 0.019 285.938);
+    --popover-foreground: oklch(0.985 0.002 247.839);
+    --primary: oklch(0.985 0.002 247.839);
+    --primary-foreground: oklch(0.205 0.026 285.938);
+    --secondary: oklch(0.269 0.015 285.938);
+    --secondary-foreground: oklch(0.985 0.002 247.839);
+    --muted: oklch(0.269 0.015 285.938);
+    --muted-foreground: oklch(0.708 0.013 285.938);
+    --accent: oklch(0.269 0.015 285.938);
+    --accent-foreground: oklch(0.985 0.002 247.839);
+    --destructive: oklch(0.704 0.191 22.216);
+    --destructive-foreground: oklch(0.145 0.019 285.938);
+    --border: oklch(0.269 0.015 285.938);
+    --input: oklch(0.269 0.015 285.938);
+    --ring: oklch(0.556 0.019 285.938);
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.985 0.002 247.839);
+    --chart-4: oklch(0.806 0.204 91.72);
+    --chart-5: oklch(0.769 0.188 70.08);
+
+    --sidebar: oklch(0.205 0.026 285.938);
+    --sidebar-foreground: oklch(0.985 0.002 247.839);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
+    --sidebar-accent: oklch(0.269 0.015 285.938);
+    --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
+    --sidebar-border: oklch(0.269 0.015 285.938);
+    --sidebar-ring: oklch(0.556 0.019 285.938);
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+    * {
+        @apply border-border;
+    }
 
-  body {
-    @apply bg-background text-foreground;
-  }
+    body {
+        @apply bg-background text-foreground;
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        user-select: none;
+        overflow: hidden;
+    }
 }
 
-/* Override collapsed sidebar width */
-[data-state='collapsed'] [data-slot='sidebar-container'] {
-  width: var(--space-8) !important;
-  /* 56px */
+/* ===== Scrollbar Utilities ===== */
+
+/* Hide scrollbar completely */
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
-[data-state='collapsed'] [data-slot='sidebar-gap'] {
-  width: var(--space-8) !important;
-  /* 56px */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
 }
 
-/* =================================================================
-   TOOLTIP ARROW STYLES
-   Moved from tooltip-content.svelte to avoid "no scopable elements" warning
-   ================================================================= */
-
-[data-slot='tooltip-content'] {
-  --tooltip-arrow-size: 8px;
+/* Custom styled scrollbar */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-foreground) transparent;
 }
 
-[data-slot='tooltip-content']::after {
-  content: '';
-  position: absolute;
-  width: var(--tooltip-arrow-size);
-  height: var(--tooltip-arrow-size);
-  background: var(--tooltip-bg);
-  box-shadow: var(--tooltip-shadow);
-  z-index: -1;
-  transform: rotate(45deg);
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
 }
 
-[data-slot='tooltip-content'][data-side='top']::after {
-  bottom: calc(var(--tooltip-arrow-size) / -2);
-  left: 50%;
-  transform: translateX(-50%) rotate(45deg);
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
 }
 
-[data-slot='tooltip-content'][data-side='bottom']::after {
-  top: calc(var(--tooltip-arrow-size) / -2);
-  left: 50%;
-  transform: translateX(-50%) rotate(45deg);
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
 }
 
-[data-slot='tooltip-content'][data-side='left']::after {
-  right: calc(var(--tooltip-arrow-size) / -2);
-  top: 50%;
-  transform: translateY(-50%) rotate(45deg);
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
 }
 
-[data-slot='tooltip-content'][data-side='right']::after {
-  left: calc(var(--tooltip-arrow-size) / -2);
-  top: 50%;
-  transform: translateY(-50%) rotate(45deg);
+.custom-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
-/* =================================================================
-   SCREENSHOT MODE
-   Масштабирование UI для скриншотов без нарушения layout
-   ================================================================= */
-html.screenshot-mode {
-  zoom: 1.25;
+/* Dark mode optimized scrollbar */
+.dark .custom-scrollbar {
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
-html.screenshot-mode body {
-  height: calc(100vh / 1.25);
-  overflow: hidden;
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* =================================================================
-   CHAT SCROLLBAR POSITIONING
-   Scrollbar at window right edge, content centered
-   ================================================================= */
-
-/* Chat container fills available space */
-.chat-container {
-  width: 100% !important;
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Scroll container takes full width - scrollbar at right edge */
-.chat-container .messages-wrapper,
-.chat-container [role="log"] {
-  width: 100% !important;
-  max-width: none !important;
+/* Table scroll - scrollbar starts below sticky header */
+.table-scroll::-webkit-scrollbar-track {
+    margin-top: 40px; /* Height of sticky header */
 }
 
-/* Scrollable content area - full width */
-.chat-container .messages-content {
-  width: 100% !important;
-  max-width: none !important;
-}
-
-/* Inner content wrapper - centered with max-width */
-.chat-container .messages-inner {
-  max-width: var(--chat-max-width, 800px) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  width: 100% !important;
-  padding-right: var(--space-3) !important;
-}
+/* Highlight.js theme integration */
+@import 'highlight.js/styles/github-dark.css';
