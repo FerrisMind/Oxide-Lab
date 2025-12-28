@@ -1,4 +1,6 @@
 {
+    "cancel": "Cancel",
+    "save": "Save & Submit",
     "loading": "Loading...",
     "buttons": {
         "close": "Close",

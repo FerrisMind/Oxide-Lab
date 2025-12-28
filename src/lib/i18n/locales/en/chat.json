@@ -42,7 +42,8 @@
         "copy": "Copy",
         "like": "Like",
         "dislike": "Dislike",
-        "regenerate": "Regenerate"
+        "regenerate": "Regenerate",
+        "edit": "Edit"
     },
     "loading": {
         "stages": {

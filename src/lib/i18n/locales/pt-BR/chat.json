@@ -38,6 +38,13 @@
     "messages": {
         "empty": "Nenhuma mensagem. Escreva algo..."
     },
+    "actions": {
+        "copy": "Copiar",
+        "like": "Curtir",
+        "dislike": "Não curtir",
+        "regenerate": "Regenerar",
+        "edit": "Editar"
+    },
     "loading": {
         "stages": {
             "start": "Inicializando carregamento...",
