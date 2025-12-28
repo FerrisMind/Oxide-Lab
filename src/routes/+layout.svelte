@@ -50,7 +50,7 @@
   const { children } = $props();
 
   let isMaximized = $state(false);
-  let isSidebarOpen = $state(true);
+  let isSidebarOpen = $state(false);
   let isModelPickerOpen = $state(false);
   let comboboxTrigger = $state<HTMLButtonElement | null>(null);
   let showDownloadManager = $state(false);
@@ -269,7 +269,6 @@
     <div class="app-header-wrapper" onmousedown={startDragging}>
       <header class="flex items-center justify-between px-2 h-14 bg-background">
         <div class="flex-1 flex items-center justify-start gap-2 sm:gap-4">
-          <!-- Model Picker -->
           {#if page.url.pathname === '/'}
             <Popover.Root bind:open={isModelPickerOpen}>
               <Popover.Trigger bind:ref={comboboxTrigger} data-no-drag>
@@ -303,7 +302,7 @@
                     placeholder={($t('common.model.selectModel') || 'Select model') + '...'}
                     autofocus
                   />
-                  <Command.List class="model-combobox-list">
+                  <Command.List class="model-combobox-list custom-scrollbar">
                     <Command.Empty class="model-combobox-empty">
                       {$t('common.model.noModelsFound') || 'No models found'}
                     </Command.Empty>

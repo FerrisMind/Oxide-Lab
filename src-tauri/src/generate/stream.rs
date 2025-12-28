@@ -4,7 +4,7 @@ use tauri::Emitter;
 use super::cancel::CANCEL_GENERATION;
 use super::{
     ctx::ContextSlice, emit::ChunkEmitter, minp::MinPFilter,
-    sampling::build_logits_processor_from_options,
+    sampling::build_logits_processor_from_options, thinking_parser::ThinkingParser,
 };
 use crate::core::attachments_text::gather_text_from_attachments;
 use crate::core::config::SamplingOptions;
@@ -137,6 +137,10 @@ fn generate_stream_impl(
     } else {
         prompt_str
     };
+
+    // Detect implicit thinking: if prompt ends with <think>, start parser in thinking mode
+    let starts_in_thinking = prompt.trim_end().ends_with("<think>");
+
     let tokens = tos
         .tokenizer()
         .encode(prompt, true)
@@ -290,9 +294,19 @@ fn generate_stream_impl(
     inference_tracker.start_generation();
 
     let mut emitter = ChunkEmitter::new(app.clone());
+    emitter.emit_start(); // Signal frontend to create assistant message
+
+    log::debug!("[stream] starts_in_thinking: {}", starts_in_thinking);
+
+    let mut thinking_parser = if starts_in_thinking {
+        ThinkingParser::new_in_thinking_mode()
+    } else {
+        ThinkingParser::new()
+    };
 
     if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
-        emitter.push_maybe_emit(&t);
+        let chunk = thinking_parser.process_token(&t);
+        emitter.emit_message(chunk);
     }
 
     let stop_ids = extract_eos_ids(tos.tokenizer());
@@ -362,7 +376,8 @@ fn generate_stream_impl(
         }
 
         if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
-            emitter.push_maybe_emit(&t);
+            let chunk = thinking_parser.process_token(&t);
+            emitter.emit_message(chunk);
             stop_text_buf.push_str(&t);
             if stop_text_buf.len() > 128 {
                 let mut cut = stop_text_buf.len() - 128;
@@ -384,8 +399,12 @@ fn generate_stream_impl(
     }
 
     if let Some(rest) = tos.decode_rest().map_err(|e| e.to_string())? {
-        emitter.push_maybe_emit(&rest);
+        let chunk = thinking_parser.process_token(&rest);
+        emitter.emit_message(chunk);
     }
+    // Flush any remaining buffered partial tags
+    let final_chunk = thinking_parser.flush();
+    emitter.emit_message(final_chunk);
     emitter.finalize();
 
     // Очищаем KV-кэш после запроса, чтобы следующее поколение стартовало с чистого состояния.

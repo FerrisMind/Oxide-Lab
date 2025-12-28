@@ -601,6 +601,8 @@
             <MessageList
               bind:messages
               showModelNotice={!$chatState.isLoaded && messages.length === 0}
+              onRegenerate={(index) => controller.handleRegenerate(index)}
+              onEdit={(index, content) => controller.handleEdit(index, content)}
             />
           </ConversationContent>
           <ConversationScrollButton />
@@ -663,6 +665,7 @@
             bind:split_prompt
             bind:verbose_prompt
             bind:tracing
+            onDeviceToggle={(val) => controller.setDeviceByToggle(val)}
           />
         </div>
       </Sheet.Content>

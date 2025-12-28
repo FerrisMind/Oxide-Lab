@@ -16,9 +16,9 @@
         "decorations": false,
         "transparent": true,
         "width": 1280,
-        "height": 800,
-        "minWidth": 1024,
-        "minHeight": 720,
+        "height": 720,
+        "minWidth": 800,
+        "minHeight": 600,
         "label": "main",
         "center": true
       }

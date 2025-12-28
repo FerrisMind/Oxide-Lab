@@ -122,7 +122,7 @@
     <!-- Brand button -->
     <button
       type="button"
-      class="brand-button flex items-center rounded-md p-1 hover:bg-sidebar-accent transition-colors"
+      class="brand-button flex items-center rounded-md py-2 pl-2.5 pr-2.5 size-10 hover:bg-sidebar-accent transition-colors"
       onclick={() => {
         if (sidebar.state === 'collapsed') {
           sidebar.toggle();
@@ -131,12 +131,12 @@
         }
       }}
     >
-      <span class="brand-icon-wrapper relative w-6 h-6 min-w-6 min-h-6 shrink-0">
-        <img src="/icon.svg" alt="Oxide Lab" class="brand-icon-default w-6 h-6 absolute inset-0" />
+      <span class="brand-icon-wrapper relative w-5 h-5 min-w-5 min-h-5 shrink-0">
+        <img src="/icon.svg" alt="Oxide Lab" class="brand-icon-default w-5 h-5 absolute inset-0" />
         <SidebarSimple
-          size={24}
+          size={20}
           weight="regular"
-          class="brand-icon-hover w-6 h-6 absolute inset-0 text-sidebar-primary"
+          class="brand-icon-hover w-5 h-5 absolute inset-0 text-sidebar-foreground"
         />
       </span>
     </button>
@@ -145,7 +145,7 @@
     {#if sidebar.state !== 'collapsed'}
       <button
         type="button"
-        class="flex items-center justify-center rounded-md p-1 hover:bg-sidebar-accent transition-colors text-sidebar-foreground"
+        class="flex items-center justify-center rounded-md size-10 hover:bg-sidebar-accent transition-colors text-sidebar-foreground"
         onclick={() => sidebar.toggle()}
       >
         <SidebarSimple size={20} weight="regular" />
@@ -241,8 +241,6 @@
       </Sidebar.MenuItem>
     </Sidebar.Menu>
   </Sidebar.Footer>
-
-  <Sidebar.Rail />
 </Sidebar.Root>
 
 <style>

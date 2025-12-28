@@ -15,9 +15,6 @@ export type { ChatControllerCtx } from './controller/types';
 // Utils
 export { sanitizeForPrompt } from './sanitize';
 export { buildPromptWithChatTemplate } from './prompts';
-export { createStreamParser } from './parser';
-export type { Segment, SegmentKind, ParseResult } from './parser';
 
 // Components
 export * from './components';
-

@@ -426,6 +426,138 @@ export function createActions(ctx: ChatControllerCtx) {
         } catch { /* ignore */ }
     }
 
+    /**
+     * Edit a message at the given index and regenerate from that point.
+     * Truncates history at editIndex, updates the message content, and regenerates.
+     */
+    async function handleEdit(editIndex: number, newContent: string) {
+        if (ctx.busy) return;
+
+        const storeState = get(chatState);
+        const isModelLoaded = ctx.isLoaded || storeState.isLoaded;
+        if (!isModelLoaded) {
+            const { message } = await import('@tauri-apps/plugin-dialog');
+            await message(get(t)('chat.errors.loadModelFirst'), {
+                title: get(t)('chat.errors.modelNotLoaded'),
+                kind: 'warning',
+            });
+            return;
+        }
+
+        // Truncate messages to editIndex (inclusive) and update content
+        const msgs = ctx.messages.slice(0, editIndex + 1);
+        if (msgs[editIndex]) {
+            msgs[editIndex].content = newContent;
+        }
+
+        // Add empty assistant message for the new response
+        msgs.push({ role: 'assistant', content: '', html: '', thinking: '', isThinking: false });
+        ctx.messages = msgs;
+
+        // Update database
+        const { chatHistory } = await import('$lib/stores/chat-history');
+        // Note: For full DB sync, you'd need to truncate and re-save messages in DB too
+        // For now, we just regenerate from the truncated history
+
+        await generateFromHistoryWithIndex(editIndex);
+    }
+
+    /**
+     * Regenerate the last assistant response.
+     * Finds the last user message and regenerates from that point.
+     */
+    async function handleRegenerate(messageIndex: number) {
+        if (ctx.busy) return;
+
+        const storeState = get(chatState);
+        const isModelLoaded = ctx.isLoaded || storeState.isLoaded;
+        if (!isModelLoaded) {
+            const { message } = await import('@tauri-apps/plugin-dialog');
+            await message(get(t)('chat.errors.loadModelFirst'), {
+                title: get(t)('chat.errors.modelNotLoaded'),
+                kind: 'warning',
+            });
+            return;
+        }
+
+        // Find the user message before this assistant message
+        let userIndex = messageIndex;
+        if (ctx.messages[messageIndex]?.role === 'assistant') {
+            userIndex = messageIndex - 1;
+        }
+
+        if (userIndex < 0 || ctx.messages[userIndex]?.role !== 'user') {
+            console.warn('[regenerate] Could not find user message to regenerate from');
+            return;
+        }
+
+        // Truncate to include the user message, remove the assistant response
+        const msgs = ctx.messages.slice(0, userIndex + 1);
+        // Add empty assistant message for the new response
+        msgs.push({ role: 'assistant', content: '', html: '', thinking: '', isThinking: false });
+        ctx.messages = msgs;
+
+        await generateFromHistoryWithIndex(userIndex);
+    }
+
+    /**
+     * Generate from history with edit_index for truncating on backend if needed.
+     */
+    async function generateFromHistoryWithIndex(editIndex?: number) {
+        ctx.busy = true;
+        chatState.update(s => ({ ...s, busy: true }));
+        try {
+            await stream.ensureListener();
+
+            const msgs = ctx.messages;
+            let hist =
+                msgs[msgs.length - 1]?.role === 'assistant' && msgs[msgs.length - 1]?.content === ''
+                    ? msgs.slice(0, -1)
+                    : msgs.slice();
+
+            const chatPrompt = await buildPromptWithChatTemplate(hist);
+
+            const { invoke } = await import('@tauri-apps/api/core');
+            await invoke('generate_stream', {
+                req: {
+                    prompt: chatPrompt,
+                    use_custom_params: ctx.use_custom_params,
+                    temperature: ctx.use_custom_params && ctx.temperature_enabled ? ctx.temperature : null,
+                    top_p: ctx.use_custom_params && ctx.top_p_enabled
+                        ? ctx.top_p_value > 0 && ctx.top_p_value <= 1 ? ctx.top_p_value : 0.9
+                        : null,
+                    top_k: ctx.use_custom_params && ctx.top_k_enabled
+                        ? Math.max(1, Math.floor(ctx.top_k_value))
+                        : null,
+                    min_p: ctx.use_custom_params && ctx.min_p_enabled
+                        ? ctx.min_p_value > 0 && ctx.min_p_value <= 1 ? ctx.min_p_value : 0.05
+                        : null,
+                    repeat_penalty: ctx.use_custom_params && ctx.repeat_penalty_enabled ? ctx.repeat_penalty_value : null,
+                    repeat_last_n: 64,
+                    split_prompt: !!ctx.split_prompt,
+                    verbose_prompt: !!ctx.verbose_prompt,
+                    tracing: !!ctx.tracing,
+                    edit_index: editIndex,
+                },
+            });
+        } catch (e) {
+            const err = String(e ?? 'Unknown error');
+            const msgs = ctx.messages;
+            const last = msgs[msgs.length - 1];
+            if (last && last.role === 'assistant' && last.content === '') {
+                last.content = `${get(t)('chat.errors.generationFailed')}: ${err}`;
+                ctx.messages = msgs;
+            }
+            try {
+                const { message } = await import('@tauri-apps/plugin-dialog');
+                await message(err, { title: get(t)('chat.errors.generationFailed'), kind: 'error' });
+            } catch { /* ignore */ }
+        } finally {
+            ctx.busy = false;
+            chatState.update(s => ({ ...s, busy: false }));
+        }
+    }
+
     async function pickModel() {
         const { open, message } = await import('@tauri-apps/plugin-dialog');
 
@@ -452,6 +584,8 @@ export function createActions(ctx: ChatControllerCtx) {
         loadGGUF,
         unloadGGUF,
         handleSend,
+        handleEdit,
+        handleRegenerate,
         handleAttachFile: _handleAttachFile,
         generateFromHistory,
         stopGenerate,

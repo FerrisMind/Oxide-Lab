@@ -40,7 +40,7 @@
     split_prompt?: boolean;
     verbose_prompt?: boolean;
     tracing?: boolean;
-    onDeviceToggle?: () => void;
+    onDeviceToggle?: (enabled: boolean) => void;
     class?: string;
   }
 
@@ -74,11 +74,11 @@
     class: className = '',
   }: Props = $props();
 
-  function toggleDevice() {
+  function setDevice(enabled: boolean) {
     if (onDeviceToggle) {
-      onDeviceToggle();
+      onDeviceToggle(enabled);
     } else {
-      use_gpu = !use_gpu;
+      use_gpu = enabled;
     }
   }
 
@@ -98,9 +98,7 @@
             ? 'border-primary bg-primary/10 text-primary'
             : 'border-border hover:border-muted-foreground',
         )}
-        onclick={() => {
-          use_gpu = false;
-        }}
+        onclick={() => setDevice(false)}
       >
         <Cpu class="size-5" />
         <span>CPU</span>
@@ -117,7 +115,7 @@
             ? 'border-primary bg-primary/10 text-primary'
             : 'border-border hover:border-muted-foreground',
         )}
-        onclick={toggleDevice}
+        onclick={() => setDevice(true)}
         disabled={!cuda_available && !cuda_build}
       >
         <GpuCard class="size-5" />

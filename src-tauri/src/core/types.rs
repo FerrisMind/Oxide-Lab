@@ -6,6 +6,21 @@ pub struct ChatMessage {
     pub content: String,
 }
 
+/// Structured message for streaming with thinking support.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct StreamMessage {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub thinking: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub content: String,
+}
+
+impl StreamMessage {
+    pub fn is_empty(&self) -> bool {
+        self.thinking.is_empty() && self.content.is_empty()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum DevicePreference {
@@ -83,6 +98,10 @@ pub struct GenerateRequest {
     pub verbose_prompt: Option<bool>,
     #[serde(default)]
     pub tracing: Option<bool>,
+    /// Edit/Regenerate: if set, truncate history at this message index before generating.
+    /// Used for regenerating from a specific point or editing a message.
+    #[serde(default)]
+    pub edit_index: Option<usize>,
 }
 
 // Структура Attachment оставлена на будущее (компат), но можно удалить полностью при необходимости.
