@@ -597,15 +597,24 @@
       <!-- Messages area with scroll -->
       <div class="messages-area flex-1 min-h-0 relative overflow-hidden">
         <Conversation class="h-full w-full">
-          <ConversationContent class="messages-content pb-16">
+          {#if hasMessages}
+            <ConversationContent class="messages-content pb-16">
+              <MessageList
+                bind:messages
+                showModelNotice={false}
+                onRegenerate={(index) => controller.handleRegenerate(index)}
+                onEdit={(index, content) => controller.handleEdit(index, content)}
+              />
+            </ConversationContent>
+            <ConversationScrollButton />
+          {:else}
             <MessageList
               bind:messages
               showModelNotice={!$chatState.isLoaded && messages.length === 0}
               onRegenerate={(index) => controller.handleRegenerate(index)}
               onEdit={(index, content) => controller.handleEdit(index, content)}
             />
-          </ConversationContent>
-          <ConversationScrollButton />
+          {/if}
         </Conversation>
       </div>
 

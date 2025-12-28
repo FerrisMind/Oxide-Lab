@@ -127,7 +127,11 @@ export function createStreamListener(ctx: ChatControllerCtx) {
             const state = get(chatHistory);
             if (state.currentSessionId) {
                 if (last && last.role === 'assistant') {
-                    await chatHistory.saveAssistantMessage(state.currentSessionId, last.content);
+                    await chatHistory.saveAssistantMessage(
+                        state.currentSessionId,
+                        last.content,
+                        last.thinking,
+                    );
                 }
             }
         }

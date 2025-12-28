@@ -4,7 +4,7 @@ import CopyButton from './CodeCopyButton.svelte';
 import type { CodeCopyButtonProps, CodeRootProps, CodeVariant } from './types';
 
 export const codeVariants = tv({
-  base: 'not-prose relative h-full overflow-auto rounded-lg border',
+  base: 'not-prose relative h-full overflow-auto rounded-3xl border my-4',
   variants: {
     variant: {
       default: 'border-border bg-card',

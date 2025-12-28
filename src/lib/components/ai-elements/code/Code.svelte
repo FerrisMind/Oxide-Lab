@@ -77,7 +77,7 @@
 
 <div {...rest} bind:this={ref} class={cn(codeVariants({ variant }), className)}>
   <!-- Header -->
-  <div class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-muted border-b border-border rounded-t-xl">
+  <div class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-muted border-b border-border rounded-t-3xl">
     <button 
       class="flex items-center justify-center p-1 bg-transparent border-none rounded text-muted-foreground cursor-pointer transition-colors hover:text-foreground hover:bg-accent" 
       onclick={toggleCollapse} 
@@ -95,7 +95,9 @@
           {@html iconSvg}
         </span>
       {/if}
-      <span class="text-xs sm:text-sm font-medium text-muted-foreground">{displayLang}</span>
+      {#if lang !== 'text' && displayLang}
+        <span class="text-xs sm:text-sm font-medium text-muted-foreground">{displayLang}</span>
+      {/if}
     </div>
     <div class="ml-auto flex items-center gap-1">
       <Button
@@ -165,7 +167,7 @@
 
   .ai-code-wrapper :global(pre.shiki) {
     overflow-x: auto;
-    border-radius: 0 0 0.75rem 0.75rem;
+    border-radius: 0 0 1.5rem 1.5rem;
     background: inherit;
     padding-top: 1rem;
     padding-bottom: 1rem;

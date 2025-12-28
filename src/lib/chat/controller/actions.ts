@@ -328,13 +328,16 @@ export function createActions(ctx: ChatControllerCtx) {
             await chatHistory.createSession(ctx.modelPath, ctx.repoId);
         }
 
-        // Save user message
+        // Save user message to DB
         await chatHistory.addMessage({ role: 'user', content: text });
+
+        // Add empty assistant message to DB (will be updated by listener on stream end)
+        await chatHistory.addMessage({ role: 'assistant', content: '', thinking: '' });
 
         // Update local context
         const msgs = ctx.messages;
         msgs.push({ role: 'user', content: text });
-        msgs.push({ role: 'assistant', content: '' });
+        msgs.push({ role: 'assistant', content: '', thinking: '', isThinking: false });
         ctx.messages = msgs;
 
         ctx.prompt = '';
@@ -444,20 +447,28 @@ export function createActions(ctx: ChatControllerCtx) {
             return;
         }
 
+        const { chatHistory } = await import('$lib/stores/chat-history');
+        const historyState = get(chatHistory);
+
         // Truncate messages to editIndex (inclusive) and update content
         const msgs = ctx.messages.slice(0, editIndex + 1);
         if (msgs[editIndex]) {
             msgs[editIndex].content = newContent;
         }
 
+        // Sync with database
+        if (historyState.currentSessionId) {
+            // Truncate in DB (keep messages up to editIndex + 1)
+            await chatHistory.truncateMessages(historyState.currentSessionId, editIndex + 1);
+            // Update the edited message content
+            await chatHistory.updateLastMessage(historyState.currentSessionId, newContent);
+            // Add new empty assistant message
+            await chatHistory.addMessage({ role: 'assistant', content: '', thinking: '' });
+        }
+
         // Add empty assistant message for the new response
         msgs.push({ role: 'assistant', content: '', html: '', thinking: '', isThinking: false });
         ctx.messages = msgs;
-
-        // Update database
-        const { chatHistory } = await import('$lib/stores/chat-history');
-        // Note: For full DB sync, you'd need to truncate and re-save messages in DB too
-        // For now, we just regenerate from the truncated history
 
         await generateFromHistoryWithIndex(editIndex);
     }
@@ -491,8 +502,20 @@ export function createActions(ctx: ChatControllerCtx) {
             return;
         }
 
+        const { chatHistory } = await import('$lib/stores/chat-history');
+        const historyState = get(chatHistory);
+
         // Truncate to include the user message, remove the assistant response
         const msgs = ctx.messages.slice(0, userIndex + 1);
+
+        // Sync with database
+        if (historyState.currentSessionId) {
+            // Truncate in DB (keep messages up to userIndex + 1)
+            await chatHistory.truncateMessages(historyState.currentSessionId, userIndex + 1);
+            // Add new empty assistant message
+            await chatHistory.addMessage({ role: 'assistant', content: '', thinking: '' });
+        }
+
         // Add empty assistant message for the new response
         msgs.push({ role: 'assistant', content: '', html: '', thinking: '', isThinking: false });
         ctx.messages = msgs;

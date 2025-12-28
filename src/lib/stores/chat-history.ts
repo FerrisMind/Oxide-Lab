@@ -1,11 +1,33 @@
 /**
  * Chat History Store
- * 
- * Manages chat sessions with SQLite persistence through Tauri.
+ *
+ * Manages chat sessions with SQLite persistence through tauri-plugin-sql.
+ * Provides reactive Svelte stores for sessions and messages.
  */
 
 import { writable, derived, get } from 'svelte/store';
 import type { ChatMessage } from './chat';
+
+const DB_NAME = 'sqlite:chat_history.db';
+
+// Types matching the SQLite schema
+export type DbSession = {
+    id: string;
+    title: string;
+    model_path: string | null;
+    repo_id: string | null;
+    created_at: number;
+    updated_at: number;
+};
+
+export type DbMessage = {
+    id: number;
+    session_id: string;
+    role: string;
+    content: string;
+    thinking: string;
+    created_at: number;
+};
 
 export type ChatSession = {
     id: string;
@@ -23,6 +45,31 @@ export type ChatHistoryState = {
     isInitialized: boolean;
 };
 
+// Lazy-load Database to avoid SSR issues
+let Database: typeof import('@tauri-apps/plugin-sql').default | null = null;
+let dbInstance: Awaited<ReturnType<typeof import('@tauri-apps/plugin-sql').default.load>> | null =
+    null;
+
+async function getDb() {
+    if (dbInstance) return dbInstance;
+
+    if (!Database) {
+        const mod = await import('@tauri-apps/plugin-sql');
+        Database = mod.default;
+    }
+
+    dbInstance = await Database.load(DB_NAME);
+    return dbInstance;
+}
+
+function dbMessageToChatMessage(msg: DbMessage): ChatMessage {
+    return {
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        thinking: msg.thinking || undefined,
+    };
+}
+
 function createChatHistoryStore() {
     const { subscribe, update, set } = writable<ChatHistoryState>({
         sessions: [],
@@ -33,33 +80,50 @@ function createChatHistoryStore() {
     return {
         subscribe,
 
-        // TODO: Integrate with Tauri backend
-        // Initialize database and migrate from localStorage
         init: async () => {
             try {
-                // TODO: Integrate with Tauri backend
-                // Command: Database.load('sqlite:chat_history.db')
-                // Then: SELECT * FROM sessions ORDER BY updated_at DESC
+                const db = await getDb();
 
-                // For now, initialize with empty state
-                update((s) => ({
-                    ...s,
-                    isInitialized: true,
-                    currentSessionId: null,
+                // Load all sessions
+                const rows = await db.select<DbSession[]>(
+                    'SELECT id, title, model_path, repo_id, created_at, updated_at FROM sessions ORDER BY updated_at DESC',
+                );
+
+                const sessions: ChatSession[] = rows.map((row) => ({
+                    id: row.id,
+                    title: row.title,
+                    modelPath: row.model_path ?? undefined,
+                    repoId: row.repo_id ?? undefined,
+                    createdAt: row.created_at,
+                    updatedAt: row.updated_at,
+                    messages: [],
                 }));
 
+                update((s) => ({
+                    ...s,
+                    sessions,
+                    isInitialized: true,
+                }));
             } catch (err) {
                 console.error('Failed to init chat database:', err);
+                update((s) => ({ ...s, isInitialized: true }));
             }
         },
 
-        createSession: async (modelPath?: string, repoId?: string) => {
+        createSession: async (modelPath?: string, repoId?: string): Promise<string> => {
             const id = crypto.randomUUID();
             const title = 'New chat';
             const now = Date.now();
 
-            // TODO: Integrate with Tauri backend
-            // Command: INSERT INTO sessions (id, title, model_path, repo_id, created_at, updated_at)
+            try {
+                const db = await getDb();
+                await db.execute(
+                    'INSERT INTO sessions (id, title, model_path, repo_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+                    [id, title, modelPath ?? null, repoId ?? null, now, now],
+                );
+            } catch (err) {
+                console.error('Failed to create session in DB:', err);
+            }
 
             update((s) => ({
                 ...s,
@@ -81,20 +145,51 @@ function createChatHistoryStore() {
             return id;
         },
 
-        loadSession: (sessionId: string) => {
+        loadSession: async (sessionId: string) => {
             update((s) => ({ ...s, currentSessionId: sessionId }));
+
+            try {
+                const db = await getDb();
+                const messages = await db.select<DbMessage[]>(
+                    'SELECT id, session_id, role, content, thinking, created_at FROM messages WHERE session_id = ? ORDER BY id ASC',
+                    [sessionId],
+                );
+
+                update((s) => {
+                    const sessions = s.sessions.map((sess) =>
+                        sess.id === sessionId
+                            ? { ...sess, messages: messages.map(dbMessageToChatMessage) }
+                            : sess,
+                    );
+                    return { ...s, sessions };
+                });
+            } catch (err) {
+                console.error('Failed to load session messages:', err);
+            }
         },
 
         addMessage: async (message: ChatMessage, sessionId?: string) => {
-            // TODO: Integrate with Tauri backend
-            // Command: INSERT INTO messages (session_id, role, content, created_at)
-
             const now = Date.now();
+            const state = get({ subscribe });
+            const targetSessionId = sessionId ?? state.currentSessionId;
+
+            if (!targetSessionId) return;
+
+            try {
+                const db = await getDb();
+                await db.execute(
+                    'INSERT INTO messages (session_id, role, content, thinking, created_at) VALUES (?, ?, ?, ?, ?)',
+                    [targetSessionId, message.role, message.content, message.thinking ?? '', now],
+                );
+                await db.execute('UPDATE sessions SET updated_at = ? WHERE id = ?', [
+                    now,
+                    targetSessionId,
+                ]);
+            } catch (err) {
+                console.error('Failed to add message to DB:', err);
+            }
 
             update((s) => {
-                const targetSessionId = sessionId ?? s.currentSessionId;
-                if (!targetSessionId) return s;
-
                 const sessions = s.sessions.map((sess) => {
                     if (sess.id !== targetSessionId) return sess;
 
@@ -102,6 +197,18 @@ function createChatHistoryStore() {
                     const titleFromMessage = isFirstUserMessage
                         ? message.content.substring(0, 50).split('\n')[0]
                         : sess.title;
+
+                    // Update title in DB if changed
+                    if (isFirstUserMessage && titleFromMessage !== sess.title) {
+                        getDb()
+                            .then((db) =>
+                                db.execute('UPDATE sessions SET title = ? WHERE id = ?', [
+                                    titleFromMessage,
+                                    targetSessionId,
+                                ]),
+                            )
+                            .catch(console.error);
+                    }
 
                     return {
                         ...sess,
@@ -115,14 +222,47 @@ function createChatHistoryStore() {
             });
         },
 
-        updateLastMessageOptimistic: (content: string) => {
+        updateLastMessage: async (sessionId: string, content: string, thinking?: string) => {
+            try {
+                const db = await getDb();
+                await db.execute(
+                    `UPDATE messages SET content = ?, thinking = ? 
+                     WHERE id = (SELECT MAX(id) FROM messages WHERE session_id = ?)`,
+                    [content, thinking ?? '', sessionId],
+                );
+            } catch (err) {
+                console.error('Failed to update last message in DB:', err);
+            }
+
+            update((s) => {
+                const sessions = s.sessions.map((sess) => {
+                    if (sess.id === sessionId && sess.messages.length > 0) {
+                        const msgs = [...sess.messages];
+                        msgs[msgs.length - 1] = {
+                            ...msgs[msgs.length - 1],
+                            content,
+                            thinking: thinking ?? msgs[msgs.length - 1].thinking,
+                        };
+                        return { ...sess, messages: msgs };
+                    }
+                    return sess;
+                });
+                return { ...s, sessions };
+            });
+        },
+
+        updateLastMessageOptimistic: (content: string, thinking?: string) => {
             update((s) => {
                 if (!s.currentSessionId) return s;
                 const sessions = s.sessions.map((sess) => {
                     if (sess.id === s.currentSessionId) {
                         const msgs = [...sess.messages];
                         if (msgs.length > 0) {
-                            msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content };
+                            msgs[msgs.length - 1] = {
+                                ...msgs[msgs.length - 1],
+                                content,
+                                thinking: thinking ?? msgs[msgs.length - 1].thinking,
+                            };
                         }
                         return { ...sess, messages: msgs };
                     }
@@ -132,15 +272,57 @@ function createChatHistoryStore() {
             });
         },
 
-        saveAssistantMessage: async (sessionId: string, content: string) => {
-            // TODO: Integrate with Tauri backend
-            // Command: INSERT INTO messages (session_id, role, content, created_at)
-            console.log(`Saving assistant message to session ${sessionId}`);
+        saveAssistantMessage: async (sessionId: string, content: string, thinking?: string) => {
+            try {
+                const db = await getDb();
+                const now = Date.now();
+                await db.execute(
+                    `UPDATE messages SET content = ?, thinking = ? 
+                     WHERE id = (SELECT MAX(id) FROM messages WHERE session_id = ?)`,
+                    [content, thinking ?? '', sessionId],
+                );
+                await db.execute('UPDATE sessions SET updated_at = ? WHERE id = ?', [now, sessionId]);
+            } catch (err) {
+                console.error('Failed to save assistant message:', err);
+            }
+        },
+
+        truncateMessages: async (sessionId: string, keepCount: number) => {
+            try {
+                const db = await getDb();
+                await db.execute(
+                    `DELETE FROM messages 
+                     WHERE session_id = ? 
+                     AND id NOT IN (
+                         SELECT id FROM messages 
+                         WHERE session_id = ? 
+                         ORDER BY id ASC 
+                         LIMIT ?
+                     )`,
+                    [sessionId, sessionId, keepCount],
+                );
+            } catch (err) {
+                console.error('Failed to truncate messages:', err);
+            }
+
+            update((s) => {
+                const sessions = s.sessions.map((sess) => {
+                    if (sess.id === sessionId) {
+                        return { ...sess, messages: sess.messages.slice(0, keepCount) };
+                    }
+                    return sess;
+                });
+                return { ...s, sessions };
+            });
         },
 
         deleteSession: async (sessionId: string) => {
-            // TODO: Integrate with Tauri backend
-            // Command: DELETE FROM sessions WHERE id = $1
+            try {
+                const db = await getDb();
+                await db.execute('DELETE FROM sessions WHERE id = ?', [sessionId]);
+            } catch (err) {
+                console.error('Failed to delete session from DB:', err);
+            }
 
             update((s) => {
                 const sessions = s.sessions.filter((sess) => sess.id !== sessionId);
@@ -153,20 +335,34 @@ function createChatHistoryStore() {
         },
 
         renameSession: async (sessionId: string, title: string) => {
-            // TODO: Integrate with Tauri backend
-            // Command: UPDATE sessions SET title = $1, updated_at = $2 WHERE id = $3
+            const now = Date.now();
+
+            try {
+                const db = await getDb();
+                await db.execute('UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?', [
+                    title,
+                    now,
+                    sessionId,
+                ]);
+            } catch (err) {
+                console.error('Failed to rename session in DB:', err);
+            }
 
             update((s) => ({
                 ...s,
                 sessions: s.sessions.map((sess) =>
-                    sess.id === sessionId ? { ...sess, title, updatedAt: Date.now() } : sess,
+                    sess.id === sessionId ? { ...sess, title, updatedAt: now } : sess,
                 ),
             }));
         },
 
         clearAll: async () => {
-            // TODO: Integrate with Tauri backend
-            // Command: DELETE FROM sessions
+            try {
+                const db = await getDb();
+                await db.execute('DELETE FROM sessions');
+            } catch (err) {
+                console.error('Failed to clear chat history:', err);
+            }
 
             update((s) => ({ ...s, sessions: [], currentSessionId: null }));
         },
@@ -193,6 +389,31 @@ export const currentSession = derived(chatHistory, ($h) => {
 
 export const sortedSessions = derived(chatHistory, ($h) => {
     return [...$h.sessions].sort((a, b) => b.updatedAt - a.updatedAt);
+});
+
+// Group sessions by time period (like Ollama)
+export const groupedSessions = derived(sortedSessions, ($sessions) => {
+    const now = Date.now();
+    const todayStart = new Date().setHours(0, 0, 0, 0);
+    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+
+    const groups = {
+        today: [] as ChatSession[],
+        thisWeek: [] as ChatSession[],
+        older: [] as ChatSession[],
+    };
+
+    for (const session of $sessions) {
+        if (session.updatedAt >= todayStart) {
+            groups.today.push(session);
+        } else if (session.updatedAt >= weekAgo) {
+            groups.thisWeek.push(session);
+        } else {
+            groups.older.push(session);
+        }
+    }
+
+    return groups;
 });
 
 // Auto-initialize on client side

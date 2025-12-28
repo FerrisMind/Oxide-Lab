@@ -3,6 +3,10 @@
         "title": "Modelo não carregado",
         "description": "Carregue um modelo para começar a conversar"
     },
+    "notice": {
+        "selectModel": "Selecione um modelo para começar a conversar",
+        "startConversation": "Inicie uma conversa"
+    },
     "composer": {
         "placeholder": "Escreva uma mensagem...",
         "placeholderNotLoaded": "Carregue um modelo para começar a conversar",
@@ -79,7 +83,10 @@
     },
     "thinking": {
         "loading": "Raciocinando…",
-        "ready": "Pensamentos"
+        "ready": "Pensamentos",
+        "thinking": "Pensando",
+        "thoughtMoment": "Pensou por um momento",
+        "thoughtSeconds": "Pensou por {seconds} segundos"
     },
     "errors": {
         "loadFailed": "Erro ao carregar modelo",

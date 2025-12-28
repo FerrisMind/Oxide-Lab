@@ -23,6 +23,11 @@
         "downloads": "Downloads",
         "about": "Sobre"
     },
+    "groups": {
+        "today": "Hoje",
+        "thisWeek": "Esta Semana",
+        "older": "Mais Antigos"
+    },
     "brand": {
         "home": "Início"
     }

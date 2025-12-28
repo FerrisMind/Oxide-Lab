@@ -27,7 +27,7 @@
   } from '$lib/stores/download-manager';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   import { t, locale } from '$lib/i18n';
-  import { chatHistory, sortedSessions, currentSession } from '$lib/stores/chat-history';
+  import { chatHistory, groupedSessions, currentSession } from '$lib/stores/chat-history';
 
   // Get sidebar state
   const sidebar = useSidebar();
@@ -84,9 +84,18 @@
 
   // Translated labels
   let newChatLabel = $derived(currentLocale ? $t('sidebar.newChat') : 'New Chat');
-  let chatsLabel = $derived(currentLocale ? $t('sidebar.chats') : 'Chats');
+  let todayLabel = $derived(currentLocale ? $t('sidebar.groups.today') : 'Today');
+  let thisWeekLabel = $derived(currentLocale ? $t('sidebar.groups.thisWeek') : 'This Week');
+  let olderLabel = $derived(currentLocale ? $t('sidebar.groups.older') : 'Older');
   let downloadsLabel = $derived(currentLocale ? $t('sidebar.footer.downloads') : 'Downloads');
   let aboutLabel = $derived(currentLocale ? $t('sidebar.footer.about') : 'About');
+
+  // Check if any groups have sessions
+  let hasAnySessions = $derived(
+    $groupedSessions.today.length > 0 ||
+      $groupedSessions.thisWeek.length > 0 ||
+      $groupedSessions.older.length > 0,
+  );
 
   onMount(() => {
     void ensureDownloadManager();
@@ -190,27 +199,74 @@
     </Sidebar.Group>
 
     <!-- Chats History (hidden when collapsed) -->
-    {#if sidebar.state !== 'collapsed'}
+    {#if sidebar.state !== 'collapsed' && hasAnySessions}
       <Sidebar.Group class="flex-1 min-h-0 flex flex-col">
-        <Sidebar.GroupLabel>{chatsLabel}</Sidebar.GroupLabel>
         <Sidebar.GroupContent class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-          <Sidebar.Menu>
-            {#each $sortedSessions as session (session.id)}
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton isActive={$currentSession?.id === session.id}>
-                  {#snippet child({ props })}
-                    <button
-                      {...props}
-                      onclick={() => handleLoadSession(session.id)}
-                      class="w-full text-left truncate"
-                    >
-                      <span>{session.title || 'Untitled Chat'}</span>
-                    </button>
-                  {/snippet}
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
-            {/each}
-          </Sidebar.Menu>
+          <!-- Today -->
+          {#if $groupedSessions.today.length > 0}
+            <div class="px-2 py-1.5 text-xs font-medium text-sidebar-foreground/50">{todayLabel}</div>
+            <Sidebar.Menu>
+              {#each $groupedSessions.today as session (session.id)}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton isActive={$currentSession?.id === session.id}>
+                    {#snippet child({ props })}
+                      <button
+                        {...props}
+                        onclick={() => handleLoadSession(session.id)}
+                        class="w-full text-left truncate"
+                      >
+                        <span>{session.title || 'Untitled Chat'}</span>
+                      </button>
+                    {/snippet}
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              {/each}
+            </Sidebar.Menu>
+          {/if}
+
+          <!-- This Week -->
+          {#if $groupedSessions.thisWeek.length > 0}
+            <div class="px-2 py-1.5 text-xs font-medium text-sidebar-foreground/50 mt-2">{thisWeekLabel}</div>
+            <Sidebar.Menu>
+              {#each $groupedSessions.thisWeek as session (session.id)}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton isActive={$currentSession?.id === session.id}>
+                    {#snippet child({ props })}
+                      <button
+                        {...props}
+                        onclick={() => handleLoadSession(session.id)}
+                        class="w-full text-left truncate"
+                      >
+                        <span>{session.title || 'Untitled Chat'}</span>
+                      </button>
+                    {/snippet}
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              {/each}
+            </Sidebar.Menu>
+          {/if}
+
+          <!-- Older -->
+          {#if $groupedSessions.older.length > 0}
+            <div class="px-2 py-1.5 text-xs font-medium text-sidebar-foreground/50 mt-2">{olderLabel}</div>
+            <Sidebar.Menu>
+              {#each $groupedSessions.older as session (session.id)}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton isActive={$currentSession?.id === session.id}>
+                    {#snippet child({ props })}
+                      <button
+                        {...props}
+                        onclick={() => handleLoadSession(session.id)}
+                        class="w-full text-left truncate"
+                      >
+                        <span>{session.title || 'Untitled Chat'}</span>
+                      </button>
+                    {/snippet}
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              {/each}
+            </Sidebar.Menu>
+          {/if}
         </Sidebar.GroupContent>
       </Sidebar.Group>
     {/if}

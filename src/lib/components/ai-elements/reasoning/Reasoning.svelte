@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { cn } from "$lib/components/ai-elements/markdown/utils/utils";
 	import { watch } from "runed";
-	import { Collapsible } from "$lib/components/ui/collapsible/index.js";
 	import { ReasoningContext, setReasoningContext } from "./reasoning-context.svelte";
+	import Shimmer from "$lib/components/ai-elements/shimmer/Shimmer.svelte";
+	import CaretRight from "phosphor-svelte/lib/CaretRight";
+	import CaretDown from "phosphor-svelte/lib/CaretDown";
+	import Brain from "phosphor-svelte/lib/Brain";
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		class?: string;
@@ -18,14 +22,13 @@
 		class: className = "",
 		isStreaming = false,
 		open = $bindable(),
-		defaultOpen = true,
+		defaultOpen = false,
 		onOpenChange,
 		duration = $bindable(),
 		children,
 		...props
 	}: Props = $props();
 
-	let AUTO_CLOSE_DELAY = 1000;
 	let MS_IN_S = 1000;
 
 	// Create the reasoning context
@@ -35,13 +38,13 @@
 		duration: duration ?? 0,
 	});
 
-	// Set up controllable state for open
+	// Set up controllable state
 	let isOpen = $state(open ?? defaultOpen);
 	let currentDuration = $state(duration ?? 0);
-	let hasAutoClosed = $state(false);
+	let hasUserInteracted = $state(false);
 	let startTime = $state<number | null>(null);
 
-	// Sync external props to context and local state
+	// Sync external props to context
 	$effect(() => {
 		reasoningContext.isStreaming = isStreaming;
 	});
@@ -60,7 +63,7 @@
 		}
 	});
 
-	// Track duration when streaming starts and ends
+	// Track duration
 	watch(
 		() => isStreaming,
 		(isStreamingValue) => {
@@ -68,6 +71,7 @@
 				if (startTime === null) {
 					startTime = Date.now();
 				}
+				hasUserInteracted = false;
 			} else if (startTime !== null) {
 				let newDuration = Math.ceil((Date.now() - startTime) / MS_IN_S);
 				currentDuration = newDuration;
@@ -76,46 +80,83 @@
 					duration = newDuration;
 				}
 				startTime = null;
+				
+				// Auto-collapse
+				if (!hasUserInteracted) {
+					isOpen = false;
+					reasoningContext.setIsOpen(false);
+					onOpenChange?.(false);
+				}
 			}
 		}
 	);
 
-	// Auto-open when streaming starts, auto-close when streaming ends (once only)
-	watch(
-		() => [isStreaming, isOpen, defaultOpen, hasAutoClosed] as const,
-		([isStreamingValue, isOpenValue, defaultOpenValue, hasAutoClosedValue]) => {
-			if (defaultOpenValue && !isStreamingValue && isOpenValue && !hasAutoClosedValue) {
-				// Add a small delay before closing to allow user to see the content
-				let timer = setTimeout(() => {
-					handleOpenChange(false);
-					hasAutoClosed = true;
-				}, AUTO_CLOSE_DELAY);
-
-				return () => clearTimeout(timer);
-			}
-		}
-	);
-
-	let handleOpenChange = (newOpen: boolean) => {
-		isOpen = newOpen;
-		reasoningContext.setIsOpen(newOpen);
-
+	function handleToggle() {
+		isOpen = !isOpen;
+		reasoningContext.setIsOpen(isOpen);
+		hasUserInteracted = true;
 		if (open !== undefined) {
-			open = newOpen;
+			open = isOpen;
 		}
+		onOpenChange?.(isOpen);
+	}
 
-		onOpenChange?.(newOpen);
-	};
+	// Text for trigger (with i18n)
+	let triggerText = $derived.by(() => {
+		if (isStreaming) return $t('chat.thinking.thinking') || 'Thinking';
+		if (currentDuration < 2) return $t('chat.thinking.thoughtMoment') || 'Thought for a moment';
+		return $t('chat.thinking.thoughtSeconds', { seconds: currentDuration }) || `Thought for ${currentDuration} seconds`;
+	});
 
-	// Set the context for child components
 	setReasoningContext(reasoningContext);
 </script>
 
-<Collapsible
-	class={cn("not-prose mb-4", className)}
-	bind:open={isOpen}
-	onOpenChange={handleOpenChange}
+<div
+	class={cn("not-prose mb-4 flex flex-col w-full", className)}
+	data-state={isOpen ? "open" : "closed"}
 	{...props}
 >
+	<!-- Trigger -->
+	<button
+		type="button"
+		class={cn(
+			"group/trigger flex items-center gap-1.5 self-start text-sm transition-colors",
+			isStreaming || isOpen
+				? "text-foreground"
+				: "text-muted-foreground hover:text-foreground"
+		)}
+		onclick={handleToggle}
+	>
+		<!-- Icon container with hover effect -->
+		<span class="relative w-4 h-4 flex items-center justify-center">
+			{#if isStreaming}
+				<Brain size={16} weight="fill" />
+			{:else if isOpen}
+				<CaretDown size={16} weight="bold" />
+			{:else}
+				<!-- Brain visible by default, caret on hover -->
+				<Brain 
+					size={16} 
+					weight="regular" 
+					class="absolute transition-opacity opacity-100 group-hover/trigger:opacity-0" 
+				/>
+				<CaretRight 
+					size={16} 
+					weight="bold" 
+					class="absolute transition-opacity opacity-0 group-hover/trigger:opacity-100" 
+				/>
+			{/if}
+		</span>
+		
+		{#if isStreaming}
+			<Shimmer as="span" duration={2} spread={1.5} content_length={triggerText.length}>
+				{triggerText}...
+			</Shimmer>
+		{:else}
+			<span>{triggerText}</span>
+		{/if}
+	</button>
+
+	<!-- Content -->
 	{@render children?.()}
-</Collapsible>
+</div>

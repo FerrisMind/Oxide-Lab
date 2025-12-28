@@ -254,6 +254,7 @@
 
 /* Table scroll - scrollbar starts below sticky header */
 .table-scroll::-webkit-scrollbar-track {
+    background: transparent;
     margin-top: 40px; /* Height of sticky header */
 }
 

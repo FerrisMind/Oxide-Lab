@@ -3,6 +3,10 @@
         "title": "Model not loaded",
         "description": "Load a model to start chatting"
     },
+    "notice": {
+        "selectModel": "Select a model to start chatting",
+        "startConversation": "Start a conversation"
+    },
     "composer": {
         "placeholder": "Write a message...",
         "placeholderNotLoaded": "Load a model to start chatting...",
@@ -79,7 +83,10 @@
     },
     "thinking": {
         "loading": "Reasoning…",
-        "ready": "Thoughts"
+        "ready": "Thoughts",
+        "thinking": "Thinking",
+        "thoughtMoment": "Thought for a moment",
+        "thoughtSeconds": "Thought for {seconds} seconds"
     },
     "errors": {
         "loadFailed": "Model load error",

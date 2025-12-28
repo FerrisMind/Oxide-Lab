@@ -3,6 +3,10 @@
         "title": "Модель не загружена",
         "description": "Загрузите модель, чтобы начать общение"
     },
+    "notice": {
+        "selectModel": "Выберите модель для начала чата",
+        "startConversation": "Начните разговор"
+    },
     "composer": {
         "placeholder": "Напишите сообщение...",
         "placeholderNotLoaded": "Загрузите модель, чтобы начать чат",
@@ -79,7 +83,10 @@
     },
     "thinking": {
         "loading": "Рассуждения…",
-        "ready": "Размышления"
+        "ready": "Размышления",
+        "thinking": "Думаю",
+        "thoughtMoment": "Подумал мгновение",
+        "thoughtSeconds": "Думал {seconds} сек."
     },
     "errors": {
         "loadFailed": "Ошибка загрузки модели",

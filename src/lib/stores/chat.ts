@@ -12,6 +12,8 @@ export type ChatMessage = {
     role: Role;
     content: string;
     html?: string;
+    thinking?: string;
+    isThinking?: boolean;
 };
 
 export type ChatPersistedState = {
