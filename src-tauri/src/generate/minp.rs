@@ -34,49 +34,55 @@ impl MinPFilter {
             }
             return Ok(logits.clone());
         }
-        let vals: Vec<f32> = logits.to_vec1::<f32>().map_err(|e| e.to_string())?;
-        if vals.is_empty() {
-            return Ok(logits.clone());
-        }
-        let mut max_val = f32::NEG_INFINITY;
-        let mut second_val = f32::NEG_INFINITY;
-        for &v in &vals {
-            if v > max_val {
-                second_val = max_val;
-                max_val = v;
-            } else if v > second_val {
-                second_val = v;
-            }
-        }
-        let threshold = max_val + self.temperature * (min_p.ln());
-        let mut kept = 0usize;
-        let masked: Vec<f32> = vals
-            .into_iter()
-            .map(|v| {
-                if v >= threshold {
-                    kept += 1;
-                    v
-                } else {
-                    f32::NEG_INFINITY
-                }
-            })
-            .collect();
+
+        // Use tensor operations instead of to_vec1() for GPU efficiency
+        let max_val = logits.max(0).map_err(|e| e.to_string())?;
+        let threshold_scalar = self.temperature * min_p.ln();
+        let threshold = (&max_val + threshold_scalar as f64).map_err(|e| e.to_string())?;
+
+        // Create mask: logits >= threshold
+        let mask = logits.ge(&threshold).map_err(|e| e.to_string())?;
+
+        // Create neg_infinity tensor for masked values
+        let neg_inf = Tensor::new(f32::NEG_INFINITY, logits.device())
+            .map_err(|e| e.to_string())?
+            .broadcast_as(logits.shape())
+            .map_err(|e| e.to_string())?;
+
+        // Apply mask: keep original where true, neg_infinity where false
+        let result = mask
+            .where_cond(logits, &neg_inf)
+            .map_err(|e| e.to_string())?;
+
         if self.log_prints < 5 {
-            let delta = max_val - threshold;
-            let gap12 = max_val - second_val;
+            // For logging, we still need to materialize some values
+            let max_f32: f32 = max_val.to_scalar().map_err(|e| e.to_string())?;
+            let threshold_f32 = max_f32 + threshold_scalar;
+            let delta = max_f32 - threshold_f32;
+
+            // Count kept tokens (requires CPU sync, done only for logging)
+            let kept: u32 = mask
+                .to_dtype(candle::DType::U32)
+                .map_err(|e| e.to_string())?
+                .sum_all()
+                .map_err(|e| e.to_string())?
+                .to_scalar()
+                .map_err(|e| e.to_string())?;
+            let total = logits.elem_count();
+
             log_infer!(
-                "min_p applied: p={:.3}, temp={:.3}, max={:.4}, threshold={:.4}, delta={:.4}, gap12={:.4}, kept={} of {}",
+                "min_p applied: p={:.3}, temp={:.3}, max={:.4}, threshold={:.4}, delta={:.4}, kept={} of {}",
                 min_p,
                 self.temperature,
-                max_val,
-                threshold,
+                max_f32,
+                threshold_f32,
                 delta,
-                gap12,
                 kept,
-                masked.len()
+                total
             );
             self.log_prints += 1;
         }
-        Tensor::new(masked.as_slice(), logits.device()).map_err(|e| e.to_string())
+
+        Ok(result)
     }
 }

@@ -1,6 +1,41 @@
 use crate::core::thread_priority::set_current_thread_below_normal;
+use std::sync::LazyLock;
+
+/// Sets platform-specific thread affinity/priority for inference threads.
+///
+/// - macOS: Uses QOS_CLASS_USER_INTERACTIVE for P-core scheduling
+/// - Windows: Uses default priority (inference pool uses normal priority for max performance)
+/// - Other platforms: No-op
+#[cfg(target_os = "macos")]
+unsafe fn set_inference_thread_affinity() {
+    // USER_INTERACTIVE has the highest scheduling priority that user code
+    // can request and is most likely to be scheduled on P-cores.
+    use libc::{pthread_set_qos_class_self_np, qos_class_t::QOS_CLASS_USER_INTERACTIVE};
+    pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
+}
+
+#[cfg(not(target_os = "macos"))]
+#[inline(always)]
+unsafe fn set_inference_thread_affinity() {
+    // On non-macOS platforms we leave affinity untouched for inference pool
+}
+
+/// High-priority rayon pool for inference tasks.
+/// Uses platform-specific optimizations:
+/// - macOS: P-core affinity
+/// - Other platforms: Default thread scheduling
+pub static INFERENCE_POOL: LazyLock<rayon::ThreadPool> = LazyLock::new(|| {
+    rayon::ThreadPoolBuilder::new()
+        .thread_name(|idx| format!("oxide-inference-{}", idx))
+        .start_handler(|_| unsafe {
+            set_inference_thread_affinity();
+        })
+        .build()
+        .expect("Failed to build inference Rayon thread pool")
+});
 
 /// Initializes the global Rayon thread pool with a low-priority start handler.
+/// This pool is used for background tasks that shouldn't compete with inference.
 ///
 /// Returns `Ok(true)` if the global pool was initialized by this call, or `Ok(false)` if it
 /// was already initialized elsewhere.
@@ -37,5 +72,12 @@ mod tests {
         let res = init_global_low_priority_pool(2).unwrap();
         // Either we init it here, or something else already did.
         assert!(res == true || res == false);
+    }
+
+    #[test]
+    fn inference_pool_can_be_accessed() {
+        // Force lazy initialization
+        let pool = &*INFERENCE_POOL;
+        assert!(pool.current_num_threads() > 0);
     }
 }

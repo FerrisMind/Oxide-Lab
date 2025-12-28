@@ -6,6 +6,7 @@ use std::io::{Read, Seek};
 /// Wrapper around candle_transformers' quantized Qwen3 implementation
 pub struct ModelWeights {
     inner: candle_transformers::models::quantized_qwen3::ModelWeights,
+    span_forward: tracing::Span,
 }
 
 impl ModelWeights {
@@ -29,12 +30,17 @@ impl ModelWeights {
                 error_msg
             }
         })?;
-        Ok(ModelWeights { inner: cw })
+        let span_forward = tracing::span!(tracing::Level::TRACE, "qwen3_forward");
+        Ok(ModelWeights {
+            inner: cw,
+            span_forward,
+        })
     }
 }
 
 impl crate::models::common::model::ModelBackend for ModelWeights {
     fn forward_layered(&mut self, input: &Tensor, position: usize) -> Result<Tensor, String> {
+        let _enter = self.span_forward.enter();
         self.inner
             .forward(input, position)
             .map_err(|e| e.to_string())

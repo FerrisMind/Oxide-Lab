@@ -47,8 +47,11 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 tracing-chrome = "0.7"
 tauri-plugin-sql = { version = "2.0", features = ["sqlite"] }
-quick-xml = "0.38"
 
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_System_Threading"] }
 
 [features]
@@ -91,3 +94,8 @@ debug-assertions = true
 
 [profile.dev.package."*"]
 debug-assertions = false
+
+# Optimized build with debug symbols for profiling
+[profile.release-with-debug]
+inherits = "release"
+debug = true

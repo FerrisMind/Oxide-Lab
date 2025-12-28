@@ -4,7 +4,7 @@ use std::sync::Mutex;
 
 use byteorder::ByteOrder;
 use candle::{Device, IndexOp, Tensor};
-use candle_nn::ops::softmax;
+use candle_nn::ops::softmax_last_dim;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
@@ -514,7 +514,7 @@ fn detect_language(
     let logits = logits
         .index_select(&language_token_ids, 0)
         .map_err(|e| format!("{e}"))?;
-    let probs = softmax(&logits, candle::D::Minus1)
+    let probs = softmax_last_dim(&logits)
         .map_err(|e| format!("{e}"))?
         .to_vec1::<f32>()
         .map_err(|e| format!("{e}"))?;

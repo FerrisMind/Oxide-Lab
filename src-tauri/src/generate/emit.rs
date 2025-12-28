@@ -4,6 +4,10 @@ use tauri::Emitter;
 use crate::core::types::StreamMessage;
 use crate::generate::thinking_parser::ParsedChunk;
 
+const DEFAULT_EMIT_INTERVAL_MS: u64 = 16;
+const MAX_CHUNK_LEN: usize = 2048;
+const BUFFER_INITIAL_CAPACITY: usize = 512;
+
 pub struct ChunkEmitter {
     app: tauri::AppHandle,
     buffer: String,
@@ -11,7 +15,6 @@ pub struct ChunkEmitter {
     content_buffer: String,
     last_emit_at: Instant,
     emit_interval: Duration,
-    max_chunk_len: usize,
     done_emitted: bool,
 }
 
@@ -19,12 +22,11 @@ impl ChunkEmitter {
     pub fn new(app: tauri::AppHandle) -> Self {
         Self {
             app,
-            buffer: String::new(),
-            thinking_buffer: String::new(),
-            content_buffer: String::new(),
+            buffer: String::with_capacity(BUFFER_INITIAL_CAPACITY),
+            thinking_buffer: String::with_capacity(BUFFER_INITIAL_CAPACITY),
+            content_buffer: String::with_capacity(BUFFER_INITIAL_CAPACITY),
             last_emit_at: Instant::now(),
-            emit_interval: Duration::from_millis(16),
-            max_chunk_len: 2048,
+            emit_interval: Duration::from_millis(DEFAULT_EMIT_INTERVAL_MS),
             done_emitted: false,
         }
     }
@@ -36,7 +38,7 @@ impl ChunkEmitter {
         }
         self.buffer.push_str(text);
         let elapsed = self.last_emit_at.elapsed();
-        if elapsed >= self.emit_interval || self.buffer.len() >= self.max_chunk_len {
+        if elapsed >= self.emit_interval || self.buffer.len() >= MAX_CHUNK_LEN {
             let chunk = std::mem::take(&mut self.buffer);
             if !chunk.is_empty() {
                 let _ = self.app.emit("token", chunk);
@@ -57,7 +59,7 @@ impl ChunkEmitter {
         let elapsed = self.last_emit_at.elapsed();
         let total_len = self.thinking_buffer.len() + self.content_buffer.len();
 
-        if elapsed >= self.emit_interval || total_len >= self.max_chunk_len {
+        if elapsed >= self.emit_interval || total_len >= MAX_CHUNK_LEN {
             self.flush_message();
         }
     }

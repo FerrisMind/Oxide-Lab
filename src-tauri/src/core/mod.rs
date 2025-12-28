@@ -16,3 +16,5 @@ pub mod attachments_text;
 pub mod background_mode;
 pub mod rayon_pool;
 pub mod thread_priority;
+
+pub use rayon_pool::INFERENCE_POOL;

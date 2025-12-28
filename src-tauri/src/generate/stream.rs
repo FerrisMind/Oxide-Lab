@@ -412,10 +412,16 @@ fn generate_stream_impl(
         model.clear_kv_cache();
     }
 
-    // Финализируем метрики inference
-    let inference_metrics = tokio::runtime::Runtime::new()
-        .map_err(|e| e.to_string())?
-        .block_on(async { inference_tracker.finish().await });
+    // Финализируем метрики inference - используем существующий runtime если доступен
+    let inference_metrics = match tokio::runtime::Handle::try_current() {
+        Ok(handle) => handle.block_on(async { inference_tracker.finish().await }),
+        Err(_) => {
+            // Fallback: создаём новый runtime только если текущий недоступен
+            tokio::runtime::Runtime::new()
+                .map_err(|e| e.to_string())?
+                .block_on(async { inference_tracker.finish().await })
+        }
+    };
 
     log_infer!(
         "Метрики inference: prompt_tokens={}, generated_tokens={}, total_time={}ms, tokens/sec={:.2}, memory={:.2}MB",

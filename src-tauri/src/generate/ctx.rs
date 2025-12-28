@@ -8,10 +8,12 @@ impl ContextSlice {
     pub fn new(full_context_tokens: Vec<u32>, limit: usize) -> Self {
         let encoded_len = full_context_tokens.len();
         let effective_context_tokens = if encoded_len > limit && limit > 0 {
-            let start = encoded_len - limit;
-            full_context_tokens[start..].to_vec()
+            // Efficient truncation: skip first N tokens, collect rest
+            let skip = encoded_len - limit;
+            full_context_tokens.into_iter().skip(skip).collect()
         } else {
-            full_context_tokens.clone()
+            // No truncation needed, consume vec directly
+            full_context_tokens
         };
         let base_context_len = effective_context_tokens.len();
         Self {

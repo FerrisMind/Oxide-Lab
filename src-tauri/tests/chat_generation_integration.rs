@@ -32,6 +32,7 @@ fn test_generate_request_with_chat_messages() {
         split_prompt: None,
         verbose_prompt: None,
         tracing: None,
+        edit_index: None,
     };
 
     assert_eq!(req.prompt, "Direct prompt");
@@ -58,6 +59,7 @@ fn test_generate_request_without_chat_messages() {
         split_prompt: None,
         verbose_prompt: None,
         tracing: None,
+        edit_index: None,
     };
 
     assert_eq!(req.prompt, "Direct prompt");
