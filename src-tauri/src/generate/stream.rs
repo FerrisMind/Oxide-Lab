@@ -1,10 +1,13 @@
 use candle::{DType, Tensor};
-use tauri::Emitter;
+// use tauri::Emitter; // Removed
 
 use super::cancel::CANCEL_GENERATION;
 use super::{
-    ctx::ContextSlice, emit::ChunkEmitter, minp::MinPFilter,
-    sampling::build_logits_processor_from_options, thinking_parser::ThinkingParser,
+    ctx::ContextSlice,
+    emit::{ChunkEmitter, EmissionBackend, GenerationEvent, TauriBackend},
+    minp::MinPFilter,
+    sampling::build_logits_processor_from_options,
+    thinking_parser::ThinkingParser,
     tool_call_parser::ToolCallParser,
 };
 use crate::core::attachments_text::gather_text_from_attachments;
@@ -34,10 +37,19 @@ pub async fn generate_stream_cmd(
         .map_err(|e| e.to_string())?
 }
 
-fn generate_stream_impl(
+pub fn generate_stream_impl(
     app: tauri::AppHandle,
     state: SharedState<Box<dyn ModelBackend + Send>>,
     req: GenerateRequest,
+) -> Result<(), String> {
+    let backend = Box::new(TauriBackend::new(app));
+    generate_stream_with_backend(state, req, backend)
+}
+
+pub fn generate_stream_with_backend(
+    state: SharedState<Box<dyn ModelBackend + Send>>,
+    req: GenerateRequest,
+    backend: Box<dyn EmissionBackend>,
 ) -> Result<(), String> {
     let _trace_guard = if req.tracing.unwrap_or(false) {
         let (chrome_layer, guard) = tracing_chrome::ChromeLayerBuilder::new().build();
@@ -100,7 +112,7 @@ fn generate_stream_impl(
         req.repeat_last_n,
         req.use_custom_params
     );
-    let _ = app.emit("token", String::new());
+    backend.emit(GenerationEvent::Token(String::new())); // Keep this direct emit for now as it's separate from generation loop
 
     // Текстовые вложения (.txt/.md): читаем и подмешиваем в последний user или в prompt
     let mut msgs = req.messages.clone();
@@ -132,9 +144,97 @@ fn generate_stream_impl(
         }
     }
 
-    // Используем либо чат, либо чистый prompt
+    // Determine limit for prompt: context_length - reservation
+    // This ensures we always have space for generation.
+    let reserve_default = 512;
+    let limit_reserve = (guard.context_length as f64 * 0.4) as usize;
+    let generation_reserve = req
+        .max_new_tokens
+        .unwrap_or(reserve_default)
+        .min(limit_reserve)
+        .max(64);
+    let prompt_limit = guard
+        .context_length
+        .saturating_sub(generation_reserve)
+        .max(1);
+
+    // Ollama-style "smart" truncation:
+    // 1. Always keep System Prompt (if present).
+    // 2. Always keep Last Message (if possible).
+    // 3. Fill remaining space with history from newest to oldest.
     let prompt = if let Some(messages) = msgs {
-        build_prompt_with_template_bos(&guard.chat_template, messages, bos_opt)?
+        if messages.is_empty() {
+            String::new()
+        } else {
+            // Extract system messages
+            let system_msgs: Vec<ChatMessage> = messages
+                .iter()
+                .filter(|m| m.role == "system")
+                .cloned()
+                .collect();
+
+            // All non-system messages
+            let other_msgs: Vec<ChatMessage> = messages
+                .iter()
+                .filter(|m| m.role != "system")
+                .cloned()
+                .collect();
+
+            if other_msgs.is_empty() {
+                // Only system messages?
+                build_prompt_with_template_bos(&guard.chat_template, system_msgs, bos_opt.clone())?
+            } else {
+                // Try to fit as many recent messages as possible
+                let mut best_prompt = String::new();
+                let n = other_msgs.len();
+
+                // Try from including ALL to including ONLY LAST
+                // Note: Ollama goes from n-1 down to 0 (including i..end).
+                // We do the same.
+                for i in 0..n {
+                    let subset_others = &other_msgs[i..]; // suffix starting at i
+                    let mut candidate_msgs = system_msgs.clone();
+                    candidate_msgs.extend_from_slice(subset_others);
+
+                    let p = build_prompt_with_template_bos(
+                        &guard.chat_template,
+                        candidate_msgs,
+                        bos_opt.clone(),
+                    )?;
+
+                    // Check length (expensive but necessary for correct truncation)
+                    let encoded = tos
+                        .tokenizer()
+                        .encode(p.clone(), true)
+                        .map_err(|e| e.to_string())?;
+                    if encoded.get_ids().len() <= prompt_limit {
+                        best_prompt = p;
+                        break; // We found the largest suffix that fits (since we started with longest? NO)
+                    // Wait, if we want the largest suffix, we should start with i=0 (longest) and increment i (shorten) until it fits.
+                    // Correct. i=0 means ALL messages. If it fits, we are good. break.
+                    // If not, i=1 (drop oldest).
+                    } else if i == n - 1 {
+                        // Even the last message + system doesn't fit!
+                        // We must use it and let it be truncated by raw token limit later if needed,
+                        // OR we force it (user wants last message).
+                        // We set best_prompt to this minimal set.
+                        best_prompt = p;
+                    }
+                }
+
+                // If best_prompt is still empty (shouldn't happen logic above covers it), default to last msg
+                if best_prompt.is_empty() {
+                    let mut minimal = system_msgs.clone();
+                    minimal.push(other_msgs.last().unwrap().clone());
+                    best_prompt = build_prompt_with_template_bos(
+                        &guard.chat_template,
+                        minimal,
+                        bos_opt.clone(),
+                    )?;
+                }
+                best_prompt
+            }
+        }
     } else {
         prompt_str
     };
@@ -147,6 +247,7 @@ fn generate_stream_impl(
         .encode(prompt, true)
         .map_err(|e| e.to_string())?;
     let full_context_tokens = tokens.get_ids().to_vec();
+
     if req.verbose_prompt.unwrap_or(false) {
         let toks = tokens.get_tokens();
         let ids = tokens.get_ids();
@@ -155,7 +256,7 @@ fn generate_stream_impl(
             let t = tok.replace('▁', " ").replace("<0x0A>", "\n");
             dump.push_str(&format!("{id:7} -> '{t}'\n"));
         }
-        let _ = app.emit("prompt_tokens_dump", dump);
+        backend.emit(GenerationEvent::PromptDump(dump));
     }
     {
         let mut sample: Vec<u32> = full_context_tokens.iter().copied().take(16).collect();
@@ -164,7 +265,8 @@ fn generate_stream_impl(
         }
         log_infer!("encoded token ids (first ~16): {:?}", sample);
     }
-    let ctx_slice = ContextSlice::new(full_context_tokens.clone(), guard.context_length.max(1));
+
+    let ctx_slice = ContextSlice::new(full_context_tokens.clone(), prompt_limit);
     let effective_context_tokens: Vec<u32> = ctx_slice.effective_context_tokens.clone();
 
     // Создаём трекер inference
@@ -298,7 +400,8 @@ fn generate_stream_impl(
     // Начинаем generation
     inference_tracker.start_generation();
 
-    let mut emitter = ChunkEmitter::new(app.clone());
+    let mut emitter = ChunkEmitter::new(backend);
+
     emitter.emit_start(); // Signal frontend to create assistant message
 
     log::debug!("[stream] starts_in_thinking: {}", starts_in_thinking);
@@ -462,7 +565,7 @@ fn generate_stream_impl(
     );
 
     // Отправляем метрики на фронтенд
-    let _ = app.emit("inference_metrics", &inference_metrics);
+    emitter.emit_metrics(inference_metrics);
 
     Ok(())
 }

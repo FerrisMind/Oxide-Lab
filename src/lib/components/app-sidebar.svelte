@@ -49,15 +49,15 @@
       icon: Gear,
       path: '/settings',
     },
-  ] as const);
-
-  const experimentalNavigationItems = $derived([
     {
       id: 'api',
       title: currentLocale ? $t('sidebar.navigation.api') : 'API',
       icon: Code,
       path: '/api',
     },
+  ] as const);
+
+  const experimentalNavigationItems = $derived([
     {
       id: 'performance',
       title: currentLocale ? $t('sidebar.navigation.performance') : 'Performance',

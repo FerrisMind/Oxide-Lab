@@ -171,6 +171,7 @@ pub fn run() {
             crate::api::download_manager::clear_download_history,
             crate::api::get_locale,
             crate::api::set_locale,
+            crate::api::openai_server::get_server_config,
         ])
         .setup(move |app| {
             // Hybrid responsiveness: keep the window/event-loop thread slightly prioritized on Windows,
@@ -204,7 +205,7 @@ pub fn run() {
             // Start OpenAI-compatible API server
             let openai_state = shared.clone();
             tauri::async_runtime::spawn(async move {
-                const OPENAI_PORT: u16 = 11434;
+                use crate::api::openai_server::OPENAI_PORT;
                 match crate::api::openai_server::start_server(openai_state, OPENAI_PORT).await {
                     Ok(_shutdown_tx) => {
                         log::info!("OpenAI API server started on port {}", OPENAI_PORT);

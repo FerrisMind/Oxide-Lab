@@ -1,37 +1,24 @@
-
-# Конфигурация cargo-deny для пермиссивных лицензий
-# Эта конфигурация разрешает только пермиссивные лицензии, которые позволяют
-# свободное использование, модификацию и распространение кода без ограничений
-# на коммерческое использование или требования к открытию исходного кода.
-
 [licenses]
-# Разрешенные пермиссивные лицензии (все остальные будут запрещены)
 allow = [
-    # Основные пермиссивные лицензии
     "MIT",
     "Apache-2.0",
     "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
     
-    # Дополнительные пермиссивные лицензии
-    "CC0-1.0",      # Creative Commons Zero (Public Domain)
-    "Unlicense",    # Unlicense (Public Domain)
-    "Zlib",         # zlib/libpng license
+    "CC0-1.0",      
+    "Unlicense",   
+    "Zlib",        
     
-    # Лицензии с исключениями (пермиссивные)
-    "Apache-2.0 WITH LLVM-exception",  # LLVM exception для target-lexicon
+    "Apache-2.0 WITH LLVM-exception",  
     
-    # Специализированные пермиссивные лицензии
-    "Unicode-3.0",  # Unicode License v3 (используется в ICU крейтах)
-    "MPL-2.0",      # Mozilla Public License 2.0 (пермиссивная)
-    "CDLA-Permissive-2.0",  # Community Data License Agreement Permissive 2.0
+    "Unicode-3.0",  
+    "MPL-2.0",      
+    "CDLA-Permissive-2.0", 
 ]
 
-# Доверять реестру crates.io
 confidence-threshold = 0.8
 
-# Исключения для конкретных крейтов
 [[licenses.clarify]]
 name = "ring"
 expression = "MIT AND ISC AND OpenSSL"

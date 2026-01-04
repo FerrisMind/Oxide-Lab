@@ -48,7 +48,7 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 tracing-chrome = "0.7"
 tauri-plugin-sql = { version = "2.0", features = ["sqlite"] }
-axum = { version = "0.8", features = ["tokio"] }
+axum = { version = "0.8", features = ["tokio", "macros"] }
 tower-http = { version = "0.6", features = ["cors"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]

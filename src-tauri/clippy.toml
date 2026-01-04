@@ -1,0 +1,4 @@
+# clippy.toml (monorepo root)
+too-many-lines-threshold = 100
+too-many-arguments-threshold = 7
+type-complexity-threshold = 250

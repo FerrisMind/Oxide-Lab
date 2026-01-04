@@ -11,6 +11,14 @@ module.exports = [
     },
   },
 
+  // Global size limits
+  {
+    rules: {
+      "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["error", { max: 50, skipBlankLines: true, skipComments: true }]
+    }
+  },
+
   // Typed JS/TS files — run project-based rules ONLY on `src/` to avoid tsconfig mismatches
   {
     files: ['src/**/*.{ts,js}'],
