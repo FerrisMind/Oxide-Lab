@@ -13,21 +13,77 @@
 
   let { content, id, class: className, ...restProps }: Props = $props();
 
-  const supportedLangs: SupportedLanguage[] = ['bash', 'diff', 'javascript', 'json', 'svelte', 'typescript', 'python', 'tsx', 'jsx', 'css', 'rust', 'text'];
+  // All supported languages for Oxide Lab
+  const supportedLangs: SupportedLanguage[] = [
+    // Fallback & CLI
+    'text', 'ansi',
+    // Documentation
+    'markdown', 'mdx',
+    // Rust ecosystem
+    'rust', 'toml',
+    // Configs
+    'yaml', 'json', 'ini',
+    // Shell & DevOps
+    'bash', 'powershell', 'dockerfile', 'nginx',
+    // Web frontend
+    'javascript', 'typescript', 'tsx', 'jsx', 'html', 'css', 'scss', 'svelte',
+    // Data & Query
+    'sql', 'graphql', 'regex',
+    // Misc
+    'diff', 'python',
+  ];
   
   function getLang(lang: string | undefined): SupportedLanguage {
     if (!lang) return 'text';
     const lower = lang.toLowerCase();
+    
+    // Direct match
     if (supportedLangs.includes(lower as SupportedLanguage)) {
       return lower as SupportedLanguage;
     }
-    // Common aliases
-    if (lower === 'js') return 'javascript';
-    if (lower === 'ts') return 'typescript';
-    if (lower === 'sh' || lower === 'shell' || lower === 'zsh') return 'bash';
-    if (lower === 'py') return 'python';
-    if (lower === 'rs') return 'rust';
-    return 'text';
+    
+    // Aliases
+    const aliases: Record<string, SupportedLanguage> = {
+      // Text fallbacks
+      'txt': 'text',
+      'plain': 'text',
+      'plaintext': 'text',
+      // JavaScript
+      'js': 'javascript',
+      'mjs': 'javascript',
+      'cjs': 'javascript',
+      // TypeScript
+      'ts': 'typescript',
+      'mts': 'typescript',
+      'cts': 'typescript',
+      // Shell
+      'sh': 'bash',
+      'shell': 'bash',
+      'zsh': 'bash',
+      'ps1': 'powershell',
+      'pwsh': 'powershell',
+      // Rust
+      'rs': 'rust',
+      // Python
+      'py': 'python',
+      // HTML/CSS
+      'htm': 'html',
+      'sass': 'scss',
+      // Config
+      'yml': 'yaml',
+      'jsonc': 'json',
+      'json5': 'json',
+      // Documentation
+      'md': 'markdown',
+      // Data
+      'gql': 'graphql',
+      're': 'regex',
+      'regexp': 'regex',
+      // Docker
+      'docker': 'dockerfile',
+    };
+    
+    return aliases[lower] || 'text';
   }
 </script>
 

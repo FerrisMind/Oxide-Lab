@@ -2,7 +2,7 @@
   /**
    * Settings Page
    * 
-   * Complete application settings including precision policy, threads, STT, 
+   * Complete application settings including threads, STT, 
    * model selector, experimental features, performance monitor, and language.
    */
   import { onMount, tick } from 'svelte';
@@ -28,18 +28,12 @@
   import { t, locale, setLocale, loadTranslations, type SupportedLocale } from '$lib/i18n';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
   import { modelSelectorSearchEnabled } from '$lib/stores/ui-preferences';
-  import type { PrecisionPolicy } from '$lib/types';
   import type { SttModelSource, SttSettings } from '$lib/types/stt';
   import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
 
   // ─────────────────────────────────────────────────────────────
   // State
   // ─────────────────────────────────────────────────────────────
-
-  // Precision Policy
-  let currentPolicy = $state<PrecisionPolicy>({ Default: null });
-  let policyLoading = $state(true);
-  let policyError = $state<string | null>(null);
 
   // Thread Limit
   const hardwareConcurrency = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4;
@@ -73,58 +67,6 @@
     { value: 'ru', label: 'Русский' },
     { value: 'pt-BR', label: 'Português (Brasil)' },
   ];
-
-  // ─────────────────────────────────────────────────────────────
-  // Precision Policy
-  // ─────────────────────────────────────────────────────────────
-
-  async function loadPrecisionPolicy() {
-    policyLoading = true;
-    policyError = null;
-    try {
-      // TODO: Integrate with Tauri backend
-      const { invoke } = await import('@tauri-apps/api/core');
-      currentPolicy = await invoke<PrecisionPolicy>('get_precision_policy');
-    } catch (err) {
-      policyError = `Failed to load precision policy: ${err}`;
-      console.error(err);
-    } finally {
-      policyLoading = false;
-    }
-  }
-
-  async function savePrecisionPolicy(policy: PrecisionPolicy) {
-    policyLoading = true;
-    policyError = null;
-    try {
-      // TODO: Integrate with Tauri backend
-      const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('set_precision_policy', { policy });
-      currentPolicy = policy;
-    } catch (err) {
-      policyError = `Failed to save precision policy: ${err}`;
-      console.error(err);
-    } finally {
-      policyLoading = false;
-    }
-  }
-
-  function selectPolicy(policyType: 'Default' | 'MemoryEfficient' | 'MaximumPrecision') {
-    const policyMap: Record<string, PrecisionPolicy> = {
-      'Default': { Default: null },
-      'MemoryEfficient': { MemoryEfficient: null },
-      'MaximumPrecision': { MaximumPrecision: null },
-    };
-    savePrecisionPolicy(policyMap[policyType]);
-  }
-
-  function isPolicySelected(policyType: 'Default' | 'MemoryEfficient' | 'MaximumPrecision'): boolean {
-    if (typeof currentPolicy === 'string') return currentPolicy === policyType;
-    if (typeof currentPolicy === 'object' && currentPolicy !== null) {
-      return policyType in currentPolicy;
-    }
-    return false;
-  }
 
   // ─────────────────────────────────────────────────────────────
   // Thread Limit
@@ -289,7 +231,6 @@
 
   onMount(async () => {
     await Promise.all([
-      loadPrecisionPolicy(),
       loadThreadLimit(),
       loadSttSettings(),
     ]);
@@ -313,60 +254,6 @@
 <div class="h-full overflow-auto p-3 sm:p-4 lg:p-6 custom-scrollbar">
   <div class="max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto space-y-4 sm:space-y-6">
     <h1 class="text-xl sm:text-2xl font-bold">{$t('settings.title')}</h1>
-
-    <!-- Precision Policy -->
-    <Card.Root>
-      <Card.Header>
-        <Card.Title class="flex items-center gap-2">
-          <Cpu class="size-5" />
-          {$t('settings.precision.title') || 'Precision Policy'}
-        </Card.Title>
-        <Card.Description>
-          {$t('settings.precision.description') || 'Control memory vs precision tradeoff'}
-          <br />
-          <span class="text-amber-500 text-xs font-medium">
-            {$t('settings.precision.warning') || 'Requires model reload to take effect'}
-          </span>
-        </Card.Description>
-      </Card.Header>
-      <Card.Content>
-        {#if policyLoading}
-          <div class="flex justify-center py-4"><Spinner class="size-6" /></div>
-        {:else}
-          <div class="grid gap-3 sm:grid-cols-3">
-            <Button
-              variant={isPolicySelected('Default') ? 'default' : 'outline'}
-              class="h-auto flex-col py-4 gap-1"
-              onclick={() => selectPolicy('Default')}
-            >
-              <span class="font-semibold">{$t('settings.precision.default') || 'Default'}</span>
-              <span class="text-xs opacity-70">{$t('settings.precision.balanced') || 'Balanced'}</span>
-            </Button>
-            <Button
-              variant={isPolicySelected('MemoryEfficient') ? 'default' : 'outline'}
-              class="h-auto flex-col py-4 gap-1"
-              onclick={() => selectPolicy('MemoryEfficient')}
-            >
-              <span class="font-semibold">{$t('settings.precision.memoryEfficient') || 'Memory Efficient'}</span>
-              <span class="text-xs opacity-70">{$t('settings.precision.lowerRam') || 'Lower RAM'}</span>
-            </Button>
-            <Button
-              variant={isPolicySelected('MaximumPrecision') ? 'default' : 'outline'}
-              class="h-auto flex-col py-4 gap-1"
-              onclick={() => selectPolicy('MaximumPrecision')}
-            >
-              <span class="font-semibold">{$t('settings.precision.maximumPrecision') || 'Maximum Precision'}</span>
-              <span class="text-xs opacity-70">{$t('settings.precision.bestQuality') || 'Best quality'}</span>
-            </Button>
-          </div>
-        {/if}
-        {#if policyError}
-          <div class="mt-3 text-sm text-destructive flex items-center gap-2">
-            <Warning class="size-4" />{policyError}
-          </div>
-        {/if}
-      </Card.Content>
-    </Card.Root>
 
     <!-- Thread Limit -->
     <Card.Root>

@@ -1,5 +1,5 @@
 use crate::core::state::SharedState;
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

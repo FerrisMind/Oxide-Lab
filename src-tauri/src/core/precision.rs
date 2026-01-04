@@ -161,6 +161,16 @@ pub struct GpuKernelConfig {
     pub force_dmmv: bool,
 }
 
+impl Default for GpuKernelConfig {
+    fn default() -> Self {
+        Self {
+            reduced_precision_f16: true,
+            reduced_precision_bf16: true,
+            force_dmmv: false,
+        }
+    }
+}
+
 impl GpuKernelConfig {
     pub fn from_policy(policy: &PrecisionPolicy) -> Self {
         match policy {

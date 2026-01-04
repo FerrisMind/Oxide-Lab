@@ -2,19 +2,57 @@
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 import { createHighlighterCore } from 'shiki/core';
 
+/**
+ * Bundled languages for Oxide Lab:
+ * - Rust development (rust, toml)
+ * - Web/docs (markdown, mdx, html, css, scss, javascript, typescript, tsx, jsx)
+ * - Configs (yaml, json, ini, dockerfile, nginx)
+ * - DevOps/CLI (bash, powershell, ansi, diff)
+ * - Data/Query (sql, graphql, regex)
+ * - Fallback (text for unknown languages)
+ */
 const bundledLanguages = {
-  bash: () => import('@shikijs/langs/bash'),
-  diff: () => import('@shikijs/langs/diff'),
-  javascript: () => import('@shikijs/langs/javascript'),
+  // Fallback & CLI output (ansi uses markdown as fallback since no dedicated module)
+  text: () => import('@shikijs/langs/markdown'),
+  ansi: () => import('@shikijs/langs/shellscript'),
+  
+  // Documentation
+  markdown: () => import('@shikijs/langs/markdown'),
+  mdx: () => import('@shikijs/langs/mdx'),
+  
+  // Rust ecosystem
+  rust: () => import('@shikijs/langs/rust'),
+  toml: () => import('@shikijs/langs/toml'),
+  
+  // Config files
+  yaml: () => import('@shikijs/langs/yaml'),
   json: () => import('@shikijs/langs/json'),
-  svelte: () => import('@shikijs/langs/svelte'),
+  ini: () => import('@shikijs/langs/ini'),
+  
+  // Shell & DevOps
+  bash: () => import('@shikijs/langs/bash'),
+  powershell: () => import('@shikijs/langs/powershell'),
+  dockerfile: () => import('@shikijs/langs/dockerfile'),
+  nginx: () => import('@shikijs/langs/nginx'),
+  
+  // Web frontend
+  javascript: () => import('@shikijs/langs/javascript'),
   typescript: () => import('@shikijs/langs/typescript'),
-  python: () => import('@shikijs/langs/python'),
   tsx: () => import('@shikijs/langs/tsx'),
   jsx: () => import('@shikijs/langs/jsx'),
+  html: () => import('@shikijs/langs/html'),
   css: () => import('@shikijs/langs/css'),
-  rust: () => import('@shikijs/langs/rust'),
-  text: () => import('@shikijs/langs/markdown'),
+  scss: () => import('@shikijs/langs/scss'),
+  
+  // Data & Query
+  sql: () => import('@shikijs/langs/sql'),
+  graphql: () => import('@shikijs/langs/graphql'),
+  regex: () => import('@shikijs/langs/regex'),
+  
+  // Misc
+  diff: () => import('@shikijs/langs/diff'),
+  svelte: () => import('@shikijs/langs/svelte'),
+  python: () => import('@shikijs/langs/python'),
 };
 
 /** The languages configured for the highlighter */

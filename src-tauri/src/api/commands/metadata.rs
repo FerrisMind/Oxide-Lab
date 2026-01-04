@@ -1,5 +1,5 @@
 use crate::core::state::SharedState;
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use candle::quantized::gguf_file;
 use std::path::Path;
 

@@ -4,7 +4,7 @@ use crate::core::tokenizer::{
     extract_chat_template, find_chat_template_in_metadata, mark_special_chat_tokens,
     tokenizer_from_gguf_metadata,
 };
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use crate::models::registry::detect_arch;
 use crate::models::registry::get_model_factory;
 use crate::{log_device, log_device_error, log_load};
@@ -73,7 +73,8 @@ pub fn set_device(
     let label = device_label(&guard.device);
     log_device!("switched -> {}", label);
     {
-        let kcfg = crate::core::precision::GpuKernelConfig::from_policy(&guard.precision_policy);
+        // Use default GPU kernel config (BF16 reduced precision enabled)
+        let kcfg = crate::core::precision::GpuKernelConfig::default();
         kcfg.apply_for_device(&guard.device);
     }
     log_device!(

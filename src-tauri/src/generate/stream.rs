@@ -1,10 +1,11 @@
-use candle::Tensor;
+use candle::{DType, Tensor};
 use tauri::Emitter;
 
 use super::cancel::CANCEL_GENERATION;
 use super::{
     ctx::ContextSlice, emit::ChunkEmitter, minp::MinPFilter,
     sampling::build_logits_processor_from_options, thinking_parser::ThinkingParser,
+    tool_call_parser::ToolCallParser,
 };
 use crate::core::attachments_text::gather_text_from_attachments;
 use crate::core::config::SamplingOptions;
@@ -14,7 +15,7 @@ use crate::core::state::SharedState;
 use crate::core::token_output_stream::TokenOutputStream;
 use crate::core::tokenizer::{extract_bos_token_str, extract_eos_ids};
 use crate::core::types::{ChatMessage, GenerateRequest};
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use crate::{log_infer, log_template_error};
 use std::sync::atomic::Ordering;
 use tracing_subscriber::prelude::*;
@@ -250,6 +251,8 @@ fn generate_stream_impl(
                 }
             };
             let logits = logits.squeeze(0).map_err(|e| e.to_string())?;
+            // Convert to F32 for sampling (like candle examples)
+            let logits = logits.to_dtype(DType::F32).map_err(|e| e.to_string())?;
             let logits = minp.apply(&logits)?;
             logits_processor
                 .sample(&logits)
@@ -283,6 +286,8 @@ fn generate_stream_impl(
             }
             let logits = last_logits_opt.ok_or_else(|| "Empty context".to_string())?;
             let logits = logits.squeeze(0).map_err(|e| e.to_string())?;
+            // Convert to F32 for sampling (like candle examples)
+            let logits = logits.to_dtype(DType::F32).map_err(|e| e.to_string())?;
             let logits = minp.apply(&logits)?;
             logits_processor
                 .sample(&logits)
@@ -304,8 +309,21 @@ fn generate_stream_impl(
         ThinkingParser::new()
     };
 
+    // Create tool call parser if tools are provided
+    let mut tool_call_parser = req.tools.as_ref().map(|tools| {
+        log_infer!("tool calling enabled with {} tools", tools.len());
+        ToolCallParser::with_json_tag(tools.clone())
+    });
+
     if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
         let chunk = thinking_parser.process_token(&t);
+        // Process tool calls if parser is active
+        if let Some(ref mut tcp) = tool_call_parser {
+            let result = tcp.add(&chunk.content);
+            for call in result.calls {
+                emitter.emit_tool_call(&call);
+            }
+        }
         emitter.emit_message(chunk);
     }
 
@@ -345,24 +363,28 @@ fn generate_stream_impl(
                 return Err("Model is not loaded".into());
             }
         };
-        let mut logits = logits.squeeze(0).map_err(|e| e.to_string())?;
+        let logits = logits.squeeze(0).map_err(|e| e.to_string())?;
+        // Convert to F32 for sampling (like candle examples)
+        let mut logits = logits.to_dtype(DType::F32).map_err(|e| e.to_string())?;
         if let Some(rp) = repeat_penalty
             && (rp - 1.0).abs() > f32::EPSILON
         {
-            if index == 0 {
-                log_infer!(
-                    "repeat_penalty enabled: value={:.3}, last_n={}",
-                    rp,
-                    req.repeat_last_n
-                );
-            }
             let start_at = all_tokens.len().saturating_sub(req.repeat_last_n);
-            logits = candle_transformers::utils::apply_repeat_penalty(
-                &logits,
-                rp,
-                &all_tokens[start_at..],
-            )
-            .map_err(|e| e.to_string())?;
+            let penalty_tokens = &all_tokens[start_at..];
+            // Only apply penalty if we have tokens to penalize (avoids shape mismatch with empty slice)
+            if !penalty_tokens.is_empty() {
+                if index == 0 {
+                    log_infer!(
+                        "repeat_penalty enabled: value={:.3}, last_n={}, applying to {} tokens",
+                        rp,
+                        req.repeat_last_n,
+                        penalty_tokens.len()
+                    );
+                }
+                logits =
+                    candle_transformers::utils::apply_repeat_penalty(&logits, rp, penalty_tokens)
+                        .map_err(|e| e.to_string())?;
+            }
         }
         let logits = minp.apply(&logits)?;
         next_token = logits_processor
@@ -377,6 +399,13 @@ fn generate_stream_impl(
 
         if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
             let chunk = thinking_parser.process_token(&t);
+            // Process tool calls if parser is active
+            if let Some(ref mut tcp) = tool_call_parser {
+                let result = tcp.add(&chunk.content);
+                for call in result.calls {
+                    emitter.emit_tool_call(&call);
+                }
+            }
             emitter.emit_message(chunk);
             stop_text_buf.push_str(&t);
             if stop_text_buf.len() > 128 {

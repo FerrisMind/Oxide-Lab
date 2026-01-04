@@ -1,7 +1,7 @@
 // API команды для мониторинга производительности
 use crate::core::performance::{PerformanceMetric, StartupMetrics, SystemUsage};
 use crate::core::state::SharedState;
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 
 /// Получить все метрики производительности
 #[tauri::command]

@@ -2,7 +2,7 @@ use crate::core::state::SharedState;
 use crate::core::types::GenerateRequest;
 use crate::generate;
 use crate::log_template;
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 
 #[tauri::command]
 pub async fn generate_stream(

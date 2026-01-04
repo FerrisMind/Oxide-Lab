@@ -7,20 +7,23 @@
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import * as Sheet from '$lib/components/ui/sheet';
+  import { PaneGroup, Pane, PaneResizer } from 'paneforge';
   import {
     Conversation,
     ConversationContent,
     ConversationScrollButton,
   } from '$lib/components/ai-elements/conversation';
-  import { MessageList, Composer, LoaderPanel } from '$lib/chat/components';
+  import { MessageList, Composer, LoaderPanel, PreviewPanel } from '$lib/chat/components';
   import type { ChatMessage } from '$lib/chat/types';
   import { createChatController } from '$lib/chat/controller';
   import { chatState, chatUiMounted, getDefaultChatState } from '$lib/stores/chat';
   import { currentSession } from '$lib/stores/chat-history';
   import { showChatHistory } from '$lib/stores/sidebar';
+  import { htmlPreviewStore, isPreviewOpen } from '$lib/stores/html-preview';
   import { performanceService } from '$lib/services/performance-service';
   import { inferenceMetricsStore } from '$lib/stores/inference-metrics';
   import type { InferenceMetrics } from '$lib/types/performance';
+
 
   // State
   let isLoaderPanelVisible = $state(false);
@@ -347,7 +350,8 @@
   // Derived values
   let isChatHistoryVisible = $derived(!!get(showChatHistory));
   let hasMessages = $derived((messages?.length ?? 0) > 0);
-  let canStopGeneration = $derived(busy && isLoaded);
+  // Use $chatState for proper reactivity in Svelte 5 (getter/setter pattern doesn't trigger reactive updates)
+  let canStopGeneration = $derived($chatState.busy && $chatState.isLoaded);
   // Use $chatState.isLoaded because store subscriptions are properly tracked by Svelte 5
   let showComposer = $derived($chatState.isLoaded || hasMessages);
 
@@ -592,54 +596,64 @@
 </script>
 
 <main class="flex flex-col h-full overflow-hidden bg-background">
-  <div class="flex flex-row flex-1 min-h-0 items-stretch h-full bg-background">
-    <section class="flex-1 min-w-0 flex flex-col relative">
-      <!-- Messages area with scroll -->
-      <div class="messages-area flex-1 min-h-0 relative overflow-hidden">
-        <Conversation class="h-full w-full">
-          {#if hasMessages}
-            <ConversationContent class="messages-content pb-16">
+  <PaneGroup direction="horizontal" class="flex flex-row flex-1 min-h-0 items-stretch h-full bg-background">
+    <Pane defaultSize={$isPreviewOpen ? 60 : 100} minSize={30}>
+      <section class="flex-1 min-w-0 flex flex-col relative h-full">
+        <!-- Messages area with scroll -->
+        <div class="messages-area flex-1 min-h-0 relative overflow-hidden">
+          <Conversation class="h-full w-full">
+            {#if hasMessages}
+              <ConversationContent class="messages-content pb-16">
+                <MessageList
+                  bind:messages
+                  showModelNotice={false}
+                  onRegenerate={(index) => controller.handleRegenerate(index)}
+                  onEdit={(index, content) => controller.handleEdit(index, content)}
+                />
+              </ConversationContent>
+              <ConversationScrollButton />
+            {:else}
               <MessageList
                 bind:messages
-                showModelNotice={false}
+                showModelNotice={!$chatState.isLoaded && messages.length === 0}
                 onRegenerate={(index) => controller.handleRegenerate(index)}
                 onEdit={(index, content) => controller.handleEdit(index, content)}
               />
-            </ConversationContent>
-            <ConversationScrollButton />
-          {:else}
-            <MessageList
-              bind:messages
-              showModelNotice={!$chatState.isLoaded && messages.length === 0}
-              onRegenerate={(index) => controller.handleRegenerate(index)}
-              onEdit={(index, content) => controller.handleEdit(index, content)}
-            />
-          {/if}
-        </Conversation>
-      </div>
-
-      <!-- Composer at bottom or centered when no messages -->
-      {#if showComposer}
-        <div
-          class="composer-area shrink-0 relative z-10 px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 bg-background"
-          class:composer-centered={!hasMessages}
-        >
-          <Composer
-            bind:prompt
-            {busy}
-            isLoaded={$chatState.isLoaded}
-            canStop={canStopGeneration}
-            {isLoaderPanelVisible}
-            {isChatHistoryVisible}
-            {hasMessages}
-            onSend={sendMessage}
-            onStop={stopGenerate}
-            onToggleLoaderPanel={toggleLoaderPanelVisibility}
-            onToggleChatHistory={toggleChatHistoryVisibility}
-          />
+            {/if}
+          </Conversation>
         </div>
-      {/if}
-    </section>
+
+        <!-- Composer at bottom or centered when no messages -->
+        {#if showComposer}
+          <div
+            class="composer-area shrink-0 relative z-10 px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 bg-background"
+            class:composer-centered={!hasMessages}
+          >
+            <Composer
+              bind:prompt
+              {busy}
+              isLoaded={$chatState.isLoaded}
+              canStop={canStopGeneration}
+              {isLoaderPanelVisible}
+              {isChatHistoryVisible}
+              {hasMessages}
+              onSend={sendMessage}
+              onStop={stopGenerate}
+              onToggleLoaderPanel={toggleLoaderPanelVisibility}
+              onToggleChatHistory={toggleChatHistoryVisibility}
+            />
+          </div>
+        {/if}
+      </section>
+    </Pane>
+
+    {#if $isPreviewOpen}
+      <PaneResizer class="pane-resizer" />
+      <Pane defaultSize={40} minSize={20}>
+        <PreviewPanel class="h-full" />
+      </Pane>
+    {/if}
+  </PaneGroup>
 
     <!-- Loader Panel Sheet -->
     <Sheet.Root bind:open={isLoaderPanelVisible}>
@@ -679,7 +693,6 @@
         </div>
       </Sheet.Content>
     </Sheet.Root>
-  </div>
 </main>
 
 <style>
@@ -722,4 +735,23 @@
     padding: 1rem;
     background: transparent;
   }
+
+  /* ===== PaneResizer Styles ===== */
+  :global(.pane-resizer) {
+    width: 6px;
+    background: transparent;
+    cursor: col-resize;
+    transition: background-color 0.2s ease;
+  }
+
+  :global(.pane-resizer:hover),
+  :global(.pane-resizer[data-state="dragging"]) {
+    background: var(--border);
+  }
+
+  :global(.pane-resizer[data-state="dragging"]) {
+    background: var(--primary);
+  }
 </style>
+
+

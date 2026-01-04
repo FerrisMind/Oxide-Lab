@@ -13,7 +13,7 @@ use crate::core::thread_priority::set_current_thread_above_normal;
 use crate::core::types::DevicePreference;
 use crate::i18n;
 use crate::log_load_warn;
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use tauri_plugin_sql::{Builder, Migration, MigrationKind};
 
 #[tauri::command]
@@ -200,6 +200,21 @@ pub fn run() {
                 }
             }
             spawn_startup_tracker(app.handle().clone(), performance_monitor.clone());
+
+            // Start OpenAI-compatible API server
+            let openai_state = shared.clone();
+            tauri::async_runtime::spawn(async move {
+                const OPENAI_PORT: u16 = 11434;
+                match crate::api::openai_server::start_server(openai_state, OPENAI_PORT).await {
+                    Ok(_shutdown_tx) => {
+                        log::info!("OpenAI API server started on port {}", OPENAI_PORT);
+                    }
+                    Err(e) => {
+                        log::error!("Failed to start OpenAI API server: {}", e);
+                    }
+                }
+            });
+
             #[cfg(debug_assertions)]
             if let Some(main_window) = app.get_webview_window("main") {
                 main_window.open_devtools();

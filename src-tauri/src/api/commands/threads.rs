@@ -1,5 +1,5 @@
 use crate::core::state::{ModelState, SharedState};
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use std::env;
 use tauri::AppHandle;
 

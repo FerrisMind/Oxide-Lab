@@ -22,11 +22,17 @@ impl MinPFilter {
         }
     }
 
+    /// Apply min-p filtering to logits.
+    /// IMPORTANT: logits must already be F32 dtype for this to work correctly.
     pub fn apply(&mut self, logits: &Tensor) -> Result<Tensor, String> {
+        // Early return if min_p is not set - just return as-is
         let min_p = match self.min_p {
             Some(v) => v,
-            None => return Ok(logits.clone()),
+            None => {
+                return Ok(logits.clone());
+            }
         };
+
         if self.temperature <= 0.0 {
             if self.log_prints < 5 {
                 log_infer!("min_p ignored because temperature <= 0");
@@ -40,11 +46,20 @@ impl MinPFilter {
         let threshold_scalar = self.temperature * min_p.ln();
         let threshold = (&max_val + threshold_scalar as f64).map_err(|e| e.to_string())?;
 
-        // Create mask: logits >= threshold
-        let mask = logits.ge(&threshold).map_err(|e| e.to_string())?;
+        // Broadcast threshold scalar to logits shape for comparison
+        let threshold_broadcasted = threshold
+            .broadcast_as(logits.shape())
+            .map_err(|e| e.to_string())?;
 
-        // Create neg_infinity tensor for masked values
+        // Create mask: logits >= threshold
+        let mask = logits
+            .ge(&threshold_broadcasted)
+            .map_err(|e| e.to_string())?;
+
+        // Create neg_infinity tensor for masked values (must match logits dtype)
         let neg_inf = Tensor::new(f32::NEG_INFINITY, logits.device())
+            .map_err(|e| e.to_string())?
+            .to_dtype(logits.dtype())
             .map_err(|e| e.to_string())?
             .broadcast_as(logits.shape())
             .map_err(|e| e.to_string())?;

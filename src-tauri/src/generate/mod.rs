@@ -5,6 +5,7 @@ pub mod minp;
 pub mod sampling;
 pub mod stream;
 pub mod thinking_parser;
+pub mod tool_call_parser;
 
 pub use cancel::cancel_generation_cmd;
 pub use stream::generate_stream_cmd;

@@ -9,6 +9,9 @@
   import Check from 'phosphor-svelte/lib/Check';
   import CaretDown from 'phosphor-svelte/lib/CaretDown';
   import CaretRight from 'phosphor-svelte/lib/CaretRight';
+  import TerminalWindow from 'phosphor-svelte/lib/TerminalWindow';
+  import Play from 'phosphor-svelte/lib/Play';
+  import { htmlPreviewStore } from '$lib/stores/html-preview';
   import {
     siJavascript,
     siTypescript,
@@ -19,7 +22,17 @@
     siCss,
     siSvelte,
     siReact,
+    siHtml5,
+    siMarkdown,
+    siToml,
+    siYaml,
+    siDocker,
+    siNginx,
+    siSass,
+    siPostgresql,
+    siGraphql,
   } from 'simple-icons';
+  import { tick } from 'svelte';
 
   let {
     ref = $bindable(null),
@@ -42,6 +55,23 @@
 
   let collapsed = $state(false);
   let copied = $state(false);
+  let codeWrapperRef: HTMLDivElement | null = $state(null);
+
+  // Auto-scroll to bottom when code changes (streaming)
+  $effect(() => {
+    // Track code changes
+    const _ = code;
+    
+    // Scroll to bottom after DOM update
+    tick().then(() => {
+      if (codeWrapperRef && !collapsed) {
+        const preElement = codeWrapperRef.querySelector('pre');
+        if (preElement) {
+          preElement.scrollTop = preElement.scrollHeight;
+        }
+      }
+    });
+  });
 
   async function handleCopy() {
     await navigator.clipboard.writeText(code);
@@ -54,25 +84,53 @@
   }
 
   // Language display names and icons
-  const langConfig: Record<string, { name: string; icon?: { svg: string; hex: string } }> = {
+  const langConfig: Record<string, { name: string; icon?: { svg: string; hex: string }; phosphorIcon?: string }> = {
+    // Fallback & CLI
+    text: { name: 'Text' },
+    ansi: { name: 'Terminal' },
+    // Documentation
+    markdown: { name: 'Markdown', icon: siMarkdown },
+    mdx: { name: 'MDX', icon: siMarkdown },
+    // Rust ecosystem
+    rust: { name: 'Rust', icon: siRust },
+    toml: { name: 'TOML', icon: siToml },
+    // Configs
+    yaml: { name: 'YAML', icon: siYaml },
+    json: { name: 'JSON', icon: siJson },
+    ini: { name: 'INI' },
+    // Shell & DevOps
+    bash: { name: 'Bash', icon: siGnubash },
+    powershell: { name: 'PowerShell', phosphorIcon: 'terminal' },
+    dockerfile: { name: 'Dockerfile', icon: siDocker },
+    nginx: { name: 'Nginx', icon: siNginx },
+    // Web frontend
     javascript: { name: 'JavaScript', icon: siJavascript },
     typescript: { name: 'TypeScript', icon: siTypescript },
-    python: { name: 'Python', icon: siPython },
-    rust: { name: 'Rust', icon: siRust },
-    bash: { name: 'Bash', icon: siGnubash },
-    json: { name: 'JSON', icon: siJson },
-    css: { name: 'CSS', icon: siCss },
-    svelte: { name: 'Svelte', icon: siSvelte },
-    jsx: { name: 'JSX', icon: siReact },
     tsx: { name: 'TSX', icon: siReact },
+    jsx: { name: 'JSX', icon: siReact },
+    html: { name: 'HTML', icon: siHtml5 },
+    css: { name: 'CSS', icon: siCss },
+    scss: { name: 'SCSS', icon: siSass },
+    svelte: { name: 'Svelte', icon: siSvelte },
+    // Data & Query
+    sql: { name: 'SQL', icon: siPostgresql },
+    graphql: { name: 'GraphQL', icon: siGraphql },
+    regex: { name: 'Regex' },
+    // Misc
     diff: { name: 'Diff' },
-    text: { name: 'Text' },
+    python: { name: 'Python', icon: siPython },
   };
 
   const config = $derived(langConfig[lang] || { name: lang });
   const displayLang = $derived(config.name);
   const iconSvg = $derived(config.icon?.svg);
   const iconColor = $derived(config.icon ? `#${config.icon.hex}` : undefined);
+  const isPhosphorIcon = $derived(!!config.phosphorIcon);
+  const isHtmlLang = $derived(lang === 'html');
+
+  function handlePreview() {
+    htmlPreviewStore.openPreview(code);
+  }
 </script>
 
 <div {...rest} bind:this={ref} class={cn(codeVariants({ variant }), className)}>
@@ -90,7 +148,11 @@
       {/if}
     </button>
     <div class="flex items-center gap-1.5">
-      {#if iconSvg}
+      {#if isPhosphorIcon}
+        <span class="lang-icon flex items-center justify-center w-4 h-4 text-muted-foreground">
+          <TerminalWindow size={14} weight="bold" />
+        </span>
+      {:else if iconSvg}
         <span class="lang-icon flex items-center justify-center w-4 h-4" style:color={iconColor}>
           {@html iconSvg}
         </span>
@@ -100,6 +162,17 @@
       {/if}
     </div>
     <div class="ml-auto flex items-center gap-1">
+      {#if isHtmlLang}
+        <Button
+          variant="ghost"
+          size="icon"
+          class="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-foreground"
+          onclick={handlePreview}
+          aria-label="Preview HTML"
+        >
+          <Play size={14} weight="fill" />
+        </Button>
+      {/if}
       <Button
         variant="ghost"
         size="icon"
@@ -118,7 +191,7 @@
 
   <!-- Code content -->
   <div class="code-content" class:collapsed>
-    <div class="ai-code-wrapper">
+    <div class="ai-code-wrapper" bind:this={codeWrapperRef}>
       {@html codeState.highlighted}
     </div>
   </div>
@@ -136,14 +209,20 @@
 
   .code-content {
     overflow: hidden;
-    transition: max-height 0.3s ease, opacity 0.2s ease;
-    max-height: 800px;
+    transition: grid-template-rows 0.3s ease, opacity 0.2s ease;
+    display: grid;
+    grid-template-rows: 1fr;
     opacity: 1;
   }
 
   .code-content.collapsed {
-    max-height: 0;
+    grid-template-rows: 0fr;
     opacity: 0;
+  }
+
+  .code-content > .ai-code-wrapper {
+    overflow: hidden;
+    min-height: 0;
   }
 
   /* Scoped global styles - only affect elements within .ai-code-wrapper */
@@ -173,11 +252,8 @@
     padding-bottom: 1rem;
     font-size: 0.875rem;
     margin: 0;
-  }
-
-  .ai-code-wrapper :global(pre.shiki:not([data-code-overflow] *):not([data-code-overflow])) {
+    max-height: 650px;
     overflow-y: auto;
-    max-height: min(100%, 650px);
   }
 
   .ai-code-wrapper :global(pre.shiki code) {

@@ -102,6 +102,9 @@ pub struct GenerateRequest {
     /// Used for regenerating from a specific point or editing a message.
     #[serde(default)]
     pub edit_index: Option<usize>,
+    /// Tools available for function calling. If provided, enables tool call parsing.
+    #[serde(default)]
+    pub tools: Option<Vec<crate::generate::tool_call_parser::Tool>>,
 }
 
 // Структура Attachment оставлена на будущее (компат), но можно удалить полностью при необходимости.

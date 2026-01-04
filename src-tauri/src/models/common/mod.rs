@@ -1,5 +1,5 @@
-pub mod builder;
-pub mod model;
+//! Common utilities for model backends
 
-#[cfg(test)]
-mod builder_test;
+pub mod flash_helpers;
+
+pub use flash_helpers::{is_flash_attention_available, scaled_dot_product_attention};

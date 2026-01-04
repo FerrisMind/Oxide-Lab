@@ -109,6 +109,12 @@ impl ChunkEmitter {
             self.done_emitted = true;
         }
     }
+
+    /// Emit tool call event.
+    pub fn emit_tool_call(&self, tool_call: &crate::generate::tool_call_parser::ToolCall) {
+        log::debug!("[emit] tool_call: name={}", tool_call.function.name);
+        let _ = self.app.emit("tool_call", tool_call);
+    }
 }
 
 impl Drop for ChunkEmitter {

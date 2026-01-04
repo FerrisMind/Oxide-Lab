@@ -5,7 +5,7 @@ use candle::quantized::gguf_file::Value;
 use candle::{Device, Tensor};
 use oxide_lib::core::prompt::{ChatMessage, PromptBuilder};
 use oxide_lib::core::tokenizer::{extract_eos_ids, tokenizer_from_gguf_metadata};
-use oxide_lib::models::common::model::ModelBackend;
+use oxide_lib::models::ModelBackend;
 use oxide_lib::models::registry::{detect_arch, get_model_factory};
 use std::collections::HashMap;
 use std::fs::File;
@@ -155,13 +155,23 @@ impl MockModelBackend {
 }
 
 impl ModelBackend for MockModelBackend {
-    fn forward_layered(&mut self, _input: &Tensor, _position: usize) -> Result<Tensor, String> {
+    fn forward(&mut self, _input: &Tensor, _position: usize) -> candle::Result<Tensor> {
         self.forward_count += 1;
         // Create a simple output tensor
         let data = vec![0.1f32; 10];
-        let tensor =
-            Tensor::from_slice(&data, data.len(), &Device::Cpu).map_err(|e| e.to_string())?;
-        Ok(tensor)
+        Tensor::from_slice(&data, data.len(), &Device::Cpu)
+    }
+
+    fn clear_kv_cache(&mut self) {
+        // No-op for mock
+    }
+
+    fn model_type(&self) -> &str {
+        "mock"
+    }
+
+    fn vocab_size(&self) -> usize {
+        10
     }
 }
 
@@ -175,7 +185,7 @@ fn test_model_backend_interface() {
         .expect("Failed to create input tensor");
 
     // Test forward pass (prefill step)
-    let result = model.forward_layered(&input_tensor, 0);
+    let result = model.forward(&input_tensor, 0);
     assert!(
         result.is_ok(),
         "Model forward pass failed: {:?}",
@@ -184,7 +194,7 @@ fn test_model_backend_interface() {
     assert_eq!(model.forward_count, 1);
 
     // Test another forward pass (decode step)
-    let result = model.forward_layered(&input_tensor, 1);
+    let result = model.forward(&input_tensor, 1);
     assert!(
         result.is_ok(),
         "Model forward pass failed: {:?}",

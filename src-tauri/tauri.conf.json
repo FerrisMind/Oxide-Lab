@@ -5,7 +5,7 @@
   "identifier": "OxideLab",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1411",
+    "devUrl": "http://localhost:1451",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../build"
   },

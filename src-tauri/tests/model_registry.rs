@@ -6,47 +6,66 @@ use std::collections::HashMap;
 fn test_supported_models_detection() {
     let mut metadata = HashMap::new();
 
-    // Test Qwen detection (only Qwen3 is currently implemented)
+    // Test Qwen3 (base assertion)
     metadata.insert(
         "general.architecture".to_string(),
         Value::String("qwen3".to_string()),
     );
     assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3));
-    metadata.clear();
 
-    // Other architectures are not implemented yet, so they should return None
+    // Test Qwen3 MoE (exact match)
+    metadata.insert(
+        "general.architecture".to_string(),
+        Value::String("qwen3_moe".to_string()),
+    );
+    assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3Moe));
+
+    // Test Qwen3 MoE (gguf match)
+    metadata.insert(
+        "general.architecture".to_string(),
+        Value::String("qwen3moe".to_string()),
+    );
+    assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3Moe));
+
+    // Test Llama detection (now supported)
     metadata.insert(
         "general.architecture".to_string(),
         Value::String("llama".to_string()),
     );
-    assert_eq!(detect_arch(&metadata), None); // Not implemented yet
-    metadata.clear();
+    assert_eq!(detect_arch(&metadata), Some(ArchKind::Llama));
 
+    // Test Mistral detection (now supported)
     metadata.insert(
         "general.architecture".to_string(),
         Value::String("mistral".to_string()),
     );
-    assert_eq!(detect_arch(&metadata), None); // Not implemented yet
-    metadata.clear();
+    assert_eq!(detect_arch(&metadata), Some(ArchKind::Mistral));
+
+    // Test Mixtral detection
+    metadata.insert(
+        "general.architecture".to_string(),
+        Value::String("mixtral".to_string()),
+    );
+    assert_eq!(detect_arch(&metadata), Some(ArchKind::Mixtral));
 }
 
 #[test]
-fn test_fallback_detection() {
+fn test_unknown_architecture() {
     let mut metadata = HashMap::new();
+    metadata.insert(
+        "general.architecture".to_string(),
+        Value::String("unknown_arch_xyz".to_string()),
+    );
+    assert_eq!(detect_arch(&metadata), None);
+}
 
-    // Test Qwen fallback detection (only Qwen3 is currently implemented)
+#[test]
+fn test_missing_architecture_key() {
+    let mut metadata = HashMap::new();
     metadata.insert(
         "model.name".to_string(),
-        Value::String("qwen3-7b".to_string()),
+        Value::String("some-model".to_string()),
     );
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3));
-    metadata.clear();
-
-    // Other architectures are not implemented yet, so they should return None
-    metadata.insert(
-        "model.name".to_string(),
-        Value::String("meta-llama-3-8b".to_string()),
-    );
-    assert_eq!(detect_arch(&metadata), None); // Not implemented yet
-    metadata.clear();
+    // Should return None because general.architecture is missing
+    assert_eq!(detect_arch(&metadata), None);
 }

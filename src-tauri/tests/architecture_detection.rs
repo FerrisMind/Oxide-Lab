@@ -12,21 +12,29 @@ fn test_architecture_detection() {
     );
     assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3));
 
-    // Test fallback detection for Qwen
+    // Test Qwen3 MoE detection (safetensors style)
     let mut metadata = HashMap::new();
     metadata.insert(
-        "some.key".to_string(),
-        Value::String("qwen3-model-v1".to_string()),
+        "general.architecture".to_string(),
+        Value::String("qwen3_moe".to_string()),
     );
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3));
+    assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3Moe));
 
-    // Test unknown architecture (Llama is not implemented yet)
+    // Test Qwen3 MoE detection (gguf style)
+    let mut metadata = HashMap::new();
+    metadata.insert(
+        "general.architecture".to_string(),
+        Value::String("qwen3moe".to_string()),
+    );
+    assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3Moe));
+
+    // Test Llama detection
     let mut metadata = HashMap::new();
     metadata.insert(
         "general.architecture".to_string(),
         Value::String("llama".to_string()),
     );
-    assert_eq!(detect_arch(&metadata), None); // Llama is not registered yet
+    assert_eq!(detect_arch(&metadata), Some(ArchKind::Llama));
 
     // Test unknown architecture
     let mut metadata = HashMap::new();

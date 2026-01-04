@@ -7,7 +7,7 @@ use crate::core::tokenizer::{
     tokenizer_from_gguf_metadata,
 };
 use crate::generate::cancel::CANCEL_LOADING;
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use crate::models::registry::{detect_arch, get_model_factory};
 use crate::{log_load, log_template, log_template_error};
 use candle::quantized::gguf_file;
@@ -45,7 +45,8 @@ pub fn load_gguf_model(
     let dev = select_device(device_pref);
     guard.device = dev;
     {
-        let kcfg = crate::core::precision::GpuKernelConfig::from_policy(&guard.precision_policy);
+        // Use default GPU kernel config (BF16 reduced precision enabled)
+        let kcfg = crate::core::precision::GpuKernelConfig::default();
         kcfg.apply_for_device(&guard.device);
     }
     log_load!("device selected: {}", device_label(&guard.device));
@@ -188,7 +189,7 @@ pub fn load_gguf_model(
     );
     // Модальная индикация удалена: единая обработка вложений реализуется на уровне проекта.
     // Persist detected architecture in state
-    guard.arch = Some(arch.clone());
+    guard.arch = Some(arch);
     if CANCEL_LOADING.load(Ordering::SeqCst) {
         emit_load_progress_debug(
             &dbg,

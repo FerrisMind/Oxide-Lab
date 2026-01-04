@@ -14,7 +14,7 @@ use crate::core::weights::{
     hub_cache_safetensors, hub_list_safetensors, local_list_safetensors, validate_safetensors_files,
 };
 use crate::generate::cancel::CANCEL_LOADING;
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use crate::models::registry::{detect_arch_from_config, get_model_factory};
 use crate::{log_hub_error, log_load, log_local_error, log_template};
 use std::sync::atomic::Ordering;
@@ -38,7 +38,8 @@ pub fn load_local_safetensors_model(
     let dev = select_device(device_pref);
     guard.device = dev.clone();
     {
-        let kcfg = crate::core::precision::GpuKernelConfig::from_policy(&guard.precision_policy);
+        // Use default GPU kernel config (BF16 reduced precision enabled)
+        let kcfg = crate::core::precision::GpuKernelConfig::default();
         kcfg.apply_for_device(&guard.device);
     }
     log_load!("device selected: {}", device_label(&guard.device));
@@ -130,7 +131,24 @@ pub fn load_local_safetensors_model(
             let head: String = tpl.chars().take(120).collect();
             log_template!("detected: len={}, head=<<<{}>>>", tpl.len(), head);
         } else {
-            log_template!("not found in tokenizer.json");
+            // Fallback: загружаем из chat_template.jinja
+            let jinja_path = model_dir.join("chat_template.jinja");
+            if jinja_path.exists() {
+                match std::fs::read_to_string(&jinja_path) {
+                    Ok(content) => {
+                        let head: String = content.chars().take(120).collect();
+                        log_template!(
+                            "loaded from chat_template.jinja: len={}, head=<<<{}>>>",
+                            content.len(),
+                            head
+                        );
+                        chat_tpl = Some(content);
+                    }
+                    Err(e) => log_template!("chat_template.jinja read error: {}", e),
+                }
+            } else {
+                log_template!("not found in tokenizer.json or chat_template.jinja");
+            }
         }
     }
 
@@ -145,20 +163,19 @@ pub fn load_local_safetensors_model(
         if let Some(arch) = detect_arch_from_config(&config) {
             // Set modality support based on architecture
             // Модальная индикация удалена.
-            // Convert PrecisionPolicy to Precision for the dtype conversion
-            let precision = match guard.precision_policy {
-                crate::core::precision::PrecisionPolicy::Default => {
-                    crate::core::precision::Precision::F32
-                }
-                crate::core::precision::PrecisionPolicy::MemoryEfficient => {
-                    crate::core::precision::Precision::F16
-                }
-                crate::core::precision::PrecisionPolicy::MaximumPrecision => {
-                    crate::core::precision::Precision::F32
-                }
-            };
-            // Determine the dtype based on precision and device
-            let dtype = crate::core::precision::precision_to_dtype(&precision, &dev);
+            // Read torch_dtype from config.json, fallback to BF16 on CUDA
+            let dtype = config
+                .get("torch_dtype")
+                .and_then(|v| v.as_str())
+                .and_then(|s| match s {
+                    "bfloat16" => Some(candle::DType::BF16),
+                    "float16" => Some(candle::DType::F16),
+                    "float32" => Some(candle::DType::F32),
+                    _ => None,
+                })
+                .unwrap_or_else(|| crate::core::precision::select_dtype_default(&dev));
+
+            log::info!("SafeTensors model dtype: {:?} (from config.json)", dtype);
 
             // Use the model factory to build the model
             emit_load_progress(app, "build_model", 60, None, false, None);
@@ -317,7 +334,23 @@ pub fn load_hub_safetensors_model(
             let head: String = tpl.chars().take(120).collect();
             log_template!("detected: len={}, head=<<<{}>>>", tpl.len(), head);
         } else {
-            log_template!("not found in tokenizer.json");
+            // Fallback: загружаем chat_template.jinja из hub
+            if let Ok(jinja_path) = api.get("chat_template.jinja") {
+                match std::fs::read_to_string(&jinja_path) {
+                    Ok(content) => {
+                        let head: String = content.chars().take(120).collect();
+                        log_template!(
+                            "loaded from chat_template.jinja: len={}, head=<<<{}>>>",
+                            content.len(),
+                            head
+                        );
+                        chat_tpl = Some(content);
+                    }
+                    Err(e) => log_template!("chat_template.jinja read error: {}", e),
+                }
+            } else {
+                log_template!("not found in tokenizer.json or chat_template.jinja");
+            }
         }
     }
 
@@ -332,20 +365,19 @@ pub fn load_hub_safetensors_model(
         if let Some(arch) = detect_arch_from_config(&config) {
             // Set modality support based on architecture
             // Модальная индикация удалена.
-            // Convert PrecisionPolicy to Precision for the dtype conversion
-            let precision = match guard.precision_policy {
-                crate::core::precision::PrecisionPolicy::Default => {
-                    crate::core::precision::Precision::F32
-                }
-                crate::core::precision::PrecisionPolicy::MemoryEfficient => {
-                    crate::core::precision::Precision::F16
-                }
-                crate::core::precision::PrecisionPolicy::MaximumPrecision => {
-                    crate::core::precision::Precision::F32
-                }
-            };
-            // Determine the dtype based on precision and device
-            let dtype = crate::core::precision::precision_to_dtype(&precision, &dev);
+            // Read torch_dtype from config.json, fallback to BF16 on CUDA
+            let dtype = config
+                .get("torch_dtype")
+                .and_then(|v| v.as_str())
+                .and_then(|s| match s {
+                    "bfloat16" => Some(candle::DType::BF16),
+                    "float16" => Some(candle::DType::F16),
+                    "float32" => Some(candle::DType::F32),
+                    _ => None,
+                })
+                .unwrap_or_else(|| crate::core::precision::select_dtype_default(&dev));
+
+            log::info!("SafeTensors model dtype: {:?} (from config.json)", dtype);
 
             // Use the model factory to build the model
             emit_load_progress(app, "build_model", 70, None, false, None);

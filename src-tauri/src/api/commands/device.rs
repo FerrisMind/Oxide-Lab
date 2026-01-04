@@ -1,7 +1,7 @@
 use crate::core::device::device_label;
 use crate::core::state::SharedState;
 use crate::core::types::DevicePreference;
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use serde::{Deserialize, Serialize};
 
 #[tauri::command]

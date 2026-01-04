@@ -4,7 +4,7 @@ use crate::core::types::LoadRequest;
 use crate::generate::cancel::{CANCEL_LOADING, cancel_model_loading_cmd};
 use crate::log_load;
 use crate::log_load_warn;
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use std::sync::Arc;
 
 pub fn clone_state_arc(

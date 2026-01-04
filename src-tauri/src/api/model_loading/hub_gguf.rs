@@ -5,7 +5,7 @@ use crate::core::tokenizer::{
     tokenizer_from_gguf_metadata,
 };
 use crate::generate::cancel::CANCEL_LOADING;
-use crate::models::common::model::ModelBackend;
+use crate::models::ModelBackend;
 use crate::models::registry::{detect_arch, get_model_factory};
 use crate::{log_hub, log_load, log_template};
 use candle::quantized::gguf_file;

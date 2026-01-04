@@ -412,9 +412,12 @@ export function createActions(ctx: ChatControllerCtx) {
     }
 
     async function stopGenerate() {
+        console.log('[stopGenerate] called');
         try {
             const { invoke } = await import('@tauri-apps/api/core');
+            console.log('[stopGenerate] invoking cancel_generation');
             await invoke('cancel_generation');
+            console.log('[stopGenerate] cancel_generation completed');
 
             // Save partial generation
             const { chatHistory } = await import('$lib/stores/chat-history');
@@ -426,7 +429,9 @@ export function createActions(ctx: ChatControllerCtx) {
                     await chatHistory.saveAssistantMessage(state.currentSessionId, last.content);
                 }
             }
-        } catch { /* ignore */ }
+        } catch (err) {
+            console.error('[stopGenerate] error:', err);
+        }
     }
 
     /**

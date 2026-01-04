@@ -126,7 +126,11 @@
   }
 
   function triggerStop() {
-    if (!canStop) return;
+    console.log('[Composer] triggerStop called, canStop:', canStop);
+    if (!canStop) {
+      console.log('[Composer] triggerStop blocked by canStop=false');
+      return;
+    }
     onStop?.();
   }
 

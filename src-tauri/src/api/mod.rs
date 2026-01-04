@@ -5,6 +5,7 @@ pub mod local_models;
 pub mod model_cards;
 pub mod model_loading;
 pub mod model_manager;
+pub mod openai_server;
 pub mod performance_api;
 pub mod template;
 
