@@ -1,5 +1,5 @@
 use crate::core::state::{ModelState, SharedState};
-use crate::models::ModelBackend;
+
 use std::env;
 use tauri::AppHandle;
 
@@ -23,18 +23,17 @@ pub(crate) fn apply_rayon_thread_limit(limit: Option<usize>) {
 
 #[tauri::command]
 pub fn get_rayon_thread_limit(app: AppHandle) -> Result<Option<usize>, String> {
-    ModelState::<Box<dyn ModelBackend + Send>>::load_thread_limit(&app).map_err(|e| e.to_string())
+    ModelState::load_thread_limit(&app).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn set_rayon_thread_limit(
     app: AppHandle,
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    state: tauri::State<'_, SharedState>,
     limit: Option<usize>,
 ) -> Result<(), String> {
     apply_rayon_thread_limit(limit);
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     guard.rayon_thread_limit = limit;
-    ModelState::<Box<dyn ModelBackend + Send>>::save_thread_limit(&app, limit)
-        .map_err(|e| e.to_string())
+    ModelState::save_thread_limit(&app, limit).map_err(|e| e.to_string())
 }

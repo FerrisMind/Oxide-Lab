@@ -4,17 +4,15 @@ use crate::core::types::LoadRequest;
 use crate::generate::cancel::{CANCEL_LOADING, cancel_model_loading_cmd};
 use crate::log_load;
 use crate::log_load_warn;
-use crate::models::ModelBackend;
+
 use std::sync::Arc;
 
-pub fn clone_state_arc(
-    state: &tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
-) -> SharedState<Box<dyn ModelBackend + Send>> {
+pub fn clone_state_arc(state: &tauri::State<'_, SharedState>) -> SharedState {
     state.inner().clone()
 }
 
 fn snapshot_for_loading(
-    guard: &ModelState<Box<dyn ModelBackend + Send>>,
+    guard: &ModelState,
 ) -> (
     candle::Device,
     crate::core::precision::PrecisionPolicy,
@@ -32,7 +30,7 @@ fn snapshot_for_loading(
 #[tauri::command]
 pub async fn load_model(
     app: tauri::AppHandle,
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    state: tauri::State<'_, SharedState>,
     req: LoadRequest,
 ) -> Result<(), String> {
     CANCEL_LOADING.store(false, std::sync::atomic::Ordering::SeqCst);
@@ -182,7 +180,7 @@ pub fn cancel_model_loading() -> Result<(), String> {
 #[tauri::command]
 pub async fn unload_model(
     app: tauri::AppHandle,
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    state: tauri::State<'_, SharedState>,
 ) -> Result<(), String> {
     let app_clone = app.clone();
     let state_arc = clone_state_arc(&state);
@@ -211,7 +209,7 @@ pub async fn unload_model(
             false,
             None,
         );
-        guard.gguf_model = None;
+        guard.scheduler.unload_model();
         crate::api::model_loading::emit_load_progress(
             &app_clone,
             "unload_model",
@@ -220,7 +218,7 @@ pub async fn unload_model(
             false,
             None,
         );
-        guard.gguf_file = None;
+        // guard.gguf_file удалено
         guard.tokenizer = None;
         crate::api::model_loading::emit_load_progress(
             &app_clone,
@@ -247,9 +245,7 @@ pub async fn unload_model(
 }
 
 #[tauri::command]
-pub fn is_model_loaded(
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
-) -> Result<bool, String> {
+pub fn is_model_loaded(state: tauri::State<'_, SharedState>) -> Result<bool, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
-    Ok(guard.gguf_model.is_some() && guard.tokenizer.is_some())
+    Ok(guard.scheduler.has_model() && guard.tokenizer.is_some())
 }

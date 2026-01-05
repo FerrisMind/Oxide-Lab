@@ -102,6 +102,9 @@ pub struct GenerateRequest {
     /// Used for regenerating from a specific point or editing a message.
     #[serde(default)]
     pub edit_index: Option<usize>,
+    /// Output format constraint for grammar sampling (json, json_schema)
+    #[serde(default)]
+    pub format: Option<crate::generate::grammar::OutputFormat>,
     /// Tools available for function calling. If provided, enables tool call parsing.
     #[serde(default)]
     pub tools: Option<Vec<crate::generate::tool_call_parser::Tool>>,

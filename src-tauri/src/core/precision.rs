@@ -213,7 +213,7 @@ mod tests {
         let config = PrecisionConfig::default();
         assert_eq!(config.cpu_dtype, DType::F32);
         assert_eq!(config.gpu_dtype, DType::BF16);
-        assert_eq!(config.allow_override, true);
+        assert!(config.allow_override);
     }
 
     #[test]
@@ -221,7 +221,7 @@ mod tests {
         let config = PrecisionConfig::memory_efficient();
         assert_eq!(config.cpu_dtype, DType::F32);
         assert_eq!(config.gpu_dtype, DType::F16);
-        assert_eq!(config.allow_override, true);
+        assert!(config.allow_override);
     }
 
     #[test]
@@ -229,7 +229,7 @@ mod tests {
         let config = PrecisionConfig::maximum_precision();
         assert_eq!(config.cpu_dtype, DType::F32);
         assert_eq!(config.gpu_dtype, DType::F32);
-        assert_eq!(config.allow_override, true);
+        assert!(config.allow_override);
     }
 
     #[test]

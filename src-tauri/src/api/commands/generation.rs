@@ -2,12 +2,11 @@ use crate::core::state::SharedState;
 use crate::core::types::GenerateRequest;
 use crate::generate;
 use crate::log_template;
-use crate::models::ModelBackend;
 
 #[tauri::command]
 pub async fn generate_stream(
     app: tauri::AppHandle,
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    state: tauri::State<'_, SharedState>,
     req: GenerateRequest,
 ) -> Result<(), String> {
     if let Ok(guard) = state.lock() {

@@ -1,5 +1,5 @@
 use crate::core::state::SharedState;
-use crate::models::ModelBackend;
+
 use candle::quantized::gguf_file;
 use std::path::Path;
 
@@ -26,7 +26,7 @@ pub fn gguf_list_metadata_keys_from_path(path: String) -> Result<Vec<String>, St
 
 #[tauri::command]
 pub fn gguf_list_metadata_keys(
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    state: tauri::State<'_, SharedState>,
 ) -> Result<Vec<String>, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     let path_str = guard

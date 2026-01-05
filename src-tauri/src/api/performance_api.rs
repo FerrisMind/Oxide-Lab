@@ -1,12 +1,11 @@
 // API команды для мониторинга производительности
 use crate::core::performance::{PerformanceMetric, StartupMetrics, SystemUsage};
 use crate::core::state::SharedState;
-use crate::models::ModelBackend;
 
 /// Получить все метрики производительности
 #[tauri::command]
 pub async fn get_performance_metrics(
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    state: tauri::State<'_, SharedState>,
 ) -> Result<Vec<PerformanceMetric>, String> {
     let monitor = {
         let guard = state.lock().map_err(|e| e.to_string())?;
@@ -19,7 +18,7 @@ pub async fn get_performance_metrics(
 /// Получить среднюю длительность операции
 #[tauri::command]
 pub async fn get_average_duration(
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    state: tauri::State<'_, SharedState>,
     operation_name: String,
 ) -> Result<Option<f64>, String> {
     let monitor = {
@@ -32,9 +31,7 @@ pub async fn get_average_duration(
 
 /// Получить текущее использование памяти
 #[tauri::command]
-pub async fn get_memory_usage(
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
-) -> Result<f64, String> {
+pub async fn get_memory_usage(state: tauri::State<'_, SharedState>) -> Result<f64, String> {
     let monitor = {
         let guard = state.lock().map_err(|e| e.to_string())?;
         guard.performance_monitor.clone()
@@ -45,9 +42,7 @@ pub async fn get_memory_usage(
 
 /// Очистить все метрики производительности
 #[tauri::command]
-pub async fn clear_performance_metrics(
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
-) -> Result<(), String> {
+pub async fn clear_performance_metrics(state: tauri::State<'_, SharedState>) -> Result<(), String> {
     let monitor = {
         let guard = state.lock().map_err(|e| e.to_string())?;
         guard.performance_monitor.clone()
@@ -59,7 +54,7 @@ pub async fn clear_performance_metrics(
 /// Получить метрики запуска приложения
 #[tauri::command]
 pub async fn get_startup_metrics(
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    state: tauri::State<'_, SharedState>,
 ) -> Result<Option<StartupMetrics>, String> {
     let monitor = {
         let guard = state.lock().map_err(|e| e.to_string())?;
@@ -71,9 +66,7 @@ pub async fn get_startup_metrics(
 
 /// Получить текущее использование системных ресурсов (CPU, GPU, память)
 #[tauri::command]
-pub async fn get_system_usage(
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
-) -> Result<SystemUsage, String> {
+pub async fn get_system_usage(state: tauri::State<'_, SharedState>) -> Result<SystemUsage, String> {
     let monitor = {
         let guard = state.lock().map_err(|e| e.to_string())?;
         guard.performance_monitor.clone()

@@ -1,12 +1,12 @@
 use crate::core::device::device_label;
 use crate::core::state::SharedState;
 use crate::core::types::DevicePreference;
-use crate::models::ModelBackend;
+
 use serde::{Deserialize, Serialize};
 
 #[tauri::command]
 pub fn set_device(
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    state: tauri::State<'_, SharedState>,
     pref: DevicePreference,
 ) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
@@ -25,9 +25,7 @@ pub struct DeviceInfoDto {
 }
 
 #[tauri::command]
-pub fn get_device_info(
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
-) -> Result<DeviceInfoDto, String> {
+pub fn get_device_info(state: tauri::State<'_, SharedState>) -> Result<DeviceInfoDto, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     let current = device_label(&guard.device).to_string();
     let cuda_build = cfg!(feature = "cuda");

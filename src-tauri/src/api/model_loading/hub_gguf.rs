@@ -5,7 +5,7 @@ use crate::core::tokenizer::{
     tokenizer_from_gguf_metadata,
 };
 use crate::generate::cancel::CANCEL_LOADING;
-use crate::models::ModelBackend;
+
 use crate::models::registry::{detect_arch, get_model_factory};
 use crate::{log_hub, log_load, log_template};
 use candle::quantized::gguf_file;
@@ -15,7 +15,7 @@ use std::sync::atomic::Ordering;
 
 pub fn load_hub_gguf_model(
     app: &tauri::AppHandle,
-    guard: &mut ModelState<Box<dyn ModelBackend + Send>>,
+    guard: &mut ModelState,
     repo_id: String,
     revision: Option<String>,
     filename: String,
@@ -35,7 +35,8 @@ pub fn load_hub_gguf_model(
     let revision = revision.unwrap_or_else(|| "main".to_string());
     log_hub!("loading {} from {}", filename, repo_id);
     let api = hf_hub::api::sync::Api::new().map_err(|e| e.to_string())?;
-    let repo = hf_hub::Repo::with_revision(repo_id, hf_hub::RepoType::Model, revision);
+    let repo =
+        hf_hub::Repo::with_revision(repo_id.clone(), hf_hub::RepoType::Model, revision.clone());
     let api = api.repo(repo);
 
     // Скачиваем GGUF-файл в кэш и открываем
@@ -241,8 +242,8 @@ pub fn load_hub_gguf_model(
         return Err("cancelled".into());
     }
 
-    guard.gguf_model = Some(model_backend);
-    guard.gguf_file = Some(file);
+    guard.scheduler.load_model(model_backend, repo_id.clone());
+    // gguf_file удалено
     guard.tokenizer = Some(tokenizer);
     guard.chat_template = chat_tpl;
     let ctx = if context_length == 0 {

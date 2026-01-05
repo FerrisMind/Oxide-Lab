@@ -22,7 +22,7 @@ use std::sync::atomic::Ordering;
 /// Load a model from local safetensors files using the ModelBuilder pattern
 pub fn load_local_safetensors_model(
     app: &tauri::AppHandle,
-    guard: &mut ModelState<Box<dyn ModelBackend + Send>>,
+    guard: &mut ModelState,
     model_path: String,
     context_length: usize,
     device_pref: Option<crate::core::types::DevicePreference>,
@@ -200,8 +200,14 @@ pub fn load_local_safetensors_model(
         }
     }
 
-    guard.gguf_model = built_model_opt;
-    guard.gguf_file = None;
+    if let Some(model) = built_model_opt {
+        guard
+            .scheduler
+            .load_model(model, model_path.to_string_lossy().to_string());
+    } else {
+        return Err("Failed to build model".into());
+    }
+    // guard.gguf_file удалено
     guard.tokenizer = tokenizer_opt;
     guard.chat_template = chat_tpl;
     guard.context_length = context_length.max(1);
@@ -232,7 +238,7 @@ pub fn load_local_safetensors_model(
 /// Load a model from Hub safetensors files using the ModelBuilder pattern
 pub fn load_hub_safetensors_model(
     app: &tauri::AppHandle,
-    guard: &mut ModelState<Box<dyn ModelBackend + Send>>,
+    guard: &mut ModelState,
     repo_id: String,
     revision: Option<String>,
     context_length: usize,
@@ -407,8 +413,12 @@ pub fn load_hub_safetensors_model(
         }
     }
 
-    guard.gguf_model = built_model_opt;
-    guard.gguf_file = None;
+    if let Some(model) = built_model_opt {
+        guard.scheduler.load_model(model, repo_id.clone());
+    } else {
+        return Err("Failed to build model".into());
+    }
+    // guard.gguf_file удалено
     guard.tokenizer = tokenizer_opt;
     guard.chat_template = chat_tpl;
     guard.context_length = context_length.max(1);
@@ -440,6 +450,5 @@ mod tests {
     fn test_safetensors_loading_function_exists() {
         // This is just a basic test to ensure the function is properly defined
         // Actual testing would require model files and a test environment
-        assert!(true);
     }
 }

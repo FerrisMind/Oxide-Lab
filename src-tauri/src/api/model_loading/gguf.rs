@@ -7,7 +7,7 @@ use crate::core::tokenizer::{
     tokenizer_from_gguf_metadata,
 };
 use crate::generate::cancel::CANCEL_LOADING;
-use crate::models::ModelBackend;
+
 use crate::models::registry::{detect_arch, get_model_factory};
 use crate::{log_load, log_template, log_template_error};
 use candle::quantized::gguf_file;
@@ -19,7 +19,7 @@ use tauri::Emitter;
 
 pub fn load_gguf_model(
     app: &tauri::AppHandle,
-    guard: &mut ModelState<Box<dyn ModelBackend + Send>>,
+    guard: &mut ModelState,
     model_path: String,
     context_length: usize,
     device_pref: Option<crate::core::types::DevicePreference>,
@@ -337,8 +337,10 @@ pub fn load_gguf_model(
         );
         return Err("cancelled".into());
     }
-    guard.gguf_model = Some(model_backend);
-    guard.gguf_file = Some(file);
+    guard
+        .scheduler
+        .load_model(model_backend, model_path.clone());
+    // gguf_file удалён из ModelState
     guard.tokenizer = Some(tokenizer);
     guard.chat_template = chat_tpl;
     let ctx = if context_length == 0 {

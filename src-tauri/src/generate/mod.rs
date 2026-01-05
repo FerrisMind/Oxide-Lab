@@ -1,6 +1,7 @@
 pub mod cancel;
 pub mod ctx;
 pub mod emit;
+pub mod grammar;
 pub mod minp;
 pub mod sampling;
 pub mod stream;

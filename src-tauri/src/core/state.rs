@@ -1,5 +1,6 @@
 use crate::core::performance::PerformanceMonitor;
 use crate::core::precision::{Precision, PrecisionPolicy};
+use crate::core::scheduler::{ModelScheduler, SchedulerConfig};
 use candle::Device;
 use serde_json;
 use std::fs::File;
@@ -11,9 +12,9 @@ use tauri::Manager;
 use tokenizers::Tokenizer;
 
 /// Универсальное состояние для любой модели
-pub struct ModelState<M> {
-    pub(crate) gguf_model: Option<M>,
-    pub(crate) gguf_file: Option<File>,
+pub struct ModelState {
+    pub(crate) scheduler: ModelScheduler,
+    // gguf_file удалён, так как модель владеет ресурсами
     pub(crate) tokenizer: Option<Tokenizer>,
     pub(crate) device: Device,
     pub(crate) context_length: usize,
@@ -35,11 +36,10 @@ pub struct ModelState<M> {
     pub(crate) performance_monitor: Arc<PerformanceMonitor>,
 }
 
-impl<M> ModelState<M> {
+impl ModelState {
     pub fn new(device: Device) -> Self {
         Self {
-            gguf_model: None,
-            gguf_file: None,
+            scheduler: ModelScheduler::new(SchedulerConfig::default()),
             tokenizer: None,
             device,
             context_length: 4096,
@@ -122,4 +122,4 @@ impl<M> ModelState<M> {
     }
 }
 
-pub type SharedState<M> = Arc<Mutex<ModelState<M>>>;
+pub type SharedState = Arc<Mutex<ModelState>>;

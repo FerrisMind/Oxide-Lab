@@ -13,7 +13,7 @@ use crate::core::thread_priority::set_current_thread_above_normal;
 use crate::core::types::DevicePreference;
 use crate::i18n;
 use crate::log_load_warn;
-use crate::models::ModelBackend;
+
 use tauri_plugin_sql::{Builder, Migration, MigrationKind};
 
 #[tauri::command]
@@ -26,7 +26,7 @@ fn get_app_info() -> serde_json::Value {
     })
 }
 
-fn build_shared_state() -> SharedState<Box<dyn ModelBackend + Send>> {
+fn build_shared_state() -> SharedState {
     let initial_device = select_device(Some(DevicePreference::Auto));
     Arc::new(Mutex::new(ModelState::new(initial_device)))
 }
@@ -179,7 +179,7 @@ pub fn run() {
             let _ = set_current_thread_above_normal();
 
             let handle = app.handle();
-            match ModelState::<Box<dyn ModelBackend + Send>>::load_thread_limit(handle) {
+            match ModelState::load_thread_limit(handle) {
                 Ok(limit) => {
                     // Leave 1 core free by default to keep UI responsive during heavy loads.
                     // If user explicitly configured a limit, always respect it.
@@ -201,6 +201,24 @@ pub fn run() {
                 }
             }
             spawn_startup_tracker(app.handle().clone(), performance_monitor.clone());
+
+            // Start the model scheduler keep-alive task
+            let scheduler_state = shared.clone();
+            tauri::async_runtime::spawn(async move {
+                // Проверяем каждую минуту (настраивается)
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+                // Первый тик происходит немедленно, пропускаем его
+                interval.tick().await;
+
+                loop {
+                    interval.tick().await;
+                    if let Ok(mut guard) = scheduler_state.lock() {
+                        guard.scheduler.check_expiration();
+                    } else {
+                        log::error!("Scheduler keep-alive task: failed to lock state");
+                    }
+                }
+            });
 
             // Start OpenAI-compatible API server
             let openai_state = shared.clone();

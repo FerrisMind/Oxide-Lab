@@ -29,7 +29,6 @@ use crate::core::types::{ChatMessage, GenerateRequest};
 use crate::generate::emit::{EmissionBackend, GenerationEvent};
 use crate::generate::stream::generate_stream_with_backend;
 use crate::generate::tool_call_parser::{Tool, ToolCall};
-use crate::models::ModelBackend;
 
 // ============================================================================
 // OpenAI API Types
@@ -65,6 +64,9 @@ pub struct ChatCompletionRequest {
     pub top_p: Option<f64>,
     #[serde(default)]
     pub tools: Option<Vec<Tool>>,
+    /// OpenAI frequency_penalty [-2.0, 2.0] - maps to repeat_penalty
+    #[serde(default)]
+    pub frequency_penalty: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -275,7 +277,7 @@ impl EmissionBackend for OpenAIBackend {
 // ============================================================================
 
 pub struct OpenAIServerState {
-    pub model_state: SharedState<Box<dyn ModelBackend + Send>>,
+    pub model_state: SharedState,
     pub shutdown_tx: broadcast::Sender<()>,
 }
 
@@ -299,16 +301,10 @@ async fn models_handler(
         )
     })?;
 
-    let mut models = if guard.gguf_model.is_some() {
+    let mut models = if guard.scheduler.has_model() {
         let model_id = guard
-            .model_path
-            .as_ref()
-            .and_then(|p| {
-                std::path::Path::new(p)
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(String::from)
-            })
+            .scheduler
+            .get_model_id()
             .unwrap_or_else(|| "loaded-model".to_string());
 
         vec![Model {
@@ -375,7 +371,7 @@ async fn create_completion(
             .lock()
             .map_err(|_| server_error("Lock failed"))?;
 
-        if guard.gguf_model.is_none() {
+        if !guard.scheduler.has_model() {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ErrorResponse {
@@ -396,6 +392,15 @@ async fn create_completion(
     let id = format!("chatcmpl-{}", generate_id());
     let model_name = req.model.clone();
 
+    // OpenAI frequency_penalty [-2,2] → repeat_penalty [0.5, 2.0]
+    // frequency_penalty=0 → repeat_penalty=1.0 (neutral)
+    // frequency_penalty>0 → stronger penalty
+    let repeat_penalty = req.frequency_penalty.map(|fp| {
+        // Clamp and convert: fp ∈ [-2, 2] → rp ∈ [0.5, 1.5] (approx)
+        // Simple linear: rp = 1.0 + fp * 0.25, clamped to [0.5, 2.0]
+        ((1.0 + fp * 0.25).clamp(0.5, 2.0)) as f32
+    });
+
     // Prepare GenerateRequest
     let gen_req = GenerateRequest {
         prompt: String::new(),
@@ -407,7 +412,7 @@ async fn create_completion(
         // defaults
         top_k: None,
         min_p: None,
-        repeat_penalty: None,
+        repeat_penalty,
         repeat_last_n: 64, // Default
         seed: None,
         use_custom_params: true,
@@ -416,6 +421,7 @@ async fn create_completion(
         split_prompt: None,
         attachments: None,
         edit_index: None,
+        format: None,
     };
 
     let state_clone = state.model_state.clone();
@@ -484,7 +490,7 @@ async fn create_completion_stream(
             .lock()
             .map_err(|_| server_error("Lock failed"))?;
 
-        if guard.gguf_model.is_none() {
+        if !guard.scheduler.has_model() {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ErrorResponse {
@@ -503,13 +509,15 @@ async fn create_completion_stream(
     let id = format!("chatcmpl-{}", generate_id());
     let model_id = req.model.clone();
 
+    // OpenAI frequency_penalty → repeat_penalty conversion
+    let repeat_penalty = req
+        .frequency_penalty
+        .map(|fp| ((1.0 + fp * 0.25).clamp(0.5, 2.0)) as f32);
+
     // Prepare GenerateRequest
     let gen_req = GenerateRequest {
         prompt: String::new(),
         messages: Some(req.messages.into_iter().map(ChatMessage::from).collect()),
-        // model: req.model, // This field exists in logic/state but not in GenerateRequest struct?
-        // Wait, check types.rs again. It DOES NOT have `model` field.
-        // So remove it.
         temperature: req.temperature,
         top_p: req.top_p,
         max_new_tokens: req.max_tokens,
@@ -517,7 +525,7 @@ async fn create_completion_stream(
         // defaults
         top_k: None,
         min_p: None,
-        repeat_penalty: None,
+        repeat_penalty,
         repeat_last_n: 64, // Default
         seed: None,
         use_custom_params: true,
@@ -526,6 +534,7 @@ async fn create_completion_stream(
         split_prompt: None,
         attachments: None,
         edit_index: None,
+        format: None,
     };
 
     let state_clone = state.model_state.clone();
@@ -694,7 +703,7 @@ async fn create_legacy_completion(
             .model_state
             .lock()
             .map_err(|_| server_error("Lock failed"))?;
-        if guard.gguf_model.is_none() {
+        if !guard.scheduler.has_model() {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ErrorResponse {
@@ -731,6 +740,7 @@ async fn create_legacy_completion(
         split_prompt: None,
         attachments: None,
         edit_index: None,
+        format: None,
     };
 
     let state_clone = state.model_state.clone();
@@ -785,7 +795,7 @@ async fn create_legacy_completion_stream(
             .model_state
             .lock()
             .map_err(|_| server_error("Lock failed"))?;
-        if guard.gguf_model.is_none() {
+        if !guard.scheduler.has_model() {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ErrorResponse {
@@ -822,6 +832,7 @@ async fn create_legacy_completion_stream(
         split_prompt: None,
         attachments: None,
         edit_index: None,
+        format: None,
     };
 
     let state_clone = state.model_state.clone();
@@ -991,7 +1002,7 @@ pub fn create_router(state: Arc<OpenAIServerState>) -> Router {
 // ============================================================================
 
 pub async fn start_server(
-    model_state: SharedState<Box<dyn ModelBackend + Send>>,
+    model_state: SharedState,
     port: u16,
 ) -> Result<broadcast::Sender<()>, std::io::Error> {
     let (shutdown_tx, _) = broadcast::channel::<()>(1);

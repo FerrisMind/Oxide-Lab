@@ -5,11 +5,10 @@
 
 use crate::core::precision::{Precision, PrecisionPolicy};
 use crate::core::state::SharedState;
-use crate::models::ModelBackend;
 
 #[tauri::command]
 pub fn get_precision_policy(
-    _state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    _state: tauri::State<'_, SharedState>,
 ) -> Result<PrecisionPolicy, String> {
     // Return default - dtype is now from model config
     Ok(PrecisionPolicy::Default)
@@ -17,7 +16,7 @@ pub fn get_precision_policy(
 
 #[tauri::command]
 pub fn set_precision_policy(
-    _state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    _state: tauri::State<'_, SharedState>,
     _policy: PrecisionPolicy,
 ) -> Result<(), String> {
     // No-op - dtype is now from model config
@@ -27,7 +26,7 @@ pub fn set_precision_policy(
 #[tauri::command]
 pub fn get_precision(
     _app: tauri::AppHandle,
-    _state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    _state: tauri::State<'_, SharedState>,
 ) -> Result<Precision, String> {
     // Return default
     Ok(Precision::default())
@@ -36,7 +35,7 @@ pub fn get_precision(
 #[tauri::command]
 pub fn set_precision(
     _app: tauri::AppHandle,
-    _state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    _state: tauri::State<'_, SharedState>,
     _precision_str: String,
 ) -> Result<(), String> {
     // No-op - dtype is now from model config

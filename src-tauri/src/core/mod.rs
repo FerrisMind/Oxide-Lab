@@ -5,6 +5,7 @@ pub mod log;
 pub mod performance;
 pub mod precision;
 pub mod prompt;
+pub mod scheduler;
 pub mod state;
 pub mod stt_whisper;
 pub mod token_output_stream;

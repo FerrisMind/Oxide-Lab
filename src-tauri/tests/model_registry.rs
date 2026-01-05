@@ -27,26 +27,12 @@ fn test_supported_models_detection() {
     );
     assert_eq!(detect_arch(&metadata), Some(ArchKind::Qwen3Moe));
 
-    // Test Llama detection (now supported)
+    // Test Llama detection
     metadata.insert(
         "general.architecture".to_string(),
         Value::String("llama".to_string()),
     );
     assert_eq!(detect_arch(&metadata), Some(ArchKind::Llama));
-
-    // Test Mistral detection (now supported)
-    metadata.insert(
-        "general.architecture".to_string(),
-        Value::String("mistral".to_string()),
-    );
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Mistral));
-
-    // Test Mixtral detection
-    metadata.insert(
-        "general.architecture".to_string(),
-        Value::String("mixtral".to_string()),
-    );
-    assert_eq!(detect_arch(&metadata), Some(ArchKind::Mixtral));
 }
 
 #[test]

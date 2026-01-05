@@ -18,20 +18,22 @@ use crate::core::state::SharedState;
 use crate::core::token_output_stream::TokenOutputStream;
 use crate::core::tokenizer::{extract_bos_token_str, extract_eos_ids};
 use crate::core::types::{ChatMessage, GenerateRequest};
-use crate::models::ModelBackend;
+
 use crate::{log_infer, log_template_error};
 use std::sync::atomic::Ordering;
 use tracing_subscriber::prelude::*;
 // Мультимодальные вложения отключены
 
+use crate::generate::grammar::GrammarSampler; // Import
+
 pub async fn generate_stream_cmd(
     app: tauri::AppHandle,
-    state: tauri::State<'_, SharedState<Box<dyn ModelBackend + Send>>>,
+    state: tauri::State<'_, SharedState>,
     req: GenerateRequest,
 ) -> Result<(), String> {
     CANCEL_GENERATION.store(false, Ordering::SeqCst);
     let app_clone = app.clone();
-    let state_arc: SharedState<Box<dyn ModelBackend + Send>> = state.inner().clone();
+    let state_arc: SharedState = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || generate_stream_impl(app_clone, state_arc, req))
         .await
         .map_err(|e| e.to_string())?
@@ -39,7 +41,7 @@ pub async fn generate_stream_cmd(
 
 pub fn generate_stream_impl(
     app: tauri::AppHandle,
-    state: SharedState<Box<dyn ModelBackend + Send>>,
+    state: SharedState,
     req: GenerateRequest,
 ) -> Result<(), String> {
     let backend = Box::new(TauriBackend::new(app));
@@ -47,7 +49,7 @@ pub fn generate_stream_impl(
 }
 
 pub fn generate_stream_with_backend(
-    state: SharedState<Box<dyn ModelBackend + Send>>,
+    state: SharedState,
     req: GenerateRequest,
     backend: Box<dyn EmissionBackend>,
 ) -> Result<(), String> {
@@ -60,10 +62,12 @@ pub fn generate_stream_with_backend(
         None
     };
     let mut guard = state.lock().map_err(|e| e.to_string())?;
-    let tokenizer = match (&guard.gguf_model, &guard.tokenizer) {
-        (Some(_), Some(tk)) => tk.clone(),
-        _ => return Err("Model/tokenizer is not loaded".into()),
-    };
+
+    // Check if model is loaded via scheduler
+    if !guard.scheduler.has_model() || guard.tokenizer.is_none() {
+        return Err("Model/tokenizer is not loaded".into());
+    }
+    let tokenizer = guard.tokenizer.clone().unwrap();
 
     // Extract BOS token before moving tokenizer into the stream helper
     let bos_opt = extract_bos_token_str(&tokenizer);
@@ -319,8 +323,8 @@ pub fn generate_stream_with_backend(
     let _vocab = tos.tokenizer().get_vocab(true);
 
     // Сбрасываем KV-кэш перед новым запросом, чтобы не тянуть состояние предыдущего диалога.
-    if let Some(model) = guard.gguf_model.as_mut() {
-        model.clear_kv_cache();
+    if let Some(entry) = guard.scheduler.active_model.as_mut() {
+        entry.model.clear_kv_cache();
     }
 
     // Начинаем prefill
@@ -334,16 +338,16 @@ pub fn generate_stream_with_backend(
                 .map_err(|e| e.to_string())?
                 .unsqueeze(0)
                 .map_err(|e| e.to_string())?;
-            let logits = match guard.gguf_model.take() {
-                Some(mut model) => {
-                    let res = model.forward_layered(&input, 0);
+            let logits = match guard.scheduler.take_model() {
+                Some(mut entry) => {
+                    let res = entry.model.forward_layered(&input, 0);
                     match res {
                         Ok(v) => {
-                            guard.gguf_model = Some(model);
+                            guard.scheduler.restore_model(entry);
                             v
                         }
                         Err(e) => {
-                            guard.gguf_model = Some(model);
+                            guard.scheduler.restore_model(entry);
                             return Err(e.to_string());
                         }
                     }
@@ -366,16 +370,16 @@ pub fn generate_stream_with_backend(
                     .map_err(|e| e.to_string())?
                     .unsqueeze(0)
                     .map_err(|e| e.to_string())?;
-                let logits = match guard.gguf_model.take() {
-                    Some(mut model) => {
-                        let res = model.forward_layered(&input, i);
+                let logits = match guard.scheduler.take_model() {
+                    Some(mut entry) => {
+                        let res = entry.model.forward_layered(&input, i);
                         match res {
                             Ok(v) => {
-                                guard.gguf_model = Some(model);
+                                guard.scheduler.restore_model(entry);
                                 v
                             }
                             Err(e) => {
-                                guard.gguf_model = Some(model);
+                                guard.scheduler.restore_model(entry);
                                 return Err(e.to_string());
                             }
                         }
@@ -418,7 +422,24 @@ pub fn generate_stream_with_backend(
         ToolCallParser::with_json_tag(tools.clone())
     });
 
+    // Инициализация grammar sampler
+    let mut grammar_sampler = if req
+        .format
+        .as_ref()
+        .map(|f| f.requires_grammar())
+        .unwrap_or(false)
+    {
+        Some(GrammarSampler::new())
+    } else {
+        None
+    };
+
     if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
+        // Update grammar sampler for the first token
+        if let Some(sampler) = grammar_sampler.as_mut() {
+            sampler.update(&t);
+        }
+
         let chunk = thinking_parser.process_token(&t);
         // Process tool calls if parser is active
         if let Some(ref mut tcp) = tool_call_parser {
@@ -448,16 +469,18 @@ pub fn generate_stream_with_backend(
             .map_err(|e| e.to_string())?
             .unsqueeze(0)
             .map_err(|e| e.to_string())?;
-        let logits = match guard.gguf_model.take() {
-            Some(mut model) => {
-                let res = model.forward_layered(&input, ctx_slice.base_context_len + index);
+        let logits = match guard.scheduler.take_model() {
+            Some(mut entry) => {
+                let res = entry
+                    .model
+                    .forward_layered(&input, ctx_slice.base_context_len + index);
                 match res {
                     Ok(v) => {
-                        guard.gguf_model = Some(model);
+                        guard.scheduler.restore_model(entry);
                         v
                     }
                     Err(e) => {
-                        guard.gguf_model = Some(model);
+                        guard.scheduler.restore_model(entry);
                         return Err(e.to_string());
                     }
                 }
@@ -501,6 +524,19 @@ pub fn generate_stream_with_backend(
         }
 
         if let Some(t) = tos.next_token(next_token).map_err(|e| e.to_string())? {
+            // Update grammar sampler
+            if let Some(sampler) = grammar_sampler.as_mut() {
+                sampler.update(&t);
+                if sampler.is_complete() {
+                    log_infer!("grammar: JSON complete, stopping generation");
+                    // Emit remaining buffer if any
+                    let chunk = thinking_parser.process_token(&t);
+                    emitter.emit_message(chunk);
+                    // Also finalize thinking parser if needed
+                    break;
+                }
+            }
+
             let chunk = thinking_parser.process_token(&t);
             // Process tool calls if parser is active
             if let Some(ref mut tcp) = tool_call_parser {
@@ -540,8 +576,8 @@ pub fn generate_stream_with_backend(
     emitter.finalize();
 
     // Очищаем KV-кэш после запроса, чтобы следующее поколение стартовало с чистого состояния.
-    if let Some(model) = guard.gguf_model.as_mut() {
-        model.clear_kv_cache();
+    if let Some(entry) = guard.scheduler.active_model.as_mut() {
+        entry.model.clear_kv_cache();
     }
 
     // Финализируем метрики inference - используем существующий runtime если доступен

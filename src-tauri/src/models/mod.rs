@@ -7,15 +7,14 @@ pub mod common;
 pub mod registry;
 
 // Model backends
+pub mod llama;
 pub mod qwen2;
 pub mod qwen2_moe;
 pub mod qwen3;
 pub mod qwen3_moe;
 // TODO: Add more models
-// pub mod llama;
 // pub mod gemma3;
 // pub mod phi3;
-// pub mod mistral;
 
 // Re-exports
 pub use api::error::{Error as ApiError, Result as ApiResult};

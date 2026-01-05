@@ -69,9 +69,8 @@ mod tests {
 
     #[test]
     fn initializes_or_reports_already_initialized() {
-        let res = init_global_low_priority_pool(2).unwrap();
+        let _res = init_global_low_priority_pool(2).unwrap();
         // Either we init it here, or something else already did.
-        assert!(res == true || res == false);
     }
 
     #[test]

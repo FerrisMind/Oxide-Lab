@@ -6,23 +6,17 @@ use std::collections::HashMap;
 /// Поддерживаемые архитектуры моделей
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ArchKind {
-    Llama,    // Llama 2, 3, 3.1, 3.2, 3.3, 4, CodeLlama
-    Mistral,  // Mistral 7B, Small, NeMo, Large
-    Mixtral,  // Mixtral MoE
-    Gemma,    // Gemma 1, 2
+    Llama,    // Llama 1/2/3/4, Mistral, Mixtral, Yi, DeepSeek, SmolLM, CodeLlama, etc.
+    Gemma,    // Gemma 1
+    Gemma2,   // Gemma 2
     Gemma3,   // Gemma 3
     Qwen2,    // Qwen 2, Qwen 2.5
     Qwen2Moe, // Qwen 2 MoE
     Qwen3,    // Qwen 3
     Qwen3Moe, // Qwen 3 MoE (30B-A3B)
-    Yi,       // Yi models
     Phi,      // Phi 1, 1.5, 2
     Phi3,     // Phi-3, Phi-3.5, Phi-4
-    DeepSeek, // DeepSeek, DeepSeek-R1
-    Pixtral,  // Pixtral
-    SmolLM2,  // SmolLM 2
     Glm4,     // GLM-4
-    ChatGlm,  // ChatGLM3
 }
 
 impl ArchKind {
@@ -30,22 +24,16 @@ impl ArchKind {
     pub fn display_name(&self) -> &'static str {
         match self {
             ArchKind::Llama => "Llama",
-            ArchKind::Mistral => "Mistral",
-            ArchKind::Mixtral => "Mixtral",
             ArchKind::Gemma => "Gemma",
+            ArchKind::Gemma2 => "Gemma 2",
             ArchKind::Gemma3 => "Gemma 3",
             ArchKind::Qwen2 => "Qwen 2",
             ArchKind::Qwen2Moe => "Qwen 2 MoE",
             ArchKind::Qwen3 => "Qwen 3",
             ArchKind::Qwen3Moe => "Qwen 3 MoE",
-            ArchKind::Yi => "Yi",
             ArchKind::Phi => "Phi",
             ArchKind::Phi3 => "Phi-3",
-            ArchKind::DeepSeek => "DeepSeek",
-            ArchKind::Pixtral => "Pixtral",
-            ArchKind::SmolLM2 => "SmolLM2",
             ArchKind::Glm4 => "GLM-4",
-            ArchKind::ChatGlm => "ChatGLM",
         }
     }
 
@@ -54,14 +42,13 @@ impl ArchKind {
         matches!(
             self,
             ArchKind::Llama
-                | ArchKind::Mistral
-                | ArchKind::Mixtral
                 | ArchKind::Gemma
+                | ArchKind::Gemma2
+                | ArchKind::Gemma3
                 | ArchKind::Qwen2
                 | ArchKind::Qwen3
                 | ArchKind::Qwen3Moe
                 | ArchKind::Phi3
-                | ArchKind::DeepSeek
         )
     }
 
@@ -115,42 +102,20 @@ fn detect_arch_from_string(s: &str) -> Option<ArchKind> {
         || s_lower.contains("qwen2.5")
     {
         Some(ArchKind::Qwen2)
-    } else if s_lower.contains("qwen1") || s_lower.contains("qwen-1") {
-        // Qwen 1.x also uses Qwen2 architecture (compatible)
-        Some(ArchKind::Qwen2)
-    } else if s_lower.contains("qwen") {
-        // Generic qwen - default to Qwen3 (latest)
-        Some(ArchKind::Qwen3)
     } else if s_lower.contains("gemma3") || s_lower.contains("gemma-3") {
         Some(ArchKind::Gemma3)
+    } else if s_lower.contains("gemma2") || s_lower.contains("gemma-2") {
+        Some(ArchKind::Gemma2)
     } else if s_lower.contains("gemma") {
         Some(ArchKind::Gemma)
-    } else if s_lower.contains("mixtral") {
-        Some(ArchKind::Mixtral)
-    } else if s_lower.contains("mistral") {
-        Some(ArchKind::Mistral)
     } else if s_lower.contains("llama") {
         Some(ArchKind::Llama)
-    } else if s_lower.contains("phi-3")
-        || s_lower.contains("phi3")
-        || s_lower.contains("phi-4")
-        || s_lower.contains("phi4")
-    {
+    } else if s_lower.contains("phi-3") || s_lower.contains("phi3") {
         Some(ArchKind::Phi3)
     } else if s_lower.contains("phi") {
         Some(ArchKind::Phi)
-    } else if s_lower.contains("deepseek") {
-        Some(ArchKind::DeepSeek)
-    } else if s_lower.contains("yi") {
-        Some(ArchKind::Yi)
-    } else if s_lower.contains("smollm") {
-        Some(ArchKind::SmolLM2)
-    } else if s_lower.contains("pixtral") {
-        Some(ArchKind::Pixtral)
     } else if s_lower.contains("glm4") || s_lower.contains("glm-4") {
         Some(ArchKind::Glm4)
-    } else if s_lower.contains("chatglm") {
-        Some(ArchKind::ChatGlm)
     } else {
         None
     }
@@ -253,14 +218,17 @@ impl ModelFactory {
                 let model = Qwen3MoeBackend::from_gguf(content, file, device, dtype)?;
                 Ok(Box::new(model))
             }
-            // TODO: Implement other architectures as separate modules
-            // ArchKind::Llama | ArchKind::Yi | ArchKind::SmolLM2 => { ... }
-            // ArchKind::Mistral | ArchKind::Mixtral => { ... }
-            // ArchKind::Phi3 | ArchKind::Phi => { ... }
-            // ArchKind::Gemma | ArchKind::Gemma3 => { ... }
+            // Llama-подобные архитектуры (Llama, Mistral, Mixtral, DeepSeek, Yi, SmolLM2)
+            // LlamaVariant определяется автоматически из metadata
+            ArchKind::Llama => {
+                use super::llama::LlamaBackend;
+                let model = LlamaBackend::from_gguf(content, file, device)?;
+                Ok(Box::new(model))
+            }
+            // TODO: Phi3, Gemma
             _ => Err(format!(
                 "Model building for {:?} is not yet implemented. \
-                 Currently supported: Qwen2, Qwen3, Qwen3Moe",
+                 Currently supported: Qwen2, Qwen3, Qwen3Moe, Llama (incl. Mistral, Mixtral, DeepSeek, Yi, SmolLM2)",
                 arch
             )),
         }
@@ -312,9 +280,15 @@ impl ModelFactory {
                     Qwen2MoeBackend::from_safetensors(&filenames, &config_path, device, dtype)?;
                 Ok(Box::new(model))
             }
+            ArchKind::Llama => {
+                use super::llama::LlamaBackend;
+                let model =
+                    LlamaBackend::from_safetensors(&filenames, &config_path, device, dtype)?;
+                Ok(Box::new(model))
+            }
             _ => Err(format!(
                 "SafeTensors model building for {:?} is not yet implemented. \
-                 Currently supported: Qwen2, Qwen2Moe, Qwen3, Qwen3Moe",
+                 Currently supported: Qwen2, Qwen2Moe, Qwen3, Qwen3Moe, Llama (incl. Mistral, Mixtral, etc.)",
                 arch
             )),
         }
@@ -354,7 +328,7 @@ mod tests {
         assert_eq!(detect_arch_from_string("llama"), Some(ArchKind::Llama));
         assert_eq!(detect_arch_from_string("Qwen3"), Some(ArchKind::Qwen3));
         assert_eq!(detect_arch_from_string("gemma3"), Some(ArchKind::Gemma3));
-        assert_eq!(detect_arch_from_string("mistral"), Some(ArchKind::Mistral));
+        assert_eq!(detect_arch_from_string("mistral"), Some(ArchKind::Llama));
         assert_eq!(detect_arch_from_string("phi-3"), Some(ArchKind::Phi3));
         assert_eq!(detect_arch_from_string("unknown"), None);
     }

@@ -12,15 +12,12 @@ fn test_auto_device_selection() {
     match device {
         Device::Cpu => {
             // This is always valid as a fallback
-            assert!(true);
         }
         Device::Cuda(_) => {
             // CUDA device was selected
-            assert!(true);
         }
         Device::Metal(_) => {
             // Metal device was selected
-            assert!(true);
         }
     }
 }
@@ -29,7 +26,7 @@ fn test_auto_device_selection() {
 fn test_explicit_cpu_selection() {
     let device = select_device(Some(DevicePreference::Cpu));
     match device {
-        Device::Cpu => assert!(true),
+        Device::Cpu => {}
         _ => panic!("Expected CPU device"),
     }
 }
