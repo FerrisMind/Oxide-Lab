@@ -162,83 +162,16 @@ pub fn generate_stream_with_backend(
         .saturating_sub(generation_reserve)
         .max(1);
 
-    // Ollama-style "smart" truncation:
-    // 1. Always keep System Prompt (if present).
-    // 2. Always keep Last Message (if possible).
-    // 3. Fill remaining space with history from newest to oldest.
+    // Ollama-style "smart" truncation via ctx::smart_truncate
     let prompt = if let Some(messages) = msgs {
-        if messages.is_empty() {
-            String::new()
-        } else {
-            // Extract system messages
-            let system_msgs: Vec<ChatMessage> = messages
-                .iter()
-                .filter(|m| m.role == "system")
-                .cloned()
-                .collect();
-
-            // All non-system messages
-            let other_msgs: Vec<ChatMessage> = messages
-                .iter()
-                .filter(|m| m.role != "system")
-                .cloned()
-                .collect();
-
-            if other_msgs.is_empty() {
-                // Only system messages?
-                build_prompt_with_template_bos(&guard.chat_template, system_msgs, bos_opt.clone())?
-            } else {
-                // Try to fit as many recent messages as possible
-                let mut best_prompt = String::new();
-                let n = other_msgs.len();
-
-                // Try from including ALL to including ONLY LAST
-                // Note: Ollama goes from n-1 down to 0 (including i..end).
-                // We do the same.
-                for i in 0..n {
-                    let subset_others = &other_msgs[i..]; // suffix starting at i
-                    let mut candidate_msgs = system_msgs.clone();
-                    candidate_msgs.extend_from_slice(subset_others);
-
-                    let p = build_prompt_with_template_bos(
-                        &guard.chat_template,
-                        candidate_msgs,
-                        bos_opt.clone(),
-                    )?;
-
-                    // Check length (expensive but necessary for correct truncation)
-                    let encoded = tos
-                        .tokenizer()
-                        .encode(p.clone(), true)
-                        .map_err(|e| e.to_string())?;
-                    if encoded.get_ids().len() <= prompt_limit {
-                        best_prompt = p;
-                        break; // We found the largest suffix that fits (since we started with longest? NO)
-                    // Wait, if we want the largest suffix, we should start with i=0 (longest) and increment i (shorten) until it fits.
-                    // Correct. i=0 means ALL messages. If it fits, we are good. break.
-                    // If not, i=1 (drop oldest).
-                    } else if i == n - 1 {
-                        // Even the last message + system doesn't fit!
-                        // We must use it and let it be truncated by raw token limit later if needed,
-                        // OR we force it (user wants last message).
-                        // We set best_prompt to this minimal set.
-                        best_prompt = p;
-                    }
-                }
-
-                // If best_prompt is still empty (shouldn't happen logic above covers it), default to last msg
-                if best_prompt.is_empty() {
-                    let mut minimal = system_msgs.clone();
-                    minimal.push(other_msgs.last().unwrap().clone());
-                    best_prompt = build_prompt_with_template_bos(
-                        &guard.chat_template,
-                        minimal,
-                        bos_opt.clone(),
-                    )?;
-                }
-                best_prompt
-            }
-        }
+        use crate::generate::ctx::smart_truncate;
+        smart_truncate(
+            tos.tokenizer(),
+            &guard.chat_template,
+            &messages,
+            bos_opt.clone(),
+            prompt_limit,
+        )?
     } else {
         prompt_str
     };

@@ -21,7 +21,7 @@ pub fn load_gguf_model(
     app: &tauri::AppHandle,
     guard: &mut ModelState,
     model_path: String,
-    context_length: usize,
+    request_context_length: usize, // Shadowed later
     device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
     let dbg = LoadDebugCtx::new();
@@ -242,6 +242,110 @@ pub fn load_gguf_model(
     {
         guard.model_config_json = Some(gg);
     }
+
+    // --- Dynamic Context Autotuning ---
+    // Extract metadata for cache estimation
+    let arch_str = format!("{:?}", arch);
+    let arch_str_lower = arch_str.to_lowercase();
+
+    // Helper to get u32 from metadata with fallback to lowercase arch
+    let get_u32 = |key_suffix: &str| -> u32 {
+        content
+            .metadata
+            .get(&format!("{}.{}", arch_str, key_suffix))
+            .or_else(|| {
+                content
+                    .metadata
+                    .get(&format!("{}.{}", arch_str_lower, key_suffix))
+            })
+            .and_then(|v| v.to_u32().ok())
+            .unwrap_or(0)
+    };
+
+    let n_layer = get_u32("block_count") as usize;
+    let n_embd = get_u32("embedding_length") as usize;
+    let n_head = get_u32("attention.head_count") as usize;
+    let mut n_kv_head = get_u32("attention.head_count_kv") as usize;
+    if n_kv_head == 0 {
+        n_kv_head = n_head;
+    } // Fallback
+
+    // Estimate head_dim
+    let head_dim = if n_head > 0 { n_embd / n_head } else { 0 };
+
+    // Determine final context length
+    let context_length = if n_layer > 0 && n_embd > 0 && n_head > 0 {
+        use crate::api::model_loading::context_algo::{ModelCacheParams, estimate_best_context};
+        use crate::api::model_loading::context_settings::{
+            ContextSettingsManager, ContextSource, ModelContextSettings,
+        };
+
+        let settings_manager = ContextSettingsManager::new(app);
+        // Use filename as ID
+        let model_id = std::path::Path::new(&model_path)
+            .file_name()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "unknown_model".to_string());
+
+        let existing = settings_manager.get_settings(&model_id);
+        if let Some(s) = existing {
+            log::info!(
+                "Using saved context settings for {}: size={}, source={:?}",
+                model_id,
+                s.size,
+                s.source
+            );
+            s.size
+        } else {
+            // Run Autotune
+            log::info!("No context settings for {}. Running Autotune...", model_id);
+            let cache_params = ModelCacheParams {
+                n_layer,
+                n_kv_head,
+                head_dim,
+                dtype_size: 2, // Assuming F16/Q8 equivalent cache size (safe upper estimation)
+            };
+
+            // Candidates: 8192, 16384, 32768, 65536
+            // We start small (4096 fallback handled in algo)
+            let candidates = vec![4096, 8192, 16384, 24576, 32768, 49152, 65536];
+
+            let best_ctx = estimate_best_context(&guard.device, &cache_params, &candidates);
+
+            log::info!("Autotune selected context: {}", best_ctx);
+
+            // Save it
+            let new_settings = ModelContextSettings {
+                size: best_ctx,
+                source: ContextSource::Auto,
+                last_autotune: Some(
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs(),
+                ),
+            };
+            let _ = settings_manager.save_settings(&model_id, new_settings);
+
+            best_ctx
+        }
+    } else {
+        log::warn!(
+            "Could not extract GGUF params for architecture {}. Using requested context.",
+            arch_str
+        );
+        request_context_length
+    };
+
+    // Warn if mismatch
+    if context_length != request_context_length && request_context_length > 0 {
+        log::info!(
+            "Context adjusted from requested {} to {}",
+            request_context_length,
+            context_length
+        );
+    }
+    // ----------------------------------
 
     tracker.start_stage("model_building");
     // Use the model factory to build the model

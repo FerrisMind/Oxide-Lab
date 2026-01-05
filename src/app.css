@@ -105,6 +105,16 @@
     --radius-xl: calc(var(--radius) + 4px);
 
     --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+
+    @keyframes wave {
+        0%,
+        100% {
+            transform: scaleY(1);
+        }
+        50% {
+            transform: scaleY(0.6);
+        }
+    }
 }
 
 :root {

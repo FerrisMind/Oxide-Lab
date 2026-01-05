@@ -248,6 +248,31 @@
         isMaximized = maximized;
       });
     });
+
+    const { listen } = await import('@tauri-apps/api/event');
+    const { toast } = await import('svelte-sonner');
+
+    const unlistenUnload = await listen<string>('model_unloaded', (event) => {
+        console.log('Model unloaded automatically:', event.payload);
+        
+        chatState.update(s => ({
+            ...s,
+            isLoaded: false,
+            // optional: clear path if you want to force re-selection, 
+            // but keeping it allows "click to reload"
+        }));
+
+        toast.info($t('common.model.unloaded') || 'Model unloaded due to inactivity', {
+            description: event.payload
+        });
+    });
+
+    // Merge unlisten functions
+    const originalUnlisten = unlistenFn;
+    unlistenFn = () => {
+        originalUnlisten();
+        unlistenUnload();
+    };
   });
 
   import { onDestroy } from 'svelte';

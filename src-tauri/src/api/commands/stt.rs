@@ -18,6 +18,7 @@ pub fn start_voice_recording(
     app: AppHandle,
     state: State<'_, AudioCaptureState>,
 ) -> Result<(), String> {
+    log::info!("Starting voice recording via Tauri command");
     state.start(app)
 }
 
@@ -32,7 +33,9 @@ pub async fn stop_voice_recording_and_transcribe(
     state: State<'_, AudioCaptureState>,
     language: Option<String>,
 ) -> Result<String, String> {
+    log::info!("Stopping voice recording and transcribing...");
     let (samples, sample_rate) = state.stop()?;
+    log::info!("Captured {} samples at {} Hz", samples.len(), sample_rate);
     let samples = if sample_rate == TARGET_SAMPLE_RATE {
         samples
     } else {

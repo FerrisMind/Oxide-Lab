@@ -25,7 +25,7 @@ pub fn load_local_safetensors_model(
     app: &tauri::AppHandle,
     guard: &mut ModelState,
     model_path: String,
-    context_length: usize,
+    request_context_length: usize, // Shadowed later
     device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
     emit_load_progress(
@@ -165,10 +165,164 @@ pub fn load_local_safetensors_model(
 
     // Use ModelBuilder pattern if we have config
     let mut built_model_opt: Option<Box<dyn ModelBackend + Send>> = None;
+    let mut context_length = request_context_length;
     if let Some(config_json_str) = config_json {
         // Parse the config JSON
         let config: serde_json::Value = serde_json::from_str(&config_json_str)
             .map_err(|e| format!("Failed to parse config.json: {}", e))?;
+
+        // --- Dynamic Context Autotuning ---
+        let n_layer = config
+            .get("num_hidden_layers")
+            .or_else(|| config.get("n_layer"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        let n_embd = config
+            .get("hidden_size")
+            .or_else(|| config.get("n_embd"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        let n_head = config
+            .get("num_attention_heads")
+            .or_else(|| config.get("n_head"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        let n_kv_head = config
+            .get("num_key_value_heads")
+            .or_else(|| config.get("n_head_kv"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(n_head as u64) as usize;
+        let head_dim = if n_head > 0 { n_embd / n_head } else { 0 };
+
+        context_length = if n_layer > 0 && n_embd > 0 && n_head > 0 {
+            use crate::api::model_loading::context_algo::{
+                ModelCacheParams, estimate_best_context,
+            };
+            use crate::api::model_loading::context_settings::{
+                ContextSettingsManager, ContextSource, ModelContextSettings,
+            };
+
+            let settings_manager = ContextSettingsManager::new(app);
+            let model_id = std::path::Path::new(&model_path)
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| model_path.to_string_lossy().to_string());
+
+            let existing = settings_manager.get_settings(&model_id);
+            if let Some(s) = existing {
+                log::info!(
+                    "Using saved context settings for {}: size={}, source={:?}",
+                    model_id,
+                    s.size,
+                    s.source
+                );
+                s.size
+            } else {
+                log::info!("No context settings for {}. Running Autotune...", model_id);
+                let cache_params = ModelCacheParams {
+                    n_layer,
+                    n_kv_head,
+                    head_dim,
+                    dtype_size: 2,
+                };
+                let candidates = vec![4096, 8192, 16384, 24576, 32768, 49152, 65536];
+                let best_ctx = estimate_best_context(&guard.device, &cache_params, &candidates);
+                log::info!("Autotune selected context: {}", best_ctx);
+                let new_settings = ModelContextSettings {
+                    size: best_ctx,
+                    source: ContextSource::Auto,
+                    last_autotune: Some(
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs(),
+                    ),
+                };
+                let _ = settings_manager.save_settings(&model_id, new_settings);
+                best_ctx
+            }
+        } else {
+            // Fallback
+            request_context_length
+        };
+        // ----------------------------------
+        log::debug!("Autotuned/Calculated context length: {}", context_length);
+
+        // --- Dynamic Context Autotuning ---
+        let n_layer = config
+            .get("num_hidden_layers")
+            .or_else(|| config.get("n_layer"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        let n_embd = config
+            .get("hidden_size")
+            .or_else(|| config.get("n_embd"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        let n_head = config
+            .get("num_attention_heads")
+            .or_else(|| config.get("n_head"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        let n_kv_head = config
+            .get("num_key_value_heads")
+            .or_else(|| config.get("n_head_kv"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(n_head as u64) as usize;
+        let head_dim = if n_head > 0 { n_embd / n_head } else { 0 };
+
+        context_length = if n_layer > 0 && n_embd > 0 && n_head > 0 {
+            use crate::api::model_loading::context_algo::{
+                ModelCacheParams, estimate_best_context,
+            };
+            use crate::api::model_loading::context_settings::{
+                ContextSettingsManager, ContextSource, ModelContextSettings,
+            };
+
+            let settings_manager = ContextSettingsManager::new(app);
+            let model_id = std::path::Path::new(&model_path)
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| model_path.to_string_lossy().to_string());
+
+            let existing = settings_manager.get_settings(&model_id);
+            if let Some(s) = existing {
+                log::info!(
+                    "Using saved context settings for {}: size={}, source={:?}",
+                    model_id,
+                    s.size,
+                    s.source
+                );
+                s.size
+            } else {
+                log::info!("No context settings for {}. Running Autotune...", model_id);
+                let cache_params = ModelCacheParams {
+                    n_layer,
+                    n_kv_head,
+                    head_dim,
+                    dtype_size: 2,
+                };
+                let candidates = vec![4096, 8192, 16384, 24576, 32768, 49152, 65536];
+                let best_ctx = estimate_best_context(&guard.device, &cache_params, &candidates);
+                log::info!("Autotune selected context: {}", best_ctx);
+                let new_settings = ModelContextSettings {
+                    size: best_ctx,
+                    source: ContextSource::Auto,
+                    last_autotune: Some(
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs(),
+                    ),
+                };
+                let _ = settings_manager.save_settings(&model_id, new_settings);
+                best_ctx
+            }
+        } else {
+            // Fallback
+            request_context_length
+        };
+        // ----------------------------------
 
         // Detect the architecture
         if let Some(arch) = detect_arch_from_config(&config) {
@@ -252,7 +406,7 @@ pub fn load_hub_safetensors_model(
     guard: &mut ModelState,
     repo_id: String,
     revision: Option<String>,
-    context_length: usize,
+    request_context_length: usize, // Shadowed later
     device_pref: Option<crate::core::types::DevicePreference>,
 ) -> Result<(), String> {
     emit_load_progress(
@@ -383,10 +537,85 @@ pub fn load_hub_safetensors_model(
 
     // Use ModelBuilder pattern if we have config
     let mut built_model_opt: Option<Box<dyn ModelBackend + Send>> = None;
+    let mut context_length = request_context_length;
+
     if let Some(config_json_str) = config_json {
         // Parse the config JSON
         let config: serde_json::Value = serde_json::from_str(&config_json_str)
             .map_err(|e| format!("Failed to parse config.json: {}", e))?;
+
+        // --- Dynamic Context Autotuning ---
+        let n_layer = config
+            .get("num_hidden_layers")
+            .or_else(|| config.get("n_layer"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        let n_embd = config
+            .get("hidden_size")
+            .or_else(|| config.get("n_embd"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        let n_head = config
+            .get("num_attention_heads")
+            .or_else(|| config.get("n_head"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        let n_kv_head = config
+            .get("num_key_value_heads")
+            .or_else(|| config.get("n_head_kv"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(n_head as u64) as usize;
+        let head_dim = if n_head > 0 { n_embd / n_head } else { 0 };
+
+        context_length = if n_layer > 0 && n_embd > 0 && n_head > 0 {
+            use crate::api::model_loading::context_algo::{
+                ModelCacheParams, estimate_best_context,
+            };
+            use crate::api::model_loading::context_settings::{
+                ContextSettingsManager, ContextSource, ModelContextSettings,
+            };
+
+            let settings_manager = ContextSettingsManager::new(app);
+            // Use repo_id as ID
+            let model_id = repo_id.clone();
+
+            let existing = settings_manager.get_settings(&model_id);
+            if let Some(s) = existing {
+                log::info!(
+                    "Using saved context settings for {}: size={}, source={:?}",
+                    model_id,
+                    s.size,
+                    s.source
+                );
+                s.size
+            } else {
+                log::info!("No context settings for {}. Running Autotune...", model_id);
+                let cache_params = ModelCacheParams {
+                    n_layer,
+                    n_kv_head,
+                    head_dim,
+                    dtype_size: 2,
+                };
+                let candidates = vec![4096, 8192, 16384, 24576, 32768, 49152, 65536];
+                let best_ctx = estimate_best_context(&guard.device, &cache_params, &candidates);
+                log::info!("Autotune selected context: {}", best_ctx);
+                let new_settings = ModelContextSettings {
+                    size: best_ctx,
+                    source: ContextSource::Auto,
+                    last_autotune: Some(
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs(),
+                    ),
+                };
+                let _ = settings_manager.save_settings(&model_id, new_settings);
+                best_ctx
+            }
+        } else {
+            request_context_length
+        };
+        // ----------------------------------
 
         // Detect the architecture
         if let Some(arch) = detect_arch_from_config(&config) {

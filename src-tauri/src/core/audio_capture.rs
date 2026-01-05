@@ -132,12 +132,13 @@ fn build_stream<T: SizedSample + Send + Sync + 'static>(
 where
     f32: FromSample<T>,
 {
-    let err_fn = |err| log::error!("Audio input stream error: {err}");
     let rms_emitter = rms_emitter.clone();
     device
         .build_input_stream(
             config,
-            move |data: &[T], _| {
+            move |data: &[T], _: &_| {
+                // Determine if we have signal
+                // (optional: log every N seconds?)
                 let rms = push_input_data(data, channels, &buffer);
                 if let (Some(rms), Some(emitter)) = (rms, rms_emitter.as_ref())
                     && let Ok(mut guard) = emitter.lock()
@@ -145,7 +146,7 @@ where
                     guard.maybe_emit(rms);
                 }
             },
-            err_fn,
+            move |err: cpal::StreamError| log::error!("Audio input stream error: {err}"),
             None,
         )
         .map_err(|e| format!("Failed to build input stream: {e}"))

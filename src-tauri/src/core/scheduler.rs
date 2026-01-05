@@ -133,7 +133,7 @@ impl ModelScheduler {
 
     /// Проверяет таймауты и выгружает просроченные модели
     #[allow(clippy::collapsible_if)]
-    pub fn check_expiration(&mut self) {
+    pub fn check_expiration(&mut self) -> Option<String> {
         if let Some(entry) = &self.active_model {
             if entry.is_expired(self.config.keep_alive) {
                 log::info!(
@@ -141,9 +141,12 @@ impl ModelScheduler {
                     entry.model_id,
                     self.config.keep_alive
                 );
+                let id = entry.model_id.clone();
                 self.active_model = None;
+                return Some(id);
             }
         }
+        None
     }
 
     pub fn has_model(&self) -> bool {

@@ -204,7 +204,9 @@ pub fn run() {
 
             // Start the model scheduler keep-alive task
             let scheduler_state = shared.clone();
+            let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
+                let app = app_handle;
                 // Проверяем каждую минуту (настраивается)
                 let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
                 // Первый тик происходит немедленно, пропускаем его
@@ -213,7 +215,11 @@ pub fn run() {
                 loop {
                     interval.tick().await;
                     if let Ok(mut guard) = scheduler_state.lock() {
-                        guard.scheduler.check_expiration();
+                        if let Some(unloaded_id) = guard.scheduler.check_expiration() {
+                            if let Err(e) = app.emit("model_unloaded", &unloaded_id) {
+                                    log::error!("Failed to emit model_unloaded event: {}", e);
+                            }
+                        }
                     } else {
                         log::error!("Scheduler keep-alive task: failed to lock state");
                     }

@@ -21,6 +21,7 @@
     PromptInputAttachment,
     type PromptInputMessage,
   } from '$lib/components/ai-elements/prompt-input';
+  import WaveLoader from '$lib/components/ui/loader/WaveLoader.svelte';
   import { cn } from '../../utils';
   import { t } from '$lib/i18n';
   import { chatState } from '$lib/stores/chat';
@@ -146,10 +147,64 @@
     onToggleLoaderPanel?.();
   }
 
-  function triggerVoiceInput() {
-    // TODO: Implement voice input with Tauri backend
-    console.log('Voice input not yet implemented');
+  import { startVoiceCapture, type VoiceCapture } from '$lib/services';
+  import CircleNotch from 'phosphor-svelte/lib/CircleNotch';
+  import LanguageSelector from '$lib/components/ui/voice/LanguageSelector.svelte';
+  import { browser } from '$app/environment';
+
+  let voiceCapture: VoiceCapture | null = null;
+  let isTranscribing = $state(false);
+  
+  // Load from local storage or default to "auto"
+  let selectedLanguage = $state<string>(
+    browser ? localStorage.getItem('voice_language') || "auto" : "auto"
+  );
+
+  $effect(() => {
+    if (browser) {
+        localStorage.setItem('voice_language', selectedLanguage);
+    }
+  });
+
+  async function triggerVoiceInput() {
+    if (isRecording) {
+      // Stop recording
+      if (voiceCapture) {
+        try {
+          isRecording = false; // Stop wave animation immediately
+          isTranscribing = true; // Show spinner
+          
+          // Pass selected language (null if auto)
+          const lang = selectedLanguage === "auto" ? null : selectedLanguage;
+          const text = await voiceCapture.stop(lang);
+          
+          if (text) {
+             // Append to prompt with a space if needed
+             prompt = prompt ? `${prompt} ${text}` : text;
+          }
+        } catch (e: any) {
+           console.error('Failed to transcribe:', e);
+           handleError({ code: 'stt_error', message: e.toString() });
+        } finally {
+           voiceCapture = null;
+           isRecording = false;
+           isTranscribing = false;
+        }
+      }
+    } else {
+      // Start recording
+      try {
+        attachError = null;
+        voiceCapture = await startVoiceCapture();
+        isRecording = true;
+      } catch (e: any) {
+        console.error('Failed to start recording:', e);
+        handleError({ code: 'stt_error', message: `Could not start recording: ${e.toString()}` });
+        isRecording = false;
+      }
+    }
   }
+
 
   function handleSubmit(message: PromptInputMessage) {
     // Handle attached files
@@ -231,14 +286,25 @@
         </PromptInputTools>
 
         <PromptInputTools class="flex items-center gap-2">
+          {#if isRecording}
+            <WaveLoader size="sm" class="text-destructive mr-2" />
+            <div class="mr-2">
+                <LanguageSelector 
+                    selectedLanguage={selectedLanguage} 
+                    onSelect={(l) => selectedLanguage = l} 
+                />
+            </div>
+          {/if}
           <!-- Voice button -->
           <PromptInputButton
             class={cn(isRecording && 'text-destructive')}
             onclick={triggerVoiceInput}
-            disabled={busy}
+            disabled={busy || isTranscribing}
             aria-label={$t('chat.composer.voice.startRecording') || 'Voice input'}
           >
-            {#if isRecording}
+            {#if isTranscribing}
+                <CircleNotch size={16} weight="bold" class="animate-spin" />
+            {:else if isRecording}
               <Stop size={16} weight="bold" />
             {:else}
               <Microphone size={16} weight="bold" />
