@@ -96,6 +96,14 @@ pub fn load_gguf_model(
         enhanced_msg
     })?;
     dbg.stage_end("read_header", read_header_start.elapsed());
+
+    let rope_metadata: Vec<_> = content
+        .metadata
+        .iter()
+        .filter(|(k, _)| k.contains("rope") || k.contains("freq"))
+        .collect();
+    log::info!("GGUF RoPE Metadata: {:?}", rope_metadata);
+
     emit_load_progress_debug(
         &dbg,
         app,
@@ -136,14 +144,23 @@ pub fn load_gguf_model(
     // Не отключаем шаблон даже при ошибке — логируем, но сохраняем сырой вариант (рендер сам уйдёт в fallback)
     let chat_tpl = match chat_tpl {
         Some(raw) => {
-            if let Err(e) = crate::core::prompt::normalize_and_validate(&raw) {
-                log_template_error!(
-                    "chat_template validation failed; keeping raw. reason={}; head=<<<{}>>>",
-                    e,
-                    raw.chars().take(180).collect::<String>()
+            // Fuzzy match against known registry to fix broken templates
+            if let Some(entry) = crate::core::template_registry::match_template(&raw) {
+                log::info!(
+                    "Replaced GGUF template with registry version: {}",
+                    entry.name
                 );
+                Some(entry.template.to_string())
+            } else {
+                if let Err(e) = crate::core::prompt::normalize_and_validate(&raw) {
+                    log_template_error!(
+                        "chat_template validation failed; keeping raw. reason={}; head=<<<{}>>>",
+                        e,
+                        raw.chars().take(180).collect::<String>()
+                    );
+                }
+                Some(raw)
             }
-            Some(raw)
         }
         None => None,
     };
@@ -431,16 +448,35 @@ fn check_supported_dtypes(content: &gguf_file::Content) -> Result<(), String> {
 
     let mut found_unsupported = Vec::new();
     let mut found_unknown = Vec::new();
+    let mut has_quantized = false;
 
     // Проверяем каждый тензор в файле
     for tensor_info in content.tensor_infos.values() {
         let dtype = tensor_info.ggml_dtype as u32;
+
+        // Если есть хотя бы один квантованный тензор, модель считается "квантованной"
+        if (2..=15).contains(&dtype) || (16..=29).contains(&dtype) {
+            has_quantized = true;
+        }
 
         if unsupported_dtypes.contains(&dtype) {
             found_unsupported.push(dtype);
         } else if !supported_dtypes.contains(&dtype) {
             found_unknown.push(dtype);
         }
+    }
+
+    // Если модель вообще не содержит квантованных тензоров (только FP32/FP16/BF16),
+    // она считается "высокоточной" и блокируется для инференса на CUDA.
+    if !has_quantized {
+        let error_msg = "Pure high-precision GGUF models (F32, F16, BF16) are currently disabled. \
+                         These models produce incorrect output on CUDA in the current version of Candle. \
+                         Please use a quantized model instead (Q4_K_M, Q5_K_M, Q8_0, etc.)."
+            .to_string();
+        log::error!(
+            "Model loading blocked: Model appears to be high-precision (no quantized tensors found)"
+        );
+        return Err(error_msg);
     }
 
     if !found_unsupported.is_empty() || !found_unknown.is_empty() {
@@ -451,10 +487,11 @@ fn check_supported_dtypes(content: &gguf_file::Content) -> Result<(), String> {
                 "Found unsupported quantization types: {:?}. ",
                 found_unsupported
             ));
-            error_msg.push_str("These IQ quantization types require a newer version of Candle. ");
             error_msg.push_str(
-                "Currently supported: F32, F16, BF16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1, Q2K-Q8K. "
+                "These IQ quantization types require a newer version of the inference library. ",
             );
+            error_msg
+                .push_str("Currently supported: Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1, Q2K-Q8K. ");
         }
 
         if !found_unknown.is_empty() {
@@ -463,7 +500,7 @@ fn check_supported_dtypes(content: &gguf_file::Content) -> Result<(), String> {
         }
 
         error_msg.push_str(
-            "Model loading is blocked. Please use a model with supported quantizations (Q4_K_M, Q5_K_M, Q8_0, etc.).",
+            "Model loading is blocked to prevent incorrect output. Please use a model with supported quantizations (Q4_K_M, Q5_K_M, Q8_0, etc.).",
         );
 
         return Err(error_msg);

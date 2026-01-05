@@ -18,4 +18,7 @@ pub mod background_mode;
 pub mod rayon_pool;
 pub mod thread_priority;
 
+pub mod template_registry;
+pub mod templates;
+
 pub use rayon_pool::INFERENCE_POOL;

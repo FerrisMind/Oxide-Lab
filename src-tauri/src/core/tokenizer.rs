@@ -96,7 +96,11 @@ pub fn mark_special_chat_tokens(tokenizer: &mut Tokenizer) {
         "<|user|>",
         "<|assistant|>",
         "<|system|>",
+        "<|system|>",
         "<|eot_id|>",
+        "<|begin_of_text|>",
+        "<|start_header_id|>",
+        "<|end_header_id|>",
         "<|endoftext|>",
         "</s>",
         "<s>",
@@ -343,9 +347,12 @@ pub fn extract_bos_token_str(tokenizer: &Tokenizer) -> Option<String> {
         // Heuristics: common BOS strings
         for key in ["<s>", "<bos>", "<BOS>", "<|begin_of_text|>"] {
             if vocab.contains_key(key) {
+                log::info!("Found BOS token in vocab: '{}'", key);
                 return Some(key.to_string());
             }
         }
+
+        log::warn!("BOS token not found in vocab (checked common keys)");
     }
     None
 }

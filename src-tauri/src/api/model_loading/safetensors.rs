@@ -9,6 +9,7 @@ use std::path::Path;
 use super::emit_load_progress;
 use crate::core::device::{device_label, select_device};
 use crate::core::state::ModelState;
+use crate::core::template_registry::match_template;
 use crate::core::tokenizer::{extract_chat_template, mark_special_chat_tokens};
 use crate::core::weights::{
     hub_cache_safetensors, hub_list_safetensors, local_list_safetensors, validate_safetensors_files,
@@ -128,8 +129,18 @@ pub fn load_local_safetensors_model(
     if let Some(tk) = tokenizer_opt.as_ref() {
         chat_tpl = extract_chat_template(tk);
         if let Some(tpl) = chat_tpl.as_ref() {
-            let head: String = tpl.chars().take(120).collect();
-            log_template!("detected: len={}, head=<<<{}>>>", tpl.len(), head);
+            // Fuzzy match against known registry
+            if let Some(entry) = match_template(tpl) {
+                log::info!(
+                    "Replaced SafeTensors template with registry version: {}",
+                    entry.name
+                );
+                chat_tpl = Some(entry.template.to_string());
+            }
+
+            let tpl_ref = chat_tpl.as_ref().unwrap();
+            let head: String = tpl_ref.chars().take(120).collect();
+            log_template!("detected: len={}, head=<<<{}>>>", tpl_ref.len(), head);
         } else {
             // Fallback: загружаем из chat_template.jinja
             let jinja_path = model_dir.join("chat_template.jinja");
@@ -337,8 +348,18 @@ pub fn load_hub_safetensors_model(
     if let Some(tk) = tokenizer_opt.as_ref() {
         chat_tpl = extract_chat_template(tk);
         if let Some(tpl) = chat_tpl.as_ref() {
-            let head: String = tpl.chars().take(120).collect();
-            log_template!("detected: len={}, head=<<<{}>>>", tpl.len(), head);
+            // Fuzzy match against known registry
+            if let Some(entry) = match_template(tpl) {
+                log::info!(
+                    "Replaced SafeTensors template with registry version: {}",
+                    entry.name
+                );
+                chat_tpl = Some(entry.template.to_string());
+            }
+
+            let tpl_ref = chat_tpl.as_ref().unwrap();
+            let head: String = tpl_ref.chars().take(120).collect();
+            log_template!("detected: len={}, head=<<<{}>>>", tpl_ref.len(), head);
         } else {
             // Fallback: загружаем chat_template.jinja из hub
             if let Ok(jinja_path) = api.get("chat_template.jinja") {

@@ -519,6 +519,19 @@ pub fn generate_stream_with_backend(
         all_tokens.push(next_token);
         inference_tracker.increment_generated_tokens();
 
+        if all_tokens.len() < 20 {
+            let text = tos
+                .tokenizer()
+                .decode(&[next_token], false)
+                .unwrap_or_default();
+            log::info!(
+                "GEN TOKEN [{}]: {} -> '{:?}'",
+                all_tokens.len(),
+                next_token,
+                text
+            );
+        }
+
         if next_token == eos_token || stop_ids.contains(&next_token) {
             break;
         }

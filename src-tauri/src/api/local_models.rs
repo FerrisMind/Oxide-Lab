@@ -587,6 +587,7 @@ struct MetadataEnvelope {
     detected_arch: Option<ArchKind>,
     validation: ValidationStatus,
     vocab_size: Option<usize>,
+    is_high_precision: bool,
 }
 
 fn read_gguf_metadata(path: &Path, include_tokens: bool) -> Result<MetadataEnvelope, String> {
@@ -620,6 +621,14 @@ fn read_gguf_metadata(path: &Path, include_tokens: bool) -> Result<MetadataEnvel
             format!("Failed to parse GGUF file: {}", err_str)
         }
     })?;
+
+    // Проверяем на наличие квантованных тензоров.
+    // Если в модели нет КВАНТОВАННЫХ тензоров (только F32, F16, BF16), она считается высокоточной.
+    let has_quantized = content.tensor_infos.values().any(|t| {
+        let dt = t.ggml_dtype as u32;
+        (2..=15).contains(&dt) || (16..=29).contains(&dt) // Q4_0..Q8_K или IQ типы
+    });
+    let is_high_precision = !has_quantized;
 
     let version = match content.magic {
         VersionedMagic::GgufV3 => 3,
@@ -693,6 +702,7 @@ fn read_gguf_metadata(path: &Path, include_tokens: bool) -> Result<MetadataEnvel
         detected_arch,
         validation,
         vocab_size,
+        is_high_precision,
     })
 }
 
@@ -740,7 +750,13 @@ fn scan_directory(dir: &Path) -> Result<Vec<ModelInfo>, String> {
                 .unwrap_or(false)
             {
                 match build_model_info(&path) {
-                    Ok(info) => models.push(info),
+                    Ok(Some(info)) => models.push(info),
+                    Ok(None) => {
+                        log::info!(
+                            "Skipping high-precision or incompatible model: {}",
+                            path.display()
+                        );
+                    }
                     Err(err) => eprintln!(
                         "Warning: Failed to parse GGUF metadata from {}: {err}",
                         path.display()
@@ -754,7 +770,7 @@ fn scan_directory(dir: &Path) -> Result<Vec<ModelInfo>, String> {
     Ok(models)
 }
 
-fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
+fn build_model_info(path: &Path) -> Result<Option<ModelInfo>, String> {
     use crate::api::model_manager::manifest::load_manifest;
 
     let envelope = read_gguf_metadata(path, false)?;
@@ -821,7 +837,11 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
     });
     let source_quantization = manifest.as_ref().and_then(|m| m.quantization.clone());
 
-    Ok(ModelInfo {
+    if envelope.is_high_precision {
+        return Ok(None);
+    }
+
+    Ok(Some(ModelInfo {
         name: file_name,
         path: path.to_path_buf(),
         file_size: metadata_fs.len(),
@@ -842,7 +862,7 @@ fn build_model_info(path: &Path) -> Result<ModelInfo, String> {
         validation_status: envelope.validation,
         created_at,
         metadata: envelope.metadata,
-    })
+    }))
 }
 
 fn build_safetensors_model_info(dir: &Path) -> Result<Option<ModelInfo>, String> {

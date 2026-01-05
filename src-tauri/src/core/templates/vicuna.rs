@@ -1,0 +1,30 @@
+use crate::core::template_registry::TemplateEntry;
+
+pub const TEMPLATE: TemplateEntry = TemplateEntry {
+    name: "vicuna",
+    template: r#"{% if messages[0]['role'] == 'system' %}
+    {% set system_message = messages[0]['content'] | trim + '\n\n' %}
+    {% set messages = messages[1:] %}
+{% else %}
+    {% set system_message = '' %}
+{% endif %}
+
+{{ bos_token + system_message }}
+{% for message in messages %}
+    {% if (message['role'] == 'user') != (loop.index0 % 2 == 0) %}
+        {{ raise_exception('Conversation roles must alternate user/assistant/user/assistant/...') }}
+    {% endif %}
+
+    {% if message['role'] == 'user' %}
+        {{ 'USER: ' + message['content'] | trim + '\n' }}
+    {% elif message['role'] == 'assistant' %}
+        {{ 'ASSISTANT: ' + message['content'] | trim + eos_token + '\n' }}
+    {% endif %}
+{% endfor %}
+
+{% if add_generation_prompt %}
+    {{ 'ASSISTANT:' }}
+{% endif %}"#,
+    stop_tokens: &["USER:", "ASSISTANT:"],
+    force_bos: false,
+};
