@@ -1,284 +1,159 @@
-[![English](https://img.shields.io/badge/English-Active-success)](README.md) [![Русский](https://img.shields.io/badge/Русский-Inactive-lightgrey)](README-RU.md) [![Português](https://img.shields.io/badge/Português-Inactive-lightgrey)](README-PT-BR.md)
-
-<br />
-
-<!-- Project Logo -->
-<p align="center">
-  <img src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/logo.svg" alt="Oxide Lab Logo" width="512" />
 </p>
-
-<br />
-
-> **Private, powerful and easy-to-use AI chat right on your computer**
-
-![Oxide Lab](https://img.shields.io/badge/Status-Active-brightgreen) ![Platform](https://img.shields.io/badge/Platform-Windows-blue) ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
-
-![GitHub Stars](https://img.shields.io/github/stars/FerrisMind/Oxide-Lab?style=social) [![Awesome Tauri](https://awesome.re/mentioned-badge.svg)](https://github.com/tauri-apps/awesome-tauri) [![Awesome Svelte](https://awesome.re/mentioned-badge.svg)](https://github.com/TheComputerM/awesome-svelte)
-
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/screenshots/chat-dark.png" alt="Oxide Lab Chat UI (Dark)" width="900" />
+<p align="left">
+  <a href="README.md"><img src="https://img.shields.io/badge/English-2ea44f" alt="English"></a>
+  <a href="README.RU.md"><img src="https://img.shields.io/badge/Русский-555" alt="Русский"></a>
+  <a href="README.PT_BR.md"><img src="https://img.shields.io/badge/Português-555" alt="Português"></a>
 </p>
-
 
 ---
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/logo.svg" alt="Oxide Lab Logo" width="512" height="512">
+
+<p align="center">
+  Private AI chat desktop application with local LLM support.<br>
+  All inference happens on your machine — no cloud, no data sharing.
+</p>
+
+<p align="center">
+  <a href="https://github.com/FerrisMind/Oxide-Lab/stargazers"><img src="https://img.shields.io/github/stars/FerrisMind/Oxide-Lab?logo=github" alt="GitHub Stars"></a>
+  <a href="https://github.com/tauri-apps/awesome-tauri"><img src="https://img.shields.io/badge/Awesome-Tauri-24C8D8?logo=tauri" alt="Awesome Tauri"></a>
+  <a href="https://github.com/TheComputerM/awesome-svelte"><img src="https://img.shields.io/badge/Awesome-Svelte-FF3E00?logo=svelte" alt="Awesome Svelte"></a>
+</p>
+
+<h1 align="center"></h1>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/screenshots/chat-dark.png" alt="Oxide Lab Chat Interface" width="900">
+</p>
 
 ## 📚 Table of Contents
 
 - [What is this?](#-what-is-this)
-- [Who is this app for?](#-who-is-this-app-for)
 - [Key Features](#-key-features)
-- [Recognition](#️-recognition)
 - [Installation & Setup](#️-installation--setup)
 - [How to Start Using](#-how-to-start-using)
-- [Interface Features](#-interface-features)
-- [Privacy and Security](#-privacy-and-security)
-- [Tips and Recommendations](#-tips-and-recommendations)
-- [System Requirements and Limitations](#-system-requirements-and-limitations)
-- [Support the Project](#-support-the-project)
+- [System Requirements](#️-system-requirements)
+- [Supported Models](#-supported-models)
+- [Privacy and Security](#️-privacy-and-security)
 - [Acknowledgments](#-acknowledgments)
-
----
+- [License](#-license)
 
 ## ✨ What is this?
 
-**Oxide Lab** is a modern desktop application for communicating with AI models that runs completely locally on your computer. No subscriptions, no data sent to the internet — just you and your personal AI assistant.
-
-### 🎯 Who is this app for?
-
-- **AI enthusiasts** — want to experiment with models locally
-- **Privacy matters** — your data stays only with you
-- **Researchers** — need control over generation parameters
-- **Creative minds** — use AI for writing, brainstorming and inspiration
-
----
+Oxide Lab is a native desktop application for running large language models locally. Built with Rust and Tauri v2, it provides a fast, private chat interface without requiring internet connectivity or external API services.
 
 ## 🚀 Key Features
 
-### 💬 **Smart Chat Interface**
-
-- Modern and intuitive design
-- Real-time streaming responses
-- Support for text and code formatting
-- Voice input powered by local Whisper
-- Voice input meter with language selection
-
-### 🧠 **Thinking Mode**
-
-- Enable the **"Thinking"** feature and watch AI think
-- See the analysis process before the final answer
-- Higher quality and thoughtful solutions to complex tasks
-
-### ⚙️ **Flexible Settings**
-
-- **Temperature** — control response creativity
-- **Top-K, Top-P, Min-P** — fine-tune generation style
-- **Repeat Penalty** — avoid repetitions
-- **Context Length** — depends on model and device resources
-
-### 🔧 **Easy Setup**
-
-- Support for local Qwen3 models in GGUF format (other models — in plans)
-- Intelligent memory management
-
----
-
-## 🎖️ Recognition
-
-Oxide Lab has been recognized by the community for its quality and innovation:
-
-- 🏆 **Featured in [Awesome Tauri](https://github.com/tauri-apps/awesome-tauri)** — curated list of quality Tauri applications
-- 🏆 **Featured in [Awesome Svelte](https://github.com/TheComputerM/awesome-svelte)** — curated list of quality Svelte projects
-
----
+- 100% local inference — your data never leaves your machine
+- Multi-architecture support: Llama, Qwen2, Qwen2.5, Qwen3, Qwen3 MoE, Mistral, Mixtral, DeepSeek, Yi, SmolLM2
+- GGUF and SafeTensors model formats
+- Hardware acceleration: CPU, CUDA (NVIDIA), Metal (Apple Silicon), Intel MKL, Apple Accelerate
+- Streaming text generation
+- Multi-language UI: English, Russian, Brazilian Portuguese
+- Modern interface built with Svelte 5 and Tailwind CSS
 
 ## 🛠️ Installation & Setup
 
 ### Prerequisites
 
-Before installing Oxide Lab, ensure you have the following installed:
+- Node.js (for frontend build)
+- Rust toolchain (for backend)
+- For CUDA: NVIDIA GPU with CUDA toolkit
+- For Metal: macOS with Apple Silicon
 
-- **Node.js** (version 18 or higher) - [Download](https://nodejs.org/)
-- **Rust** (latest stable) - [Install](https://rustup.rs/)
-- **Git** - [Download](https://git-scm.com/)
+### Development
 
-#### For GPU Acceleration (Optional but Recommended)
+```bash
+# Install dependencies
+npm install
 
-- **CUDA 12.0+** for NVIDIA GPUs (Windows/Linux)
+# Run with CPU backend
+npm run tauri:dev:cpu
 
-### Installation Steps
+# Run with CUDA backend (NVIDIA GPU)
+npm run tauri:dev:cuda
 
-1. **Clone the repository:**
+# Platform-aware development
+npm run app:dev
+```
 
-   ```bash
-   git clone https://github.com/FerrisMind/Oxide-Lab.git
-   cd Oxide-Lab
-   ```
+### Build
 
-2. **Install dependencies:**
+```bash
+# Build with CPU backend
+npm run tauri:build:cpu
 
-   ```bash
-   npm install
-   ```
+# Build with CUDA backend
+npm run tauri:build:cuda
+```
 
-3. **Run in development mode:**
+### Quality Checks
 
-   ```bash
-   # For CPU-only mode
-   npm run tauri:dev:cpu
+```bash
+npm run lint          # ESLint
+npm run lint:fix      # ESLint with auto-fix
+npm run check         # Svelte type checking
+npm run format        # Prettier formatting
+npm run test          # Vitest tests
+```
 
-   # For CUDA GPU mode (if CUDA is available)
-   npm run tauri:dev:cuda
-   ```
+### Rust-specific (from src-tauri/)
 
-4. **Build for production:**
-
-   ```bash
-   # CPU-only build
-   npm run tauri:build:cpu
-
-   # CUDA build
-   npm run tauri:build:cuda
-   ```
-
-### System Requirements
-
-- **OS:** Windows 10/11, Linux, macOS
-- **RAM:** Minimum 4GB, Recommended 8GB+
-- **Storage:** 500MB for application + model size
-- **GPU:** Optional, but recommended for better performance
-
-### Troubleshooting
-
-- If you encounter build issues, ensure Rust and Node.js are properly installed
-- For GPU support, verify CUDA installation
-- Check the [Issues](https://github.com/FerrisMind/Oxide-Lab/issues) page for common problems
-
----
+```bash
+cargo clippy          # Linting
+cargo test            # Unit tests
+cargo audit           # Security audit
+```
 
 ## 📖 How to Start Using
 
-### 1️⃣ **Get the Model**
+1. Build or download the application
+2. Download a compatible GGUF or SafeTensors model (e.g., from Hugging Face)
+3. Launch Oxide Lab
+4. Load your model through the interface
+5. Start chatting
 
-Download a model in `.gguf` format and `tokenizer.json` file:
+## 🖥️ System Requirements
 
-- **Recommended models:** Qwen3 4B (and other Qwen3 variants in GGUF)
-- **Where to download:** [Hugging Face](https://huggingface.co/collections/Qwen/qwen3-67dd247413f0e2e4f653967f), official model repositories
+- Windows, macOS, or Linux
+- Minimum 8 GB RAM (16+ GB recommended for larger models)
+- For GPU acceleration:
+  - NVIDIA: CUDA-compatible GPU
+  - Apple: M1/M2/M3 chip (Metal)
+  - Intel: CPU with MKL support
 
-### 2️⃣ **Load into Application**
+## 🤖 Supported Models
 
-1. Open Oxide Lab
-2. Click **"Select Model File"** and specify path to `.gguf` file
-3. Optionally configure inference parameters
-4. Click **"Load"**
+Architectures with full support:
+- Llama (1, 2, 3, 4), Mistral, Mixtral, DeepSeek, Yi, SmolLM2, CodeLlama
+- Qwen2, Qwen2.5, Qwen2 MoE
+- Qwen3, Qwen3 MoE
 
-### 3️⃣ **Start Chatting**
-
-- Enter your question or request
-- Enable **"Thinking"** for deeper responses
-- Adjust generation parameters to your taste
-- Enjoy conversation with your personal AI!
-
----
-
-## 🎨 Interface Features
-
-### 📊 **Informative Indicators**
-
-- Model loading progress with detailed stages
-- Generation status indicators
-- Visual display of AI thinking
-
-### ⚡ **Quick Actions**
-
-- Cancel model loading with one click
-- Stop generation at any moment
-- Quick parameter changes without reloading
-
----
+Formats:
+- GGUF (quantized models)
+- SafeTensors
 
 ## 🛡️ Privacy and Security
 
-### 🔒 **100% Local**
-
-- All computations happen on your computer
-- No external requests or data sending
-- Full control over your information
-
-### 💾 **Data Management**
-
-- Conversations stored only in application session
-- Models remain on your disk
-- No hidden data collection
-
----
-
-## 💡 Tips and Recommendations
-
-### 🎯 **For best results:**
-
-- Use thinking mode for complex tasks
-- The app already has the best settings built-in based on Qwen3 model manufacturer recommendations. Just enable and use!
-- The app also supports changing default settings. Experiment with temperature: 0.7-1.0 for creativity, 0.1-0.3 for accuracy
-- Increase context for working with long documents
-
-### ⚡ **Performance optimization:**
-
-- Supports CPU and GPU (CUDA)
-
-### 🎨 **Creative usage:**
-
-- Enable thinking for text analysis and problem solving
-- Experiment with high temperature for creative writing
-- Use long context for working with large documents
-
----
-
-## 🖥️ System Requirements and Limitations
-
-### Supported Platforms
-
-- Windows 10/11 — full support
-- Linux and macOS — in planning stage (not yet supported)
-
-### Models
-
-- Supported: Qwen3 in GGUF format (mono-architecture)
-- Important: compatibility with other models is not yet guaranteed
-
-### Minimum Hardware Requirements
-
-The smallest Qwen3 models (0.6B and 1.7B) work with acceptable speed and quality even on devices with 2-core CPU and 4 GB RAM. The 4B model also works in this application with such devices, but the performance is many times lower and requires more memory, which is difficult to achieve, for example, with LM Studio without significant quality loss.
-
-### Context and Performance
-
-- Effective context length depends on: selected model, available RAM
-- Practically achievable context length may be lower than theoretically declared by the model
-- The larger the context, the higher the memory requirements and lower the generation speed
-
----
-
-## 🌟 Support the Project
-
-If Oxide Lab has been useful to you:
-
-- ⭐ Star the project
-- 🐛 Report bugs
-- 💡 Suggest new features
-- 🤝 Share with friends
-
----
+- All processing happens locally on your device
+- No telemetry or data collection
+- No internet connection required for inference
+- Content Security Policy (CSP) enforced
 
 ## 🙏 Acknowledgments
 
-Oxide Lab is built with the help of amazing open-source technologies:
+This project is built on top of excellent open-source work:
 
-- **[Rust](https://www.rust-lang.org/)** - Systems programming language that guarantees memory safety and performance
-- **[Tauri](https://tauri.app/)** - Framework for building fast and secure desktop applications
-- **[Candle](https://github.com/huggingface/candle)** - Minimalist ML framework for Rust
-- **[Phosphor Icons](https://phosphoricons.com/)** - Beautiful and consistent icon set
+- [Candle](https://github.com/huggingface/candle) — ML framework for Rust (HuggingFace)
+- [Tauri](https://tauri.app/) — Desktop application framework
+- [Svelte](https://svelte.dev/) — Frontend framework
+- [Tokenizers](https://github.com/huggingface/tokenizers) — Fast tokenization (HuggingFace)
 
----
+See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for full dependency attribution.
 
-> **Made with ❤️ for the AI enthusiast community**  
-> _Freedom, privacy and control over artificial intelligence_
+## 📄 License
+
+Apache-2.0 — see [LICENSE](LICENSE)
+
+Copyright (c) 2025 FerrisMind
