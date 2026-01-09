@@ -1,8 +1,8 @@
 </p>
 <p align="left">
-  <a href="README.md"><img src="https://img.shields.io/badge/English-2ea44f" alt="English"></a>
-  <a href="README.RU.md"><img src="https://img.shields.io/badge/Русский-555" alt="Русский"></a>
-  <a href="README.PT_BR.md"><img src="https://img.shields.io/badge/Português-555" alt="Português"></a>
+  <a href="README.md"><img src="https://img.shields.io/badge/English-232323" alt="English"></a>
+  <a href="README.RU.md"><img src="https://img.shields.io/badge/Русский-D65C5C" alt="Русский"></a>
+  <a href="README.PT_BR.md"><img src="https://img.shields.io/badge/Português_BR-232323" alt="Português"></a>
 </p>
 
 ---
