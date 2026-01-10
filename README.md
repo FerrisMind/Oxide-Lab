@@ -30,6 +30,7 @@
 ## 📚 Table of Contents
 
 - [What is this?](#-what-is-this)
+- [Demo](#-demo)
 - [Key Features](#-key-features)
 - [Installation & Setup](#️-installation--setup)
 - [How to Start Using](#-how-to-start-using)
@@ -42,6 +43,20 @@
 ## ✨ What is this?
 
 Oxide Lab is a native desktop application for running large language models locally. Built with Rust and Tauri v2, it provides a fast, private chat interface without requiring internet connectivity or external API services.
+
+## 🎬 Demo
+
+<p align="center">
+  <video src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/screenshots/dem1.mp4" width="600" controls></video>
+</p>
+
+<p align="center">
+  <video src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/screenshots/dem2.mp4" width="600" controls></video>
+</p>
+
+<p align="center">
+  <video src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/screenshots/dem3.mp4" width="600" controls></video>
+</p>
 
 ## 🚀 Key Features
 
