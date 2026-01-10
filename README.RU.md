@@ -46,17 +46,11 @@ Oxide Lab — нативное десктопное приложение для 
 
 ## 🎬 Демо
 
-<p align="center">
-  <video src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/screenshots/dem1.mp4" width="600" controls></video>
-</p>
+https://github.com/user-attachments/assets/0b9c8ff9-7793-4108-8b62-b0800cbd855e
 
-<p align="center">
-  <video src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/screenshots/dem2.mp4" width="600" controls></video>
-</p>
+https://github.com/user-attachments/assets/27c1f544-69e0-4a91-8fa5-4c21d67cb7c7
 
-<p align="center">
-  <video src="https://raw.githubusercontent.com/FerrisMind/Oxide-Lab/main/.github/assets/screenshots/dem3.mp4" width="600" controls></video>
-</p>
+https://github.com/user-attachments/assets/ce5337d5-3e63-4263-b6a7-56e6847bbc71
 
 ## 🚀 Ключевые возможности
 
