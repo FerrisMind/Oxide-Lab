@@ -366,6 +366,26 @@
     padding: 0.75rem 1rem;
     font-size: 1rem;
     line-height: 1.3;
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-foreground) transparent;
+  }
+  
+  :global(.composer-input::-webkit-scrollbar) {
+    width: 6px;
+    height: 6px;
+  }
+
+  :global(.composer-input::-webkit-scrollbar-track) {
+    background: transparent;
+  }
+
+  :global(.composer-input::-webkit-scrollbar-thumb) {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+
+  :global(.composer-input::-webkit-scrollbar-thumb:hover) {
+    background-color: var(--muted-foreground);
   }
 
   :global(.composer-input:focus),

@@ -22,6 +22,7 @@
   import Microphone from 'phosphor-svelte/lib/Microphone';
   import MagnifyingGlass from 'phosphor-svelte/lib/MagnifyingGlass';
   import ChartBar from 'phosphor-svelte/lib/ChartBar';
+  import Lightning from 'phosphor-svelte/lib/Lightning';
   import FolderOpen from 'phosphor-svelte/lib/FolderOpen';
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
   import Warning from 'phosphor-svelte/lib/Warning';
@@ -60,6 +61,12 @@
 
   // Model Selector Search
   let modelSearchEnabled = $state(true);
+
+  // Prefix Cache
+  let prefixCacheEnabled = $state(true);
+  let prefixCacheMaxEntries = $state(32);
+  let prefixCacheLoading = $state(true);
+  let prefixCacheStats = $state({ hits: 0, misses: 0, entries: 0 });
 
   // Languages
   const languages: { value: SupportedLocale; label: string }[] = [
@@ -226,6 +233,55 @@
   }
 
   // ─────────────────────────────────────────────────────────────
+  // Prefix Cache
+  // ─────────────────────────────────────────────────────────────
+
+  async function loadPrefixCacheInfo() {
+    prefixCacheLoading = true;
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const info = await invoke<{ enabled: boolean; max_entries: number; stats: { hits: number; misses: number; entries: number } }>('get_prefix_cache_info');
+      prefixCacheEnabled = info.enabled;
+      prefixCacheMaxEntries = info.max_entries || 32;
+      prefixCacheStats = info.stats;
+    } catch (err) {
+      console.error('Failed to load prefix cache info:', err);
+    } finally {
+      prefixCacheLoading = false;
+    }
+  }
+
+  async function handlePrefixCacheToggle(enabled: boolean) {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('set_prefix_cache_enabled', { enabled, maxEntries: prefixCacheMaxEntries });
+      prefixCacheEnabled = enabled;
+    } catch (err) {
+      console.error('Failed to toggle prefix cache:', err);
+    }
+  }
+
+  async function handlePrefixCacheMaxEntriesChange(maxEntries: number) {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('set_prefix_cache_enabled', { enabled: prefixCacheEnabled, maxEntries });
+      prefixCacheMaxEntries = maxEntries;
+    } catch (err) {
+      console.error('Failed to update prefix cache max entries:', err);
+    }
+  }
+
+  async function handleClearPrefixCache() {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('clear_prefix_cache');
+      await loadPrefixCacheInfo();
+    } catch (err) {
+      console.error('Failed to clear prefix cache:', err);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // Lifecycle
   // ─────────────────────────────────────────────────────────────
 
@@ -233,6 +289,7 @@
     await Promise.all([
       loadThreadLimit(),
       loadSttSettings(),
+      loadPrefixCacheInfo(),
     ]);
   });
 
@@ -425,6 +482,60 @@
             ? $t('settings.modelSelector.enabledDescription') || 'Search is enabled in the model selector'
             : $t('settings.modelSelector.disabledDescription') || 'Search is disabled in the model selector'}
         </p>
+      </Card.Content>
+    </Card.Root>
+
+    <!-- Prefix Cache Settings -->
+    <Card.Root>
+      <Card.Header>
+        <Card.Title class="flex items-center gap-2">
+          <Lightning class="size-5" />
+          {$t('settings.prefixCache.title') || 'Prefix Cache'}
+        </Card.Title>
+        <Card.Description>{$t('settings.prefixCache.description') || 'Reuse KV cache for faster multi-turn conversations'}</Card.Description>
+      </Card.Header>
+      <Card.Content class="space-y-4">
+        {#if prefixCacheLoading}
+          <div class="flex justify-center py-4"><Spinner class="size-6" /></div>
+        {:else}
+          <label class="flex items-center gap-3 cursor-pointer">
+            <Checkbox 
+              checked={prefixCacheEnabled}
+              onCheckedChange={(checked: boolean) => handlePrefixCacheToggle(checked)}
+            />
+            <span>{$t('settings.prefixCache.enable') || 'Enable prefix caching'}</span>
+          </label>
+          
+          {#if prefixCacheEnabled}
+            <div class="space-y-2">
+              <Label>{$t('settings.prefixCache.maxEntries') || 'Max cache entries'}: {prefixCacheMaxEntries}</Label>
+              <input
+                type="range"
+                min="8"
+                max="128"
+                step="8"
+                bind:value={prefixCacheMaxEntries}
+                onchange={() => handlePrefixCacheMaxEntriesChange(prefixCacheMaxEntries)}
+                class="w-full accent-primary"
+              />
+              <div class="flex justify-between text-xs text-muted-foreground">
+                <span>8</span>
+                <span>128</span>
+              </div>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 rounded bg-muted/30">
+              <div class="text-sm space-y-1">
+                <div>{$t('settings.prefixCache.stats.hits') || 'Hits'}: <span class="font-medium text-green-600">{prefixCacheStats.hits}</span></div>
+                <div>{$t('settings.prefixCache.stats.misses') || 'Misses'}: <span class="font-medium text-orange-600">{prefixCacheStats.misses}</span></div>
+                <div>{$t('settings.prefixCache.stats.entries') || 'Cached entries'}: <span class="font-medium">{prefixCacheStats.entries}</span></div>
+              </div>
+              <Button variant="outline" size="sm" onclick={handleClearPrefixCache}>
+                {$t('settings.prefixCache.clear') || 'Clear cache'}
+              </Button>
+            </div>
+          {/if}
+        {/if}
       </Card.Content>
     </Card.Root>
 

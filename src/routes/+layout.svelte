@@ -44,6 +44,7 @@
   import { folderPath, models, scanFolder } from '$lib/stores/local-models';
   import type { ModelInfo } from '$lib/types/local-models';
 
+
   // Pages for mount-all pattern
   import Chat from '$lib/chat/Chat.svelte';
 
@@ -250,7 +251,7 @@
     });
 
     const { listen } = await import('@tauri-apps/api/event');
-    const { toast } = await import('svelte-sonner');
+    const { toast, Toaster } = await import('svelte-sonner');
 
     const unlistenUnload = await listen<string>('model_unloaded', (event) => {
         console.log('Model unloaded automatically:', event.payload);
@@ -258,8 +259,12 @@
         chatState.update(s => ({
             ...s,
             isLoaded: false,
-            // optional: clear path if you want to force re-selection, 
-            // but keeping it allows "click to reload"
+            modelPath: '', // Force selector reset
+            pendingModelPath: '',
+            errorText: '',
+            // Clear loading state too just in case
+            isLoadingModel: false,
+            loadingStage: ''
         }));
 
         toast.info($t('common.model.unloaded') || 'Model unloaded due to inactivity', {
@@ -498,10 +503,16 @@
     <DownloadManagerModal onClose={() => (showDownloadManager = false)} />
   {/if}
 
-  <!-- Hidden slot for SvelteKit routing -->
   {#if page.url.pathname === '/'}
     <div hidden>{@render children()}</div>
   {/if}
+
+  <div class="toaster-wrapper">
+     <!-- Dynamic import workaround for Toaster if needed, or just standard usage if imported -->
+     {#await import('svelte-sonner') then { Toaster }}
+        <Toaster position="bottom-right" richColors theme="dark" />
+     {/await}
+  </div>
 </SidebarUI.Provider>
 
 <style>
@@ -756,6 +767,26 @@
       visibility 0.15s ease;
     overflow: auto;
     background: var(--background);
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-foreground) transparent;
+  }
+
+  .page-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .page-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .page-container::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+
+  .page-container::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
   }
 
   .page-container.active {

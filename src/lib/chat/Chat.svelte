@@ -26,29 +26,32 @@
 
 
   // State
+  // Initial State from Store (Synchronous)
+  const savedState = get(chatState);
+
   let isLoaderPanelVisible = $state(false);
-  let modelPath = $state('');
-  let repoId = $state<string>('');
-  let revision = $state<string>('');
-  let hubGgufFilename = $state<string>('');
-  let prompt = $state('');
-  let messages = $state<ChatMessage[]>([]);
-  let busy = $state(false);
-  let format = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>('gguf');
-  let pendingModelPath = $state('');
-  let pendingFormat = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>('gguf');
-  let isLoaded = $state(false);
-  let errorText = $state('');
+  let modelPath = $state(savedState.modelPath);
+  let repoId = $state<string>(savedState.repoId);
+  let revision = $state<string>(savedState.revision);
+  let hubGgufFilename = $state<string>(savedState.hubGgufFilename);
+  let prompt = $state(savedState.prompt);
+  let messages = $state<ChatMessage[]>(Array.isArray(savedState.messages) ? savedState.messages : []);
+  let busy = $state(savedState.busy);
+  let format = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>(savedState.format);
+  let pendingModelPath = $state(savedState.pendingModelPath);
+  let pendingFormat = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>(savedState.pendingFormat);
+  let isLoaded = $state(savedState.isLoaded);
+  let errorText = $state(savedState.errorText);
 
   // Device state
-  let use_gpu = $state<boolean>(false);
-  let cuda_available = $state<boolean>(false);
-  let cuda_build = $state<boolean>(false);
-  let current_device = $state<string>('CPU');
-  let avx = $state<boolean>(false);
-  let neon = $state<boolean>(false);
-  let simd128 = $state<boolean>(false);
-  let f16c = $state<boolean>(false);
+  let use_gpu = $state<boolean>(savedState.use_gpu);
+  let cuda_available = $state<boolean>(savedState.cuda_available);
+  let cuda_build = $state<boolean>(savedState.cuda_build);
+  let current_device = $state<string>(savedState.current_device);
+  let avx = $state<boolean>(savedState.avx);
+  let neon = $state<boolean>(savedState.neon);
+  let simd128 = $state<boolean>(savedState.simd128);
+  let f16c = $state<boolean>(savedState.f16c);
 
   // Modality support
   let supports_text = $state<boolean>(true);
@@ -57,29 +60,29 @@
   let supports_video = $state<boolean>(false);
 
   // Loading state
-  let isLoadingModel = $state(false);
-  let loadingProgress = $state(0);
-  let loadingStage = $state('');
-  let isCancelling = $state(false);
-  let isUnloadingModel = $state(false);
-  let unloadingProgress = $state(0);
+  let isLoadingModel = $state(savedState.isLoadingModel);
+  let loadingProgress = $state(savedState.loadingProgress);
+  let loadingStage = $state(savedState.loadingStage);
+  let isCancelling = $state(savedState.isCancelling);
+  let isUnloadingModel = $state(savedState.isUnloadingModel);
+  let unloadingProgress = $state(savedState.unloadingProgress);
 
   // Inference params
-  let temperature = $state<number>(0.8);
-  let temperature_enabled = $state(false);
-  let top_k_enabled = $state(false);
-  let top_k_value = $state<number>(40);
-  let top_p_enabled = $state(false);
-  let top_p_value = $state<number>(0.9);
-  let min_p_enabled = $state(false);
-  let min_p_value = $state<number>(0.05);
-  let repeat_penalty_enabled = $state(false);
-  let repeat_penalty_value = $state<number>(1.1);
-  let ctx_limit_value = $state<number>(4096);
-  let use_custom_params = $state<boolean>(false);
-  let split_prompt = $state<boolean>(false);
-  let verbose_prompt = $state<boolean>(false);
-  let tracing = $state<boolean>(false);
+  let temperature = $state<number>(savedState.temperature);
+  let temperature_enabled = $state(savedState.temperature_enabled);
+  let top_k_enabled = $state(savedState.top_k_enabled);
+  let top_k_value = $state<number>(savedState.top_k_value);
+  let top_p_enabled = $state(savedState.top_p_enabled);
+  let top_p_value = $state<number>(savedState.top_p_value);
+  let min_p_enabled = $state(savedState.min_p_enabled);
+  let min_p_value = $state<number>(savedState.min_p_value);
+  let repeat_penalty_enabled = $state(savedState.repeat_penalty_enabled);
+  let repeat_penalty_value = $state<number>(savedState.repeat_penalty_value);
+  let ctx_limit_value = $state<number>(savedState.ctx_limit_value);
+  let use_custom_params = $state<boolean>(savedState.use_custom_params);
+  let split_prompt = $state<boolean>(savedState.split_prompt);
+  let verbose_prompt = $state<boolean>(savedState.verbose_prompt);
+  let tracing = $state<boolean>(savedState.tracing);
 
   // Create controller with context
   const controller = createChatController({
@@ -464,52 +467,15 @@
   onMount(async () => {
     chatUiMounted.set(true);
 
-    try {
-      const s = get(chatState) ?? getDefaultChatState();
-      modelPath = s.modelPath;
-      repoId = s.repoId;
-      revision = s.revision;
-      hubGgufFilename = s.hubGgufFilename;
-      format = s.format;
-      prompt = s.prompt;
+    chatUiMounted.set(true);
 
+    // Initial session messages sync
+    try {
       const session = get(currentSession);
-      messages = session?.messages ?? (Array.isArray(s.messages) ? s.messages : []);
-      busy = s.busy;
-      isLoaded = s.isLoaded;
-      errorText = s.errorText;
-      isLoadingModel = s.isLoadingModel;
-      loadingProgress = s.loadingProgress;
-      loadingStage = s.loadingStage;
-      isCancelling = s.isCancelling;
-      isUnloadingModel = s.isUnloadingModel;
-      unloadingProgress = s.unloadingProgress;
-      temperature = s.temperature;
-      temperature_enabled = s.temperature_enabled;
-      top_k_enabled = s.top_k_enabled;
-      top_k_value = s.top_k_value;
-      top_p_enabled = s.top_p_enabled;
-      top_p_value = s.top_p_value;
-      min_p_enabled = s.min_p_enabled;
-      min_p_value = s.min_p_value;
-      repeat_penalty_enabled = s.repeat_penalty_enabled;
-      repeat_penalty_value = s.repeat_penalty_value;
-      ctx_limit_value = s.ctx_limit_value;
-      use_custom_params = s.use_custom_params;
-      use_gpu = s.use_gpu;
-      cuda_available = s.cuda_available;
-      cuda_build = s.cuda_build;
-      current_device = s.current_device;
-      avx = s.avx;
-      neon = s.neon;
-      simd128 = s.simd128;
-      f16c = s.f16c;
-      split_prompt = s.split_prompt;
-      verbose_prompt = s.verbose_prompt;
-      tracing = s.tracing;
-    } catch {
-      // Ignore, use defaults
-    }
+      if (session) {
+          messages = session.messages;
+      }
+    } catch { /* ignore */ }
 
     // Initialize stream listener
     try {

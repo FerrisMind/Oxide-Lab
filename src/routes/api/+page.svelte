@@ -5,7 +5,6 @@
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
   import { Badge } from '$lib/components/ui/badge';
-  import { ScrollArea } from '$lib/components/ui/scroll-area';
   import Copy from 'phosphor-svelte/lib/Copy';
   import Check from 'phosphor-svelte/lib/Check';
   import TerminalWindow from 'phosphor-svelte/lib/TerminalWindow';
@@ -160,9 +159,9 @@ print(completion.choices[0].message.content)`);
     <Tabs.Content value="python">
         <Card.Root>
             <Card.Content class="p-0 overflow-hidden rounded-lg bg-slate-950 dark:bg-slate-950">
-                <ScrollArea class="h-[300px] w-full p-4">
+                <div class="h-[300px] w-full p-4 overflow-auto custom-scrollbar">
                      <pre class="text-sm font-mono text-slate-50"><code>{pythonExample}</code></pre>
-                </ScrollArea>
+                </div>
                  <div class="flex justify-end p-2 border-t border-slate-800 bg-slate-900">
                     <Button variant="ghost" size="sm" class="text-slate-400 hover:text-white" onclick={() => copyToClipboard(pythonExample)}>
                         <Copy size={14} class="mr-2" /> Copy
@@ -175,9 +174,9 @@ print(completion.choices[0].message.content)`);
     <Tabs.Content value="curl">
         <Card.Root>
             <Card.Content class="p-0 overflow-hidden rounded-lg bg-slate-950 dark:bg-slate-950">
-                 <ScrollArea class="h-[300px] w-full p-4">
+                 <div class="h-[300px] w-full p-4 overflow-auto custom-scrollbar">
                      <pre class="text-sm font-mono text-slate-50"><code>{curlExample}</code></pre>
-                </ScrollArea>
+                </div>
                 <div class="flex justify-end p-2 border-t border-slate-800 bg-slate-900">
                     <Button variant="ghost" size="sm" class="text-slate-400 hover:text-white" onclick={() => copyToClipboard(curlExample)}>
                         <Copy size={14} class="mr-2" /> Copy
