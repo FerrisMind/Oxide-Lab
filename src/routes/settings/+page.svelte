@@ -31,6 +31,7 @@
   import { modelSelectorSearchEnabled } from '$lib/stores/ui-preferences';
   import type { SttModelSource, SttSettings } from '$lib/types/stt';
   import PerformanceMonitor from '$lib/components/PerformanceMonitor.svelte';
+  import { APP_VERSION, APP_LICENSE } from '$lib/version';
 
   // ─────────────────────────────────────────────────────────────
   // State
@@ -617,11 +618,11 @@
         <div class="space-y-2 text-sm">
           <div class="flex justify-between">
             <span class="text-muted-foreground">{$t('about.version') || 'Version'}</span>
-            <span>0.13.1</span>
+            <span>{APP_VERSION}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-muted-foreground">{$t('about.license') || 'License'}</span>
-            <span>Apache-2.0</span>
+            <span>{APP_LICENSE}</span>
           </div>
         </div>
       </Card.Content>

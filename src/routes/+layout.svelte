@@ -43,7 +43,7 @@
   import { chatState } from '$lib/stores/chat';
   import { folderPath, models, scanFolder } from '$lib/stores/local-models';
   import type { ModelInfo } from '$lib/types/local-models';
-
+  import { APP_VERSION } from '$lib/version';
 
   // Pages for mount-all pattern
   import Chat from '$lib/chat/Chat.svelte';
@@ -56,7 +56,7 @@
   let comboboxTrigger = $state<HTMLButtonElement | null>(null);
   let showDownloadManager = $state(false);
   let showAbout = $state(false);
-  let appVersion = $state('0.13.1');
+  let appVersion = $state(APP_VERSION);
   let modalElement = $state<HTMLDivElement | null>(null);
 
   const appWindow = getCurrentWindow();
@@ -169,8 +169,8 @@
       const appInfo = (await invoke('get_app_info')) as { version: string };
       appVersion = appInfo.version;
     } catch (error) {
-      console.warn('Failed to get app version:', error);
-      appVersion = '0.13.1';
+      console.warn('Failed to get app version from backend, using package.json version:', error);
+      // Fallback to package.json version (already set as initial value)
     }
   }
 
