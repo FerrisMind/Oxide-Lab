@@ -111,5 +111,17 @@
         "errors": {
             "customDirRequired": "Select a custom model folder first"
         }
+    },
+    "prefixCache": {
+        "title": "Prefix Cache",
+        "description": "Reuse KV cache for faster multi-turn conversations",
+        "enable": "Enable prefix caching",
+        "maxEntries": "Max cache entries",
+        "clear": "Clear cache",
+        "stats": {
+            "hits": "Hits",
+            "misses": "Misses",
+            "entries": "Cached entries"
+        }
     }
 }

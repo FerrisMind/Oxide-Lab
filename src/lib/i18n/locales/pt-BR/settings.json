@@ -111,5 +111,17 @@
         "errors": {
             "customDirRequired": "Selecione uma pasta de modelo primeiro"
         }
+    },
+    "prefixCache": {
+        "title": "Cache de Prefixo",
+        "description": "Reutilizar cache KV para conversas multi-turno mais rápidas",
+        "enable": "Habilitar cache de prefixo",
+        "maxEntries": "Máx. entradas no cache",
+        "clear": "Limpar cache",
+        "stats": {
+            "hits": "Acertos",
+            "misses": "Falhas",
+            "entries": "Entradas em cache"
+        }
     }
 }
