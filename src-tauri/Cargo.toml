@@ -1,6 +1,6 @@
 [package]
 name = "oxide-lab"
-version = "0.13.1"
+version = "0.14.0"
 description = "Private AI chat application with local model support"
 authors = ["FerrisMind"]
 license = "Apache-2.0"

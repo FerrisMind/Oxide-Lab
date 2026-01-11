@@ -56,7 +56,7 @@
   let comboboxTrigger = $state<HTMLButtonElement | null>(null);
   let showDownloadManager = $state(false);
   let showAbout = $state(false);
-  let appVersion = $state('0.13.1');
+  let appVersion = $state('0.14.0');
   let modalElement = $state<HTMLDivElement | null>(null);
 
   const appWindow = getCurrentWindow();
@@ -170,7 +170,7 @@
       appVersion = appInfo.version;
     } catch (error) {
       console.warn('Failed to get app version:', error);
-      appVersion = '0.13.1';
+      appVersion = '0.14.0';
     }
   }
 
