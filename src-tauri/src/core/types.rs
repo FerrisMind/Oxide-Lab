@@ -108,6 +108,30 @@ pub struct GenerateRequest {
     /// Tools available for function calling. If provided, enables tool call parsing.
     #[serde(default)]
     pub tools: Option<Vec<crate::generate::tool_call_parser::Tool>>,
+    /// Stop sequences - generation stops when any of these are encountered
+    #[serde(default)]
+    pub stop_sequences: Option<Vec<String>>,
+    /// Tool choice: auto, none, required, or specific function
+    #[serde(default)]
+    pub tool_choice: Option<ToolChoice>,
+}
+
+/// Tool choice options for controlling function calling behavior
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ToolChoice {
+    /// "auto", "none", "required"
+    Mode(String),
+    /// {"type": "function", "function": {"name": "..."}}
+    Function {
+        r#type: String,
+        function: ToolChoiceFunction,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolChoiceFunction {
+    pub name: String,
 }
 
 // Структура Attachment оставлена на будущее (компат), но можно удалить полностью при необходимости.

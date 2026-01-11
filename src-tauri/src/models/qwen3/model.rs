@@ -422,4 +422,9 @@ impl ModelForCausalLM {
     pub fn clear_kv_cache(&mut self) {
         self.base.clear_kv_cache();
     }
+
+    /// Returns hidden states of the last layer after normalization [batch, seq_len, hidden_size]
+    pub fn get_hidden_states(&mut self, input: &Tensor, offset: usize) -> Result<Tensor> {
+        self.base.forward(input, offset)
+    }
 }

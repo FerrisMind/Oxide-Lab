@@ -172,6 +172,9 @@ pub fn run() {
             crate::api::get_locale,
             crate::api::set_locale,
             crate::api::openai_server::get_server_config,
+            crate::api::prefix_cache_api::get_prefix_cache_info,
+            crate::api::prefix_cache_api::set_prefix_cache_enabled,
+            crate::api::prefix_cache_api::clear_prefix_cache,
         ])
         .setup(move |app| {
             // Hybrid responsiveness: keep the window/event-loop thread slightly prioritized on Windows,
@@ -215,10 +218,10 @@ pub fn run() {
                 loop {
                     interval.tick().await;
                     if let Ok(mut guard) = scheduler_state.lock() {
-                        if let Some(unloaded_id) = guard.scheduler.check_expiration() {
-                            if let Err(e) = app.emit("model_unloaded", &unloaded_id) {
-                                    log::error!("Failed to emit model_unloaded event: {}", e);
-                            }
+                        if let Some(unloaded_id) = guard.scheduler.check_expiration()
+                            && let Err(e) = app.emit("model_unloaded", &unloaded_id)
+                        {
+                            log::error!("Failed to emit model_unloaded event: {}", e);
                         }
                     } else {
                         log::error!("Scheduler keep-alive task: failed to lock state");

@@ -25,14 +25,51 @@ use tokio::sync::broadcast;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::core::state::SharedState;
-use crate::core::types::{ChatMessage, GenerateRequest};
+use crate::core::types::{ChatMessage, GenerateRequest, ToolChoice};
 use crate::generate::emit::{EmissionBackend, GenerationEvent};
 use crate::generate::stream::generate_stream_with_backend;
 use crate::generate::tool_call_parser::{Tool, ToolCall};
+use candle::Tensor;
 
 // ============================================================================
 // OpenAI API Types
 // ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingRequest {
+    pub model: String,
+    pub input: EmbeddingInput,
+    #[serde(default)]
+    pub user: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum EmbeddingInput {
+    String(String),
+    Array(Vec<String>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingResponse {
+    pub object: String,
+    pub data: Vec<EmbeddingData>,
+    pub model: String,
+    pub usage: EmbeddingUsage,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingData {
+    pub object: String,
+    pub index: usize,
+    pub embedding: Vec<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingUsage {
+    pub prompt_tokens: usize,
+    pub total_tokens: usize,
+}
 
 pub const OPENAI_PORT: u16 = 11434;
 
@@ -67,6 +104,32 @@ pub struct ChatCompletionRequest {
     /// OpenAI frequency_penalty [-2.0, 2.0] - maps to repeat_penalty
     #[serde(default)]
     pub frequency_penalty: Option<f64>,
+    /// OpenAI presence_penalty [-2.0, 2.0] (logged warning, not yet implemented)
+    #[serde(default)]
+    pub presence_penalty: Option<f64>,
+    /// Stop sequences - generation stops when any of these are encountered
+    #[serde(default)]
+    pub stop: Option<StopTokens>,
+    /// Tool choice: auto, none, required, or specific function
+    #[serde(default)]
+    pub tool_choice: Option<ToolChoice>,
+}
+
+/// Stop tokens can be a single string or an array of strings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum StopTokens {
+    Single(String),
+    Multi(Vec<String>),
+}
+
+impl StopTokens {
+    pub fn to_vec(&self) -> Vec<String> {
+        match self {
+            StopTokens::Single(s) => vec![s.clone()],
+            StopTokens::Multi(v) => v.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -343,6 +406,92 @@ async fn models_handler(
     }))
 }
 
+async fn embeddings_handler(
+    State(state): State<Arc<OpenAIServerState>>,
+    Json(req): Json<EmbeddingRequest>,
+) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+    let mut guard = state
+        .model_state
+        .lock()
+        .map_err(|_| server_error("Lock failed"))?;
+
+    if !guard.scheduler.has_model() || guard.tokenizer.is_none() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: ApiError {
+                    message: "Model/tokenizer is not loaded".into(),
+                    error_type: "invalid_request_error".into(),
+                    code: None,
+                },
+            }),
+        ));
+    }
+
+    let tokenizer = guard.tokenizer.clone().unwrap();
+    let model_name = req.model.clone();
+
+    let inputs = match req.input {
+        EmbeddingInput::String(s) => vec![s],
+        EmbeddingInput::Array(v) => v,
+    };
+
+    let mut data = Vec::new();
+    let mut total_tokens = 0;
+
+    for (index, text) in inputs.into_iter().enumerate() {
+        let tokens = tokenizer
+            .encode(text, true)
+            .map_err(|e| server_error(&e.to_string()))?;
+        let token_ids = tokens.get_ids();
+        let prompt_tokens = token_ids.len();
+        total_tokens += prompt_tokens;
+
+        let input_tensor = Tensor::new(token_ids, &guard.device)
+            .map_err(|e| server_error(&e.to_string()))?
+            .unsqueeze(0)
+            .map_err(|e| server_error(&e.to_string()))?;
+
+        let mut entry = guard
+            .scheduler
+            .take_model()
+            .ok_or_else(|| server_error("Model missing during execution"))?;
+
+        let result = (|| -> candle::Result<Vec<f32>> {
+            let hidden_states = entry.model.get_embeddings(&input_tensor)?;
+            let embedding_tensor = hidden_states.mean(1)?.squeeze(0)?;
+            embedding_tensor.to_vec1()
+        })();
+
+        let embedding = match result {
+            Ok(emb) => {
+                guard.scheduler.restore_model(entry);
+                emb
+            }
+            Err(e) => {
+                guard.scheduler.restore_model(entry);
+                return Err(server_error(&format!("Embedding failed: {}", e)));
+            }
+        };
+
+        data.push(EmbeddingData {
+            object: "embedding".to_string(),
+            index,
+            embedding,
+        });
+    }
+
+    Ok(Json(EmbeddingResponse {
+        object: "list".to_string(),
+        data,
+        model: model_name,
+        usage: EmbeddingUsage {
+            prompt_tokens: total_tokens,
+            total_tokens,
+        },
+    }))
+}
+
 async fn chat_completions_handler(
     State(state): State<Arc<OpenAIServerState>>,
     Json(req): Json<ChatCompletionRequest>,
@@ -401,6 +550,14 @@ async fn create_completion(
         ((1.0 + fp * 0.25).clamp(0.5, 2.0)) as f32
     });
 
+    // Log warning for presence_penalty (not yet implemented in sampling)
+    if req.presence_penalty.is_some() {
+        log::warn!("presence_penalty is not yet implemented, ignoring");
+    }
+
+    // Convert stop tokens
+    let stop_sequences = req.stop.as_ref().map(|s| s.to_vec());
+
     // Prepare GenerateRequest
     let gen_req = GenerateRequest {
         prompt: String::new(),
@@ -422,6 +579,8 @@ async fn create_completion(
         attachments: None,
         edit_index: None,
         format: None,
+        stop_sequences,
+        tool_choice: req.tool_choice,
     };
 
     let state_clone = state.model_state.clone();
@@ -514,6 +673,14 @@ async fn create_completion_stream(
         .frequency_penalty
         .map(|fp| ((1.0 + fp * 0.25).clamp(0.5, 2.0)) as f32);
 
+    // Log warning for presence_penalty (not yet implemented)
+    if req.presence_penalty.is_some() {
+        log::warn!("presence_penalty is not yet implemented, ignoring");
+    }
+
+    // Convert stop tokens
+    let stop_sequences = req.stop.as_ref().map(|s| s.to_vec());
+
     // Prepare GenerateRequest
     let gen_req = GenerateRequest {
         prompt: String::new(),
@@ -535,6 +702,8 @@ async fn create_completion_stream(
         attachments: None,
         edit_index: None,
         format: None,
+        stop_sequences,
+        tool_choice: req.tool_choice,
     };
 
     let state_clone = state.model_state.clone();
@@ -741,6 +910,8 @@ async fn create_legacy_completion(
         attachments: None,
         edit_index: None,
         format: None,
+        stop_sequences: None,
+        tool_choice: None,
     };
 
     let state_clone = state.model_state.clone();
@@ -833,6 +1004,8 @@ async fn create_legacy_completion_stream(
         attachments: None,
         edit_index: None,
         format: None,
+        stop_sequences: None,
+        tool_choice: None,
     };
 
     let state_clone = state.model_state.clone();
@@ -993,6 +1166,7 @@ pub fn create_router(state: Arc<OpenAIServerState>) -> Router {
         .route("/v1/models", get(models_handler))
         .route("/v1/chat/completions", post(chat_completions_handler))
         .route("/v1/completions", post(completions_handler))
+        .route("/v1/embeddings", post(embeddings_handler))
         .layer(cors)
         .with_state(state)
 }

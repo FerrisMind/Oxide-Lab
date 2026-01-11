@@ -71,7 +71,8 @@ pub fn estimate_best_context(
         let req = params.memory_required(ctx);
 
         // 1. Theoretical Check
-        if free_vram > 0 && req + (VRAM_HEADROOM_MB + WHISPER_RESERVE_MB) * BYTES_PER_MB > free_vram {
+        if free_vram > 0 && req + (VRAM_HEADROOM_MB + WHISPER_RESERVE_MB) * BYTES_PER_MB > free_vram
+        {
             // If this candidate fails theory, larger ones will too.
             break;
         }

@@ -7,6 +7,7 @@ pub mod model_loading;
 pub mod model_manager;
 pub mod openai_server;
 pub mod performance_api;
+pub mod prefix_cache_api;
 pub mod template;
 
 pub use commands::*;

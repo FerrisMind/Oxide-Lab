@@ -22,17 +22,46 @@ pub struct DownloadManifest {
     pub downloaded_at: String,
 }
 
-pub fn save_manifest(dir: &Path, manifest: &DownloadManifest) -> Result<(), String> {
-    let path = dir.join(MANIFEST_FILE_NAME);
+pub fn resolve_manifest_path(target: &Path) -> std::path::PathBuf {
+    if target.is_dir() {
+        target.join(MANIFEST_FILE_NAME)
+    } else {
+        // For files (like .gguf), we append the manifest extension to the filename
+        // e.g. model.gguf -> model.gguf.oxide-manifest.json
+        let file_name = target
+            .file_name()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_default();
+        target.with_file_name(format!("{}{}", file_name, MANIFEST_FILE_NAME))
+    }
+}
+
+pub fn save_manifest(target: &Path, manifest: &DownloadManifest) -> Result<(), String> {
+    let path = resolve_manifest_path(target);
     let serialized = serde_json::to_string_pretty(manifest)
         .map_err(|e| format!("Не удалось сериализовать манифест: {e}"))?;
     fs::write(&path, serialized)
         .map_err(|e| format!("Не удалось сохранить манифест {}: {e}", path.display()))
 }
 
-pub fn load_manifest(dir: &Path) -> Option<DownloadManifest> {
-    let path = dir.join(MANIFEST_FILE_NAME);
-    let data = fs::read_to_string(path).ok()?;
+pub fn load_manifest(target: &Path) -> Option<DownloadManifest> {
+    let path = resolve_manifest_path(target);
+    // If specific file manifest missing for a file, try directory manifest fallback?
+    // No, strictly separate for now to avoid pollution.
+    let data = fs::read_to_string(&path)
+        .or_else(|_| {
+            // Fallback: checks hidden .oxide-manifest.json if target is a file
+            if target.is_file()
+                && let Some(parent) = target.parent()
+            {
+                return fs::read_to_string(parent.join(MANIFEST_FILE_NAME));
+            }
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Manifest not found",
+            ))
+        })
+        .ok()?;
     serde_json::from_str(&data).ok()
 }
 

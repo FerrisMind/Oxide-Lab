@@ -143,4 +143,13 @@ impl ModelBackend for Qwen3Backend {
     fn supports_flash_attn(&self) -> bool {
         self.optimization.uses_flash_attn()
     }
+
+    fn get_embeddings(&mut self, input: &Tensor) -> candle::Result<Tensor> {
+        match &mut self.inner {
+            Qwen3Inner::Full(model) => model.get_hidden_states(input, 0),
+            Qwen3Inner::Quantized(_) => {
+                candle::bail!("Embeddings not yet supported for Qwen3-GGUF (MVP)")
+            }
+        }
+    }
 }

@@ -255,8 +255,23 @@ pub fn generate_stream_with_backend(
 
     let _vocab = tos.tokenizer().get_vocab(true);
 
-    // Сбрасываем KV-кэш перед новым запросом, чтобы не тянуть состояние предыдущего диалога.
-    if let Some(entry) = guard.scheduler.active_model.as_mut() {
+    // ============ Prefix Cache: проверяем совпадение ============
+    let prefix_match = guard.prefix_cache.match_prefix(&effective_context_tokens);
+    let prefix_hit = prefix_match.is_some();
+
+    if let Some(ref pm) = prefix_match {
+        log_infer!(
+            "prefix cache HIT: matched {} tokens, kv_position={}",
+            pm.matched_tokens,
+            pm.kv_position
+        );
+    } else {
+        log_infer!("prefix cache MISS");
+    }
+
+    // Сбрасываем KV-кэш ТОЛЬКО если нет prefix match
+    // При prefix hit модель должна сохранить KV-кэш с предыдущего запроса
+    if !prefix_hit && let Some(entry) = guard.scheduler.active_model.as_mut() {
         entry.model.clear_kv_cache();
     }
 
@@ -349,11 +364,25 @@ pub fn generate_stream_with_backend(
         ThinkingParser::new()
     };
 
-    // Create tool call parser if tools are provided
-    let mut tool_call_parser = req.tools.as_ref().map(|tools| {
-        log_infer!("tool calling enabled with {} tools", tools.len());
-        ToolCallParser::with_json_tag(tools.clone())
-    });
+    // Tool Choice Handling
+    let tool_choice = req.tool_choice.as_ref();
+    let tools_enabled = match tool_choice {
+        Some(crate::core::types::ToolChoice::Mode(m)) if m == "none" => false,
+        _ => req.tools.is_some(),
+    };
+
+    // Create tool call parser if tools are enabled
+    let mut tool_call_parser = if tools_enabled {
+        req.tools.as_ref().map(|tools| {
+            // If specific function is requested, we should probably filter tools or enforce it.
+            // For MVP: if tool_choice is Function { name }, we still use all tools but logic might differ.
+            // However, the prompt might need adjustment for "required" or "function".
+            log_infer!("tool calling enabled with {} tools", tools.len());
+            ToolCallParser::with_json_tag(tools.clone())
+        })
+    } else {
+        None
+    };
 
     // Инициализация grammar sampler
     let mut grammar_sampler = if req
@@ -502,6 +531,18 @@ pub fn generate_stream_with_backend(
                     let _ = stop_text_buf.drain(..cut);
                 }
             }
+
+            // Check user-provided stop sequences first
+            if req
+                .stop_sequences
+                .as_ref()
+                .is_some_and(|seqs| seqs.iter().any(|s| stop_text_buf.contains(s)))
+            {
+                log_infer!("stop sequence detected");
+                break;
+            }
+
+            // Fallback to hardcoded EOS sequences
             if stop_text_buf.contains("<end_of_turn>")
                 || stop_text_buf.contains("<|end_of_turn|>")
                 || stop_text_buf.contains("<|eot_id|>")
@@ -521,8 +562,24 @@ pub fn generate_stream_with_backend(
     emitter.emit_message(final_chunk);
     emitter.finalize();
 
-    // Очищаем KV-кэш после запроса, чтобы следующее поколение стартовало с чистого состояния.
-    if let Some(entry) = guard.scheduler.active_model.as_mut() {
+    // ============ Prefix Cache: сохраняем позицию ============
+    // Сохраняем prompt tokens и позицию KV-кэша для будущих запросов
+    // kv_position = количество токенов промпта (без сгенерированных)
+    let kv_position = effective_context_tokens.len();
+    guard
+        .prefix_cache
+        .insert(&effective_context_tokens, kv_position);
+    log_infer!(
+        "prefix cache INSERT: {} tokens at position {}",
+        effective_context_tokens.len(),
+        kv_position
+    );
+
+    // НЕ очищаем KV-кэш после запроса если prefix cache включён
+    // Это позволяет переиспользовать KV-кэш для следующего запроса
+    if !guard.prefix_cache.enabled()
+        && let Some(entry) = guard.scheduler.active_model.as_mut()
+    {
         entry.model.clear_kv_cache();
     }
 

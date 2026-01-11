@@ -49,6 +49,40 @@ pub trait ModelBackend: Send {
         // По умолчанию ничего не делаем
         Ok(())
     }
+
+    // ============ Prefix Cache Support ============
+
+    /// Возвращает текущую позицию KV-кэша (количество обработанных токенов)
+    ///
+    /// Используется для Prefix Cache: после prefill сохраняем эту позицию,
+    /// чтобы при повторном запросе с тем же префиксом пропустить prefill.
+    fn kv_cache_position(&self) -> usize {
+        0 // По умолчанию: prefix cache не поддерживается
+    }
+
+    /// Устанавливает позицию KV-кэша для продолжения генерации
+    ///
+    /// Используется для Prefix Cache: при cache hit устанавливаем позицию
+    /// в сохранённое значение и продолжаем генерацию с этой точки.
+    ///
+    /// # Returns
+    /// `true` если модель поддерживает prefix cache, `false` иначе
+    fn set_kv_cache_position(&mut self, _pos: usize) -> bool {
+        false // По умолчанию: prefix cache не поддерживается
+    }
+
+    /// Проверяет, поддерживает ли модель prefix caching
+    fn supports_prefix_cache(&self) -> bool {
+        false // По умолчанию: не поддерживается
+    }
+
+    /// Возвращает эмбеддинги для входного тензора
+    ///
+    /// # Returns
+    /// Тензор эмбеддингов (скрытые состояния последнего слоя)
+    fn get_embeddings(&mut self, _input: &Tensor) -> candle::Result<Tensor> {
+        candle::bail!("Embeddings not supported for this model type")
+    }
 }
 
 /// Информация о загруженной модели

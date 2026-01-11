@@ -4,6 +4,7 @@ pub mod device;
 pub mod log;
 pub mod performance;
 pub mod precision;
+pub mod prefix_cache;
 pub mod prompt;
 pub mod scheduler;
 pub mod state;

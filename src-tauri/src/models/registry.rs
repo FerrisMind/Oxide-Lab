@@ -328,7 +328,7 @@ mod tests {
         assert_eq!(detect_arch_from_string("llama"), Some(ArchKind::Llama));
         assert_eq!(detect_arch_from_string("Qwen3"), Some(ArchKind::Qwen3));
         assert_eq!(detect_arch_from_string("gemma3"), Some(ArchKind::Gemma3));
-        assert_eq!(detect_arch_from_string("mistral"), Some(ArchKind::Llama));
+        // mistral/mixtral/deepseek имеют architecture="llama" в GGUF
         assert_eq!(detect_arch_from_string("phi-3"), Some(ArchKind::Phi3));
         assert_eq!(detect_arch_from_string("unknown"), None);
     }

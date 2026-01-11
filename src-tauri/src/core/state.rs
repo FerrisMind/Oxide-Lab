@@ -1,5 +1,6 @@
 use crate::core::performance::PerformanceMonitor;
 use crate::core::precision::{Precision, PrecisionPolicy};
+use crate::core::prefix_cache::{PrefixCache, PrefixCacheConfig};
 use crate::core::scheduler::{ModelScheduler, SchedulerConfig};
 use candle::Device;
 use serde_json;
@@ -34,6 +35,8 @@ pub struct ModelState {
     pub(crate) rayon_thread_limit: Option<usize>,
     /// Performance monitor для отслеживания метрик
     pub(crate) performance_monitor: Arc<PerformanceMonitor>,
+    /// Prefix Cache для переиспользования KV-кэшей
+    pub(crate) prefix_cache: PrefixCache,
 }
 
 impl ModelState {
@@ -54,6 +57,8 @@ impl ModelState {
             precision_policy: PrecisionPolicy::Default,
             rayon_thread_limit: None,
             performance_monitor: Arc::new(PerformanceMonitor::new(1000)),
+            // Prefix cache включён по умолчанию (32 записи)
+            prefix_cache: PrefixCache::new(PrefixCacheConfig::enabled(32)),
         }
     }
 

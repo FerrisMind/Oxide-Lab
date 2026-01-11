@@ -804,14 +804,19 @@ fn build_model_info(path: &Path) -> Result<Option<ModelInfo>, String> {
     });
 
     // Try to load manifest for GGUF files downloaded through our system
-    let manifest_dir = path.parent().unwrap_or(Path::new("."));
-    let mut manifest = load_manifest(manifest_dir);
+    // We pass the full path so it checks {filename}.oxide-manifest.json first
+    let mut manifest = load_manifest(path);
+
+    // If not found, check if there is a directory-level manifest (loaded by fallback in load_manifest)
+    // If still nothing, infer and save.
     if manifest.is_none() {
         let inferred = infer_manifest_from_gguf(path, &envelope.metadata);
-        if let Err(err) = save_manifest(manifest_dir, &inferred) {
+
+        // Save to file-specific manifest to avoid polluting directory
+        if let Err(err) = save_manifest(path, &inferred) {
             eprintln!(
                 "Warning: failed to save manifest for {}: {err}",
-                manifest_dir.display()
+                path.display()
             );
         }
         manifest = Some(inferred);
@@ -1364,24 +1369,20 @@ pub fn update_model_manifest(
     publisher: Option<String>,
 ) -> Result<(), String> {
     let path = PathBuf::from(model_path);
-    let manifest_dir = if path.is_dir() {
-        path
-    } else {
-        path.parent()
-            .ok_or_else(|| "Invalid model path".to_string())?
-            .to_path_buf()
-    };
+    // We don't need manifest_dir calculation if we pass path directly to resolve_manifest_path
+    if !path.exists() {
+        return Err(format!("Model path does not exist: {}", path.display()));
+    }
 
-    let mut manifest = load_manifest(&manifest_dir).unwrap_or_else(|| DownloadManifest {
+    let mut manifest = load_manifest(&path).unwrap_or_else(|| DownloadManifest {
         version: 1,
-        repo_id: manifest_dir
+        repo_id: path
             .file_name()
             .and_then(|s| s.to_str())
             .map(|s| format!("local/{s}"))
             .unwrap_or_else(|| "local/model".to_string()),
         repo_name: repo_name.clone().unwrap_or_else(|| {
-            manifest_dir
-                .file_name()
+            path.file_name()
                 .unwrap_or_default()
                 .to_string_lossy()
                 .to_string()
@@ -1401,7 +1402,7 @@ pub fn update_model_manifest(
         manifest.publisher = pubish;
     }
 
-    save_manifest(&manifest_dir, &manifest)
+    save_manifest(&path, &manifest)
 }
 
 fn is_allowed_quantization(value: &str) -> bool {

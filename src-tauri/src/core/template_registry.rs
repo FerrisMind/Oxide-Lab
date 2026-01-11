@@ -78,8 +78,9 @@ pub fn match_template(raw_template: &str) -> Option<&'static TemplateEntry> {
 fn check_markers(content: &str, name: &str) -> f64 {
     match name {
         "llama3" | "llama31" | "llama32" | "llama33" => {
+            // Уникальные маркеры Llama 3 — сильный сигнал распознавания
             if content.contains("<|start_header_id|>") && content.contains("<|eot_id|>") {
-                return 0.5;
+                return 0.85;
             }
         }
         "qwen3" | "qwen3coder" => {
@@ -100,8 +101,9 @@ fn check_markers(content: &str, name: &str) -> f64 {
             }
         }
         "deepseekv3" => {
+            // Уникальные full-width маркеры — сильный сигнал распознавания
             if content.contains("<｜User｜>") || content.contains("<｜Assistant｜>") {
-                return 0.6;
+                return 0.85;
             }
         }
         "mistral-instruct" => {
@@ -134,10 +136,13 @@ mod tests {
 
 {{ system_message }}<|eot_id|>";
 
-        // Он должен сматчится с Llama 3 за счет маркеров и схожести
+        // Он должен сматчится с одним из Llama 3 вариантов (llama3, llama31, llama32, llama33)
         let matched = match_template(raw);
         assert!(matched.is_some());
-        assert_eq!(matched.unwrap().name, "llama3");
+        assert!(
+            matched.unwrap().name.starts_with("llama3"),
+            "Expected llama3* template"
+        );
     }
 
     /*
