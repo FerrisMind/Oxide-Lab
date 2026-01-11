@@ -127,17 +127,16 @@ cargo audit           # Auditoria de segurança
 ## 🖥️ Requisitos do Sistema
 
 - Windows, macOS ou Linux
-- Mínimo 8 GB de RAM (16+ GB recomendado para modelos maiores)
+- Mínimo 4 GB de RAM (8+ GB recomendado para modelos maiores)
 - Para aceleração GPU:
   - NVIDIA: GPU compatível com CUDA
   - Apple: chip M1/M2/M3 (Metal)
-  - Intel: CPU com suporte MKL
 
 ## 🤖 Modelos Suportados
 
 Arquiteturas com suporte completo:
-- Llama (1, 2, 3, 4), Mistral, Mixtral, DeepSeek, Yi, SmolLM2, CodeLlama
-- Qwen2, Qwen2.5, Qwen2 MoE
+- Llama (1, 2, 3), Mistral, Mixtral, DeepSeek, Yi, SmolLM2, CodeLlama
+- Qwen2/2.5, Qwen2.5/2 MoE
 - Qwen3, Qwen3 MoE
 
 Formatos:

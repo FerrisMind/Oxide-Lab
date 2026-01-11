@@ -126,17 +126,16 @@ cargo audit           # Security audit
 ## 🖥️ System Requirements
 
 - Windows, macOS, or Linux
-- Minimum 8 GB RAM (16+ GB recommended for larger models)
+- Minimum 4 GB RAM (8+ GB recommended for larger models)
 - For GPU acceleration:
   - NVIDIA: CUDA-compatible GPU
   - Apple: M1/M2/M3 chip (Metal)
-  - Intel: CPU with MKL support
 
 ## 🤖 Supported Models
 
 Architectures with full support:
-- Llama (1, 2, 3, 4), Mistral, Mixtral, DeepSeek, Yi, SmolLM2, CodeLlama
-- Qwen2, Qwen2.5, Qwen2 MoE
+- Llama (1, 2, 3), Mistral, Mixtral, DeepSeek, Yi, SmolLM2, CodeLlama
+- Qwen2/2.5, Qwen2.5/2 MoE
 - Qwen3, Qwen3 MoE
 
 Formats:
