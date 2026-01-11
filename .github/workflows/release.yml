@@ -15,30 +15,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-14'
-            args: ''
-            rust_targets: ''
+          - platform: 'macos-latest' # Apple Silicon
             cargo_features: 'metal,fast-cpu-accelerate'
 
-          - platform: 'macos-14'
-            args: '--target x86_64-apple-darwin'
-            rust_targets: 'x86_64-apple-darwin'
-            cargo_features: 'fast-cpu-accelerate'
+          - platform: 'ubuntu-22.04' # x86_64
+            cargo_features: 'fast-cpu-mkl'
 
-          - platform: 'ubuntu-22.04'
-            args: ''
-            rust_targets: ''
-            cargo_features: ''
-
-          - platform: 'windows-latest'
-            args: ''
-            rust_targets: ''
-            cargo_features: ''
-
-          - platform: 'windows-latest'
-            args: '--target aarch64-pc-windows-msvc'
-            rust_targets: 'aarch64-pc-windows-msvc'
-            cargo_features: ''
+          - platform: 'windows-latest' # x86_64
+            cargo_features: 'fast-cpu-mkl'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -53,8 +37,6 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rust_targets }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -70,7 +52,8 @@ jobs:
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
-            build-essential
+            build-essential \
+            libmkl-dev
 
       - name: Install frontend dependencies
         run: npm ci
@@ -87,23 +70,20 @@ jobs:
           releaseBody: |
             ## 🚀 Oxide-Lab v__VERSION__
 
-            ### CPU-Optimized Builds
+            ### Оптимизированные сборки
+            
+            **macOS (Apple Silicon)**
+            - 🍎 Metal + Accelerate framework
+            
+            **Linux (x86_64)**
+            - 🐧 Intel MKL (Math Kernel Library)
+            
+            **Windows (x86_64)**
+            - 🪟 Intel MKL (Math Kernel Library)
 
-            **macOS**
-            - 🍎 Apple Silicon (M1/M2/M3/M4): Metal + Accelerate
-            - 🍎 Intel: Accelerate framework
-
-            **Linux**
-            - 🐧 x86_64: Intel MKL optimizations
-
-            **Windows**
-            - 🪟 x86_64: CPU-only
-            - 🪟 ARM64: CPU-only
-
-            ### 🎮 CUDA Version
-            For NVIDIA GPU users
-
+            ---
+            *Сборка с поддержкой CUDA доступна отдельно.*
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}${{ matrix.cargo_features && format(' --features {0}', matrix.cargo_features) || '' }}
+          args: --features ${{ matrix.cargo_features }}
           updaterJsonPreferNsis: true
