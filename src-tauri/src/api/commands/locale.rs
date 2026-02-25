@@ -1,20 +1,15 @@
 /*!
  * Locale Commands for Tauri
- *
- * Команды для управления локалью из frontend.
  */
-use crate::i18n::{self, Locale};
 
-/// Получить текущую локаль
+/// Get current locale
 #[tauri::command]
 pub fn get_locale() -> String {
-    i18n::get_locale().as_str().to_string()
+    "en".to_string()
 }
 
-/// Установить локаль
+/// Set locale (stub — locale system removed during candle cleanup)
 #[tauri::command]
-pub fn set_locale(locale: String) -> Result<(), String> {
-    let locale_enum: Locale = locale.parse().map_err(|_| "Invalid locale".to_string())?;
-    i18n::set_locale(locale_enum);
+pub fn set_locale(_locale: String) -> Result<(), String> {
     Ok(())
 }

@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
    * Settings Page
-   * 
-   * Complete application settings including threads, STT, 
+   *
+   * Complete application settings including threads, STT,
    * model selector, experimental features, performance monitor, and language.
    */
   import { onMount, tick } from 'svelte';
@@ -25,6 +25,8 @@
   import Lightning from 'phosphor-svelte/lib/Lightning';
   import FolderOpen from 'phosphor-svelte/lib/FolderOpen';
   import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
+  import Trash from 'phosphor-svelte/lib/Trash';
+  import Plugs from 'phosphor-svelte/lib/Plugs';
   import Warning from 'phosphor-svelte/lib/Warning';
   import { t, locale, setLocale, loadTranslations, type SupportedLocale } from '$lib/i18n';
   import { experimentalFeatures } from '$lib/stores/experimental-features.svelte';
@@ -35,9 +37,106 @@
   // ─────────────────────────────────────────────────────────────
   // State
   // ─────────────────────────────────────────────────────────────
+  // Runtime Engines
+  // ─────────────────────────────────────────────────────────────
+
+  interface EngineInfo {
+    engine_id: string;
+    name: string;
+    description: string | null;
+    installed: boolean;
+    binary_path: string | null;
+    download_url: string | null;
+    capabilities: string[];
+  }
+
+  let engines = $state<EngineInfo[]>([]);
+  let enginesLoading = $state(true);
+  let installingEngineId = $state<string | null>(null);
+  let installProgress = $state(0);
+  let installStage = $state('');
+  let installMessage = $state('');
+  let engineError = $state<string | null>(null);
+
+  async function loadEngines() {
+    enginesLoading = true;
+    engineError = null;
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      engines = await invoke<EngineInfo[]>('list_engines');
+    } catch (err) {
+      engineError = `Failed to load engines: ${err}`;
+      console.error(err);
+    } finally {
+      enginesLoading = false;
+    }
+  }
+
+  async function handleInstallEngine(engineId: string) {
+    installingEngineId = engineId;
+    installProgress = 0;
+    installStage = 'starting';
+    installMessage = '';
+    engineError = null;
+
+    // Listen for progress
+    let unlistenProgress: (() => void) | null = null;
+    try {
+      const { listen } = await import('@tauri-apps/api/event');
+      unlistenProgress = await listen<{
+        engine_id: string;
+        stage: string;
+        progress: number;
+        message: string;
+      }>('engine_install_progress', (e) => {
+        if (e.payload.engine_id === engineId) {
+          installProgress = e.payload.progress;
+          installStage = e.payload.stage;
+          installMessage = e.payload.message;
+        }
+      });
+
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('install_engine_cmd', { engineId });
+
+      // Refresh engine list
+      await loadEngines();
+
+      const { message } = await import('@tauri-apps/plugin-dialog');
+      await message(`Engine installed successfully`, { title: 'Runtime', kind: 'info' });
+    } catch (err) {
+      engineError = `Installation failed: ${err}`;
+      console.error(err);
+    } finally {
+      if (unlistenProgress) unlistenProgress();
+      installingEngineId = null;
+      installProgress = 0;
+    }
+  }
+
+  async function handleUninstallEngine(engineId: string) {
+    const { ask } = await import('@tauri-apps/plugin-dialog');
+    const confirmed = await ask('Are you sure you want to uninstall this engine?', {
+      title: 'Uninstall Engine',
+      kind: 'warning',
+    });
+    if (!confirmed) return;
+
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('uninstall_engine_cmd', { engineId });
+      await loadEngines();
+    } catch (err) {
+      engineError = `Uninstall failed: ${err}`;
+      console.error(err);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
 
   // Thread Limit
-  const hardwareConcurrency = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4;
+  const hardwareConcurrency =
+    typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4;
   let threadLimit = $state<number | null>(null);
   let threadSliderValue = $state(hardwareConcurrency);
   let threadLimitLoading = $state(true);
@@ -240,7 +339,11 @@
     prefixCacheLoading = true;
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      const info = await invoke<{ enabled: boolean; max_entries: number; stats: { hits: number; misses: number; entries: number } }>('get_prefix_cache_info');
+      const info = await invoke<{
+        enabled: boolean;
+        max_entries: number;
+        stats: { hits: number; misses: number; entries: number };
+      }>('get_prefix_cache_info');
       prefixCacheEnabled = info.enabled;
       prefixCacheMaxEntries = info.max_entries || 32;
       prefixCacheStats = info.stats;
@@ -286,11 +389,7 @@
   // ─────────────────────────────────────────────────────────────
 
   onMount(async () => {
-    await Promise.all([
-      loadThreadLimit(),
-      loadSttSettings(),
-      loadPrefixCacheInfo(),
-    ]);
+    await Promise.all([loadEngines(), loadThreadLimit(), loadSttSettings(), loadPrefixCacheInfo()]);
   });
 
   // Sync with stores
@@ -312,6 +411,81 @@
   <div class="max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto space-y-4 sm:space-y-6">
     <h1 class="text-xl sm:text-2xl font-bold">{$t('settings.title')}</h1>
 
+    <!-- Runtime Engines -->
+    <Card.Root>
+      <Card.Header>
+        <Card.Title class="flex items-center gap-2">
+          <Plugs class="size-5" />
+          Runtime
+        </Card.Title>
+        <Card.Description>Inference engines for running AI models locally</Card.Description>
+      </Card.Header>
+      <Card.Content class="space-y-3">
+        {#if enginesLoading}
+          <div class="flex justify-center py-4"><Spinner class="size-6" /></div>
+        {:else if engines.length === 0}
+          <p class="text-sm text-muted-foreground">No engines configured.</p>
+        {:else}
+          {#each engines as engine (engine.engine_id)}
+            <div class="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">{engine.name}</span>
+                  {#if engine.installed}
+                    <Badge variant="default" class="text-xs"
+                      ><Check class="size-3 mr-1" />Installed</Badge
+                    >
+                  {:else}
+                    <Badge variant="outline" class="text-xs">Not installed</Badge>
+                  {/if}
+                </div>
+                {#if engine.description}
+                  <p class="text-xs text-muted-foreground mt-1 truncate">{engine.description}</p>
+                {/if}
+                <div class="flex gap-1 mt-1.5">
+                  {#each engine.capabilities as cap}
+                    <Badge variant="secondary" class="text-xs px-1.5 py-0">{cap}</Badge>
+                  {/each}
+                </div>
+              </div>
+              <div class="flex items-center gap-2 ml-3 flex-shrink-0">
+                {#if installingEngineId === engine.engine_id}
+                  <div class="flex items-center gap-2 text-sm">
+                    <Spinner class="size-4" />
+                    <div class="text-right">
+                      <div class="font-medium">{Math.round(installProgress)}%</div>
+                      <div class="text-xs text-muted-foreground">{installMessage}</div>
+                    </div>
+                  </div>
+                {:else if engine.installed}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onclick={() => handleUninstallEngine(engine.engine_id)}
+                  >
+                    <Trash class="size-4 mr-1" />
+                    Uninstall
+                  </Button>
+                {:else if engine.download_url}
+                  <Button size="sm" onclick={() => handleInstallEngine(engine.engine_id)}>
+                    <DownloadSimple class="size-4 mr-1" />
+                    Install
+                  </Button>
+                {:else}
+                  <span class="text-xs text-muted-foreground">No download available</span>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        {/if}
+        {#if engineError}
+          <div class="text-sm text-destructive flex items-center gap-2">
+            <Warning class="size-4" />{engineError}
+          </div>
+        {/if}
+      </Card.Content>
+    </Card.Root>
+
     <!-- Thread Limit -->
     <Card.Root>
       <Card.Header>
@@ -319,7 +493,9 @@
           <Gear class="size-5" />
           {$t('settings.threads.title') || 'Thread Limit'}
         </Card.Title>
-        <Card.Description>{$t('settings.threads.description') || 'Control CPU thread usage'}</Card.Description>
+        <Card.Description
+          >{$t('settings.threads.description') || 'Control CPU thread usage'}</Card.Description
+        >
       </Card.Header>
       <Card.Content>
         {#if threadLimitLoading}
@@ -327,8 +503,12 @@
         {:else}
           <div class="space-y-4">
             <div class="flex items-center justify-between">
-              <Label>{$t('settings.threads.maxThreads') || 'Max threads'}: {threadSliderValue}</Label>
-              <Badge variant="outline">{$t('settings.threads.available') || 'Available'}: {hardwareConcurrency}</Badge>
+              <Label
+                >{$t('settings.threads.maxThreads') || 'Max threads'}: {threadSliderValue}</Label
+              >
+              <Badge variant="outline"
+                >{$t('settings.threads.available') || 'Available'}: {hardwareConcurrency}</Badge
+              >
             </div>
             <input
               type="range"
@@ -370,7 +550,9 @@
           <Microphone class="size-5" />
           {$t('settings.stt.title') || 'Speech-to-Text'}
         </Card.Title>
-        <Card.Description>{$t('settings.stt.description') || 'Configure voice input model'}</Card.Description>
+        <Card.Description
+          >{$t('settings.stt.description') || 'Configure voice input model'}</Card.Description
+        >
       </Card.Header>
       <Card.Content class="space-y-4">
         {#if sttLoading}
@@ -429,15 +611,21 @@
                 <Input bind:value={sttRevision} class="text-sm" />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs">{$t('settings.stt.download.modelFile') || 'Model File'}</Label>
+                <Label class="text-xs"
+                  >{$t('settings.stt.download.modelFile') || 'Model File'}</Label
+                >
                 <Input bind:value={sttModelFilename} class="text-sm" />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs">{$t('settings.stt.download.tokenizerFile') || 'Tokenizer'}</Label>
+                <Label class="text-xs"
+                  >{$t('settings.stt.download.tokenizerFile') || 'Tokenizer'}</Label
+                >
                 <Input bind:value={sttTokenizerFilename} class="text-sm" />
               </div>
               <div class="space-y-1 sm:col-span-2">
-                <Label class="text-xs">{$t('settings.stt.download.configFile') || 'Config File'}</Label>
+                <Label class="text-xs"
+                  >{$t('settings.stt.download.configFile') || 'Config File'}</Label
+                >
                 <Input bind:value={sttConfigFilename} class="text-sm" />
               </div>
             </div>
@@ -467,20 +655,26 @@
           <MagnifyingGlass class="size-5" />
           {$t('settings.modelSelector.title') || 'Model Selector'}
         </Card.Title>
-        <Card.Description>{$t('settings.modelSelector.description') || 'Configure model picker behavior'}</Card.Description>
+        <Card.Description
+          >{$t('settings.modelSelector.description') ||
+            'Configure model picker behavior'}</Card.Description
+        >
       </Card.Header>
       <Card.Content>
         <label class="flex items-center gap-3 cursor-pointer">
-          <Checkbox 
+          <Checkbox
             checked={modelSearchEnabled}
             onCheckedChange={(checked: boolean) => handleModelSearchToggle(checked)}
           />
-          <span>{$t('settings.modelSelector.enableSearch') || 'Enable search in model picker'}</span>
+          <span>{$t('settings.modelSelector.enableSearch') || 'Enable search in model picker'}</span
+          >
         </label>
         <p class="mt-2 text-sm text-muted-foreground">
           {modelSearchEnabled
-            ? $t('settings.modelSelector.enabledDescription') || 'Search is enabled in the model selector'
-            : $t('settings.modelSelector.disabledDescription') || 'Search is disabled in the model selector'}
+            ? $t('settings.modelSelector.enabledDescription') ||
+              'Search is enabled in the model selector'
+            : $t('settings.modelSelector.disabledDescription') ||
+              'Search is disabled in the model selector'}
         </p>
       </Card.Content>
     </Card.Root>
@@ -492,23 +686,28 @@
           <Lightning class="size-5" />
           {$t('settings.prefixCache.title') || 'Prefix Cache'}
         </Card.Title>
-        <Card.Description>{$t('settings.prefixCache.description') || 'Reuse KV cache for faster multi-turn conversations'}</Card.Description>
+        <Card.Description
+          >{$t('settings.prefixCache.description') ||
+            'Reuse KV cache for faster multi-turn conversations'}</Card.Description
+        >
       </Card.Header>
       <Card.Content class="space-y-4">
         {#if prefixCacheLoading}
           <div class="flex justify-center py-4"><Spinner class="size-6" /></div>
         {:else}
           <label class="flex items-center gap-3 cursor-pointer">
-            <Checkbox 
+            <Checkbox
               checked={prefixCacheEnabled}
               onCheckedChange={(checked: boolean) => handlePrefixCacheToggle(checked)}
             />
             <span>{$t('settings.prefixCache.enable') || 'Enable prefix caching'}</span>
           </label>
-          
+
           {#if prefixCacheEnabled}
             <div class="space-y-2">
-              <Label>{$t('settings.prefixCache.maxEntries') || 'Max cache entries'}: {prefixCacheMaxEntries}</Label>
+              <Label
+                >{$t('settings.prefixCache.maxEntries') || 'Max cache entries'}: {prefixCacheMaxEntries}</Label
+              >
               <input
                 type="range"
                 min="8"
@@ -523,12 +722,21 @@
                 <span>128</span>
               </div>
             </div>
-            
+
             <div class="flex items-center justify-between p-3 rounded bg-muted/30">
               <div class="text-sm space-y-1">
-                <div>{$t('settings.prefixCache.stats.hits') || 'Hits'}: <span class="font-medium text-green-600">{prefixCacheStats.hits}</span></div>
-                <div>{$t('settings.prefixCache.stats.misses') || 'Misses'}: <span class="font-medium text-orange-600">{prefixCacheStats.misses}</span></div>
-                <div>{$t('settings.prefixCache.stats.entries') || 'Cached entries'}: <span class="font-medium">{prefixCacheStats.entries}</span></div>
+                <div>
+                  {$t('settings.prefixCache.stats.hits') || 'Hits'}:
+                  <span class="font-medium text-green-600">{prefixCacheStats.hits}</span>
+                </div>
+                <div>
+                  {$t('settings.prefixCache.stats.misses') || 'Misses'}:
+                  <span class="font-medium text-orange-600">{prefixCacheStats.misses}</span>
+                </div>
+                <div>
+                  {$t('settings.prefixCache.stats.entries') || 'Cached entries'}:
+                  <span class="font-medium">{prefixCacheStats.entries}</span>
+                </div>
               </div>
               <Button variant="outline" size="sm" onclick={handleClearPrefixCache}>
                 {$t('settings.prefixCache.clear') || 'Clear cache'}
@@ -546,11 +754,14 @@
           <Flask class="size-5" />
           {$t('settings.experimental.title') || 'Experimental Features'}
         </Card.Title>
-        <Card.Description>{$t('settings.experimental.description') || 'Try new features before release'}</Card.Description>
+        <Card.Description
+          >{$t('settings.experimental.description') ||
+            'Try new features before release'}</Card.Description
+        >
       </Card.Header>
       <Card.Content>
         <label class="flex items-center gap-3 cursor-pointer">
-          <Checkbox 
+          <Checkbox
             checked={experimentalEnabled}
             onCheckedChange={(checked: boolean) => handleExperimentalToggle(checked)}
           />
@@ -570,7 +781,10 @@
           <ChartBar class="size-5" />
           {$t('settings.performance.title') || 'Performance'}
         </Card.Title>
-        <Card.Description>{$t('settings.performance.description') || 'Monitor system performance'}</Card.Description>
+        <Card.Description
+          >{$t('settings.performance.description') ||
+            'Monitor system performance'}</Card.Description
+        >
       </Card.Header>
       <Card.Content>
         <PerformanceMonitor />
@@ -584,7 +798,10 @@
           <Globe class="size-5" />
           {$t('settings.language.title') || 'Language'}
         </Card.Title>
-        <Card.Description>{$t('settings.language.description') || 'Select your preferred language'}</Card.Description>
+        <Card.Description
+          >{$t('settings.language.description') ||
+            'Select your preferred language'}</Card.Description
+        >
       </Card.Header>
       <Card.Content>
         <div class="flex gap-2 flex-wrap">

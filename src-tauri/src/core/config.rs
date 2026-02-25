@@ -113,32 +113,6 @@ impl SamplingOptions {
         }
     }
 
-    /// Update options with custom values from a GenerateRequest
-    pub fn with_request_options(mut self, req: &crate::core::types::GenerateRequest) -> Self {
-        if req.use_custom_params {
-            if let Some(temp) = req.temperature {
-                self.temperature = temp;
-            }
-            if let Some(top_p) = req.top_p {
-                self.top_p = Some(top_p);
-            }
-            if let Some(top_k) = req.top_k {
-                self.top_k = Some(top_k);
-            }
-            if let Some(min_p) = req.min_p {
-                self.min_p = Some(min_p);
-            }
-            if let Some(seed) = req.seed {
-                self.seed = Some(seed);
-            }
-            if let Some(repeat_penalty) = req.repeat_penalty {
-                self.repeat_penalty = Some(repeat_penalty);
-            }
-            self.repeat_last_n = req.repeat_last_n;
-        }
-        self
-    }
-
     /// Get effective seed value (using default if none specified)
     pub fn effective_seed(&self) -> u64 {
         self.seed.unwrap_or(42)

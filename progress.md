@@ -1,0 +1,22 @@
+# Progress
+
+- Implemented P0 fixes:
+  - Removed duplicated loaded-model event writes from `+layout.svelte`.
+  - Kept a single loaded-model source in `local-models.ts`.
+  - Reworked `PerformanceService` inference history to O(1) ring behavior.
+- Implemented P1 fixes:
+  - Replaced dynamic Tauri imports in hot paths (`prompts`, `layout`, `local-models`).
+  - Replaced Qwen-specific prompt fallback with model-agnostic transcript format.
+  - Added lazy GGUF file loading path in HF search (`convertToRemoteModelInfo(..., false)`).
+  - Split chat UI into `ChatMessages.svelte` and `ChatComposer.svelte`.
+- Implemented P2 fixes:
+  - Extracted `SessionGroup.svelte` and removed duplicated sidebar group markup.
+  - Refactored `llama-backend-service` to remove duplicated overview logic.
+  - Added repository layer: `chat-history-repository.ts` and moved DB/persistence responsibilities.
+  - Unified error propagation in `download-manager` via `downloadManagerError` store + rethrow.
+  - Removed dead localStorage folder-path key in `local-models.ts`.
+- Added tests:
+  - `prompts.test.ts`, `local-models.test.ts`, `chat-history.test.ts`, `listener.test.ts`, `download-manager.test.ts`.
+- Validation:
+  - Targeted tests: passed.
+  - `svelte-check`: project files pass; external example configs still emit missing package warnings.

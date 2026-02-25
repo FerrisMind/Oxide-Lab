@@ -22,8 +22,6 @@ export class LocalModelsService {
      */
     static async scanFolder(folderPath: string): Promise<ModelInfo[]> {
         try {
-
-
             const { invoke } = await import('@tauri-apps/api/core');
             return await invoke<ModelInfo[]>('scan_models_folder', { folderPath });
         } catch (error) {

@@ -24,7 +24,6 @@
   import { inferenceMetricsStore } from '$lib/stores/inference-metrics';
   import type { InferenceMetrics } from '$lib/types/performance';
 
-
   // State
   // Initial State from Store (Synchronous)
   const savedState = get(chatState);
@@ -35,11 +34,17 @@
   let revision = $state<string>(savedState.revision);
   let hubGgufFilename = $state<string>(savedState.hubGgufFilename);
   let prompt = $state(savedState.prompt);
-  let messages = $state<ChatMessage[]>(Array.isArray(savedState.messages) ? savedState.messages : []);
+  let messages = $state<ChatMessage[]>(
+    Array.isArray(savedState.messages) ? savedState.messages : [],
+  );
   let busy = $state(savedState.busy);
-  let format = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>(savedState.format);
+  let format = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>(
+    savedState.format,
+  );
   let pendingModelPath = $state(savedState.pendingModelPath);
-  let pendingFormat = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>(savedState.pendingFormat);
+  let pendingFormat = $state<'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors'>(
+    savedState.pendingFormat,
+  );
   let isLoaded = $state(savedState.isLoaded);
   let errorText = $state(savedState.errorText);
 
@@ -467,15 +472,15 @@
   onMount(async () => {
     chatUiMounted.set(true);
 
-    chatUiMounted.set(true);
-
     // Initial session messages sync
     try {
       const session = get(currentSession);
       if (session) {
-          messages = session.messages;
+        messages = session.messages;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // Initialize stream listener
     try {
@@ -562,7 +567,10 @@
 </script>
 
 <main class="flex flex-col h-full overflow-hidden bg-background">
-  <PaneGroup direction="horizontal" class="flex flex-row flex-1 min-h-0 items-stretch h-full bg-background">
+  <PaneGroup
+    direction="horizontal"
+    class="flex flex-row flex-1 min-h-0 items-stretch h-full bg-background"
+  >
     <Pane defaultSize={$isPreviewOpen ? 60 : 100} minSize={30}>
       <section class="flex-1 min-w-0 flex flex-col relative h-full">
         <!-- Messages area with scroll -->
@@ -621,49 +629,49 @@
     {/if}
   </PaneGroup>
 
-    <!-- Loader Panel Sheet -->
-    <Sheet.Root bind:open={isLoaderPanelVisible}>
-      <Sheet.Content side="right" class="w-full sm:max-w-[450px] p-0">
-        <Sheet.Header class="p-4 pb-2">
-          <Sheet.Title>Model Settings</Sheet.Title>
-        </Sheet.Header>
-        <div class="flex-1 overflow-y-auto p-4 pt-0 custom-scrollbar">
-          <LoaderPanel
-            bind:format
-            bind:modelPath
-            bind:repoId
-            bind:revision
-            bind:hubGgufFilename
-            bind:ctx_limit_value
-            bind:isLoadingModel
-            bind:isUnloadingModel
-            bind:isCancelling
-            bind:loadingStage
-            bind:loadingProgress
-            bind:unloadingProgress
-            bind:errorText
-            bind:busy
-            bind:isLoaded
-            bind:use_gpu
-            bind:cuda_available
-            bind:cuda_build
-            bind:avx
-            bind:neon
-            bind:simd128
-            bind:f16c
-            bind:split_prompt
-            bind:verbose_prompt
-            bind:tracing
-            onDeviceToggle={(val) => controller.setDeviceByToggle(val)}
-          />
-        </div>
-      </Sheet.Content>
-    </Sheet.Root>
+  <!-- Loader Panel Sheet -->
+  <Sheet.Root bind:open={isLoaderPanelVisible}>
+    <Sheet.Content side="right" class="w-full sm:max-w-[450px] p-0">
+      <Sheet.Header class="p-4 pb-2">
+        <Sheet.Title>Model Settings</Sheet.Title>
+      </Sheet.Header>
+      <div class="flex-1 overflow-y-auto p-4 pt-0 custom-scrollbar">
+        <LoaderPanel
+          bind:format
+          bind:modelPath
+          bind:repoId
+          bind:revision
+          bind:hubGgufFilename
+          bind:ctx_limit_value
+          bind:isLoadingModel
+          bind:isUnloadingModel
+          bind:isCancelling
+          bind:loadingStage
+          bind:loadingProgress
+          bind:unloadingProgress
+          bind:errorText
+          bind:busy
+          bind:isLoaded
+          bind:use_gpu
+          bind:cuda_available
+          bind:cuda_build
+          bind:avx
+          bind:neon
+          bind:simd128
+          bind:f16c
+          bind:split_prompt
+          bind:verbose_prompt
+          bind:tracing
+          onDeviceToggle={(val) => controller.setDeviceByToggle(val)}
+        />
+      </div>
+    </Sheet.Content>
+  </Sheet.Root>
 </main>
 
 <style>
   /* ===== Gradient Overlays (CSS Only - Complex Effects) ===== */
-  
+
   /* Gradient fade overlay at top */
   .messages-area::before {
     content: '';
@@ -711,13 +719,11 @@
   }
 
   :global(.pane-resizer:hover),
-  :global(.pane-resizer[data-state="dragging"]) {
+  :global(.pane-resizer[data-state='dragging']) {
     background: var(--border);
   }
 
-  :global(.pane-resizer[data-state="dragging"]) {
+  :global(.pane-resizer[data-state='dragging']) {
     background: var(--primary);
   }
 </style>
-
-

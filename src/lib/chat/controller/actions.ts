@@ -1,12 +1,12 @@
 /**
  * Chat Controller Actions
  * 
- * Implements all chat-related actions for model loading, inference, and device management.
+ * Implements all chat-related actions using the EngineManager architecture.
+ * Engines are started/stopped via Tauri commands, generation uses OpenAI-compatible API.
  */
 
 import type { ChatControllerCtx } from './types';
 import { createStreamListener } from './listener';
-import { buildPromptWithChatTemplate } from '$lib/chat/prompts';
 import { get } from 'svelte/store';
 import { t } from '$lib/i18n';
 import { chatState } from '$lib/stores/chat';
@@ -14,141 +14,29 @@ import { chatState } from '$lib/stores/chat';
 export function createActions(ctx: ChatControllerCtx) {
     const stream = createStreamListener(ctx);
 
-    function isModelLoadDebugEnabled() {
-        try {
-            return localStorage.getItem('oxide.debugModelLoad') === '1';
-        } catch {
-            return false;
-        }
-    }
+    // Track which engine is currently active
+    let activeEngineId: string | null = null;
 
-    // Load progress event type
-    type LoadProgressEvent = {
-        stage: string;
-        progress: number;
-        message?: string;
-        done?: boolean;
-        error?: string;
-    };
+    // ─── Engine Management ────────────────────────────────────────
 
-    let loadUnlisten: (() => void) | null = null;
-    let lastLoadProgressAt = 0;
-
-    async function ensureLoadProgressListener() {
-        if (loadUnlisten) return;
-        try {
-            // TODO: Integrate with Tauri backend
-            // Command: listen('load_progress', callback)
-            const { listen } = await import('@tauri-apps/api/event');
-
-            loadUnlisten = await listen<LoadProgressEvent>('load_progress', async (e) => {
-                const p = e.payload || ({} as LoadProgressEvent);
-                if (isModelLoadDebugEnabled()) {
-                    const now = performance.now();
-                    const delta = lastLoadProgressAt ? Math.round(now - lastLoadProgressAt) : 0;
-                    lastLoadProgressAt = now;
-                    console.debug('[load_progress]', { deltaMs: delta, ...p });
-                }
-                if (typeof p.progress === 'number')
-                    ctx.loadingProgress = Math.max(0, Math.min(100, Math.floor(p.progress)));
-                if (typeof p.stage === 'string') ctx.loadingStage = p.stage;
-                if (p.message) ctx.errorText = '';
-                if (p.error) ctx.errorText = String(p.error);
-
-                // If start stage, ensure loading indicators are on
-                if (p.stage === 'start') {
-                    ctx.isLoadingModel = true;
-                    ctx.busy = true;
-                    ctx.isLoaded = false;
-                    chatState.update(s => ({ ...s, isLoaded: false, isLoadingModel: true, busy: true }));
-                }
-                if (p.done) {
-                    ctx.isLoadingModel = false;
-                    ctx.busy = false;
-                    if (!p.error) {
-                        ctx.isLoaded = true;
-                        ctx.loadingProgress = 100;
-                        chatState.update(s => ({ ...s, isLoaded: true, isLoadingModel: false, busy: false, loadingProgress: 100 }));
-                    }
-                }
-            });
-
-            // Additional channel: early modality signal from backend
-            await listen<{ text?: boolean; image?: boolean; audio?: boolean; video?: boolean }>('modality_support', (e) => {
-                const m = e.payload || {};
-                if (typeof m.text === 'boolean') ctx.supports_text = m.text;
-                if (typeof m.image === 'boolean') ctx.supports_image = m.image;
-                if (typeof m.audio === 'boolean') ctx.supports_audio = m.audio;
-                if (typeof m.video === 'boolean') ctx.supports_video = m.video;
-            });
-        } catch (err) {
-            console.warn('failed to attach load_progress listener', err);
-        }
-    }
-
-    // Attachment handler (currently disabled)
-    async function _handleAttachFile(_payload: { filename: string; content: string }) {
-        // Attachments are not added to prompt in current implementation
-        return;
-    }
-
-    async function refreshDeviceInfo() {
-        try {
-            // TODO: Integrate with Tauri backend
-            // Command: invoke('get_device_info')
-            const { invoke } = await import('@tauri-apps/api/core');
-            const info = await invoke<{
-                cuda_build?: boolean;
-                cuda_available?: boolean;
-                current?: string;
-                avx?: boolean;
-                neon?: boolean;
-                simd128?: boolean;
-                f16c?: boolean;
-            }>('get_device_info');
-
-            ctx.cuda_build = !!info?.cuda_build;
-            ctx.cuda_available = !!info?.cuda_available;
-            ctx.current_device = String(info?.current ?? 'CPU');
-            ctx.avx = !!info?.avx;
-            ctx.neon = !!info?.neon;
-            ctx.simd128 = !!info?.simd128;
-            ctx.f16c = !!info?.f16c;
-            ctx.use_gpu = ctx.cuda_available && ctx.current_device === 'CUDA';
-        } catch { /* ignore */ }
-    }
-
-    async function setDeviceByToggle(desired?: boolean) {
+    /**
+     * List available engines from engines.json
+     */
+    async function listEngines(): Promise<Array<{ id: string; name: string; description?: string }>> {
         try {
             const { invoke } = await import('@tauri-apps/api/core');
-            if (typeof desired !== 'undefined') {
-                ctx.use_gpu = !!desired;
-            }
-            if (ctx.use_gpu) {
-                await invoke('set_device', { pref: { kind: 'cuda', index: 0 } });
-            } else {
-                await invoke('set_device', { pref: { kind: 'cpu' } });
-            }
-            await refreshDeviceInfo();
+            return await invoke('list_engines');
         } catch (e) {
-            console.warn('[device] toggle switch failed', e);
+            console.warn('[engines] Failed to list engines:', e);
+            return [];
         }
     }
 
-    // Initialize device info on start
-    void refreshDeviceInfo();
-
-    function cancelLoading() {
-        ctx.isCancelling = true;
-        ctx.loadingStage = 'cancelling';
-        try {
-            import('@tauri-apps/api/core').then(({ invoke }) => {
-                void invoke('cancel_model_loading');
-            });
-        } catch { /* ignore */ }
-    }
-
-    async function loadGGUF() {
+    /**
+     * Start an engine with a given model path.
+     * Replaces the old loadGGUF / load_model flow.
+     */
+    async function startEngine(engineId?: string, modelPath?: string) {
         ctx.isLoadingModel = true;
         ctx.loadingProgress = 0;
         ctx.loadingStage = 'start';
@@ -156,145 +44,100 @@ export function createActions(ctx: ChatControllerCtx) {
         ctx.isLoaded = false;
         ctx.errorText = '';
 
-        let stallTimer: ReturnType<typeof setInterval> | null = null;
-        if (isModelLoadDebugEnabled()) {
-            const intervalMs = 250;
-            let expected = performance.now() + intervalMs;
-            stallTimer = setInterval(() => {
-                const now = performance.now();
-                const drift = now - expected;
-                expected = now + intervalMs;
-                if (drift > 500) {
-                    console.warn('[ui-stall] event loop blocked', { driftMs: Math.round(drift) });
-                }
-            }, intervalMs);
-        }
-
         try {
-            await ensureLoadProgressListener();
             await stream.ensureListener();
+            await ensureEngineStatusListener();
 
             const { invoke } = await import('@tauri-apps/api/core');
-            const { message } = await import('@tauri-apps/plugin-dialog');
 
-            const context_length = Math.max(1, Math.floor(ctx.ctx_limit_value));
-            console.log('[load] frontend params', { context_length, format: ctx.format });
-
-            if (ctx.isCancelling) return;
-
-            // TODO: Integrate with Tauri backend
-            // Command: invoke('load_model', { req: {...} })
-
-            if (ctx.format === 'gguf') {
-                if (!ctx.modelPath) {
-                    await message('Укажите путь к .gguf', { title: 'Загрузка модели', kind: 'warning' });
-                    return;
+            // If no engine specified, pick first available
+            if (!engineId) {
+                const engines = await listEngines();
+                if (engines.length === 0) {
+                    throw new Error('No engines configured. Check engines.json.');
                 }
-                await invoke('load_model', {
-                    req: {
-                        format: 'gguf',
-                        model_path: ctx.modelPath,
-                        tokenizer_path: null,
-                        context_length,
-                        device: ctx.use_gpu ? { kind: 'cuda', index: 0 } : { kind: 'cpu' },
-                    },
-                });
-            } else if (ctx.format === 'hub_gguf') {
-                if (!ctx.repoId || !ctx.hubGgufFilename) {
-                    await message('Укажите repoId и имя файла .gguf', {
-                        title: 'Загрузка из HF Hub',
-                        kind: 'warning',
-                    });
-                    return;
-                }
-                await invoke('load_model', {
-                    req: {
-                        format: 'hub_gguf',
-                        repo_id: ctx.repoId,
-                        revision: ctx.revision || null,
-                        filename: ctx.hubGgufFilename,
-                        context_length,
-                        device: ctx.use_gpu ? { kind: 'cuda', index: 0 } : { kind: 'cpu' },
-                    },
-                });
-            } else if (ctx.format === 'hub_safetensors') {
-                if (!ctx.repoId) {
-                    await message('Укажите repoId (owner/repo)', {
-                        title: 'Загрузка из HF Hub',
-                        kind: 'warning',
-                    });
-                    return;
-                }
-                await invoke('load_model', {
-                    req: {
-                        format: 'hub_safetensors',
-                        repo_id: ctx.repoId,
-                        revision: ctx.revision || null,
-                        context_length,
-                        device: ctx.use_gpu ? { kind: 'cuda', index: 0 } : { kind: 'cpu' },
-                    },
-                });
-            } else if (ctx.format === 'local_safetensors') {
-                if (!ctx.modelPath) {
-                    await message('Укажите директорию с моделью safetensors', {
-                        title: 'Локальная модель',
-                        kind: 'warning',
-                    });
-                    return;
-                }
-                await invoke('load_model', {
-                    req: {
-                        format: 'local_safetensors',
-                        model_path: ctx.modelPath,
-                        context_length,
-                        device: ctx.use_gpu ? { kind: 'cuda', index: 0 } : { kind: 'cpu' },
-                    },
-                });
+                engineId = engines[0].id;
             }
 
-            await refreshDeviceInfo();
-            if (ctx.isCancelling) return;
+            const path = modelPath || ctx.modelPath;
+            if (!path) {
+                const { message } = await import('@tauri-apps/plugin-dialog');
+                await message(get(t)('chat.errors.loadModelFirst'), {
+                    title: get(t)('chat.loading.title') || 'Engine',
+                    kind: 'warning',
+                });
+                return;
+            }
+
+            console.log('[engine] Starting:', engineId, 'with model:', path);
+
+            ctx.loadingStage = 'starting_engine';
+            ctx.loadingProgress = 30;
+
+            await invoke('start_engine', {
+                engineId,
+                modelPath: path,
+            });
+
+            activeEngineId = engineId;
+            ctx.isLoaded = true;
+            ctx.loadingProgress = 100;
+            chatState.update(s => ({
+                ...s,
+                isLoaded: true,
+                isLoadingModel: false,
+                busy: false,
+                loadingProgress: 100,
+            }));
+
+            console.log('[engine] Started successfully:', engineId);
         } catch (e) {
             const err = String(e ?? 'Unknown error');
             ctx.errorText = err;
             try {
                 const { message } = await import('@tauri-apps/plugin-dialog');
-                await message(err, { title: get(t)('chat.errors.loadFailed'), kind: 'error' });
+                await message(err, {
+                    title: get(t)('chat.errors.loadFailed'),
+                    kind: 'error',
+                });
             } catch { /* ignore */ }
         } finally {
-            if (stallTimer) clearInterval(stallTimer);
+            ctx.isLoadingModel = false;
+            ctx.busy = false;
         }
     }
 
-    async function unloadGGUF() {
-        if (ctx.busy || !ctx.isLoaded) return;
+    /**
+     * Stop the active engine. Replaces unloadGGUF.
+     */
+    async function stopEngine() {
+        if (!activeEngineId || ctx.busy) return;
+
         ctx.isUnloadingModel = true;
         ctx.unloadingProgress = 0;
         ctx.busy = true;
         ctx.errorText = '';
 
         try {
-            const unloadInterval = setInterval(() => {
-                if (ctx.unloadingProgress < 80) ctx.unloadingProgress += Math.random() * 15 + 5;
-            }, 100);
-
             const { invoke } = await import('@tauri-apps/api/core');
-            await invoke('unload_model');
+            ctx.unloadingProgress = 50;
+
+            await invoke('stop_engine', { engineId: activeEngineId });
 
             ctx.unloadingProgress = 100;
-            clearInterval(unloadInterval);
             await new Promise((r) => setTimeout(r, 300));
+
             ctx.isLoaded = false;
             ctx.messages = [];
-            ctx.errorText = get(t)('chat.loading.unloadSuccess');
+            activeEngineId = null;
 
-            const unloadSuccessText = get(t)('chat.loading.unloadSuccess');
+            const successText = get(t)('chat.loading.unloadSuccess');
+            ctx.errorText = successText;
             setTimeout(() => {
-                if (ctx.errorText === unloadSuccessText) ctx.errorText = '';
+                if (ctx.errorText === successText) ctx.errorText = '';
             }, 3000);
         } catch (e) {
-            const err = String(e ?? 'Unknown error');
-            ctx.errorText = err;
+            ctx.errorText = String(e ?? 'Unknown error');
         } finally {
             ctx.isUnloadingModel = false;
             ctx.unloadingProgress = 0;
@@ -302,15 +145,49 @@ export function createActions(ctx: ChatControllerCtx) {
         }
     }
 
+    // ─── Engine Status Listener ──────────────────────────────────
+
+    let engineStatusUnlisten: (() => void) | null = null;
+
+    async function ensureEngineStatusListener() {
+        if (engineStatusUnlisten) return;
+        try {
+            const { listen } = await import('@tauri-apps/api/event');
+            engineStatusUnlisten = await listen<{
+                engine_id: string;
+                status: string;
+                error?: string;
+            }>('engine_status', (e) => {
+                const p = e.payload;
+                console.log('[engine_status]', p);
+
+                if (p.status === 'ready') {
+                    ctx.isLoaded = true;
+                    ctx.isLoadingModel = false;
+                    ctx.loadingProgress = 100;
+                }
+                if (p.status === 'error') {
+                    ctx.errorText = p.error || 'Engine error';
+                    ctx.isLoadingModel = false;
+                }
+                if (p.status === 'stopped') {
+                    ctx.isLoaded = false;
+                }
+            });
+        } catch (err) {
+            console.warn('Failed to attach engine_status listener:', err);
+        }
+    }
+
+    // ─── Chat / Generation ───────────────────────────────────────
+
     async function handleSend() {
         const text = ctx.prompt.trim();
         if (!text || ctx.busy) return;
 
-        // Check both ctx.isLoaded and chatState for model loaded status
-        // (ctx.isLoaded may not update due to Svelte 5 reactivity issues with getter/setter pattern)
         const storeState = get(chatState);
         const isModelLoaded = ctx.isLoaded || storeState.isLoaded;
-        if (!isModelLoaded) {
+        if (!isModelLoaded || !activeEngineId) {
             const { message } = await import('@tauri-apps/plugin-dialog');
             await message(get(t)('chat.errors.loadModelFirst'), {
                 title: get(t)('chat.errors.modelNotLoaded'),
@@ -321,20 +198,14 @@ export function createActions(ctx: ChatControllerCtx) {
 
         // Add user message to database
         const { chatHistory } = await import('$lib/stores/chat-history');
-
-        // Create session if none exists
         const state = get(chatHistory);
         if (!state.currentSessionId) {
             await chatHistory.createSession(ctx.modelPath, ctx.repoId);
         }
 
-        // Save user message to DB
         await chatHistory.addMessage({ role: 'user', content: text });
-
-        // Add empty assistant message to DB (will be updated by listener on stream end)
         await chatHistory.addMessage({ role: 'assistant', content: '', thinking: '' });
 
-        // Update local context
         const msgs = ctx.messages;
         msgs.push({ role: 'user', content: text });
         msgs.push({ role: 'assistant', content: '', thinking: '', isThinking: false });
@@ -344,54 +215,63 @@ export function createActions(ctx: ChatControllerCtx) {
         await generateFromHistory();
     }
 
+    /**
+     * Build OpenAI-compatible messages array from chat history.
+     */
+    function buildOpenAIMessages(history: Array<{ role: string; content: string }>) {
+        return history
+            .filter(m => m.content.trim() !== '')
+            .map(m => ({ role: m.role, content: m.content }));
+    }
+
+    /**
+     * Build request with optional sampling parameters.
+     */
+    function buildGenerateRequest(messages: Array<{ role: string; content: string }>) {
+        const req: Record<string, unknown> = {
+            model: 'default',
+            messages,
+            stream: true,
+        };
+
+        if (ctx.use_custom_params) {
+            if (ctx.temperature_enabled) req.temperature = ctx.temperature;
+            if (ctx.top_p_enabled && ctx.top_p_value > 0 && ctx.top_p_value <= 1) {
+                req.top_p = ctx.top_p_value;
+            }
+            if (ctx.top_k_enabled) {
+                // top_k is not standard OpenAI but many engines support it
+                req.top_k = Math.max(1, Math.floor(ctx.top_k_value));
+            }
+            if (ctx.repeat_penalty_enabled) {
+                req.repetition_penalty = ctx.repeat_penalty_value;
+            }
+        }
+
+        return req;
+    }
+
     async function generateFromHistory() {
         ctx.busy = true;
         chatState.update(s => ({ ...s, busy: true }));
+
         try {
             await stream.ensureListener();
 
             const msgs = ctx.messages;
-            let hist =
-                msgs[msgs.length - 1]?.role === 'assistant' && msgs[msgs.length - 1]?.content === ''
-                    ? msgs.slice(0, -1)
-                    : msgs.slice();
+            const hist = msgs[msgs.length - 1]?.role === 'assistant' && msgs[msgs.length - 1]?.content === ''
+                ? msgs.slice(0, -1)
+                : msgs.slice();
 
-            const chatPrompt = await buildPromptWithChatTemplate(hist);
+            const openaiMessages = buildOpenAIMessages(hist);
+            const req = buildGenerateRequest(openaiMessages);
 
-            console.log('[infer] frontend params', {
-                use_custom_params: ctx.use_custom_params,
-                temperature: ctx.use_custom_params && ctx.temperature_enabled ? ctx.temperature : null,
-                top_k: ctx.use_custom_params && ctx.top_k_enabled ? Math.max(1, Math.floor(ctx.top_k_value)) : null,
-                top_p: ctx.use_custom_params && ctx.top_p_enabled
-                    ? ctx.top_p_value > 0 && ctx.top_p_value <= 1 ? ctx.top_p_value : 0.9
-                    : null,
-                min_p: ctx.use_custom_params && ctx.min_p_enabled
-                    ? ctx.min_p_value > 0 && ctx.min_p_value <= 1 ? ctx.min_p_value : 0.05
-                    : null,
-                repeat_penalty: ctx.use_custom_params && ctx.repeat_penalty_enabled ? ctx.repeat_penalty_value : null,
-            });
+            console.log('[generate] Sending to engine:', activeEngineId, 'messages:', openaiMessages.length);
 
             const { invoke } = await import('@tauri-apps/api/core');
-            await invoke('generate_stream', {
-                req: {
-                    prompt: chatPrompt,
-                    use_custom_params: ctx.use_custom_params,
-                    temperature: ctx.use_custom_params && ctx.temperature_enabled ? ctx.temperature : null,
-                    top_p: ctx.use_custom_params && ctx.top_p_enabled
-                        ? ctx.top_p_value > 0 && ctx.top_p_value <= 1 ? ctx.top_p_value : 0.9
-                        : null,
-                    top_k: ctx.use_custom_params && ctx.top_k_enabled
-                        ? Math.max(1, Math.floor(ctx.top_k_value))
-                        : null,
-                    min_p: ctx.use_custom_params && ctx.min_p_enabled
-                        ? ctx.min_p_value > 0 && ctx.min_p_value <= 1 ? ctx.min_p_value : 0.05
-                        : null,
-                    repeat_penalty: ctx.use_custom_params && ctx.repeat_penalty_enabled ? ctx.repeat_penalty_value : null,
-                    repeat_last_n: 64,
-                    split_prompt: !!ctx.split_prompt,
-                    verbose_prompt: !!ctx.verbose_prompt,
-                    tracing: !!ctx.tracing,
-                },
+            await invoke('generate', {
+                engineId: activeEngineId,
+                req,
             });
         } catch (e) {
             const err = String(e ?? 'Unknown error');
@@ -412,12 +292,11 @@ export function createActions(ctx: ChatControllerCtx) {
     }
 
     async function stopGenerate() {
-        console.log('[stopGenerate] called');
+        if (!activeEngineId) return;
+        console.log('[stopGenerate] called for engine:', activeEngineId);
         try {
             const { invoke } = await import('@tauri-apps/api/core');
-            console.log('[stopGenerate] invoking cancel_generation');
-            await invoke('cancel_generation');
-            console.log('[stopGenerate] cancel_generation completed');
+            await invoke('cancel_generation', { engineId: activeEngineId });
 
             // Save partial generation
             const { chatHistory } = await import('$lib/stores/chat-history');
@@ -434,16 +313,14 @@ export function createActions(ctx: ChatControllerCtx) {
         }
     }
 
-    /**
-     * Edit a message at the given index and regenerate from that point.
-     * Truncates history at editIndex, updates the message content, and regenerates.
-     */
+    // ─── Edit / Regenerate ───────────────────────────────────────
+
     async function handleEdit(editIndex: number, newContent: string) {
         if (ctx.busy) return;
 
         const storeState = get(chatState);
         const isModelLoaded = ctx.isLoaded || storeState.isLoaded;
-        if (!isModelLoaded) {
+        if (!isModelLoaded || !activeEngineId) {
             const { message } = await import('@tauri-apps/plugin-dialog');
             await message(get(t)('chat.errors.loadModelFirst'), {
                 title: get(t)('chat.errors.modelNotLoaded'),
@@ -455,39 +332,29 @@ export function createActions(ctx: ChatControllerCtx) {
         const { chatHistory } = await import('$lib/stores/chat-history');
         const historyState = get(chatHistory);
 
-        // Truncate messages to editIndex (inclusive) and update content
         const msgs = ctx.messages.slice(0, editIndex + 1);
         if (msgs[editIndex]) {
             msgs[editIndex].content = newContent;
         }
 
-        // Sync with database
         if (historyState.currentSessionId) {
-            // Truncate in DB (keep messages up to editIndex + 1)
             await chatHistory.truncateMessages(historyState.currentSessionId, editIndex + 1);
-            // Update the edited message content
             await chatHistory.updateLastMessage(historyState.currentSessionId, newContent);
-            // Add new empty assistant message
             await chatHistory.addMessage({ role: 'assistant', content: '', thinking: '' });
         }
 
-        // Add empty assistant message for the new response
         msgs.push({ role: 'assistant', content: '', html: '', thinking: '', isThinking: false });
         ctx.messages = msgs;
 
-        await generateFromHistoryWithIndex(editIndex);
+        await generateFromHistory();
     }
 
-    /**
-     * Regenerate the last assistant response.
-     * Finds the last user message and regenerates from that point.
-     */
     async function handleRegenerate(messageIndex: number) {
         if (ctx.busy) return;
 
         const storeState = get(chatState);
         const isModelLoaded = ctx.isLoaded || storeState.isLoaded;
-        if (!isModelLoaded) {
+        if (!isModelLoaded || !activeEngineId) {
             const { message } = await import('@tauri-apps/plugin-dialog');
             await message(get(t)('chat.errors.loadModelFirst'), {
                 title: get(t)('chat.errors.modelNotLoaded'),
@@ -496,7 +363,6 @@ export function createActions(ctx: ChatControllerCtx) {
             return;
         }
 
-        // Find the user message before this assistant message
         let userIndex = messageIndex;
         if (ctx.messages[messageIndex]?.role === 'assistant') {
             userIndex = messageIndex - 1;
@@ -510,117 +376,62 @@ export function createActions(ctx: ChatControllerCtx) {
         const { chatHistory } = await import('$lib/stores/chat-history');
         const historyState = get(chatHistory);
 
-        // Truncate to include the user message, remove the assistant response
         const msgs = ctx.messages.slice(0, userIndex + 1);
 
-        // Sync with database
         if (historyState.currentSessionId) {
-            // Truncate in DB (keep messages up to userIndex + 1)
             await chatHistory.truncateMessages(historyState.currentSessionId, userIndex + 1);
-            // Add new empty assistant message
             await chatHistory.addMessage({ role: 'assistant', content: '', thinking: '' });
         }
 
-        // Add empty assistant message for the new response
         msgs.push({ role: 'assistant', content: '', html: '', thinking: '', isThinking: false });
         ctx.messages = msgs;
 
-        await generateFromHistoryWithIndex(userIndex);
+        await generateFromHistory();
     }
 
-    /**
-     * Generate from history with edit_index for truncating on backend if needed.
-     */
-    async function generateFromHistoryWithIndex(editIndex?: number) {
-        ctx.busy = true;
-        chatState.update(s => ({ ...s, busy: true }));
-        try {
-            await stream.ensureListener();
-
-            const msgs = ctx.messages;
-            let hist =
-                msgs[msgs.length - 1]?.role === 'assistant' && msgs[msgs.length - 1]?.content === ''
-                    ? msgs.slice(0, -1)
-                    : msgs.slice();
-
-            const chatPrompt = await buildPromptWithChatTemplate(hist);
-
-            const { invoke } = await import('@tauri-apps/api/core');
-            await invoke('generate_stream', {
-                req: {
-                    prompt: chatPrompt,
-                    use_custom_params: ctx.use_custom_params,
-                    temperature: ctx.use_custom_params && ctx.temperature_enabled ? ctx.temperature : null,
-                    top_p: ctx.use_custom_params && ctx.top_p_enabled
-                        ? ctx.top_p_value > 0 && ctx.top_p_value <= 1 ? ctx.top_p_value : 0.9
-                        : null,
-                    top_k: ctx.use_custom_params && ctx.top_k_enabled
-                        ? Math.max(1, Math.floor(ctx.top_k_value))
-                        : null,
-                    min_p: ctx.use_custom_params && ctx.min_p_enabled
-                        ? ctx.min_p_value > 0 && ctx.min_p_value <= 1 ? ctx.min_p_value : 0.05
-                        : null,
-                    repeat_penalty: ctx.use_custom_params && ctx.repeat_penalty_enabled ? ctx.repeat_penalty_value : null,
-                    repeat_last_n: 64,
-                    split_prompt: !!ctx.split_prompt,
-                    verbose_prompt: !!ctx.verbose_prompt,
-                    tracing: !!ctx.tracing,
-                    edit_index: editIndex,
-                },
-            });
-        } catch (e) {
-            const err = String(e ?? 'Unknown error');
-            const msgs = ctx.messages;
-            const last = msgs[msgs.length - 1];
-            if (last && last.role === 'assistant' && last.content === '') {
-                last.content = `${get(t)('chat.errors.generationFailed')}: ${err}`;
-                ctx.messages = msgs;
-            }
-            try {
-                const { message } = await import('@tauri-apps/plugin-dialog');
-                await message(err, { title: get(t)('chat.errors.generationFailed'), kind: 'error' });
-            } catch { /* ignore */ }
-        } finally {
-            ctx.busy = false;
-            chatState.update(s => ({ ...s, busy: false }));
-        }
-    }
+    // ─── File Picker ─────────────────────────────────────────────
 
     async function pickModel() {
         const { open, message } = await import('@tauri-apps/plugin-dialog');
 
-        if (ctx.format === 'gguf') {
-            const selected = await open({
-                multiple: false,
-                filters: [{ name: 'GGUF', extensions: ['gguf'] }],
-            });
-            if (typeof selected === 'string') ctx.modelPath = selected;
-        } else {
-            await message(
-                'Для загрузки из HF Hub заполните repoId, revision (по желанию) и, для GGUF, имя файла.',
-                { title: 'HF Hub', kind: 'info' },
-            );
-        }
+        const selected = await open({
+            multiple: false,
+            filters: [{ name: 'Model Files', extensions: ['gguf'] }],
+        });
+        if (typeof selected === 'string') ctx.modelPath = selected;
     }
+
+    // ─── Lifecycle ───────────────────────────────────────────────
 
     function destroy() {
         stream.destroy();
+        if (engineStatusUnlisten) {
+            try { engineStatusUnlisten(); } catch { /* ignore */ }
+            engineStatusUnlisten = null;
+        }
     }
 
     return {
-        cancelLoading,
-        loadGGUF,
-        unloadGGUF,
+        // Engine management (new API)
+        listEngines,
+        startEngine,
+        stopEngine,
+        // Chat
         handleSend,
         handleEdit,
         handleRegenerate,
-        handleAttachFile: _handleAttachFile,
         generateFromHistory,
         stopGenerate,
+        // UI
         pickModel,
         destroy,
-        refreshDeviceInfo,
-        setDeviceByToggle,
         ensureStreamListener: stream.ensureListener,
+        // Legacy aliases for backward compat
+        loadGGUF: startEngine,
+        unloadGGUF: stopEngine,
+        cancelLoading: () => { ctx.isCancelling = true; },
+        refreshDeviceInfo: async () => { },
+        setDeviceByToggle: async (_desired?: boolean) => { },
+        handleAttachFile: async () => { },
     };
 }

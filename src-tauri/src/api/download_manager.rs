@@ -4,6 +4,7 @@
 use std::{
     collections::HashMap,
     fs,
+    io::Read,
     path::{Path, PathBuf},
     sync::Arc,
     time::{Duration, Instant},
@@ -14,6 +15,7 @@ use futures_util::StreamExt;
 use once_cell::sync::Lazy;
 use reqwest::header::{HeaderMap, HeaderValue, RANGE};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::{
     fs::OpenOptions,
@@ -22,7 +24,9 @@ use tokio::{
     task::JoinHandle,
 };
 
-use super::local_models::build_http_client;
+use crate::core::path_safety::{
+    ensure_scoped_existing_pathbuf, ensure_scoped_path, sanitize_file_name,
+};
 
 /// Event sent to the frontend whenever the downloads state changes.
 pub const DOWNLOAD_EVENT: &str = "download-manager-updated";
@@ -261,11 +265,13 @@ impl DownloadManager {
 }
 
 fn sanitize_download_url(repo_id: &str, url: &str) -> Result<(), String> {
-    if !url.starts_with("https://huggingface.co/") {
+    let parsed = reqwest::Url::parse(url).map_err(|e| format!("Invalid download URL: {e}"))?;
+    if parsed.scheme() != "https" || parsed.host_str() != Some("huggingface.co") {
         return Err("Download URL must originate from huggingface.co".to_string());
     }
     let encoded_repo = repo_id.replace('/', "%2F");
-    if !(url.contains(repo_id) || url.contains(&encoded_repo)) {
+    let path = parsed.path();
+    if !(path.contains(repo_id) || path.contains(&encoded_repo)) {
         return Err("Download URL does not match repository id".to_string());
     }
     Ok(())
@@ -304,6 +310,40 @@ async fn rename_partial_to_final(partial: &Path, final_path: &Path) -> Result<()
     tokio::fs::rename(partial, final_path)
         .await
         .map_err(|e| format!("Failed to finalize downloaded file: {e}"))
+}
+
+async fn verify_sha256(path: &Path, expected_sha256: &str) -> Result<(), String> {
+    let expected = expected_sha256.trim().to_ascii_lowercase();
+    let file_path = path.to_path_buf();
+    let actual = tokio::task::spawn_blocking(move || compute_sha256_hex(&file_path))
+        .await
+        .map_err(|e| format!("SHA256 verification task failed: {e}"))??;
+    if actual == expected {
+        return Ok(());
+    }
+    Err(format!(
+        "SHA256 mismatch for {} (expected {}, got {})",
+        path.display(),
+        expected,
+        actual
+    ))
+}
+
+fn compute_sha256_hex(path: &Path) -> Result<String, String> {
+    let mut file =
+        fs::File::open(path).map_err(|e| format!("Failed to open {}: {e}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 64 * 1024];
+    loop {
+        let read = file
+            .read(&mut buffer)
+            .map_err(|e| format!("Failed to read {}: {e}", path.display()))?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
 }
 
 fn compute_speed_and_eta(
@@ -392,9 +432,12 @@ async fn run_download_loop(
         manager.emit_update(&app).await;
     }
 
-    let client = match build_http_client() {
-        Ok(client) => client,
-        Err(err) => return DownloadLoopOutcome::Error(err),
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_secs(600))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => return DownloadLoopOutcome::Error(e.to_string()),
     };
 
     let mut headers = HeaderMap::new();
@@ -534,6 +577,13 @@ async fn run_download_loop(
         return DownloadLoopOutcome::Error(err);
     }
 
+    if let Some(expected_sha256) = sha256.as_deref()
+        && let Err(err) = verify_sha256(&final_path, expected_sha256).await
+    {
+        let _ = tokio::fs::remove_file(&final_path).await;
+        return DownloadLoopOutcome::Error(err);
+    }
+
     persist_download_completed(&job_id, &final_path).await;
 
     {
@@ -577,7 +627,7 @@ async fn run_download_loop(
     DownloadLoopOutcome::Completed
 }
 
-async fn init_job(request: &StartDownloadRequest, job_id: &str) -> Result<DownloadJob, String> {
+fn init_job(request: &StartDownloadRequest, job_id: &str) -> Result<DownloadJob, String> {
     sanitize_download_url(&request.repo_id, &request.download_url)?;
     let destination_dir = PathBuf::from(&request.destination_dir);
     Ok(DownloadJob {
@@ -742,41 +792,31 @@ async fn start_task(app: AppHandle, job: DownloadJob) -> Result<(), String> {
 #[tauri::command]
 pub async fn start_model_download(
     app: AppHandle,
-    request: StartDownloadRequest,
+    mut request: StartDownloadRequest,
 ) -> Result<DownloadJob, String> {
     MANAGER.ensure_history_loaded(&app).await?;
 
     if request.destination_dir.trim().is_empty() {
         return Err("Destination directory cannot be empty".to_string());
     }
+    request.filename = sanitize_file_name(&request.filename)?;
+    let scoped_destination = ensure_scoped_path(&app, &request.destination_dir, false)?;
+    request.destination_dir = scoped_destination.to_string_lossy().to_string();
 
     let job_id = build_job_id(&request.repo_id, &request.filename);
 
-    {
-        let manager = &*MANAGER;
-        let guard = manager.state.read().await;
-        if guard.active.contains_key(&job_id) {
-            return Err("Download is already in progress".to_string());
-        }
+    let manager = &*MANAGER;
+    let mut guard = manager.state.write().await;
+    if guard.active.contains_key(&job_id) {
+        return Err("Download is already in progress".to_string());
     }
-
-    let mut job = init_job(&request, &job_id).await?;
+    let mut job = init_job(&request, &job_id)?;
     job.status = DownloadStatus::Queued;
     job.updated_at = Some(Utc::now());
-
-    {
-        let manager = &*MANAGER;
-        manager
-            .state
-            .write()
-            .await
-            .active
-            .insert(job_id.clone(), job.clone());
-        manager.emit_update(&app).await;
-    }
-
+    guard.active.insert(job_id.clone(), job.clone());
+    drop(guard);
+    manager.emit_update(&app).await;
     start_task(app.clone(), job.clone()).await?;
-
     Ok(job)
 }
 
@@ -889,14 +929,20 @@ pub async fn remove_download_entry(
         let mut guard = MANAGER.state.write().await;
         if let Some(pos) = guard.history.iter().position(|entry| entry.id == job_id) {
             let entry = guard.history.remove(pos);
-            if delete_file
-                && entry.status == DownloadStatus::Completed
-                && let Err(err) = fs::remove_file(&entry.destination_path)
-            {
-                log::warn!(
-                    "Failed to delete file {}: {err}",
-                    entry.destination_path.display()
-                );
+            if delete_file && entry.status == DownloadStatus::Completed {
+                match ensure_scoped_existing_pathbuf(&app, &entry.destination_path) {
+                    Ok(scoped_path) => {
+                        if let Err(err) = fs::remove_file(&scoped_path) {
+                            log::warn!("Failed to delete file {}: {err}", scoped_path.display());
+                        }
+                    }
+                    Err(err) => {
+                        log::warn!(
+                            "Skipping file deletion outside allowed scope {}: {err}",
+                            entry.destination_path.display()
+                        );
+                    }
+                }
             }
         }
     }

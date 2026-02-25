@@ -1,23 +1,9 @@
-pub mod device;
-pub mod experimental;
+pub mod compat;
 pub mod general;
-pub mod generation;
 pub mod locale;
-pub mod metadata;
-pub mod model;
-pub mod precision;
-pub mod prompts;
-pub mod stt;
 pub mod threads;
 
-pub use device::*;
-pub use experimental::*;
+pub use compat::*;
 pub use general::*;
-pub use generation::*;
 pub use locale::*;
-pub use metadata::*;
-pub use model::*;
-pub use precision::*;
-pub use prompts::*;
-pub use stt::*;
 pub use threads::*;

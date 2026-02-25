@@ -1,25 +1,12 @@
 pub mod audio_capture;
-pub mod config;
-pub mod device;
-pub mod log;
-pub mod performance;
-pub mod precision;
-pub mod prefix_cache;
-pub mod prompt;
-pub mod scheduler;
-pub mod state;
-pub mod stt_whisper;
-pub mod token_output_stream;
-pub mod tokenizer;
-pub mod types;
-pub mod weights;
-// Убрали мультимодальность: vision/audio/multimodal/attachments/attachment_router удалены
-pub mod attachments_text;
 pub mod background_mode;
+pub mod config;
+pub mod log;
+pub mod path_safety;
+pub mod performance;
 pub mod rayon_pool;
+pub mod state;
 pub mod thread_priority;
-
-pub mod template_registry;
-pub mod templates;
+pub mod types;
 
 pub use rayon_pool::INFERENCE_POOL;

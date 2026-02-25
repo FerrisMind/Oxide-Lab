@@ -2,21 +2,25 @@
  * Chat Controller Types
  * 
  * Defines the context interface for the chat controller.
+ * Updated for EngineManager architecture.
  */
 
 import type { ChatMessage } from '$lib/chat/types';
 
 export type ChatControllerCtx = {
+    // Model / Engine
     get modelPath(): string;
     set modelPath(v: string);
-    get format(): 'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors';
-    set format(v: 'gguf' | 'hub_gguf' | 'hub_safetensors' | 'local_safetensors');
+    get format(): string;
+    set format(v: string);
     get repoId(): string;
     set repoId(v: string);
     get revision(): string;
     set revision(v: string);
     get hubGgufFilename(): string;
     set hubGgufFilename(v: string);
+
+    // Chat state
     get prompt(): string;
     set prompt(v: string);
     get messages(): ChatMessage[];
@@ -27,6 +31,8 @@ export type ChatControllerCtx = {
     set isLoaded(v: boolean);
     get errorText(): string;
     set errorText(v: string);
+
+    // Loading state
     get isLoadingModel(): boolean;
     set isLoadingModel(v: boolean);
     get loadingProgress(): number;
@@ -35,10 +41,14 @@ export type ChatControllerCtx = {
     set loadingStage(v: string);
     get isCancelling(): boolean;
     set isCancelling(v: boolean);
+
+    // Unloading state
     get isUnloadingModel(): boolean;
     set isUnloadingModel(v: boolean);
     get unloadingProgress(): number;
     set unloadingProgress(v: number);
+
+    // Sampling parameters
     get temperature(): number;
     set temperature(v: number);
     get temperature_enabled(): boolean;
@@ -63,7 +73,8 @@ export type ChatControllerCtx = {
     set ctx_limit_value(v: number);
     get use_custom_params(): boolean;
     set use_custom_params(v: boolean);
-    // Device inference
+
+    // Device inference (kept for UI compatibility, populated from engine info)
     get use_gpu(): boolean;
     set use_gpu(v: boolean);
     get cuda_available(): boolean;
@@ -80,6 +91,7 @@ export type ChatControllerCtx = {
     set simd128(v: boolean);
     get f16c(): boolean;
     set f16c(v: boolean);
+
     // Modalities
     get supports_text(): boolean;
     set supports_text(v: boolean);
@@ -89,6 +101,7 @@ export type ChatControllerCtx = {
     set supports_audio(v: boolean);
     get supports_video(): boolean;
     set supports_video(v: boolean);
+
     // Prompt flags
     get split_prompt(): boolean;
     set split_prompt(v: boolean);

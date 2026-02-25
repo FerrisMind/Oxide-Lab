@@ -230,9 +230,6 @@
     // Initialize i18n
     initI18n(page.url.pathname);
 
-    // Load experimental features
-    void experimentalFeatures.loadState();
-
     // Initialize backend connections (download manager, model cards, performance listeners)
     const { initializeBackend } = await import('$lib/services/backend');
     void initializeBackend().catch((err) => console.warn('Backend initialization failed:', err));

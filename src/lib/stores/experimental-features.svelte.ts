@@ -4,12 +4,7 @@
  * Manages experimental features state with Tauri backend persistence.
  */
 
-// Extend Window type for Tauri support
-declare global {
-    interface Window {
-        __TAURI__?: unknown;
-    }
-}
+import { hasTauriContext } from '$lib/utils/tauri';
 
 /**
  * Global store for experimental features state
@@ -43,7 +38,7 @@ class ExperimentalFeaturesStore {
 
             // TODO: Integrate with Tauri backend
             // Command: invoke('get_experimental_features_enabled')
-            if (typeof window !== 'undefined' && window.__TAURI__) {
+            if (hasTauriContext()) {
                 try {
                     const { invoke } = await import('@tauri-apps/api/core');
                     this._enabled = await invoke<boolean>('get_experimental_features_enabled');
@@ -74,7 +69,7 @@ class ExperimentalFeaturesStore {
 
             // TODO: Integrate with Tauri backend
             // Command: invoke('set_experimental_features_enabled', { enabled })
-            if (typeof window !== 'undefined' && window.__TAURI__) {
+            if (hasTauriContext()) {
                 try {
                     const { invoke } = await import('@tauri-apps/api/core');
                     await invoke('set_experimental_features_enabled', { enabled });

@@ -1,0 +1,90 @@
+[
+    {
+        "id": "llama-cpp",
+        "name": "llama.cpp",
+        "description": "High-performance LLM inference. Supports GGUF models with CPU and GPU acceleration.",
+        "capabilities": [
+            "chat",
+            "completion",
+            "vision"
+        ],
+        "args_template": [
+            "--model",
+            "{model_path}",
+            "--port",
+            "{port}",
+            "--host",
+            "127.0.0.1",
+            "-ngl",
+            "99"
+        ],
+        "health_endpoint": "/health",
+        "api_style": "openai",
+        "binary": {
+            "variants": [
+                {
+                    "os": "windows",
+                    "arch": "x64",
+                    "gpu": null,
+                    "path": "llama-server.exe",
+                    "download_url": "https://github.com/ggerganov/llama.cpp/releases/download/b5170/llama-b5170-bin-win-cpu-x64.zip",
+                    "sha256": null
+                },
+                {
+                    "os": "windows",
+                    "arch": "x64",
+                    "gpu": "cuda",
+                    "path": "llama-server.exe",
+                    "download_url": "https://github.com/ggerganov/llama.cpp/releases/download/b5170/llama-b5170-bin-win-cuda-cu12.4-x64.zip",
+                    "sha256": null
+                },
+                {
+                    "os": "linux",
+                    "arch": "x64",
+                    "gpu": null,
+                    "path": "llama-server",
+                    "download_url": "https://github.com/ggerganov/llama.cpp/releases/download/b5170/llama-b5170-bin-ubuntu-x64.zip",
+                    "sha256": null
+                },
+                {
+                    "os": "macos",
+                    "arch": "arm64",
+                    "gpu": null,
+                    "path": "llama-server",
+                    "download_url": "https://github.com/ggerganov/llama.cpp/releases/download/b5170/llama-b5170-bin-macos-arm64.zip",
+                    "sha256": null
+                }
+            ]
+        }
+    },
+    {
+        "id": "sd-cpp",
+        "name": "stable-diffusion.cpp",
+        "description": "Image generation with Stable Diffusion models. Fast CPU and GPU inference.",
+        "capabilities": [
+            "image_generation"
+        ],
+        "args_template": [
+            "--model",
+            "{model_path}",
+            "--listen-port",
+            "{port}",
+            "-l",
+            "127.0.0.1"
+        ],
+        "health_endpoint": "/",
+        "api_style": "openai_images",
+        "binary": {
+            "variants": [
+                {
+                    "os": "windows",
+                    "arch": "x64",
+                    "gpu": null,
+                    "path": "sd-server.exe",
+                    "download_url": null,
+                    "sha256": null
+                }
+            ]
+        }
+    }
+]
