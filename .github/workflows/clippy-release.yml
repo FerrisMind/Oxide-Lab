@@ -6,6 +6,9 @@ on:
 permissions:
   contents: read
 
+env:
+  CARGO_BUILD_JOBS: default
+
 jobs:
   clippy:
     strategy:

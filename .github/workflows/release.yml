@@ -9,6 +9,9 @@ on:
 permissions:
   contents: write
 
+env:
+  CARGO_BUILD_JOBS: default
+
 jobs:
   release:
     strategy:

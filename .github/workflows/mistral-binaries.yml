@@ -11,6 +11,8 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_NET_RETRY: '10'
   CARGO_HTTP_TIMEOUT: '120'
+  # Never leave this empty: matrix expansion/rust-cache can inject "" and break cargo.
+  CARGO_BUILD_JOBS: default
 
 jobs:
   resolve-version:
@@ -148,8 +150,6 @@ jobs:
       MISTRAL_TAG: ${{ needs.resolve-version.outputs.tag }}
       ASSET_NAME: mistral-${{ needs.resolve-version.outputs.tag }}-bin-${{ matrix.asset_suffix }}
       MISTRAL_SRC_DIR: ./.mistral-rs-src
-      CUDA_COMPUTE_CAP: ${{ matrix.cuda_compute_cap }}
-      CARGO_BUILD_JOBS: ${{ matrix.cargo_build_jobs }}
 
     steps:
       - name: Checkout repository
@@ -196,6 +196,16 @@ jobs:
         with:
           workspaces: './.mistral-rs-src -> target'
 
+      - name: Sanitize cargo environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          # GitHub Actions has no unset; overwrite invalid empty values for later steps.
+          echo "CARGO_BUILD_JOBS=default" >> "${GITHUB_ENV}"
+          if [ -n "${{ matrix.cuda_compute_cap }}" ]; then
+            echo "CUDA_COMPUTE_CAP=${{ matrix.cuda_compute_cap }}" >> "${GITHUB_ENV}"
+          fi
+
       - name: Fetch Rust dependencies
         shell: bash
         run: |
@@ -233,7 +243,13 @@ jobs:
             config_args+=(--config "${{ matrix.clear_target_rustflags_key }}=[]")
           fi
 
+          jobs_arg=()
+          if [[ -n "${{ matrix.cargo_build_jobs }}" ]]; then
+            jobs_arg=(-j "${{ matrix.cargo_build_jobs }}")
+          fi
+
           cargo_args=(build -p mistralrs-cli --release --locked --offline)
+          cargo_args+=("${jobs_arg[@]}")
           if [[ -n "${{ matrix.cargo_target }}" ]]; then
             cargo_args+=(--target "${{ matrix.cargo_target }}")
           fi
@@ -269,6 +285,9 @@ jobs:
           $cargoArgs = @(
             "build", "-p", "mistralrs-cli", "--release", "--locked", "--offline"
           )
+          if ("${{ matrix.cargo_build_jobs }}" -ne "") {
+            $cargoArgs += "-j", "${{ matrix.cargo_build_jobs }}"
+          }
           if ("${{ matrix.cargo_target }}" -ne "") {
             $cargoArgs += "--target", "${{ matrix.cargo_target }}"
           }
