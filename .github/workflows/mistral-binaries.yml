@@ -47,8 +47,9 @@ jobs:
             features: 'accelerate,metal'
             asset_suffix: 'macos-arm64'
             archive_ext: 'tar.gz'
-            clear_build_rustflags: 'false'
+            clear_build_rustflags: 'true'
             clear_target_rustflags_key: ''
+            clear_env_rustflags: 'true'
 
           - platform: 'macos-14'
             rust_targets: 'x86_64-apple-darwin'
@@ -164,6 +165,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if [[ "${{ matrix.clear_env_rustflags }}" == "true" ]]; then
+            # ring asserts a fixed aarch64-apple-darwin feature baseline; mistral.rs
+            # .cargo/config.toml sets target-cpu=native which breaks that on CI runners.
+            export RUSTFLAGS=""
+          fi
 
           config_args=()
           if [[ "${{ matrix.clear_build_rustflags }}" == "true" ]]; then
