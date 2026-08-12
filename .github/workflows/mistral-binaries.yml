@@ -83,6 +83,7 @@ jobs:
             cargo_target: ''
             features: 'cuda'
             cuda_version: '12.4.1'
+            cuda_compute_cap: '80'
             asset_suffix: 'ubuntu-cuda-12.4-x64'
             archive_ext: 'tar.gz'
             clear_build_rustflags: 'false'
@@ -93,6 +94,7 @@ jobs:
             cargo_target: ''
             features: 'cuda'
             cuda_version: '12.1.1'
+            cuda_compute_cap: '80'
             asset_suffix: 'ubuntu-cuda-12.1-x64'
             archive_ext: 'tar.gz'
             clear_build_rustflags: 'false'
@@ -103,6 +105,7 @@ jobs:
             cargo_target: ''
             features: 'cuda'
             cuda_version: '12.4.1'
+            cuda_compute_cap: '80'
             asset_suffix: 'win-cuda-12.4-x64'
             archive_ext: 'zip'
             clear_build_rustflags: 'false'
@@ -113,6 +116,7 @@ jobs:
             cargo_target: ''
             features: 'cuda'
             cuda_version: '12.1.1'
+            cuda_compute_cap: '80'
             asset_suffix: 'win-cuda-12.1-x64'
             archive_ext: 'zip'
             clear_build_rustflags: 'false'
@@ -132,6 +136,7 @@ jobs:
       MISTRAL_TAG: ${{ needs.resolve-version.outputs.tag }}
       ASSET_NAME: mistral-${{ needs.resolve-version.outputs.tag }}-bin-${{ matrix.asset_suffix }}
       MISTRAL_SRC_DIR: ./.mistral-rs-src
+      CUDA_COMPUTE_CAP: ${{ matrix.cuda_compute_cap }}
 
     steps:
       - name: Checkout repository
@@ -189,6 +194,9 @@ jobs:
           fi
 
           echo "Building ${ASSET_NAME} from mistral.rs ${MISTRAL_TAG}"
+          if [[ -n "${CUDA_COMPUTE_CAP:-}" ]]; then
+            echo "CUDA compute capability: sm_${CUDA_COMPUTE_CAP} (no GPU on CI runner)"
+          fi
           cd "${MISTRAL_SRC_DIR}"
           packages=(mistralrs-cli)
           for pkg in "${packages[@]}"; do
