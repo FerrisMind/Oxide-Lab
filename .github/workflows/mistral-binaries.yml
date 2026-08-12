@@ -183,7 +183,7 @@ jobs:
 
           echo "Building ${ASSET_NAME} from mistral.rs ${MISTRAL_TAG}"
           cd "${MISTRAL_SRC_DIR}"
-          packages=(mistralrs-server)
+          packages=(mistralrs-cli)
           for pkg in "${packages[@]}"; do
             cargo ${config_args[@]+"${config_args[@]}"} build -p "$pkg" --release ${cargo_args[@]+"${cargo_args[@]}"}
           done
@@ -200,7 +200,7 @@ jobs:
           fi
 
           mkdir -p "dist/stage/${ASSET_NAME}"
-          binaries=(mistralrs-server)
+          binaries=(mistralrs)
           for bin in "${binaries[@]}"; do
             bin_path="${target_dir}/${bin}"
             if [[ ! -f "$bin_path" ]]; then
@@ -223,7 +223,7 @@ jobs:
 
           $stageDir = Join-Path "dist/stage" $env:ASSET_NAME
           New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
-          $binaries = @("mistralrs-server.exe")
+          $binaries = @("mistralrs.exe")
           foreach ($bin in $binaries) {
             $binPath = Join-Path $targetDir $bin
             if (-not (Test-Path $binPath)) {
@@ -293,7 +293,7 @@ jobs:
 
           body="## mistral.rs ${MISTRAL_TAG} Binaries
 
-          Prebuilt \`mistralrs-server\` binaries for Oxide backend integration.
+          Prebuilt \`mistralrs\` binaries for Oxide backend integration.
 
           ### Platforms
           | Platform | Arch | Backend | Asset |
