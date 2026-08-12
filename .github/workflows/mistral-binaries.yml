@@ -6,6 +6,12 @@ on:
 permissions:
   contents: write
 
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_TERM_COLOR: always
+  CARGO_NET_RETRY: '10'
+  CARGO_HTTP_TIMEOUT: '120'
+
 jobs:
   resolve-version:
     runs-on: ubuntu-latest
@@ -41,95 +47,101 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-14'
+          # macOS ARM64: clear native rustflags so ring's aarch64-apple-darwin checks pass.
+          - platform: macos-14
             rust_targets: ''
             cargo_target: ''
-            features: 'accelerate,metal'
-            asset_suffix: 'macos-arm64'
-            archive_ext: 'tar.gz'
-            clear_build_rustflags: 'true'
-            clear_target_rustflags_key: ''
-            clear_env_rustflags: 'true'
+            features: metal
+            asset_suffix: macos-arm64
+            archive_ext: tar.gz
+            rustflags_mode: empty
+            clear_cargo_rustflags: true
 
-          - platform: 'macos-14'
-            rust_targets: 'x86_64-apple-darwin'
-            cargo_target: 'x86_64-apple-darwin'
-            features: 'accelerate,metal'
-            asset_suffix: 'macos-x64'
-            archive_ext: 'tar.gz'
-            clear_build_rustflags: 'true'
-            clear_target_rustflags_key: 'target.x86_64-apple-darwin.rustflags'
+          # macOS x64 cross-compile from Apple Silicon runner.
+          - platform: macos-14
+            rust_targets: x86_64-apple-darwin
+            cargo_target: x86_64-apple-darwin
+            features: metal
+            asset_suffix: macos-x64
+            archive_ext: tar.gz
+            rustflags_mode: empty
+            clear_cargo_rustflags: true
+            clear_target_rustflags_key: target.x86_64-apple-darwin.rustflags
 
-          - platform: 'ubuntu-22.04'
-            rust_targets: ''
-            cargo_target: ''
-            features: ''
-            asset_suffix: 'ubuntu-cpu-x64'
-            archive_ext: 'tar.gz'
-            clear_build_rustflags: 'false'
-            clear_target_rustflags_key: ''
-
-          - platform: 'windows-latest'
+          - platform: ubuntu-22.04
             rust_targets: ''
             cargo_target: ''
             features: ''
-            asset_suffix: 'win-cpu-x64'
-            archive_ext: 'zip'
-            clear_build_rustflags: 'false'
-            clear_target_rustflags_key: ''
+            asset_suffix: ubuntu-cpu-x64
+            archive_ext: tar.gz
+            rustflags_mode: generic
+            clear_cargo_rustflags: true
 
-          - platform: 'ubuntu-22.04'
+          - platform: windows-latest
             rust_targets: ''
             cargo_target: ''
-            features: 'cuda'
+            features: ''
+            asset_suffix: win-cpu-x64
+            archive_ext: zip
+            rustflags_mode: generic
+            clear_cargo_rustflags: true
+
+          - platform: ubuntu-22.04
+            rust_targets: ''
+            cargo_target: ''
+            features: cuda
             cuda_version: '12.4.1'
             cuda_compute_cap: '80'
-            asset_suffix: 'ubuntu-cuda-12.4-x64'
-            archive_ext: 'tar.gz'
-            clear_build_rustflags: 'false'
-            clear_target_rustflags_key: ''
+            asset_suffix: ubuntu-cuda-12.4-x64
+            archive_ext: tar.gz
+            rustflags_mode: generic
+            clear_cargo_rustflags: true
+            cargo_build_jobs: '2'
 
-          - platform: 'ubuntu-22.04'
+          - platform: ubuntu-22.04
             rust_targets: ''
             cargo_target: ''
-            features: 'cuda'
+            features: cuda
             cuda_version: '12.1.1'
             cuda_compute_cap: '80'
-            asset_suffix: 'ubuntu-cuda-12.1-x64'
-            archive_ext: 'tar.gz'
-            clear_build_rustflags: 'false'
-            clear_target_rustflags_key: ''
+            asset_suffix: ubuntu-cuda-12.1-x64
+            archive_ext: tar.gz
+            rustflags_mode: generic
+            clear_cargo_rustflags: true
+            cargo_build_jobs: '2'
 
-          - platform: 'windows-latest'
+          - platform: windows-latest
             rust_targets: ''
             cargo_target: ''
-            features: 'cuda'
+            features: cuda
             cuda_version: '12.4.1'
             cuda_compute_cap: '80'
-            asset_suffix: 'win-cuda-12.4-x64'
-            archive_ext: 'zip'
-            clear_build_rustflags: 'false'
-            clear_target_rustflags_key: ''
+            asset_suffix: win-cuda-12.4-x64
+            archive_ext: zip
+            rustflags_mode: generic
+            clear_cargo_rustflags: true
+            cargo_build_jobs: '2'
 
-          - platform: 'windows-latest'
+          - platform: windows-latest
             rust_targets: ''
             cargo_target: ''
-            features: 'cuda'
+            features: cuda
             cuda_version: '12.1.1'
             cuda_compute_cap: '80'
-            asset_suffix: 'win-cuda-12.1-x64'
-            archive_ext: 'zip'
-            clear_build_rustflags: 'false'
-            clear_target_rustflags_key: ''
+            asset_suffix: win-cuda-12.1-x64
+            archive_ext: zip
+            rustflags_mode: generic
+            clear_cargo_rustflags: true
+            cargo_build_jobs: '2'
 
-          - platform: 'windows-latest'
-            rust_targets: 'aarch64-pc-windows-msvc'
-            cargo_target: 'aarch64-pc-windows-msvc'
+          - platform: windows-latest
+            rust_targets: aarch64-pc-windows-msvc
+            cargo_target: aarch64-pc-windows-msvc
             features: ''
-            asset_suffix: 'win-cpu-arm64'
-            archive_ext: 'zip'
-            clear_build_rustflags: 'true'
-            clear_target_rustflags_key: ''
+            asset_suffix: win-cpu-arm64
+            archive_ext: zip
+            rustflags_mode: generic
+            clear_cargo_rustflags: true
 
     runs-on: ${{ matrix.platform }}
     env:
@@ -137,6 +149,7 @@ jobs:
       ASSET_NAME: mistral-${{ needs.resolve-version.outputs.tag }}-bin-${{ matrix.asset_suffix }}
       MISTRAL_SRC_DIR: ./.mistral-rs-src
       CUDA_COMPUTE_CAP: ${{ matrix.cuda_compute_cap }}
+      CARGO_BUILD_JOBS: ${{ matrix.cargo_build_jobs }}
 
     steps:
       - name: Checkout repository
@@ -147,45 +160,80 @@ jobs:
         uses: jimver/cuda-toolkit@v0.2.30
         with:
           cuda: ${{ matrix.cuda_version }}
-          method: 'network'
+          method: network
+
+      - name: Setup MSVC for CUDA (Windows)
+        if: runner.os == 'Windows' && contains(matrix.features, 'cuda')
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev
+          if [[ "${{ matrix.features }}" == "cuda" ]]; then
+            nvcc --version
+          fi
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_targets }}
 
+      - name: Clone mistral.rs
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "${MISTRAL_SRC_DIR}"
+          git clone --depth 1 --branch "${MISTRAL_TAG}" \
+            https://github.com/EricLBuehler/mistral.rs.git "${MISTRAL_SRC_DIR}"
+
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './.mistral-rs-src -> target'
 
-      - name: Clone mistral.rs
+      - name: Fetch Rust dependencies
         shell: bash
         run: |
-          rm -rf "${MISTRAL_SRC_DIR}"
-          git clone --depth 1 --branch "${MISTRAL_TAG}" \
-            https://github.com/EricLBuehler/mistral.rs.git "${MISTRAL_SRC_DIR}"
+          set -euo pipefail
+          cd "${MISTRAL_SRC_DIR}"
+          for i in 1 2 3 4 5; do
+            cargo fetch --locked && break
+            if [[ "$i" -eq 5 ]]; then
+              exit 1
+            fi
+            sleep $((i * 20))
+          done
 
       - name: Build mistralrs binary
+        if: runner.os != 'Windows' || !contains(matrix.features, 'cuda')
         shell: bash
         run: |
           set -euo pipefail
 
-          if [[ "${{ matrix.clear_env_rustflags }}" == "true" ]]; then
-            # ring asserts a fixed aarch64-apple-darwin feature baseline; mistral.rs
-            # .cargo/config.toml sets target-cpu=native which breaks that on CI runners.
-            export RUSTFLAGS=""
-          fi
+          case "${{ matrix.rustflags_mode }}" in
+            empty)
+              # ring on Apple Silicon requires the default aarch64-apple-darwin baseline.
+              export RUSTFLAGS=""
+              ;;
+            generic)
+              export RUSTFLAGS="-C target-cpu=generic"
+              ;;
+          esac
 
           config_args=()
-          if [[ "${{ matrix.clear_build_rustflags }}" == "true" ]]; then
+          if [[ "${{ matrix.clear_cargo_rustflags }}" == "true" ]]; then
             config_args+=(--config "build.rustflags=[]")
           fi
           if [[ -n "${{ matrix.clear_target_rustflags_key }}" ]]; then
             config_args+=(--config "${{ matrix.clear_target_rustflags_key }}=[]")
           fi
 
-          cargo_args=()
+          cargo_args=(build -p mistralrs-cli --release --locked --offline)
           if [[ -n "${{ matrix.cargo_target }}" ]]; then
             cargo_args+=(--target "${{ matrix.cargo_target }}")
           fi
@@ -197,11 +245,43 @@ jobs:
           if [[ -n "${CUDA_COMPUTE_CAP:-}" ]]; then
             echo "CUDA compute capability: sm_${CUDA_COMPUTE_CAP} (no GPU on CI runner)"
           fi
+
           cd "${MISTRAL_SRC_DIR}"
-          packages=(mistralrs-cli)
-          for pkg in "${packages[@]}"; do
-            cargo ${config_args[@]+"${config_args[@]}"} build -p "$pkg" --release ${cargo_args[@]+"${cargo_args[@]}"}
-          done
+          cargo "${config_args[@]}" "${cargo_args[@]}"
+
+      - name: Build mistralrs binary (Windows CUDA)
+        if: runner.os == 'Windows' && contains(matrix.features, 'cuda')
+        shell: pwsh
+        run: |
+          switch ("${{ matrix.rustflags_mode }}") {
+            "empty" { $env:RUSTFLAGS = "" }
+            "generic" { $env:RUSTFLAGS = "-C target-cpu=generic" }
+          }
+
+          $configArgs = @()
+          if ("${{ matrix.clear_cargo_rustflags }}" -eq "true") {
+            $configArgs += "--config", "build.rustflags=[]"
+          }
+          if ("${{ matrix.clear_target_rustflags_key }}" -ne "") {
+            $configArgs += "--config", "${{ matrix.clear_target_rustflags_key }}=[]"
+          }
+
+          $cargoArgs = @(
+            "build", "-p", "mistralrs-cli", "--release", "--locked", "--offline"
+          )
+          if ("${{ matrix.cargo_target }}" -ne "") {
+            $cargoArgs += "--target", "${{ matrix.cargo_target }}"
+          }
+          if ("${{ matrix.features }}" -ne "") {
+            $cargoArgs += "--features", "${{ matrix.features }}"
+          }
+
+          Write-Host "Building $env:ASSET_NAME from mistral.rs $env:MISTRAL_TAG"
+          Write-Host "CUDA compute capability: sm_$env:CUDA_COMPUTE_CAP (no GPU on CI runner)"
+          Get-Command cl, nvcc | Format-Table -AutoSize
+
+          Set-Location $env:MISTRAL_SRC_DIR
+          cargo @configArgs @cargoArgs
 
       - name: Package archive (macOS/Linux)
         if: runner.os != 'Windows'
@@ -215,16 +295,13 @@ jobs:
           fi
 
           mkdir -p "dist/stage/${ASSET_NAME}"
-          binaries=(mistralrs)
-          for bin in "${binaries[@]}"; do
-            bin_path="${target_dir}/${bin}"
-            if [[ ! -f "$bin_path" ]]; then
-              echo "Binary not found: $bin_path"
-              exit 1
-            fi
-            cp "$bin_path" "dist/stage/${ASSET_NAME}/${bin}"
-            chmod +x "dist/stage/${ASSET_NAME}/${bin}"
-          done
+          bin_path="${target_dir}/mistralrs"
+          if [[ ! -f "$bin_path" ]]; then
+            echo "Binary not found: $bin_path"
+            exit 1
+          fi
+          cp "$bin_path" "dist/stage/${ASSET_NAME}/mistralrs"
+          chmod +x "dist/stage/${ASSET_NAME}/mistralrs"
           tar -czf "dist/${ASSET_NAME}.tar.gz" -C dist/stage "${ASSET_NAME}"
 
       - name: Package archive (Windows)
@@ -238,14 +315,11 @@ jobs:
 
           $stageDir = Join-Path "dist/stage" $env:ASSET_NAME
           New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
-          $binaries = @("mistralrs.exe")
-          foreach ($bin in $binaries) {
-            $binPath = Join-Path $targetDir $bin
-            if (-not (Test-Path $binPath)) {
-              throw "Binary not found: $binPath"
-            }
-            Copy-Item $binPath (Join-Path $stageDir $bin) -Force
+          $binPath = Join-Path $targetDir "mistralrs.exe"
+          if (-not (Test-Path $binPath)) {
+            throw "Binary not found: $binPath"
           }
+          Copy-Item $binPath (Join-Path $stageDir "mistralrs.exe") -Force
 
           $archivePath = "dist/$($env:ASSET_NAME).zip"
           if (Test-Path $archivePath) {
@@ -310,17 +384,19 @@ jobs:
 
           Prebuilt \`mistralrs\` binaries for Oxide backend integration.
 
+          CUDA builds target **sm_80** (Ampere+) and were compiled without a GPU on CI (\`CUDA_COMPUTE_CAP=80\`).
+
           ### Platforms
           | Platform | Arch | Backend | Asset |
           |----------|------|---------|-------|
-          | macOS | Apple Silicon | accelerate + metal | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-macos-arm64.tar.gz) |
-          | macOS | Intel x64 | accelerate + metal | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-macos-x64.tar.gz) |
+          | macOS | Apple Silicon | metal | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-macos-arm64.tar.gz) |
+          | macOS | Intel x64 | metal | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-macos-x64.tar.gz) |
           | Ubuntu | x86_64 | cpu | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-ubuntu-cpu-x64.tar.gz) |
-          | Ubuntu | x86_64 | cuda 12.4 | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-ubuntu-cuda-12.4-x64.tar.gz) |
-          | Ubuntu | x86_64 | cuda 12.1 | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-ubuntu-cuda-12.1-x64.tar.gz) |
+          | Ubuntu | x86_64 | cuda 12.4 (sm_80) | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-ubuntu-cuda-12.4-x64.tar.gz) |
+          | Ubuntu | x86_64 | cuda 12.1 (sm_80) | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-ubuntu-cuda-12.1-x64.tar.gz) |
           | Windows | x86_64 | cpu | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-win-cpu-x64.zip) |
-          | Windows | x86_64 | cuda 12.4 | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-win-cuda-12.4-x64.zip) |
-          | Windows | x86_64 | cuda 12.1 | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-win-cuda-12.1-x64.zip) |
+          | Windows | x86_64 | cuda 12.4 (sm_80) | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-win-cuda-12.4-x64.zip) |
+          | Windows | x86_64 | cuda 12.1 (sm_80) | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-win-cuda-12.1-x64.zip) |
           | Windows | ARM64 | cpu | [Download](${repo_url}/releases/download/${RELEASE_TAG}/mistral-${MISTRAL_TAG}-bin-win-cpu-arm64.zip) |
 
           ### Source
